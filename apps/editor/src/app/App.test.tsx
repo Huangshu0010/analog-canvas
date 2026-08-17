@@ -202,9 +202,10 @@ describe("editor shell", () => {
     expect(markup).toContain('data-testid="shapes-insert"');
     expect(markup).toContain('data-testid="library-toggle"');
     expect(markup).toContain('data-testid="shapes-library-panel"');
-    expect(markup).toContain('data-testid="shapes-fold-examples"');
-    expect(markup).toContain("Common-Source Amplifier");
-    expect(markup).toContain("Two-Stage Op Amp");
+    expect(markup).toContain('data-testid="examples-toggle"');
+    expect(markup).not.toContain('data-testid="shapes-fold-examples"');
+    expect(markup).not.toContain("Common-Source Amplifier");
+    expect(markup).not.toContain("Two-Stage Op Amp");
     expect(markup).toContain('data-open="true"');
     expect(markup).toContain(">Library</span>");
     expect(markup).toContain('class="app-statusbar"');

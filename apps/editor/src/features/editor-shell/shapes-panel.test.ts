@@ -6,7 +6,6 @@ import {
   componentCatalog,
   paletteSymbols,
 } from "../component-insert/symbol-catalog";
-import { libraryProjectExamples } from "../../examples/library-examples";
 import { quickPlaceRequest, ShapesPanel } from "./shapes-panel";
 
 describe("shapes quick-place", () => {
@@ -19,7 +18,6 @@ describe("shapes quick-place", () => {
         recentSymbolIds: [],
         open: true,
         onOpenInsert: () => undefined,
-        onOpenExample: () => undefined,
         onQuickPlace: () => undefined,
       }),
     );
@@ -68,15 +66,7 @@ describe("shapes quick-place", () => {
     expect(markup).toContain('title="Place Capacitor"');
     expect(markup).toContain(">V Src</span>");
     expect(markup).toContain(">Cap</span>");
-    expect(markup).toContain('data-testid="shapes-fold-examples"');
-    expect(markup.match(/data-testid="shapes-example-/g)).toHaveLength(
-      libraryProjectExamples.length,
-    );
-    for (const example of libraryProjectExamples) {
-      expect(markup).toContain(`data-testid="shapes-example-${example.id}"`);
-      expect(markup).toContain(example.name);
-    }
-    expect(markup).toContain('class="shapes-example-card"');
+    expect(markup).not.toContain('data-testid="shapes-example-');
   });
 
   it("quick-places without persisting parameter placeholders", () => {

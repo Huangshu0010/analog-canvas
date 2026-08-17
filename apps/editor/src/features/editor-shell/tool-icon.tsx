@@ -1,6 +1,7 @@
 export type ToolIconName =
   | "insert"
   | "library"
+  | "examples"
   | "wire"
   | "text"
   | "arrow"
@@ -41,6 +42,13 @@ export function ToolIcon({ name }: { name: ToolIconName }) {
           <rect x="11" y="3.5" width="6" height="6" rx="1" {...common} />
           <rect x="3" y="10.5" width="6" height="6" rx="1" {...common} />
           <rect x="11" y="10.5" width="6" height="6" rx="1" {...common} />
+        </>
+      ) : null}
+      {name === "examples" ? (
+        <>
+          <rect x="3" y="4" width="10" height="11" rx="1" {...common} />
+          <path d="M6 7h4M6 10h4M6 13h3" {...common} />
+          <rect x="8" y="6" width="9" height="10" rx="1" {...common} />
         </>
       ) : null}
       {name === "wire" ? (

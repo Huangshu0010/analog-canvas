@@ -144,6 +144,7 @@ import {
   quickPlaceRequest,
   ShapesPanel,
 } from "../features/editor-shell/shapes-panel";
+import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import {
   createLibraryExampleProject,
   type LibraryProjectExample,
@@ -609,6 +610,9 @@ export function App({
   });
   const [compactLayout, setCompactLayout] = useState(compactLayoutMatches);
   const [compactLibraryPanelOpen, setCompactLibraryPanelOpen] = useState(false);
+  const [leftPanelMode, setLeftPanelMode] = useState<"library" | "examples">(
+    "library",
+  );
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [recentSymbolIds, setRecentSymbolIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
@@ -1517,6 +1521,10 @@ export function App({
   }
 
   function toggleLibraryPanel(): void {
+    if (leftPanelMode === "examples") {
+      showLibraryPanel();
+      return;
+    }
     if (compactLayout) {
       setCompactLibraryPanelOpen((current) => {
         const next = !current;
@@ -1534,6 +1542,29 @@ export function App({
       }
       return next;
     });
+  }
+
+  function showLeftPanel(mode: "library" | "examples"): void {
+    setLeftPanelMode(mode);
+    if (compactLayout) {
+      setCompactLibraryPanelOpen(true);
+      setSelectionOpen(false);
+      return;
+    }
+    setLibraryPanelOpen(true);
+    try {
+      window.localStorage.setItem(LIBRARY_PANEL_STORAGE_KEY, "true");
+    } catch {
+      // The left panel remains usable when storage is unavailable.
+    }
+  }
+
+  function showLibraryPanel(): void {
+    showLeftPanel("library");
+  }
+
+  function showExamplesPanel(): void {
+    showLeftPanel("examples");
   }
 
   function resetInteractionState(): void {
@@ -7706,6 +7737,23 @@ export function App({
         <aside className="tool-rail" aria-label="Tool rail">
           <button
             type="button"
+            className="tool-rail-button examples-toggle"
+            title="Show circuit examples"
+            aria-pressed={
+              leftPanelMode === "examples" && visibleLibraryPanelOpen
+            }
+            aria-controls="examples-panel"
+            aria-expanded={
+              leftPanelMode === "examples" && visibleLibraryPanelOpen
+            }
+            data-testid="examples-toggle"
+            onClick={showExamplesPanel}
+          >
+            <ToolIcon name="examples" />
+            <span>Examples</span>
+          </button>
+          <button
+            type="button"
             className="tool-rail-button"
             title={
               visibleLibraryPanelOpen
@@ -7772,14 +7820,20 @@ export function App({
             <span>Rect</span>
           </button>
         </aside>
-        <ShapesPanel
-          styleProfileId={document.presentation.styleProfileId}
-          recentSymbolIds={recentSymbolIds}
-          open={visibleLibraryPanelOpen}
-          onOpenInsert={openInsertComponentDialog}
-          onOpenExample={openLibraryExample}
-          onQuickPlace={beginInsertedComponentPlacement}
-        />
+        {leftPanelMode === "library" ? (
+          <ShapesPanel
+            styleProfileId={document.presentation.styleProfileId}
+            recentSymbolIds={recentSymbolIds}
+            open={visibleLibraryPanelOpen}
+            onOpenInsert={openInsertComponentDialog}
+            onQuickPlace={beginInsertedComponentPlacement}
+          />
+        ) : (
+          <ExamplesPanel
+            open={visibleLibraryPanelOpen}
+            onOpenExample={openLibraryExample}
+          />
+        )}
         <aside
           className={selectionOpen ? "selection-dock open" : "selection-dock"}
           aria-label="Properties"

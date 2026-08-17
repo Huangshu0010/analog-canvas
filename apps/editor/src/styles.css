@@ -663,6 +663,11 @@ body {
   white-space: nowrap;
 }
 
+.tool-rail-button.examples-toggle {
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
 .tool-rail-divider {
   height: 1px;
   margin: var(--icm-space-1) var(--icm-space-2);
@@ -705,6 +710,13 @@ body {
 
 .shapes-panel-title:hover {
   background: var(--icm-surface-hover);
+}
+
+.shapes-panel-static-title {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: var(--icm-space-1);
 }
 
 .shapes-panel-header {

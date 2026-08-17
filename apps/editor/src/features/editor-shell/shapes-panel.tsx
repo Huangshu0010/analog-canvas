@@ -1,9 +1,5 @@
 import { useState } from "react";
 
-import {
-  libraryProjectExamples,
-  type LibraryProjectExample,
-} from "../../examples/library-examples";
 import type { ComponentInsertRequest } from "../component-insert/component-insert-request";
 import { SymbolArtwork } from "../component-insert/symbol-artwork";
 import { initialComponentParameterValues } from "../component-insert/component-parameters";
@@ -70,7 +66,6 @@ export interface ShapesPanelProps {
   recentSymbolIds: readonly string[];
   open: boolean;
   onOpenInsert(): void;
-  onOpenExample(example: LibraryProjectExample): void;
   onQuickPlace(request: ComponentInsertRequest): void;
 }
 
@@ -79,7 +74,6 @@ export function ShapesPanel({
   recentSymbolIds,
   open,
   onOpenInsert,
-  onOpenExample,
   onQuickPlace,
 }: ShapesPanelProps) {
   const libraryGroups = componentCatalog(styleProfileId, "");
@@ -134,42 +128,6 @@ export function ShapesPanel({
       </header>
 
       <div className="shapes-panel-body">
-        <details
-          className="shapes-fold"
-          open
-          data-testid="shapes-fold-examples"
-        >
-          <summary className="shapes-fold-summary">
-            <span className="shapes-fold-label">Examples</span>
-            <span className="shapes-fold-count">
-              {libraryProjectExamples.length}
-            </span>
-          </summary>
-          <div className="shapes-fold-body">
-            <div className="shapes-example-list">
-              {libraryProjectExamples.map((example) => (
-                <button
-                  key={example.id}
-                  type="button"
-                  className="shapes-example-card"
-                  data-testid={`shapes-example-${example.id}`}
-                  aria-label={`Open example ${example.name}`}
-                  title={`Open ${example.name}`}
-                  onClick={() => onOpenExample(example)}
-                >
-                  <span className="shapes-example-copy">
-                    <span className="shapes-example-kicker">Example</span>
-                    <span className="shapes-example-name">{example.name}</span>
-                    <span className="shapes-example-description">
-                      {example.description}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </details>
-
         <details className="shapes-fold" open data-testid="shapes-fold-library">
           <summary className="shapes-fold-summary">
             <span className="shapes-fold-label">
