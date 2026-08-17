@@ -7827,3 +7827,12 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: committed and pushed on
   `codex/device-protocol-compatibility-plan`; remote required checks remain the
   mainline delivery gate.
+
+## 2026-08-17 - Characterize current routing behavior
+
+- Target: protect the retained routing read behavior before protocol clean-cut
+  work begins.
+- Changed areas: direct derived resolved-route geometry tests and target plan.
+- Validation: focused routing suite (9 files / 73 tests),
+  `pnpm test:impact -- --base origin/main`, and `git diff --check` passed.
+- Commit status: pending commit on `codex/routing-protocol-unification`.
