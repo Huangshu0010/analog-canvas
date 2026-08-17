@@ -7780,4 +7780,5 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   smoke); `git diff --check` passed.
 - Commit status: committed locally as
   `feat(protocol): isolate device and project compatibility` on
-  `codex/device-protocol-compatibility-plan`; pending push and remote checks.
+  `codex/device-protocol-compatibility-plan` and pushed; remote required checks
+  remain the mainline delivery gate.
