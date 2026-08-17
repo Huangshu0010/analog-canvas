@@ -7903,3 +7903,17 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   and `git diff --check` passed.
 - Commit status: committed and pushed as
   `feat(editor): add Library project examples` on `codex/library-examples`.
+
+## 2026-08-17 - Separate Edit Engine transaction protocol layers
+
+- Target: separate transaction input and result contracts from Edit Engine
+  execution without changing protocol shape, exports, or mutation behavior.
+- Changed areas: added dedicated edit-schema and transaction-result modules;
+  reduced `transaction.ts` to execution/domain validation with compatibility
+  re-exports.
+- Validation: focused transaction/protocol suite (3 files / 30 tests), Edit
+  Engine build, `pnpm typecheck`, `pnpm test:impact -- --base origin/main`,
+  and `git diff --check` passed.
+- Commit status: included in
+  `refactor(edit-engine): separate transaction protocol layers` on
+  `codex/app-transaction-module-layers`.
