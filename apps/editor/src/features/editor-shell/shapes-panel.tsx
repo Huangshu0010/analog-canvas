@@ -1,9 +1,5 @@
 import { useState } from "react";
 
-import {
-  libraryProjectExamples,
-  type LibraryProjectExample,
-} from "../../examples/library-examples";
 import type { ComponentInsertRequest } from "../component-insert/component-insert-request";
 import { SymbolArtwork } from "../component-insert/symbol-artwork";
 import { initialComponentParameterValues } from "../component-insert/component-parameters";
@@ -70,7 +66,7 @@ export interface ShapesPanelProps {
   recentSymbolIds: readonly string[];
   open: boolean;
   onOpenInsert(): void;
-  onOpenExample(example: LibraryProjectExample): void;
+  onShowExamples(): void;
   onQuickPlace(request: ComponentInsertRequest): void;
 }
 
@@ -79,7 +75,7 @@ export function ShapesPanel({
   recentSymbolIds,
   open,
   onOpenInsert,
-  onOpenExample,
+  onShowExamples,
   onQuickPlace,
 }: ShapesPanelProps) {
   const libraryGroups = componentCatalog(styleProfileId, "");
@@ -122,54 +118,31 @@ export function ShapesPanel({
       data-open={open ? "true" : "false"}
     >
       <header className="shapes-panel-header">
-        <button
-          type="button"
-          className="shapes-panel-title"
-          onClick={onOpenInsert}
-          title="Open insert dialog (I)"
-        >
-          <span className="shapes-kicker">Quick place</span>
-          <span className="shapes-panel-heading">Library</span>
-        </button>
+        <div className="left-panel-tabs" aria-label="Library panels">
+          <button
+            type="button"
+            className="left-panel-tab active"
+            data-testid="library-panel-tab"
+            aria-current="page"
+            onClick={onOpenInsert}
+            title="Open insert dialog (I)"
+          >
+            <span className="shapes-kicker">Quick place</span>
+            <span className="shapes-panel-heading">Library</span>
+          </button>
+          <button
+            type="button"
+            className="left-panel-tab"
+            data-testid="examples-panel-toggle"
+            onClick={onShowExamples}
+            title="Show circuit examples"
+          >
+            Examples
+          </button>
+        </div>
       </header>
 
       <div className="shapes-panel-body">
-        <details
-          className="shapes-fold"
-          open
-          data-testid="shapes-fold-examples"
-        >
-          <summary className="shapes-fold-summary">
-            <span className="shapes-fold-label">Examples</span>
-            <span className="shapes-fold-count">
-              {libraryProjectExamples.length}
-            </span>
-          </summary>
-          <div className="shapes-fold-body">
-            <div className="shapes-example-list">
-              {libraryProjectExamples.map((example) => (
-                <button
-                  key={example.id}
-                  type="button"
-                  className="shapes-example-card"
-                  data-testid={`shapes-example-${example.id}`}
-                  aria-label={`Open example ${example.name}`}
-                  title={`Open ${example.name}`}
-                  onClick={() => onOpenExample(example)}
-                >
-                  <span className="shapes-example-copy">
-                    <span className="shapes-example-kicker">Example</span>
-                    <span className="shapes-example-name">{example.name}</span>
-                    <span className="shapes-example-description">
-                      {example.description}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </details>
-
         <details className="shapes-fold" open data-testid="shapes-fold-library">
           <summary className="shapes-fold-summary">
             <span className="shapes-fold-label">
