@@ -24,6 +24,8 @@ This target owns only its integration record and the branch/PR lifecycle.
 
 - `plan/2026-08-17-merge-library-examples/plan.md`
 - `plan/log.md` (close-out entry only)
+- `apps/editor/src/examples/common-source-amplifier.icproj.json`
+- `apps/editor/src/examples/two-stage-op-amp.icproj.json`
 
 - Read-only: `main`, the committed Library examples implementation, and the
   GitHub Actions result for the review branch
@@ -33,9 +35,11 @@ This target owns only its integration record and the branch/PR lifecycle.
 
 1. Record the integration target and run the required clean local mainline
    check.
-2. Create or update a review PR, wait for required remote checks, then merge
+2. Apply the repository's deterministic JSON formatting when the mainline
+   formatter identifies a bundled example asset.
+3. Create or update a review PR, wait for required remote checks, then merge
    it into `main` through the remote provider.
-3. Confirm the merged `main` ref and record the factual outcome.
+4. Confirm the merged `main` ref and record the factual outcome.
 
 ## Validation
 

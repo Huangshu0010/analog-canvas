@@ -532,9 +532,7 @@
           },
           "id": "route-ui-2-a-3",
           "netId": "net-ui-1",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-ui-3",
             "kind": "junction"
@@ -548,9 +546,7 @@
           },
           "id": "route-ui-2-b-3",
           "netId": "net-ui-1",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "instanceId": "X8",
             "kind": "terminal",
@@ -566,10 +562,7 @@
           },
           "id": "route-ui-4",
           "netId": "net-ui-1",
-          "segmentModes": [
-            "manual",
-            "manual"
-          ],
+          "segmentModes": ["manual", "manual"],
           "to": {
             "junctionId": "junction-ui-3",
             "kind": "junction"
@@ -589,9 +582,7 @@
           },
           "id": "route-ui-5-a-10",
           "netId": "net-contact-p13",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-ui-10",
             "kind": "junction"
@@ -605,9 +596,7 @@
           },
           "id": "route-ui-5-b-10",
           "netId": "net-contact-p13",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "instanceId": "P12",
             "kind": "terminal",
@@ -622,9 +611,7 @@
           },
           "id": "route-ui-11-a-13",
           "netId": "net-contact-p13",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-ui-13",
             "kind": "junction"
@@ -638,9 +625,7 @@
           },
           "id": "route-ui-11-b-13",
           "netId": "net-contact-p13",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "instanceId": "C9",
             "kind": "terminal",
@@ -656,11 +641,7 @@
           },
           "id": "route-ui-15",
           "netId": "net-contact-p13",
-          "segmentModes": [
-            "manual",
-            "manual",
-            "manual"
-          ],
+          "segmentModes": ["manual", "manual", "manual"],
           "to": {
             "junctionId": "junction-ui-13",
             "kind": "junction"
@@ -684,10 +665,7 @@
           },
           "id": "route-ui-16",
           "netId": "net-contact-p13",
-          "segmentModes": [
-            "manual",
-            "manual"
-          ],
+          "segmentModes": ["manual", "manual"],
           "to": {
             "junctionId": "junction-ui-10",
             "kind": "junction"

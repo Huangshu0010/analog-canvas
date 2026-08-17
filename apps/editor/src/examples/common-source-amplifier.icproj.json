@@ -1018,10 +1018,7 @@
           },
           "id": "route-ui-5",
           "netId": "net-ui-5",
-          "segmentModes": [
-            "manual",
-            "manual"
-          ],
+          "segmentModes": ["manual", "manual"],
           "to": {
             "instanceId": "R3-copy-5",
             "kind": "terminal",
@@ -1042,9 +1039,7 @@
           },
           "id": "route-ui-8-a-10",
           "netId": "net-split-1143160ec6fc8d88",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-ui-10",
             "kind": "junction"
@@ -1058,9 +1053,7 @@
           },
           "id": "route-ui-8-b-10",
           "netId": "net-split-1143160ec6fc8d88",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "instanceId": "C1",
             "kind": "terminal",
@@ -1075,9 +1068,7 @@
           },
           "id": "route-ui-11-a-12",
           "netId": "net-split-1143160ec6fc8d88",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-ui-12",
             "kind": "junction"
@@ -1091,9 +1082,7 @@
           },
           "id": "route-ui-11-b-12-a-26",
           "netId": "net-split-1143160ec6fc8d88",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-ui-26",
             "kind": "junction"
@@ -1107,9 +1096,7 @@
           },
           "id": "route-ui-11-b-12-b-26-a-29",
           "netId": "net-split-1143160ec6fc8d88",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-ui-29",
             "kind": "junction"
@@ -1123,9 +1110,7 @@
           },
           "id": "route-ui-11-b-12-b-26-b-29",
           "netId": "net-split-1143160ec6fc8d88",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "instanceId": "M2",
             "kind": "terminal",
@@ -1141,9 +1126,7 @@
           },
           "id": "route-ui-19",
           "netId": "net-global-0",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "instanceId": "GND5-copy-2",
             "kind": "terminal",
@@ -1159,9 +1142,7 @@
           "id": "route-vdd7-rail-a-21",
           "netId": "net-power-vdd7",
           "presentation": "power-rail",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-ui-21",
             "kind": "junction"
@@ -1176,9 +1157,7 @@
           "id": "route-vdd7-rail-b-21",
           "netId": "net-power-vdd7",
           "presentation": "power-rail",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-vdd7-end",
             "kind": "junction"
@@ -1192,9 +1171,7 @@
           },
           "id": "route-ui-22",
           "netId": "net-power-vdd7",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "instanceId": "R3",
             "kind": "terminal",
@@ -1210,9 +1187,7 @@
           },
           "id": "route-ui-23",
           "netId": "net-split-315c27b4f6e1c409",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-ui-15",
             "kind": "junction"
@@ -1226,9 +1201,7 @@
           },
           "id": "route-ui-24",
           "netId": "net-split-315c27b4f6e1c409",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "instanceId": "M2",
             "kind": "terminal",
@@ -1243,10 +1216,7 @@
           },
           "id": "route-ui-25",
           "netId": "net-split-315c27b4f6e1c409",
-          "segmentModes": [
-            "manual",
-            "manual"
-          ],
+          "segmentModes": ["manual", "manual"],
           "to": {
             "instanceId": "GND5",
             "kind": "terminal",
@@ -1267,10 +1237,7 @@
           },
           "id": "route-ui-30",
           "netId": "net-split-1143160ec6fc8d88",
-          "segmentModes": [
-            "manual",
-            "manual"
-          ],
+          "segmentModes": ["manual", "manual"],
           "to": {
             "junctionId": "junction-ui-29",
             "kind": "junction"
@@ -1290,9 +1257,7 @@
           },
           "id": "route-ui-31",
           "netId": "net-split-315c27b4f6e1c409",
-          "segmentModes": [
-            "manual"
-          ],
+          "segmentModes": ["manual"],
           "to": {
             "junctionId": "junction-ui-15",
             "kind": "junction"
