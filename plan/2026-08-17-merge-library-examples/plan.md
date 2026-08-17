@@ -52,8 +52,10 @@ This target owns only its integration record and the branch/PR lifecycle.
 ## Test Impact
 
 - Decision: no-test-change
-- Evidence: this target integrates the already-tested commit without changing
-  application behavior; the required CI check re-runs the protected suite.
+- Reason: this target integrates already-tested commits without changing
+  application behavior.
+- Existing protection: `pnpm ci:check` re-runs the protected static, unit,
+  release, and browser contracts on the rebased review branch.
 
 ## Commit Intent
 
