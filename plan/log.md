@@ -8042,3 +8042,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: staged for
   `refactor(editor): continue placement and properties migration` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Extract editor shell panel state checkpoint
+
+- Target: start Step 5 by moving generic panel and dialog visibility state out
+  of the App composition root.
+- Changed areas: added and connected `useEditorPanels` for Library,
+  responsive shell, selection shelf, Help, About, and project-search state.
+- Validation: focused shell/search contracts (4 files / 19 tests), 3 focused
+  Playwright command-menu/search/layout scenarios, `pnpm typecheck`, and
+  `git diff --check` passed.
+- Commit status: staged for
+  `refactor(editor): extract editor shell panel state` on
+  `codex/app-transaction-module-layers`.

@@ -247,6 +247,7 @@ import type { BrowserRecoveryGeneration } from "../document/browser-recovery-con
 import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
+import { useEditorPanels } from "../features/editor-shell/use-editor-panels";
 import {
   type InstanceMovePreview,
   useSelectionInteraction,
@@ -392,22 +393,37 @@ export function App({
   const [agentPanelOpen, setAgentPanelOpen] = useState(false);
   const [agentDetailsOpen, setAgentDetailsOpen] = useState(false);
   const [agentStatusDismissed, setAgentStatusDismissed] = useState(false);
-  const [libraryPanelOpen, setLibraryPanelOpen] = useState(() => {
+  const initialLibraryPanelOpen = (() => {
     if (typeof window === "undefined") return true;
     try {
       return window.localStorage.getItem(LIBRARY_PANEL_STORAGE_KEY) !== "false";
     } catch {
       return true;
     }
-  });
-  const [compactLayout, setCompactLayout] = useState(() =>
+  })();
+  const {
+    libraryPanelOpen,
+    setLibraryPanelOpen,
+    compactLayout,
+    setCompactLayout,
+    compactLibraryPanelOpen,
+    setCompactLibraryPanelOpen,
+    leftPanelMode,
+    setLeftPanelMode,
+    selectionOpen,
+    setSelectionOpen,
+    helpOpen,
+    setHelpOpen,
+    aboutOpen,
+    setAboutOpen,
+    searchOpen,
+    setSearchOpen,
+    searchQuery,
+    setSearchQuery,
+  } = useEditorPanels(
+    initialLibraryPanelOpen,
     compactLayoutMatches(COMPACT_LAYOUT_MEDIA_QUERY),
   );
-  const [compactLibraryPanelOpen, setCompactLibraryPanelOpen] = useState(false);
-  const [leftPanelMode, setLeftPanelMode] = useState<"library" | "examples">(
-    "library",
-  );
-  const [selectionOpen, setSelectionOpen] = useState(false);
   const [, setRecentSymbolIds] = useState<string[]>([]);
   const [restoreAfterRefresh] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -641,10 +657,6 @@ export function App({
   const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
     null,
   );
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [highlightedNetOrigin, setHighlightedNetOrigin] = useState<{
     documentId: string;
     netId: string;
