@@ -8110,3 +8110,17 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: staged for
   `refactor(editor): continue editor panel state hook` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Complete editor shell Hook
+
+- Target: finish the flat shell ownership by moving dialog focus and Agent
+  panel state into `useEditorPanels`.
+- Changed areas: the Hook now owns storage initialization, Help/About focus
+  restoration, Search close/reset, and Agent panel/detail/dismissal state;
+  App remains the JSX and external Agent-session composition root.
+- Validation: focused shell/search unit contracts (4 files / 19 tests), 4
+  Library/catalog Playwright scenarios, 3 command/search/layout scenarios,
+  Editor build, and `pnpm typecheck` passed.
+- Commit status: staged for
+  `refactor(editor): complete editor panel state hook` on
+  `codex/app-transaction-module-layers`.

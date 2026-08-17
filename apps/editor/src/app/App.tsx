@@ -368,17 +368,10 @@ export function App({
       ).project,
   );
   const [status, setStatus] = useState("Ready");
-  const [agentPanelOpen, setAgentPanelOpen] = useState(false);
-  const [agentDetailsOpen, setAgentDetailsOpen] = useState(false);
-  const [agentStatusDismissed, setAgentStatusDismissed] = useState(false);
-  const initialLibraryPanelOpen = (() => {
-    if (typeof window === "undefined") return true;
-    try {
-      return window.localStorage.getItem(LIBRARY_PANEL_STORAGE_KEY) !== "false";
-    } catch {
-      return true;
-    }
-  })();
+  const helpButtonRef = useRef<HTMLButtonElement>(null);
+  const helpCloseRef = useRef<HTMLButtonElement>(null);
+  const aboutButtonRef = useRef<HTMLButtonElement>(null);
+  const aboutCloseRef = useRef<HTMLButtonElement>(null);
   const {
     libraryPanelOpen,
     setLibraryPanelOpen,
@@ -398,13 +391,25 @@ export function App({
     setSearchOpen,
     searchQuery,
     setSearchQuery,
+    agentPanelOpen,
+    setAgentPanelOpen,
+    agentDetailsOpen,
+    setAgentDetailsOpen,
+    agentStatusDismissed,
+    setAgentStatusDismissed,
+    closeHelp,
+    closeAbout,
+    closeSearch,
     showLeftPanel,
     toggleLibraryPanel,
   } = useEditorPanels({
-    initialLibraryOpen: initialLibraryPanelOpen,
     initialCompact: compactLayoutMatches(COMPACT_LAYOUT_MEDIA_QUERY),
     compactMediaQuery: COMPACT_LAYOUT_MEDIA_QUERY,
     libraryStorageKey: LIBRARY_PANEL_STORAGE_KEY,
+    helpButtonRef,
+    helpCloseRef,
+    aboutButtonRef,
+    aboutCloseRef,
   });
   const [restoreAfterRefresh] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -619,10 +624,6 @@ export function App({
   const instanceValueInputRef = useRef<HTMLInputElement>(null);
   const netLabelPropertyInputRef = useRef<HTMLInputElement>(null);
   const netLabelEditorInputRef = useRef<HTMLInputElement>(null);
-  const helpButtonRef = useRef<HTMLButtonElement>(null);
-  const helpCloseRef = useRef<HTMLButtonElement>(null);
-  const aboutButtonRef = useRef<HTMLButtonElement>(null);
-  const aboutCloseRef = useRef<HTMLButtonElement>(null);
   const documentViewBoxes = useRef(new Map<string, GridRect>());
   const renderedDocument = useMemo(() => {
     if (!draftingHandlePreview || !document.drafting) return document;
@@ -5424,29 +5425,6 @@ export function App({
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
   });
-
-  useEffect(() => {
-    if (helpOpen) helpCloseRef.current?.focus();
-  }, [helpOpen]);
-
-  useEffect(() => {
-    if (aboutOpen) aboutCloseRef.current?.focus();
-  }, [aboutOpen]);
-
-  function closeHelp(): void {
-    setHelpOpen(false);
-    requestAnimationFrame(() => helpButtonRef.current?.focus());
-  }
-
-  function closeAbout(): void {
-    setAboutOpen(false);
-    requestAnimationFrame(() => aboutButtonRef.current?.focus());
-  }
-
-  function closeSearch(): void {
-    setSearchOpen(false);
-    setSearchQuery("");
-  }
 
   function selectSearchResult(result: SearchResult): void {
     navigateToLocator(

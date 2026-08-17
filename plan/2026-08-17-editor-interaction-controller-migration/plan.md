@@ -28,7 +28,7 @@ The five domains are:
 |    2 | Selection and movement            | completed: commands, pointer drags, and keyboard Move session have one Hook owner | `refactor(editor): complete selection interaction hook` |
 |    3 | Component insertion and placement | completed: dialog, recents, component/VDD placement, and transactions have one Hook owner | `refactor(editor): complete component placement hook`   |
 |    4 | Property editing                  | completed: drafts, Net Label, text, and label-visibility actions have one Hook owner | `refactor(editor): complete properties editor hook`     |
-|    5 | Panels and dialogs                | in progress: Library persistence and responsive shell ownership extracted; dialog focus and Agent state pending | `refactor(editor): continue editor panel state hook`    |
+|    5 | Panels and dialogs                | completed: responsive state, persistence, dialog focus, and Agent panel state have one Hook owner | `refactor(editor): complete editor panel state hook`    |
 
 ## State and Ownership
 
@@ -370,6 +370,9 @@ plan(editor): define flat interaction hook migration
 
 ## Outcome
 
-Step 1 moved route-specific Wire creation and drag orchestration into
-`useWireInteraction`; `App.tsx` retains only cross-domain pointer arbitration.
-Keep `status: active` until all five steps and final branch validation complete.
+Steps 1–5 move editor interaction state, effects, and transactional lifecycle
+ownership into their flat domain Hooks. `App.tsx` now composes those Hooks,
+keeps page-level JSX and cross-domain shortcut/pointer arbitration, and retains
+pure calculation helpers until a separate calculation-layer target owns them.
+Keep `status: active` until final branch validation, duplicate-owner audit, and
+delivery record are complete.
