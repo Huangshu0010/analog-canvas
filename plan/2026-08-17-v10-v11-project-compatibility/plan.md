@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -97,4 +97,9 @@ tests, all workspace builds, and production editor smoke. General RichText
 fraction insertion remains a separate editor feature as documented by ADR
 0023. The implementation commit was pushed as `e037a08`; mainline delivery was
 reopened after PR #106 reported conflicts with the newer merged protocol/test
-system baseline.
+system baseline. The branch then merged current `main` at `3dbf743`, retained
+both factual log histories, and repeated the clean-state mainline gate from a
+frozen install. Final local `pnpm ci:check` passed static contracts, 132 test
+files / 809 unit tests, all workspace builds, performance and golden checks,
+release/package smoke, and 144 Playwright tests. PR #106 carries the completed
+target for required GitHub Actions verification and merge.

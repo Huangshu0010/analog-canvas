@@ -7706,14 +7706,15 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Changed areas: model parsing metadata and v10 adapter; formal-file staging,
   dirty/save UX, recovery envelope/storage consistency; accepted ADR 0023 and
   current compatibility documentation; focused unit and browser contracts.
-- Validation: 101 affected unit tests; dedicated v10 upload/recovery/v11-save
-  Playwright flow; typecheck, documentation links, and formatting; full
-  `pnpm verify:branch` with 798 unit tests, all workspace builds, and production
-  editor smoke; `git diff --check`.
-- Commit status: committed with this target close-out on
-  `chore/unify-current-protocol-baseline` as
-  `feat(model): accept schema v10 through a direct v11 upgrade`; push status is
-  recorded in the handoff.
+- Validation: 101 affected unit tests and the dedicated v10
+  upload/recovery/v11-save Playwright flow; after synchronizing current `main`,
+  frozen install plus full `pnpm ci:check` passed static contracts, 132 test
+  files / 809 unit tests, all builds, performance/golden checks, release and
+  package smoke, and 144 Playwright tests; `git diff --check` passed.
+- Commit status: implementation `e037a08` plus the reviewed `main` integration
+  are carried by PR #106 on `chore/unify-current-protocol-baseline`; required
+  GitHub Actions checks and merge are the remaining delivery gate.
+
 ## 2026-08-17 - Test-system rationalization
 
 - Target: make test responsibility explicit and enforce an evidence-based
