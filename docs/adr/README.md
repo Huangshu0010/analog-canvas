@@ -40,6 +40,9 @@ The current Project schema, ordinary Port-symbol Instance, typed-edit, and
 Agent credential-lifetime baseline—partially superseding clauses in ADR
 0010/0013/0014/0015/0016—is
 [`0022-current-protocol-baseline.md`](0022-current-protocol-baseline.md).
+The rolling current-and-previous Project read policy, superseding ADR 0022's
+current-only compatibility clause, is
+[`0023-rolling-previous-project-compatibility.md`](0023-rolling-previous-project-compatibility.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

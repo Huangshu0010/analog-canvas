@@ -4638,10 +4638,13 @@ export function App({
         source: "opened-file",
         formalFileHint: { name: staged.fileName },
       });
+      if (staged.migrated) setFileState("dirty");
       setImportDiagnostics([]);
       setImportReviewOpen(false);
       setStatus(
-        `Opened ${staged.fileName} at revision ${staged.topDocumentRevision}`,
+        staged.migrated
+          ? `Opened and upgraded ${staged.fileName} from schema ${staged.sourceSchemaVersion} to schema ${staged.project.schemaVersion} — save the Project to keep the upgrade`
+          : `Opened ${staged.fileName} at revision ${staged.topDocumentRevision}`,
       );
     });
   }

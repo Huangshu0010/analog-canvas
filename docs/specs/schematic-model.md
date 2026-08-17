@@ -87,4 +87,5 @@ objects are visual-only and cannot create connectivity.
 
 Mutation occurs only through atomic Edit Engine transactions against an exact
 Document revision. GUI and Agent writes use the same schema and invariants.
-Persistence accepts and writes only schema 11; no migration is performed.
+Persistence writes only schema 11. It accepts schema 10 through the bounded
+direct upgrade defined by ADR 0023; no compatibility shape enters the model.

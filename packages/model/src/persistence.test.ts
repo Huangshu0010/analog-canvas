@@ -8,6 +8,7 @@ import {
   ProjectFormatError,
   loadProject,
   parseProject,
+  parseProjectWithMetadata,
   saveProject,
   serializeProject,
   type ProjectStorage,
@@ -69,13 +70,75 @@ describe("Project persistence", () => {
     }
   });
 
-  it("rejects every non-current schema version", () => {
+  it("directly upgrades schema 10 and reports its source version", () => {
+    const project = createEmptyProject("project-test", "Test Project");
+    const source = {
+      ...JSON.parse(serializeProject(project)),
+      schemaVersion: 10,
+    };
+    source.documents[0].annotations.push({
+      id: "plain-v10-value",
+      kind: "instance-value",
+      content: { runs: [{ kind: "text", value: "20u/1u" }] },
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    const parsed = parseProjectWithMetadata(JSON.stringify(source));
+
+    expect(parsed).toMatchObject({
+      sourceSchemaVersion: 10,
+      migrated: true,
+      project: { schemaVersion: 11 },
+    });
+    expect({ ...parsed.project, schemaVersion: 10 }).toEqual(source);
+  });
+
+  it("lets an upgraded schema-10 Project author and persist a schema-11 fraction", () => {
+    const source = {
+      ...JSON.parse(
+        serializeProject(createEmptyProject("project-test", "Test Project")),
+      ),
+      schemaVersion: 10,
+    };
+    const project = parseProject(JSON.stringify(source));
+    project.documents[0]!.annotations.push({
+      id: "value-fraction",
+      kind: "instance-value",
+      content: {
+        runs: [
+          {
+            kind: "fraction",
+            numerator: { runs: [{ kind: "text", value: "10um" }] },
+            denominator: { runs: [{ kind: "text", value: "150nm" }] },
+          },
+        ],
+      },
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+
+    const reopened = parseProject(serializeProject(project));
+    expect(reopened.schemaVersion).toBe(11);
+    expect(
+      reopened.documents[0]!.annotations[0]?.content.runs[0],
+    ).toMatchObject({
+      kind: "fraction",
+      numerator: { runs: [{ value: "10um" }] },
+      denominator: { runs: [{ value: "150nm" }] },
+    });
+  });
+
+  it("rejects schemas outside the rolling current-and-previous window", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/exactly 11/);
+    ).toThrow(/must be 10 or 11/);
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 9 })),
-    ).toThrow(/exactly 11/);
+    ).toThrow(/must be 10 or 11/);
   });
 });

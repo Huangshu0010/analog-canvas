@@ -17,7 +17,7 @@
 // Storage (WP-1) and React coordination (WP-2) build on these functions; they
 // must not re-implement the rules independently.
 
-import { parseProject } from "@icm/model";
+import { parseProjectWithMetadata } from "@icm/model";
 import type { CircuitProject } from "@icm/model";
 import { ProjectFormatError } from "@icm/model";
 
@@ -285,14 +285,15 @@ export function reviewBrowserRecoveryProject(
   record: BrowserRecoveryRecordV2,
 ): BrowserRecoveryProjectReview {
   try {
-    const project = parseProject(record.projectText);
+    const parsed = parseProjectWithMetadata(record.projectText);
+    const project = parsed.project;
     if (project.id !== record.projectId) {
       return {
         status: "corrupt",
         message: "record projectId does not match the stored Project",
       };
     }
-    if (project.schemaVersion !== record.projectSchemaVersion) {
+    if (parsed.sourceSchemaVersion !== record.projectSchemaVersion) {
       return {
         status: "corrupt",
         message: "record schema version does not match the stored Project",

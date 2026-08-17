@@ -10,6 +10,19 @@ export interface ProjectDiagnostic {
   path: ReadonlyArray<string | number>;
 }
 
+/**
+ * The rolling compatibility window is deliberately explicit. Advancing the
+ * current schema must replace this adapter rather than accidentally extending
+ * an unbounded migration chain.
+ */
+export const PREVIOUS_PROJECT_SCHEMA_VERSION = 10;
+
+export interface ProjectParseResult {
+  readonly project: CircuitProject;
+  readonly sourceSchemaVersion: number;
+  readonly migrated: boolean;
+}
+
 export class ProjectFormatError extends Error {
   readonly diagnostics: readonly ProjectDiagnostic[];
 
@@ -56,7 +69,9 @@ export function validateProject(input: unknown): CircuitProject {
   return result.data;
 }
 
-export function parseProject(serialized: string): CircuitProject {
+export function parseProjectWithMetadata(
+  serialized: string,
+): ProjectParseResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(serialized) as unknown;
@@ -70,19 +85,48 @@ export function parseProject(serialized: string): CircuitProject {
       },
     ]);
   }
-  if (
-    !isRecord(parsed) ||
-    parsed.schemaVersion !== CURRENT_PROJECT_SCHEMA_VERSION
-  ) {
+  if (!isRecord(parsed) || !Number.isInteger(parsed.schemaVersion)) {
     throw new ProjectFormatError([
       {
         code: "UNSUPPORTED_SCHEMA_VERSION",
-        message: `Project schemaVersion must be exactly ${CURRENT_PROJECT_SCHEMA_VERSION}`,
+        message: "Project schemaVersion must be an integer",
         path: ["schemaVersion"],
       },
     ]);
   }
-  return validateProject(parsed);
+
+  const sourceSchemaVersion = parsed.schemaVersion as number;
+  if (sourceSchemaVersion === CURRENT_PROJECT_SCHEMA_VERSION) {
+    return {
+      project: validateProject(parsed),
+      sourceSchemaVersion,
+      migrated: false,
+    };
+  }
+  if (sourceSchemaVersion === PREVIOUS_PROJECT_SCHEMA_VERSION) {
+    // Schema 11 adds the RichText `fraction` variant. Every valid schema-10
+    // value is already a valid schema-11 value after advancing the version;
+    // preserve user-authored text exactly rather than re-projecting it.
+    return {
+      project: validateProject({
+        ...parsed,
+        schemaVersion: CURRENT_PROJECT_SCHEMA_VERSION,
+      }),
+      sourceSchemaVersion,
+      migrated: true,
+    };
+  }
+  throw new ProjectFormatError([
+    {
+      code: "UNSUPPORTED_SCHEMA_VERSION",
+      message: `Project schemaVersion must be ${PREVIOUS_PROJECT_SCHEMA_VERSION} or ${CURRENT_PROJECT_SCHEMA_VERSION}`,
+      path: ["schemaVersion"],
+    },
+  ]);
+}
+
+export function parseProject(serialized: string): CircuitProject {
+  return parseProjectWithMetadata(serialized).project;
 }
 
 export function serializeProject(project: CircuitProject): string {

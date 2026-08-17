@@ -198,8 +198,9 @@ no electrical meaning.
 Open, demo load, restore, and human-approved staged import replace the entire
 Project through one replacement boundary; they are not Edit Engine
 transactions. Replacement cancels pending recovery for the outgoing Project
-and terminates its Agent session. Only complete schema-11 Projects are accepted;
-the editor performs no migration.
+and terminates its Agent session. A complete schema-10 Project may be upgraded
+at the read boundary and then enters the editor only as schema-11; migrated
+formal files are marked as needing save.
 
 Selection, viewport, active tool, previews, Agent tokens, and approval UI are
 transient and never enter Project JSON. Recovery is scheduled only after a

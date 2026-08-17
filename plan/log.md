@@ -7698,6 +7698,23 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   `docs(protocol): ratify current schema and agent contracts` on
   `chore/unify-current-protocol-baseline`; not pushed.
 
+## 2026-08-17 - Add rolling schema-10 Project compatibility
+
+- Target: open schema-10 Project JSON through one direct, content-preserving
+  upgrade to the sole schema-11 runtime and save format, without restoring the
+  historic sequential migration registry or fixture archive.
+- Changed areas: model parsing metadata and v10 adapter; formal-file staging,
+  dirty/save UX, recovery envelope/storage consistency; accepted ADR 0023 and
+  current compatibility documentation; focused unit and browser contracts.
+- Validation: 101 affected unit tests and the dedicated v10
+  upload/recovery/v11-save Playwright flow; after synchronizing current `main`,
+  frozen install plus full `pnpm ci:check` passed static contracts, 132 test
+  files / 809 unit tests, all builds, performance/golden checks, release and
+  package smoke, and 144 Playwright tests; `git diff --check` passed.
+- Commit status: implementation `e037a08` plus the reviewed `main` integration
+  are carried by PR #106 on `chore/unify-current-protocol-baseline`; required
+  GitHub Actions checks and merge are the remaining delivery gate.
+
 ## 2026-08-17 - Test-system rationalization
 
 - Target: make test responsibility explicit and enforce an evidence-based

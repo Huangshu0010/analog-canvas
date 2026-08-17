@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import {
@@ -34,6 +35,36 @@ test("downloads the canonical Project when File System Access is unavailable", a
   await expect
     .poll(() => recoveryProjectTexts(page))
     .toContain('"revision": 1');
+});
+
+test("upgrades a schema-10 Project and saves it as schema 11", async ({
+  page,
+}) => {
+  const source = JSON.parse(
+    readFileSync(
+      resolve(process.cwd(), "fixtures/projects/minimal/project.icproj.json"),
+      "utf8",
+    ),
+  ) as Record<string, unknown>;
+  source.schemaVersion = 10;
+
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "minimal-v10.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(source)),
+  });
+  await expect(page.getByTestId("status")).toContainText(
+    "upgraded minimal-v10.icproj.json from schema 10 to schema 11",
+  );
+  await expect
+    .poll(() => recoveryProjectTexts(page))
+    .toContain('"schemaVersion": 11');
+
+  const saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as { schemaVersion: number };
+  expect(saved.schemaVersion).toBe(11);
 });
 
 test("reports a confirmed File System Access save", async ({ page }) => {
