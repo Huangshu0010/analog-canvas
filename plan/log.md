@@ -8029,3 +8029,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: staged for
   `refactor(editor): extract placement interaction checkpoint` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Extract placement commit and properties draft checkpoints
+
+- Target: continue placement and properties migration without changing the
+  edit-engine transaction boundary.
+- Changed areas: placement Hook now routes component/VDD canvas commits; the
+  properties Hook owns instance and Net Label draft state.
+- Validation: focused properties contracts (3 files / 22 tests), focused
+  insertion/VDD and property Playwright scenarios, Editor build, and
+  `pnpm typecheck` passed.
+- Commit status: staged for
+  `refactor(editor): continue placement and properties migration` on
+  `codex/app-transaction-module-layers`.

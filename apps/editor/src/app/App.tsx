@@ -246,6 +246,7 @@ import {
 import type { BrowserRecoveryGeneration } from "../document/browser-recovery-contract";
 import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
+import { usePropertiesEditor } from "../features/properties/use-properties-editor";
 import {
   type InstanceMovePreview,
   useSelectionInteraction,
@@ -628,22 +629,15 @@ export function App({
   const [bulkDrawInstanceId, setBulkDrawInstanceId] = useState<string | null>(
     null,
   );
-  const [netLabelDraft, setNetLabelDraft] = useState("");
   const netLabelDraftRouteRef = useRef<string | null>(null);
-  const [netLabelEditorOpen, setNetLabelEditorOpen] = useState(false);
-  const [instancePropertyDraft, setInstancePropertyDraft] = useState<{
-    instanceId: string | null;
-    parameters: Record<string, string>;
-    x: string;
-    y: string;
-    rotation: "0" | "90" | "180" | "270";
-  }>({
-    instanceId: null,
-    parameters: {},
-    x: "",
-    y: "",
-    rotation: "0",
-  });
+  const {
+    instancePropertyDraft,
+    netLabelDraft,
+    netLabelEditorOpen,
+    setInstancePropertyDraft,
+    setNetLabelDraft,
+    setNetLabelEditorOpen,
+  } = usePropertiesEditor();
   const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
     null,
   );
@@ -1144,6 +1138,7 @@ export function App({
   const {
     beginInsertedComponentPlacement: beginInsertedComponentPlacementFromHook,
     cancelComponentInsert: cancelComponentInsertFromHook,
+    commitPendingPlacementAt: commitPendingPlacementAtFromHook,
     closeInsertDialog: closeInsertDialogFromHook,
     insertDialogOpen,
     openInsertComponentDialog: openInsertComponentDialogFromHook,
@@ -1163,6 +1158,14 @@ export function App({
     rotateComponentPlacement,
     mirrorComponentPlacement,
     setStatus,
+    vddRailMode,
+    vddRailStart,
+    pendingSymbolId,
+    pendingComponentPlacement,
+    setVddRailStart,
+    setVddRailPreviewPoint,
+    placeVddRail,
+    placeNewComponent,
   });
   const {
     beginCopyPlacement: beginCopyPlacementFromSelection,
@@ -7763,7 +7766,7 @@ export function App({
                 event.clientY,
                 event.currentTarget,
               );
-              commitPendingPlacementAt({
+              commitPendingPlacementAtFromHook({
                 x: snapCoordinate(rawPoint.x, document.presentation.grid),
                 y: snapCoordinate(rawPoint.y, document.presentation.grid),
               });

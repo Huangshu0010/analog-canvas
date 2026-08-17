@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import type { ComponentInsertRequest } from "./insert-component-dialog";
 import type { ScreenFlip } from "../../interaction/shortcut-orientation";
+import type { Point } from "@icm/model";
+import type { PendingComponentPlacement } from "../../interaction/interaction-state";
 
 export interface UseComponentPlacementOptions {
   recentStorageKey: string;
@@ -14,6 +16,18 @@ export interface UseComponentPlacementOptions {
   rotateComponentPlacement: (delta: 90 | -90) => void;
   mirrorComponentPlacement: (direction: ScreenFlip) => void;
   setStatus: (status: string) => void;
+  vddRailMode: boolean;
+  vddRailStart: Point | null;
+  pendingSymbolId: string | null;
+  pendingComponentPlacement: PendingComponentPlacement | null;
+  setVddRailStart: (point: Point) => void;
+  setVddRailPreviewPoint: (point: Point) => void;
+  placeVddRail: (start: Point, end: Point) => void;
+  placeNewComponent: (
+    symbolId: string,
+    point: Point,
+    placement: PendingComponentPlacement,
+  ) => void;
 }
 
 /** Flat placement dialog and component-placement command owner. */
@@ -83,6 +97,30 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     );
   };
 
+  const commitPendingPlacementAt = (point: Point): void => {
+    if (options.vddRailMode) {
+      if (!options.vddRailStart) {
+        options.setVddRailStart(point);
+        options.setVddRailPreviewPoint(point);
+        options.setStatus("VDD rail: click the right end (Esc cancels)");
+      } else if (point.x === options.vddRailStart.x) {
+        options.setStatus("VDD rail needs a non-zero horizontal length");
+      } else {
+        options.placeVddRail(options.vddRailStart, {
+          x: point.x,
+          y: options.vddRailStart.y,
+        });
+      }
+      return;
+    }
+    if (!options.pendingSymbolId || !options.pendingComponentPlacement) return;
+    options.placeNewComponent(
+      options.pendingSymbolId,
+      point,
+      options.pendingComponentPlacement,
+    );
+  };
+
   return {
     beginInsertedComponentPlacement,
     cancelComponentInsert,
@@ -92,5 +130,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     openInsertComponentDialog,
     rotatePendingComponent,
     mirrorPendingComponent,
+    commitPendingPlacementAt,
   };
 }
