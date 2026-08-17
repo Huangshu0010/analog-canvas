@@ -1,5 +1,5 @@
 ---
-status: completed
+status: active
 experience: none
 ---
 
@@ -53,6 +53,9 @@ and this plan is updated first.
 4. Add focused regressions for content preservation, post-migration fraction
    authoring/round-trip, file staging, recovery consistency, and rejection
    boundaries; document the rolling N-1 policy.
+5. Synchronize the review branch with the latest `main`, resolve overlapping
+   protocol/test-governance documentation deliberately, repeat required local
+   validation, and wait for required remote checks before mainline merge.
 
 ## Validation
 
@@ -92,4 +95,6 @@ proved v10 upload, v11 recovery seeding, and v11 save output. Validation passed
 documentation and formatting checks, and `pnpm verify:branch` with 798 unit
 tests, all workspace builds, and production editor smoke. General RichText
 fraction insertion remains a separate editor feature as documented by ADR
-0023.
+0023. The implementation commit was pushed as `e037a08`; mainline delivery was
+reopened after PR #106 reported conflicts with the newer merged protocol/test
+system baseline.
