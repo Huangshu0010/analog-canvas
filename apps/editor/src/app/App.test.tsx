@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { createEmptyProject } from "@icm/model";
-import { serializeProject } from "@icm/model";
+import { serializeProject } from "@icm/project-protocol";
 import { EditTransactionSchema } from "@icm/edit-engine";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";

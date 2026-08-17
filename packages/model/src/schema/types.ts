@@ -1,0 +1,78 @@
+import type { z } from "zod";
+import type * as Schema from "./index.js";
+
+export type StableId = z.infer<typeof Schema.StableIdSchema>;
+export type GridPoint = z.infer<typeof Schema.GridPointSchema>;
+export type GridRect = z.infer<typeof Schema.GridRectSchema>;
+export type DerivedPoint = z.infer<typeof Schema.DerivedPointSchema>;
+export type DerivedRect = z.infer<typeof Schema.DerivedRectSchema>;
+export type SymbolLocalPoint = z.infer<typeof Schema.SymbolLocalPointSchema>;
+export type SymbolLocalRect = z.infer<typeof Schema.SymbolLocalRectSchema>;
+/** @deprecated Name the coordinate domain as GridPoint or DerivedPoint. */
+export type Point = GridPoint;
+/** @deprecated Name the coordinate domain as GridRect or DerivedRect. */
+export type Rect = GridRect;
+export type Rotation = z.infer<typeof Schema.RotationSchema>;
+export type Mirror = z.infer<typeof Schema.MirrorSchema>;
+export type Orientation = z.infer<typeof Schema.OrientationSchema>;
+export type SourcePosition = z.infer<typeof Schema.SourcePositionSchema>;
+export type SourceSpan = z.infer<typeof Schema.SourceSpanSchema>;
+export type SourceManifest = z.infer<typeof Schema.SourceManifestSchema>;
+export type SymbolLibraryLock = z.infer<typeof Schema.SymbolLibraryLockSchema>;
+export type InstanceImportProvenance = z.infer<
+  typeof Schema.InstanceImportProvenanceSchema
+>;
+export type NetlistDeviceClass = z.infer<
+  typeof Schema.NetlistDeviceClassSchema
+>;
+export type InstanceNetlistBinding = z.infer<
+  typeof Schema.InstanceNetlistBindingSchema
+>;
+export type InstanceNetlistData = z.infer<
+  typeof Schema.InstanceNetlistDataSchema
+>;
+export type CellNetlistInterface = z.infer<
+  typeof Schema.CellNetlistInterfaceSchema
+>;
+export type CellNetlistTerminal = z.infer<
+  typeof Schema.CellNetlistTerminalSchema
+>;
+export type MosBulkBinding = z.infer<typeof Schema.MosBulkBindingSchema>;
+export type TerminalRef = z.infer<typeof Schema.TerminalRefSchema>;
+export type Instance = z.infer<typeof Schema.InstanceSchema>;
+export type Net = z.infer<typeof Schema.NetSchema>;
+export type NetPowerDomain = z.infer<typeof Schema.NetPowerDomainSchema>;
+export type RouteEndpoint = z.infer<typeof Schema.RouteEndpointSchema>;
+export type RouteBranch = z.infer<typeof Schema.RouteBranchSchema>;
+export type RoutePresentation = z.infer<typeof Schema.RoutePresentationSchema>;
+export type Junction = z.infer<typeof Schema.JunctionSchema>;
+export type NoConnectEndpoint = z.infer<typeof Schema.NoConnectEndpointSchema>;
+export type NoConnect = z.infer<typeof Schema.NoConnectSchema>;
+export type JunctionRole = z.infer<typeof Schema.JunctionRoleSchema>;
+export type AnnotationKind = z.infer<typeof Schema.AnnotationKindSchema>;
+export type RouteMarkerKind = z.infer<typeof Schema.RouteMarkerKindSchema>;
+export type RouteAnnotationAttachment = z.infer<
+  typeof Schema.RouteAnnotationAttachmentSchema
+>;
+export type Annotation = z.infer<typeof Schema.AnnotationSchema>;
+export type VisualAnchor = z.infer<typeof Schema.VisualAnchorSchema>;
+export type DraftText = z.infer<typeof Schema.DraftTextSchema>;
+export type DraftArrow = z.infer<typeof Schema.DraftArrowSchema>;
+export type DraftLeader = z.infer<typeof Schema.DraftLeaderSchema>;
+export type DraftCallout = z.infer<typeof Schema.DraftCalloutSchema>;
+export type DraftConstructionLine = z.infer<
+  typeof Schema.DraftConstructionLineSchema
+>;
+export type DraftRectangle = z.infer<typeof Schema.DraftRectangleSchema>;
+export type DraftFloatingSymbol = z.infer<
+  typeof Schema.DraftFloatingSymbolSchema
+>;
+export type DraftingObject = z.infer<typeof Schema.DraftingObjectSchema>;
+export type DraftingLayer = z.infer<typeof Schema.DraftingLayerSchema>;
+export type PresentationIntent = z.infer<
+  typeof Schema.PresentationIntentSchema
+>;
+export type LayoutGroup = z.infer<typeof Schema.LayoutGroupSchema>;
+export type LayoutConstraint = z.infer<typeof Schema.LayoutConstraintSchema>;
+export type SchematicDocument = z.infer<typeof Schema.SchematicDocumentSchema>;
+export type CircuitProject = z.infer<typeof Schema.CircuitProjectSchema>;

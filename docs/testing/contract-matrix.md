@@ -5,7 +5,7 @@ an index for change impact, not a claim that the listed suites are exhaustive.
 
 | Contract | Primary owner and checks | Higher-level confirmation |
 | --- | --- | --- |
-| Persisted Project schema, migrations, and compatibility rejection | `packages/model/src/{schema,persistence,compatibility-corpus}.test.ts` | project-file and recovery editor tests |
+| Persisted Project schema, migration, and compatibility rejection | `packages/model/src/schema.test.ts` and `packages/project-protocol/src/{persistence,compatibility-corpus}.test.ts` | project-file and recovery editor tests |
 | Persisted coordinate domain and grid normalization | `packages/model/src/coordinate-domain.test.ts` | Editor snap and drafting manipulation tests |
 | Typed edit atomicity, history, and routing constraints | `packages/edit-engine/src/{transaction,history,routing,wire-editing}.test.ts` | Editor wiring and movement workflows |
 | Electrical topology identity | `packages/agent-adapter/src/snapshot.test.ts` with `@icm/derived` hash implementation | Agent snapshot/session behavior |

@@ -10,7 +10,11 @@
 // database or object store. Records left undecodable by a future format
 // change are left untouched rather than deleted.
 
-import { parseProject, ProjectFormatError, serializeProject } from "@icm/model";
+import {
+  parseProject,
+  ProjectFormatError,
+  serializeProject,
+} from "@icm/project-protocol";
 
 import {
   BROWSER_RECOVERY_MAX_RECORD_BYTES,

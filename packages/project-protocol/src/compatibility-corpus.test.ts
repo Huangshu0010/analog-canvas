@@ -4,8 +4,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { CURRENT_PROJECT_SCHEMA_VERSION } from "./schema.js";
-import { parseProject, serializeProject } from "./persistence.js";
+import { CURRENT_PROJECT_SCHEMA_VERSION } from "@icm/model";
+import { parseProject, serializeProject } from "./index.js";
 
 interface CompatibilityCorpus {
   readonly current: readonly string[];

@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 import type { WebSocketRoute } from "@playwright/test";
 import { createHash } from "node:crypto";
 
-import { createEmptyProject, serializeProject } from "@icm/model";
+import { createEmptyProject } from "@icm/model";
+import { serializeProject } from "@icm/project-protocol";
 
 import { clickCommand, openMenu } from "./editor-fixtures.js";
 

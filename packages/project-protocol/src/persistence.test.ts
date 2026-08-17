@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createEmptyProject } from "./factories.js";
+import { createEmptyProject } from "@icm/model";
 import {
   ProjectFormatError,
   loadProject,
@@ -12,7 +12,7 @@ import {
   saveProject,
   serializeProject,
   type ProjectStorage,
-} from "./persistence.js";
+} from "./index.js";
 
 class MemoryStorage implements ProjectStorage {
   readonly files = new Map<string, string>();

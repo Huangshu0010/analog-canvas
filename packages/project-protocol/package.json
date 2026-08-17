@@ -1,5 +1,5 @@
 {
-  "name": "@icm/edit-engine",
+  "name": "@icm/project-protocol",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,10 +14,6 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@icm/derived": "workspace:*",
-    "@icm/model": "workspace:*",
-    "@icm/project-protocol": "workspace:*",
-    "@icm/symbols": "workspace:*",
-    "zod": "4.4.3"
+    "@icm/model": "workspace:*"
   }
 }

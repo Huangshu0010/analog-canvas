@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -88,7 +88,15 @@ docs(protocol): accept device protocol module architecture
 
 ## Outcome
 
-At close-out, record the extracted package boundaries, compatibility behavior,
-validation, and commit evidence. Do not claim completion until current schema
-11, current device behavior, and rolling v10-to-v11 compatibility all have
-direct evidence.
+Implemented the behavior-preserving boundary extraction. `@icm/devices` is
+the single built-in descriptor authority while Symbols keep artwork and
+descriptor parity validation. `@icm/project-protocol` is the sole Project
+parse/migrate/serialize boundary; it directly upgrades schema 10 to the sole
+schema-11 runtime and serializer, returning typed diagnostics to staged file
+opening. `@icm/model` now owns only current schema-11 structures, split by
+responsibility behind its stable public schema export.
+
+Validated focused model/device/protocol/editor contracts, the schema-10 file
+open and schema-11 save browser workflow, `pnpm test:impact -- --base main`,
+and `pnpm verify:branch` (134 files / 815 tests, workspace build, production
+smoke). `git diff --check` passed. Commit evidence follows the target commit.

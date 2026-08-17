@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createEmptyProject, serializeProject } from "@icm/model";
+import { createEmptyProject } from "@icm/model";
+import { serializeProject } from "@icm/project-protocol";
 
 import {
   formatProjectOpenDiagnostics,

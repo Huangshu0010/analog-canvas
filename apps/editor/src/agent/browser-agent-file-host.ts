@@ -13,12 +13,8 @@ import {
   exportFormalArtifactsInBrowser,
   rasterizeFormalSvgInBrowser,
 } from "@icm/exporters/browser";
-import {
-  parseProject,
-  serializeProject,
-  type CircuitProject,
-  type SchematicDocument,
-} from "@icm/model";
+import { parseProject, serializeProject } from "@icm/project-protocol";
+import type { CircuitProject, SchematicDocument } from "@icm/model";
 import { importSpiceSources } from "@icm/spice";
 import type { SymbolResolver } from "@icm/symbols";
 

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
 
-import { createEmptyProject, serializeProject } from "@icm/model";
+import { createEmptyProject } from "@icm/model";
+import { serializeProject } from "@icm/project-protocol";
 
 import {
   BROWSER_RECOVERY_DATABASE_NAME,

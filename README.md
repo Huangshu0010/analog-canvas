@@ -31,10 +31,12 @@ files. Use **File / Save Project** to download the authoritative
 
 - `apps/editor/`: React/SVG editor.
 - `apps/local-host/`: loopback-only production host for the installable PWA.
-- `packages/model/` and `packages/edit-engine/`: persisted circuit model and
-  atomic mutation boundary.
-- `packages/spice/`, `packages/symbols/`, and `packages/netlist/`: structural
-  SPICE import, symbol semantics, and deterministic design-netlist export.
+- `packages/model/`, `packages/project-protocol/`, and `packages/edit-engine/`:
+  current persisted circuit model, bounded file compatibility, and atomic
+  mutation boundary.
+- `packages/spice/`, `packages/devices/`, `packages/symbols/`, and
+  `packages/netlist/`: structural SPICE import, built-in device facts, symbol
+  semantics, and deterministic design-netlist export.
 - `packages/exporters/` and `packages/render-svg/`: formal SVG, PNG, and PDF
   output.
 - `docs/`: current architecture, user guides, normative contracts, ADRs, and

@@ -7764,3 +7764,20 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   `pnpm test:impact -- --base main`, and `git diff --check` passed.
 - Commit status: committed on `codex/device-protocol-compatibility-plan` as a
   planning-only record; no executable protocol or device behavior changed.
+
+## 2026-08-17 - Establish device protocol and compatibility foundation
+
+- Target: implement the accepted independent device registry and bounded
+  Project compatibility boundary without changing schema-11 serialization or
+  existing device behavior.
+- Changed areas: `@icm/devices` descriptor authority and Symbol/netlist
+  consumers; `@icm/project-protocol` parse/direct-v10-upgrade/serialize API;
+  current-only modular model schema; editor file/recovery, node storage, tests,
+  package boundaries, and current documentation.
+- Validation: focused model/device/protocol/editor tests; schema-10
+  open-and-save Playwright workflow; `pnpm test:impact -- --base main`; and
+  `pnpm verify:branch` (134 files / 815 tests, workspace build, production
+  smoke); `git diff --check` passed.
+- Commit status: committed locally as
+  `feat(protocol): isolate device and project compatibility` on
+  `codex/device-protocol-compatibility-plan`; pending push and remote checks.

@@ -8,8 +8,8 @@ an archive. Completed plans with resolved experience are stored under
 
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
-| `active`                  |     1 | `2026-08-17-device-protocol-foundation` is executing the accepted device-protocol and compatibility-boundary architecture. |
-| `completed` + `none`      |    38 | Verify commit/log evidence, then archive according to routine retention policy.   |
+| `active`                  |     0 | No active root plan remains.                                                       |
+| `completed` + `none`      |    39 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
@@ -74,8 +74,16 @@ handling after commit evidence is recorded.
 
 `2026-08-17-device-protocol-compatibility-architecture` is a completed
 planning record with resolved experience. It defines the behavior-preserving
-module boundaries and bounded compatibility policy; an accepted ADR is required
-before its future executable implementation starts.
+module boundaries and bounded compatibility policy; ADR 0024 accepted that
+architecture before the foundation implementation began.
+
+## 2026-08-17 Device protocol foundation closure
+
+`2026-08-17-device-protocol-foundation` is completed with resolved experience.
+The single device descriptor registry, current-only modular model, bounded
+Project protocol adapter, editor/recovery migration, focused browser evidence,
+and branch-wide verification are present; it is eligible for normal completed
+plan retention after commit evidence is recorded.
 
 ## Legacy Metadata Sweep
 

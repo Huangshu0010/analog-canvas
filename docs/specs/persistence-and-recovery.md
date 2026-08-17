@@ -2,9 +2,12 @@
 
 Status: `accepted`
 
-Primary owner: `packages/model` and the editor document lifecycle
+Primary owner: `packages/project-protocol` and the editor document lifecycle
 
-Portable Projects use canonical schema-11 `.icproj.json`. Persistence validates
+Portable Projects use canonical schema-11 `.icproj.json`. The current-only
+model in `packages/model` validates the normalized shape;
+`packages/project-protocol` owns parsing, rolling compatibility diagnostics,
+and canonical serialization. Persistence validates
 the complete current schema before open or save and writes atomically where the
 platform supports it. Schema 10 reads through one direct content-preserving
 upgrade to schema 11; older and future versions are rejected. Migration runs

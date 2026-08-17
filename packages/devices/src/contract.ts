@@ -1,10 +1,7 @@
 import type { NetlistDeviceClass, StableId } from "@icm/model";
 
 export type DeviceNetlistTargetPolicy =
-  | "builtin"
-  | "required-model"
-  | "child-cell"
-  | "none";
+  "builtin" | "required-model" | "child-cell" | "none";
 
 export interface DeviceCapabilities {
   readonly supportsModel: boolean;

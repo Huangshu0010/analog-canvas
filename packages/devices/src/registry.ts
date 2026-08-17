@@ -43,22 +43,20 @@ const definitions = [
       supportsValueAnnotation: true,
     },
   },
-  ...(["nmos", "pmos"] as const).map(
-    (symbolId): DeviceDescriptor => ({
-      symbolId,
-      deviceClass: "mos",
-      referencePrefix: "M",
-      pinOrder: ["D", "G", "S", "B"],
-      targetPolicy: "required-model",
-      requiredParameters: ["w", "l"],
-      dialects: ["spice", "spectre"],
-      capabilities: {
-        supportsModel: true,
-        supportsBulkBinding: true,
-        supportsValueAnnotation: true,
-      },
-    }),
-  ),
+  ...(["nmos", "pmos"] as const).map((symbolId): DeviceDescriptor => ({
+    symbolId,
+    deviceClass: "mos",
+    referencePrefix: "M",
+    pinOrder: ["D", "G", "S", "B"],
+    targetPolicy: "required-model",
+    requiredParameters: ["w", "l"],
+    dialects: ["spice", "spectre"],
+    capabilities: {
+      supportsModel: true,
+      supportsBulkBinding: true,
+      supportsValueAnnotation: true,
+    },
+  })),
   {
     symbolId: "diode",
     deviceClass: "diode",
@@ -73,22 +71,20 @@ const definitions = [
       supportsValueAnnotation: true,
     },
   },
-  ...(["npn", "pnp"] as const).map(
-    (symbolId): DeviceDescriptor => ({
-      symbolId,
-      deviceClass: "bjt",
-      referencePrefix: "Q",
-      pinOrder: ["C", "B", "E"],
-      targetPolicy: "required-model",
-      requiredParameters: [],
-      dialects: ["spice", "spectre"],
-      capabilities: {
-        supportsModel: true,
-        supportsBulkBinding: false,
-        supportsValueAnnotation: true,
-      },
-    }),
-  ),
+  ...(["npn", "pnp"] as const).map((symbolId): DeviceDescriptor => ({
+    symbolId,
+    deviceClass: "bjt",
+    referencePrefix: "Q",
+    pinOrder: ["C", "B", "E"],
+    targetPolicy: "required-model",
+    requiredParameters: [],
+    dialects: ["spice", "spectre"],
+    capabilities: {
+      supportsModel: true,
+      supportsBulkBinding: false,
+      supportsValueAnnotation: true,
+    },
+  })),
   {
     symbolId: "voltage-source",
     deviceClass: "voltage-source",
