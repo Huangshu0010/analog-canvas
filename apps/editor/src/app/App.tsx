@@ -211,6 +211,7 @@ import {
 import {
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
+  proposeSelectionRouteDeletion,
 } from "../features/selection/delete-selection";
 import { createRoutingDemoProject } from "../demos/routing-demo";
 import { createVisualDemoProject } from "../demos/visual-demo";
@@ -3809,8 +3810,52 @@ export function App({
       movePlan,
     };
     let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
+    let routeVisual: ReturnType<typeof startCanvasDragVisual> | null = null;
+    const routeIdSet = new Set(document.routes.map((route) => route.id));
     const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, movePlan.previewObjectIds));
+      (visual ??= startCanvasDragVisual(
+        svg,
+        movePlan.previewObjectIds.filter((id) => !routeIdSet.has(id)),
+      ));
+    const paintMovePreview = (
+      moves: readonly { instanceId: string; position: Point }[],
+      delta: Point,
+    ) => {
+      dragVisual().translate(delta);
+      const groupMove = proposeGroupMoveEdits(document, resolver, moves);
+      if (groupMove.preview.routes.length === 0) return;
+      routeVisual ??= startCanvasDragVisual(
+        svg,
+        groupMove.preview.routes.map((route) => route.routeId),
+      );
+      const projected = structuredClone(document);
+      for (const move of moves) {
+        const instance = projected.instances.find(
+          (candidate) => candidate.id === move.instanceId,
+        );
+        if (instance?.placement) instance.placement.position = move.position;
+      }
+      for (const move of groupMove.preview.junctions) {
+        const junction = projected.junctions.find(
+          (candidate) => candidate.id === move.junctionId,
+        );
+        if (junction) junction.position = move.position;
+      }
+      for (const routeMove of groupMove.preview.routes) {
+        const route = projected.routes.find(
+          (candidate) => candidate.id === routeMove.routeId,
+        );
+        if (!route) continue;
+        const from = resolveEndpointPoint(projected, resolver, route.from);
+        const to = resolveEndpointPoint(projected, resolver, route.to);
+        if (!from || !to) continue;
+        routeVisual.setObjectPolyline(route.id, [
+          from,
+          ...routeMove.waypoints,
+          to,
+        ]);
+      }
+    };
     const tolerance = logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX);
     let lastSnap: SnapResult | undefined;
     canvasDragSessionRef.current = startCanvasDragSession({
@@ -3833,14 +3878,24 @@ export function App({
           (move) => move.instanceId === preview.primaryInstanceId,
         )!;
         const original = preview.originalPositions[preview.primaryInstanceId]!;
-        dragVisual().translate({
-          x: primary.position.x - original.x,
-          y: primary.position.y - original.y,
-        });
+        try {
+          paintMovePreview(resolved.moves, {
+            x: primary.position.x - original.x,
+            y: primary.position.y - original.y,
+          });
+        } catch {
+          // The transaction reports protected or unresolved geometry on
+          // release; keep the Instance preview responsive in the meantime.
+          dragVisual().translate({
+            x: primary.position.x - original.x,
+            y: primary.position.y - original.y,
+          });
+        }
       },
       onFinish: ({ client, dragged }) => {
         canvasDragSessionRef.current = null;
         visual?.restore();
+        routeVisual?.restore();
         paintSnapGuides([]);
         if (dragged) {
           completeInstanceMove(
@@ -3855,6 +3910,7 @@ export function App({
       onCancel: () => {
         canvasDragSessionRef.current = null;
         visual?.restore();
+        routeVisual?.restore();
         paintSnapGuides([]);
       },
     });
@@ -6560,7 +6616,7 @@ export function App({
       return;
     }
     if (hasMixedSelection) {
-      const visualRouteDeletion = proposeVisualRouteDeletion(
+      const visualRouteDeletion = proposeSelectionRouteDeletion(
         document,
         [...initialRouteIds],
         [...selectedJunctionIds],

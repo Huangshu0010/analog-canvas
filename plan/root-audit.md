@@ -127,6 +127,19 @@ placed the Examples entry in the far-left tool rail, passed local and remote
 delivery gates, and merged as `f7d961c`; it is eligible for normal completed-
 plan retention handling.
 
+## 2026-08-17 Connected-Wire editing stabilization closure
+
+`2026-08-17-connected-wire-move-delete` is completed with resolved experience.
+Connected Route drag previews, local endpoint stretch, and branch-isolated
+visual deletion have focused unit and browser regression evidence; the target
+is committed as `4c11e7a` and awaits remote required checks.
+
+## 2026-08-17 Narrow Library browser-test stabilization closure
+
+`2026-08-17-stabilize-narrow-library-e2e` is completed with resolved
+experience. Its layout poll passed three repeated focused runs and the complete
+local delivery gate, and is ready for its separate test-only commit.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

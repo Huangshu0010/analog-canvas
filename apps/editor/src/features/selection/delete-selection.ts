@@ -18,8 +18,31 @@ export function collectVisualRouteDeletion(
   routeIds: readonly string[],
   junctionIds: readonly string[],
 ): { routeIds: string[]; junctionIds: string[] } {
-  const proposal = proposeVisualRouteDeletion(document, routeIds, junctionIds);
+  const proposal = proposeSelectionRouteDeletion(
+    document,
+    routeIds,
+    junctionIds,
+  );
   return { routeIds: proposal.routeIds, junctionIds: proposal.junctionIds };
+}
+
+/**
+ * Route geometry is the authoritative deletion target whenever the visual
+ * selection contains a Route. A marquee commonly includes the shared
+ * Junction dot at a selected branch endpoint; treating that incidental dot as
+ * an independent Junction deletion would expand into every sibling Route.
+ * Junction-only deletion retains the explicit topology-vertex behavior.
+ */
+export function proposeSelectionRouteDeletion(
+  document: SchematicDocument,
+  routeIds: readonly string[],
+  junctionIds: readonly string[],
+) {
+  return proposeVisualRouteDeletion(
+    document,
+    routeIds,
+    routeIds.length > 0 ? [] : junctionIds,
+  );
 }
 
 export function proposeConnectedInstanceDeletion(

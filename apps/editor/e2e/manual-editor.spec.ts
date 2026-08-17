@@ -1121,6 +1121,39 @@ test("moves a selected wire segment and deletes a connected component safely", a
   );
 });
 
+test("previews a connected Wire while its Instance moves", async ({ page }) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await placeComponent(page, "resistor", { x: 520, y: 220 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
+
+  const before = await readRoutePoints(page, "route-ui-1");
+  const hit = page.getByTestId("hit-R1");
+  const box = await hit.boundingBox();
+  if (!box) throw new Error("Connected Instance is not measurable");
+  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 70, start.y + 50, { steps: 4 });
+
+  await expect(page.getByTestId("revision")).toHaveText("3");
+  await expect
+    .poll(() => readRoutePoints(page, "route-ui-1"))
+    .not.toEqual(before);
+  const during = await readRoutePoints(page, "route-ui-1");
+  expect(during[0]).not.toEqual(before[0]);
+  expect(during.at(-1)).toEqual(before.at(-1));
+
+  await page.mouse.up();
+  await expect(page.getByTestId("revision")).toHaveText("4");
+  const after = await readRoutePoints(page, "route-ui-1");
+  expect(after[0]).toEqual(during[0]);
+  expect(after.at(-1)).toEqual(before.at(-1));
+});
+
 test("moves internal wiring with a selected group and copies the routed subgraph", async ({
   page,
 }) => {
@@ -1148,9 +1181,9 @@ test("moves internal wiring with a selected group and copies the routed subgraph
     0.35,
     0,
     async () => {
-      await expect(
-        page.locator('[data-layer="routes"] [data-object-id="route-ui-1"]'),
-      ).toHaveAttribute("transform", /translate/u);
+      await expect
+        .poll(() => readRoutePoints(page, "route-ui-1"))
+        .not.toEqual(before);
       await expect(
         page.locator('[data-layer="symbols"] [data-object-id="R1"]'),
       ).toHaveAttribute("transform", /translate/u);

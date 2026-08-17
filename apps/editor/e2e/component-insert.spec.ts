@@ -863,9 +863,11 @@ test("keeps a usable canvas while toggling Library at the narrow breakpoint", as
           getComputedStyle(element).gridTemplateColumns.split(" ").length,
       ),
   ).toBe(1);
+  await expect
+    .poll(async () => (await canvas.boundingBox())?.width ?? 0)
+    .toBeLessThan(closedWidth);
   const openWidth = (await canvas.boundingBox())?.width ?? 0;
   expect(openWidth).toBeGreaterThan(450);
-  expect(openWidth).toBeLessThan(closedWidth);
 
   await page.getByTestId("selection-shelf").click();
   await expect(panel).toHaveAttribute("data-open", "false");

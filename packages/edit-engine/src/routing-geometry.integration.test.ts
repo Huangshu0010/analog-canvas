@@ -210,7 +210,7 @@ describe("derived connectivity and route geometry", () => {
     ).toEqual([
       {
         routeId: "route-h",
-        waypoints: [{ x: 450, y: 360 }],
+        waypoints: [{ x: 150, y: 300 }],
         segmentModes: ["manual", "manual"],
       },
     ]);

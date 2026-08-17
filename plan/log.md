@@ -7927,3 +7927,30 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   `git diff --check` passed.
 - Commit status: committed on `codex/wire-snap-rectangle-edge-fractions`;
   remote required checks remain the mainline delivery gate.
+
+## 2026-08-17 - Stabilize connected Wire move and deletion
+
+- Target: make connected Routes follow Instance drags predictably and isolate
+  deletion to explicitly selected Wire branches.
+- Changed areas: Edit Engine endpoint/group stretch planning; Editor live Route
+  preview and visual deletion normalization; focused unit and browser coverage.
+- Validation: focused route/selection suites (4 files / 46 tests), targeted
+  connected and group-move browser scenarios, all 824 unit/integration tests,
+  typecheck, build/release verification, test-impact, formatting, and diff
+  checks passed. The full browser run passed 145/146; its sole unrelated narrow
+  Library timing failure passed in isolation and is tracked separately.
+- Commit status: committed as `4c11e7a` on
+  `codex/connected-wire-move-delete`; remote required checks remain the
+  mainline delivery gate.
+
+## 2026-08-17 - Stabilize narrow Library browser timing
+
+- Target: remove an immediate layout-width sample from the existing narrow
+  Library browser test without changing its product assertion.
+- Changed areas: Playwright Library layout timing assertion and target records.
+- Validation: the focused scenario passed three repeated runs; the complete
+  `pnpm ci:check` gate passed static contracts, 824 unit/integration tests,
+  build/release verification, and all 146 browser tests.
+- Commit status: ready to commit separately on
+  `codex/connected-wire-move-delete`; remote required checks remain the
+  mainline delivery gate.
