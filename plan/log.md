@@ -8209,3 +8209,14 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   builds, test-impact, Prettier, documentation-link, and diff checks passed.
 - Commit status: staged for `feat(net): unify power net authoring` on
   `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N3 derived and export convergence
+
+- Target: make global Net equivalence, ERC, and netlist export consume one
+  folded-name/global-name contract.
+- Changed areas: model validation, Project Connectivity Index global groups,
+  global trace hops, ERC, netlist extraction, and focused regressions.
+- Validation: focused 4-file Vitest run (21 tests), Model/Derived/Netlist
+  builds, and diff checks passed.
+- Commit status: staged for `feat(net): converge derived and export semantics`
+  on `codex/net-contract-unification-plan`.

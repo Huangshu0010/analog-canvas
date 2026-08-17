@@ -31,4 +31,13 @@ describe("Net contract", () => {
       "DUPLICATE_NET_NAME:bias:net-a,net-z",
     );
   });
+
+  it("reports a global Net without its required electrical name", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({ id: "net-global", scope: "global", terminals: [] });
+
+    expect(validateNetContract(document)).toEqual([
+      { code: "UNNAMED_GLOBAL_NET", netIds: ["net-global"] },
+    ]);
+  });
 });

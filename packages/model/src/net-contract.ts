@@ -8,11 +8,16 @@ export function foldNetName(name: string): string {
   return name.trim().toLowerCase();
 }
 
-export interface NetContractIssue {
-  code: "DUPLICATE_NET_NAME";
-  foldedName: string;
-  netIds: readonly string[];
-}
+export type NetContractIssue =
+  | {
+      code: "DUPLICATE_NET_NAME";
+      foldedName: string;
+      netIds: readonly string[];
+    }
+  | {
+      code: "UNNAMED_GLOBAL_NET";
+      netIds: readonly string[];
+    };
 
 /**
  * Validate the Document-local name invariant without changing its persisted
@@ -31,7 +36,7 @@ export function validateNetContract(
     netIdsByFoldedName.set(foldedName, ids);
   }
 
-  return [...netIdsByFoldedName]
+  const duplicateNames = [...netIdsByFoldedName]
     .filter(([, netIds]) => netIds.length > 1)
     .map(([foldedName, netIds]) => ({
       code: "DUPLICATE_NET_NAME" as const,
@@ -43,9 +48,22 @@ export function validateNetContract(
     .sort((left, right) =>
       left.foldedName.localeCompare(right.foldedName, "en"),
     );
+  const unnamedGlobals = document.nets
+    .filter((net) => net.scope === "global" && !net.name)
+    .map((net) => ({
+      code: "UNNAMED_GLOBAL_NET" as const,
+      netIds: [net.id],
+    }));
+  const issues: NetContractIssue[] = [...duplicateNames, ...unnamedGlobals];
+  return issues.sort((left, right) =>
+    `${left.code}:${left.code === "DUPLICATE_NET_NAME" ? left.foldedName : ""}:${left.netIds.join(",")}`.localeCompare(
+      `${right.code}:${right.code === "DUPLICATE_NET_NAME" ? right.foldedName : ""}:${right.netIds.join(",")}`,
+      "en",
+    ),
+  );
 }
 
 /** Stable key for comparing a contract issue before and after a transaction. */
 export function netContractIssueKey(issue: NetContractIssue): string {
-  return `${issue.code}:${issue.foldedName}:${issue.netIds.join(",")}`;
+  return `${issue.code}:${issue.code === "DUPLICATE_NET_NAME" ? issue.foldedName : ""}:${issue.netIds.join(",")}`;
 }

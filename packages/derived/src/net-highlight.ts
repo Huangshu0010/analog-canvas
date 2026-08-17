@@ -48,12 +48,19 @@ export interface HierarchyNetTraceHop {
   frame: CrossCellTraceFrame;
 }
 
+export interface GlobalNetTraceHop {
+  direction: "global";
+  from: HierarchyNetRef;
+  to: HierarchyNetRef;
+  foldedName: string;
+}
+
 export interface HierarchyNetTrace {
   primary: NetHighlight;
   /** One highlight for every reachable logical net, including the primary. */
   highlights: readonly NetHighlight[];
   /** Every concrete parent-instance/child-formal-terminal traversal edge. */
-  hops: readonly HierarchyNetTraceHop[];
+  hops: readonly (HierarchyNetTraceHop | GlobalNetTraceHop)[];
 }
 
 export function computeNetHighlight(
@@ -149,7 +156,7 @@ export function traceHierarchyNet(
   const queue: HierarchyNetRef[] = [{ documentId, netId }];
   const visited = new Set<string>();
   const highlights: NetHighlight[] = [];
-  const hops: HierarchyNetTraceHop[] = [];
+  const hops: Array<HierarchyNetTraceHop | GlobalNetTraceHop> = [];
 
   while (queue.length > 0) {
     const current = queue.shift()!;
@@ -202,6 +209,35 @@ export function traceHierarchyNet(
         queue.push(to);
       }
     }
+
+    const globalRecord = index.documents
+      .get(current.documentId)
+      ?.nets.get(current.netId);
+    // The index record intentionally contains no persisted name. Resolve the
+    // group through the global map by matching the stable local Net reference.
+    const group = [...index.globalNets.values()].find((candidate) =>
+      candidate.nets.some(
+        (ref) =>
+          ref.documentId === current.documentId && ref.netId === current.netId,
+      ),
+    );
+    if (globalRecord && group) {
+      for (const to of group.nets) {
+        if (
+          to.documentId === current.documentId &&
+          to.netId === current.netId
+        ) {
+          continue;
+        }
+        hops.push({
+          direction: "global",
+          from: current,
+          to,
+          foldedName: group.foldedName,
+        });
+        queue.push(to);
+      }
+    }
   }
 
   highlights.sort((left, right) =>
@@ -210,11 +246,19 @@ export function traceHierarchyNet(
       "en",
     ),
   );
-  hops.sort((left, right) =>
-    `${left.direction}\u0000${left.from.documentId}\u0000${left.from.netId}\u0000${left.frame.instanceId}\u0000${left.frame.parentPinName}`.localeCompare(
-      `${right.direction}\u0000${right.from.documentId}\u0000${right.from.netId}\u0000${right.frame.instanceId}\u0000${right.frame.parentPinName}`,
+  hops.sort((left, right) => {
+    const leftSuffix =
+      left.direction === "global"
+        ? left.foldedName
+        : `${left.frame.instanceId}\u0000${left.frame.parentPinName}`;
+    const rightSuffix =
+      right.direction === "global"
+        ? right.foldedName
+        : `${right.frame.instanceId}\u0000${right.frame.parentPinName}`;
+    return `${left.direction}\u0000${left.from.documentId}\u0000${left.from.netId}\u0000${leftSuffix}`.localeCompare(
+      `${right.direction}\u0000${right.from.documentId}\u0000${right.from.netId}\u0000${rightSuffix}`,
       "en",
-    ),
-  );
+    );
+  });
   return { primary, highlights, hops };
 }

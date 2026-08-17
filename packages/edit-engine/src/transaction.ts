@@ -2171,10 +2171,14 @@ export function executeTransaction(
     (issue) => !originalNetContractIssueKeys.has(netContractIssueKey(issue)),
   );
   if (introducedNetContractIssue) {
+    const message =
+      introducedNetContractIssue.code === "UNNAMED_GLOBAL_NET"
+        ? `Transaction introduces unnamed global Net ${introducedNetContractIssue.netIds[0]}`
+        : `Transaction introduces duplicate Net name ${introducedNetContractIssue.foldedName}; merge explicitly`;
     return rejectTransaction(
       document,
       "INVALID_RESULT",
-      `Transaction introduces duplicate Net name ${introducedNetContractIssue.foldedName}; merge explicitly`,
+      message,
       [],
       introducedNetContractIssue.netIds,
     );

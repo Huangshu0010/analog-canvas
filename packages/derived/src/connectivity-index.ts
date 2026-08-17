@@ -1,4 +1,4 @@
-import { deriveStableId, flattenRichText } from "@icm/model";
+import { deriveStableId, flattenRichText, foldNetName } from "@icm/model";
 import type {
   CircuitProject,
   Net,
@@ -77,6 +77,17 @@ export interface HierarchyConnectivityIndex {
   edges: readonly HierarchyEdge[];
 }
 
+export interface NetObjectRef {
+  documentId: string;
+  netId: string;
+}
+
+/** Derived project-wide equivalence for explicitly named global Nets only. */
+export interface GlobalNetGroup {
+  foldedName: string;
+  nets: readonly NetObjectRef[];
+}
+
 /**
  * Project-level object identity (ADR 0015). Direct-document locators carry an
  * empty hierarchy path; C6 later supplies non-empty paths for navigation.
@@ -89,6 +100,7 @@ export interface ProjectConnectivityIndex {
   projectId: string;
   documents: ReadonlyMap<string, DocumentConnectivityIndex>;
   hierarchy: HierarchyConnectivityIndex;
+  globalNets: ReadonlyMap<string, GlobalNetGroup>;
   objectIndex: ProjectObjectIndex;
 }
 
@@ -350,6 +362,36 @@ function buildHierarchyIndex(
   return { edges };
 }
 
+function buildGlobalNetIndex(
+  project: CircuitProject,
+): ReadonlyMap<string, GlobalNetGroup> {
+  const groups = new Map<string, NetObjectRef[]>();
+  for (const document of project.documents) {
+    for (const net of document.nets) {
+      if (net.scope !== "global" || !net.name) continue;
+      const foldedName = foldNetName(net.name);
+      const refs = groups.get(foldedName) ?? [];
+      refs.push({ documentId: document.id, netId: net.id });
+      groups.set(foldedName, refs);
+    }
+  }
+  return new Map(
+    [...groups.entries()]
+      .sort(([left], [right]) => left.localeCompare(right, "en"))
+      .map(([foldedName, nets]) => [
+        foldedName,
+        {
+          foldedName,
+          nets: nets.sort(
+            (left, right) =>
+              left.documentId.localeCompare(right.documentId, "en") ||
+              left.netId.localeCompare(right.netId, "en"),
+          ),
+        },
+      ]),
+  );
+}
+
 /** Resolve only the stable imported hierarchy link written by the importer. */
 function referencedDocumentId(
   project: CircuitProject,
@@ -409,6 +451,7 @@ export function buildProjectConnectivityIndex(
     projectId: project.id,
     documents,
     hierarchy: buildHierarchyIndex(project, resolver),
+    globalNets: buildGlobalNetIndex(project),
     objectIndex: buildObjectIndex(project),
   };
 }
