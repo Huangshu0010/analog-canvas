@@ -270,6 +270,7 @@ import type { ScreenFlip } from "../interaction/shortcut-orientation";
 import {
   buildDraftingAnchors,
   buildInstanceAnchors,
+  buildRectangleEdgeSnapAnchors,
   buildSceneSnapTargets,
   endpointSnapAnchor,
 } from "../snap/candidates";
@@ -3292,6 +3293,10 @@ export function App({
       source,
       anchor: endpointSnapAnchor(source),
     }));
+    const rectangleEdgeTargets = buildRectangleEdgeSnapAnchors(
+      document,
+      resolver,
+    );
     const activeSourceAnchorId = wireSource
       ? endpointSnapAnchor(wireSource).id
       : null;
@@ -3300,6 +3305,7 @@ export function App({
       [
         ...endpointTargets.map((candidate) => candidate.anchor),
         ...routeTargets.map((candidate) => candidate.anchor),
+        ...rectangleEdgeTargets,
       ],
       {
         grid: document.presentation.grid,

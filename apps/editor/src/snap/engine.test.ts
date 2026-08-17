@@ -341,6 +341,18 @@ describe("unified Snap Engine", () => {
     expect(result.pointMatch?.id).toBe("pin");
   });
 
+  it("lets Wire snap to drafting geometry without creating an electrical match", () => {
+    const result = resolvePointSnap(
+      { x: 12, y: 12 },
+      [{ id: "rectangle-edge", point: { x: 10, y: 10 }, kind: "drafting" }],
+      { grid: 10, tolerance: 4, profile: SNAP_PROFILES.wire },
+    );
+
+    expect(result.delta).toEqual({ x: -2, y: -2 });
+    expect(result.pointMatch?.id).toBe("rectangle-edge");
+    expect(result.electricalMatch).toBeUndefined();
+  });
+
   it("excludes the active Wire source and reports equal coincident targets", () => {
     const result = resolvePointSnap(
       { x: 10, y: 10 },

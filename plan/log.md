@@ -7903,3 +7903,15 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   and `git diff --check` passed.
 - Commit status: committed and pushed as
   `feat(editor): add Library project examples` on `codex/library-examples`.
+
+## 2026-08-17 - Snap Wire to rectangle edge centers
+
+- Target: let Wire geometry snap to the midpoint of each drafting rectangle
+  edge without creating implicit electrical contact.
+- Changed areas: Editor Snap candidate construction, Wire snap profile and
+  target collection, focused Snap regression tests, and target plan.
+- Validation: focused Snap suites (2 files / 15 tests), `pnpm typecheck`,
+  `pnpm build`, formatting check, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
+- Commit status: committed on `codex/wire-snap-rectangle-edge-centers`;
+  remote required checks remain the mainline delivery gate.
