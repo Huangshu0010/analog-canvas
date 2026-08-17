@@ -1,27 +1,10 @@
-import type {
-  Point,
-  RouteAnnotationAttachment,
-  RouteBranch,
-  RouteEndpoint,
-  SchematicDocument,
-} from "@icm/model";
-import type { SymbolResolver } from "@icm/symbols";
-
-import { endpointKey, resolveEndpointPoint } from "./endpoint.js";
+import type { Point, RouteBranch } from "@icm/model";
 
 export type SegmentMode = RouteBranch["segmentModes"][number];
 
-export interface RoutePolyline {
-  routeId: string;
-  netId: string;
-  points: Point[];
-  segmentModes: SegmentMode[];
-}
-
-export interface RouteAttachmentPlacement {
-  position: Point;
-  labelPosition: Point;
-  rotation: 0 | 90 | 180 | 270;
+export interface RouteEditPath {
+  points: readonly Point[];
+  segmentModes: readonly SegmentMode[];
 }
 
 export interface RoutedEndpointGeometry {
@@ -35,78 +18,8 @@ export interface OrthogonalEscapeRoute {
   segmentModes: SegmentMode[];
 }
 
-export interface Crossing {
-  routeAId: string;
-  routeBId: string;
-  netAId: string;
-  netBId: string;
-  point: Point;
-  kind: "crossing" | "overlap";
-}
-
 function samePoint(left: Point, right: Point): boolean {
   return left.x === right.x && left.y === right.y;
-}
-
-export function routePolyline(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-  route: RouteBranch,
-): RoutePolyline | null {
-  const from = resolveEndpointPoint(document, resolver, route.from);
-  const to = resolveEndpointPoint(document, resolver, route.to);
-  if (!from || !to) return null;
-  return {
-    routeId: route.id,
-    netId: route.netId,
-    points: [from, ...route.waypoints, to],
-    segmentModes: [...route.segmentModes],
-  };
-}
-
-/**
- * Resolves a visual annotation attachment against the current derived route
- * geometry. `t` survives segment stretching; the route remains electrically
- * untouched. An invalid segment is deliberately unresolved rather than
- * silently moving an annotation to a different conductor.
- */
-export function routeAttachmentPlacement(
-  polyline: RoutePolyline,
-  attachment: RouteAnnotationAttachment,
-): RouteAttachmentPlacement | null {
-  const from = polyline.points[attachment.segmentIndex];
-  const to = polyline.points[attachment.segmentIndex + 1];
-  if (!from || !to) return null;
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy);
-  if (length === 0) return null;
-  const position = {
-    x: from.x + dx * attachment.t,
-    y: from.y + dy * attachment.t,
-  };
-  const normal = { x: -dy / length, y: dx / length };
-  const direction = attachment.direction === "forward" ? 1 : -1;
-  const angle = Math.round(
-    (Math.atan2(dy * direction, dx * direction) * 180) / Math.PI,
-  );
-  const rotation = ((angle % 360) + 360) % 360;
-  if (
-    rotation !== 0 &&
-    rotation !== 90 &&
-    rotation !== 180 &&
-    rotation !== 270
-  ) {
-    return null;
-  }
-  return {
-    position,
-    labelPosition: {
-      x: position.x + normal.x * attachment.normalOffset,
-      y: position.y + normal.y * attachment.normalOffset,
-    },
-    rotation,
-  };
 }
 
 export function isOrthogonal(points: readonly Point[]): boolean {
@@ -287,7 +200,7 @@ export function buildOrthogonalEscapeRoute(
 }
 
 export function moveRouteSegment(
-  polyline: RoutePolyline,
+  polyline: RouteEditPath,
   segmentIndex: number,
   target: Point,
 ): { waypoints: Point[]; segmentModes: SegmentMode[] } {
@@ -368,113 +281,4 @@ export function moveRouteSegment(
     waypoints: normalized.points.slice(1, -1),
     segmentModes: normalized.segmentModes,
   };
-}
-
-function sharedExplicitEndpoint(
-  left: RouteBranch,
-  right: RouteBranch,
-): RouteEndpoint | null {
-  for (const leftEndpoint of [left.from, left.to]) {
-    for (const rightEndpoint of [right.from, right.to]) {
-      if (endpointKey(leftEndpoint) === endpointKey(rightEndpoint)) {
-        return leftEndpoint;
-      }
-    }
-  }
-  return null;
-}
-
-function between(value: number, first: number, second: number): boolean {
-  return value >= Math.min(first, second) && value <= Math.max(first, second);
-}
-
-function segmentIntersection(
-  a: Point,
-  b: Point,
-  c: Point,
-  d: Point,
-): { point: Point; kind: Crossing["kind"] } | null {
-  const abHorizontal = a.y === b.y;
-  const cdHorizontal = c.y === d.y;
-  if (abHorizontal !== cdHorizontal) {
-    const horizontalA = abHorizontal ? a : c;
-    const horizontalB = abHorizontal ? b : d;
-    const verticalA = abHorizontal ? c : a;
-    const verticalB = abHorizontal ? d : b;
-    const point = { x: verticalA.x, y: horizontalA.y };
-    return between(point.x, horizontalA.x, horizontalB.x) &&
-      between(point.y, verticalA.y, verticalB.y)
-      ? { point, kind: "crossing" }
-      : null;
-  }
-  if (abHorizontal && a.y === c.y) {
-    const start = Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x));
-    const end = Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x));
-    return start <= end
-      ? { point: { x: start, y: a.y }, kind: "overlap" }
-      : null;
-  }
-  if (!abHorizontal && a.x === c.x) {
-    const start = Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y));
-    const end = Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y));
-    return start <= end
-      ? { point: { x: a.x, y: start }, kind: "overlap" }
-      : null;
-  }
-  return null;
-}
-
-export function deriveCrossings(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-): Crossing[] {
-  const routes = [...document.routes].sort((left, right) =>
-    left.id.localeCompare(right.id, "en"),
-  );
-  const result: Crossing[] = [];
-  for (let leftIndex = 0; leftIndex < routes.length; leftIndex += 1) {
-    for (
-      let rightIndex = leftIndex + 1;
-      rightIndex < routes.length;
-      rightIndex += 1
-    ) {
-      const left = routes[leftIndex]!;
-      const right = routes[rightIndex]!;
-      const leftPolyline = routePolyline(document, resolver, left);
-      const rightPolyline = routePolyline(document, resolver, right);
-      if (!leftPolyline || !rightPolyline) continue;
-      const shared = sharedExplicitEndpoint(left, right);
-      const sharedPoint = shared
-        ? resolveEndpointPoint(document, resolver, shared)
-        : null;
-      for (let a = 1; a < leftPolyline.points.length; a += 1) {
-        for (let b = 1; b < rightPolyline.points.length; b += 1) {
-          const intersection = segmentIntersection(
-            leftPolyline.points[a - 1]!,
-            leftPolyline.points[a]!,
-            rightPolyline.points[b - 1]!,
-            rightPolyline.points[b]!,
-          );
-          if (!intersection) continue;
-          if (sharedPoint && samePoint(sharedPoint, intersection.point))
-            continue;
-          result.push({
-            routeAId: left.id,
-            routeBId: right.id,
-            netAId: left.netId,
-            netBId: right.netId,
-            point: intersection.point,
-            kind: intersection.kind,
-          });
-        }
-      }
-    }
-  }
-  return result.sort(
-    (left, right) =>
-      left.routeAId.localeCompare(right.routeAId, "en") ||
-      left.routeBId.localeCompare(right.routeBId, "en") ||
-      left.point.x - right.point.x ||
-      left.point.y - right.point.y,
-  );
 }

@@ -20,7 +20,7 @@ function endpoint(
 function input(endpoints: ResolvedEndpoint[]) {
   return {
     endpoints: new Map(endpoints.map((e) => [e.id, e])),
-    existingRoutePolylines: [],
+    existingRoutePaths: [],
     instanceBoxes: [],
   };
 }
@@ -258,7 +258,7 @@ describe("expandRouteGraph", () => {
     });
     const inp = {
       endpoints: new Map(),
-      existingRoutePolylines: [],
+      existingRoutePaths: [],
       instanceBoxes: [
         { instanceId: "M1", min: { x: 180, y: 80 }, max: { x: 220, y: 120 } },
       ],

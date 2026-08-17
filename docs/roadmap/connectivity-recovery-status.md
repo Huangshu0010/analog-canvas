@@ -17,7 +17,7 @@ the roadmap's original recovery audit.
 | NoConnect               | Completed minimal lifecycle: schema v3 migration, edits, undo/redo, clipboard, render/export, snapshot and topology hash.                           | Maintain regression coverage.                                                                                                          |
 | ERC                     | Core completed: binding, unresolved symbol, imported-pin, hierarchy, floating gate/bulk, and NoConnect policy.                                      | Iterate policy and suppression UX from product feedback.                                                                               |
 | Diagnostics UI          | Persistent project workbench merges locator-backed ERC, visual and routing diagnostics, with Cell labels, domain/severity filters and cross-Cell navigation. | SPICE remains in Import Review until source spans have stable locators. |
-| Compatibility cleanup   | Consumer audit complete for all production read paths; no blind deletion performed.                                                                 | `routePolyline` remains the geometry derivation primitive and is still required inside Edit Engine transaction validation/mutation.    |
+| Compatibility cleanup   | Completed: production consumers use resolved geometry; query/attachment reads and Edit Engine mutations have distinct owners.                         | Keep characterization and preview/commit parity tests as the deletion guard.                                                           |
 
 ## Verification evidence
 
@@ -29,9 +29,8 @@ the roadmap's original recovery audit.
 - Agent API artifacts, Phase 5 formal SVG goldens, route-attached current-arrow
   golden and production-preview smoke checks passed.
 
-The retained `routePolyline` primitive is no longer a parallel production read
-path: it remains inside geometry derivation and Edit Engine mutation/validation
-where a stored-route primitive is required. Source-only SPICE diagnostics stay
-in Import Review by the accepted ADR boundary; they are not falsely assigned a
+The legacy `routePolyline` primitive and derived-package mutation helpers were
+removed after the consumer migration. Source-only SPICE diagnostics stay in
+Import Review by the accepted ADR boundary; they are not falsely assigned a
 canvas location. This status records completion of the connectivity recovery,
 not an end to future product-policy iteration.

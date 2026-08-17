@@ -7,15 +7,18 @@ import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import {
-  buildOrthogonalEscapeRoute,
   deriveCrossings,
   deriveFlightlines,
   deriveVisibleConnectivity,
-  normalizeRouteGeometry,
-  proposeLocalStretch,
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
-} from "./index.js";
+} from "@icm/derived";
+
+import {
+  buildOrthogonalEscapeRoute,
+  normalizeRouteGeometry,
+} from "./route-geometry-edit.js";
+import { proposeLocalStretch } from "./route-operations.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 

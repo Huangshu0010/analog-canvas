@@ -27,13 +27,13 @@ export interface InstanceBox {
 
 export interface ExpansionInput {
   endpoints: ReadonlyMap<string, ResolvedEndpoint>;
-  existingRoutePolylines: ReadonlyArray<{ routeId: string; points: Point[] }>;
+  existingRoutePaths: ReadonlyArray<{ routeId: string; points: Point[] }>;
   instanceBoxes: ReadonlyArray<InstanceBox>;
 }
 
 export interface SerializedExpansionInput {
   endpoints: ReadonlyArray<ResolvedEndpoint>;
-  existingRoutePolylines: ReadonlyArray<{ routeId: string; points: Point[] }>;
+  existingRoutePaths: ReadonlyArray<{ routeId: string; points: Point[] }>;
   instanceBoxes: ReadonlyArray<InstanceBox>;
 }
 
@@ -44,7 +44,7 @@ export function hydrateExpansionInput(
     endpoints: new Map(
       input.endpoints.map((endpoint) => [endpoint.id, endpoint]),
     ),
-    existingRoutePolylines: input.existingRoutePolylines,
+    existingRoutePaths: input.existingRoutePaths,
     instanceBoxes: input.instanceBoxes,
   };
 }

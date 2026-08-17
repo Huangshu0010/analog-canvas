@@ -35,27 +35,30 @@ import type {
   SchematicDocument,
 } from "@icm/model";
 import {
-  buildOrthogonalEscapeRoute,
   defaultInstanceLabelPlacement,
   endpointKey,
   endpointBelongsToNet,
   inferInstanceLabelSide,
   instanceLabelRowOffset,
   isMosBulkRoute,
-  isOrthogonal,
   netEndpoints,
-  normalizeRouteGeometry,
   placeUprightInstanceLabel,
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
   resolveMosBulkConnection,
   resolveSchematicStyleProfile,
-  routePolyline,
   visibleSymbolInkBounds,
 } from "@icm/derived";
 import { displayableInstanceValue } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
 import { z } from "zod";
+
+import {
+  buildOrthogonalEscapeRoute,
+  isOrthogonal,
+  normalizeRouteGeometry,
+} from "./route-geometry-edit.js";
+import { resolveRouteEditPath } from "./route-operations.js";
 
 export const EditActorSchema = z.strictObject({
   kind: z.enum(["human", "agent"]),
@@ -803,7 +806,7 @@ function validateRoute(
   if (!endpointBelongsToNet(document, net, route.to)) {
     return `Route to endpoint is not a member of ${route.netId}`;
   }
-  const polyline = routePolyline(document, resolver, route);
+  const polyline = resolveRouteEditPath(document, resolver, route);
   if (!polyline) return `Route ${route.id} has an unresolved endpoint`;
   if (!isOrthogonal(polyline.points)) {
     return `Route ${route.id} must contain only non-zero orthogonal segments`;
@@ -998,7 +1001,7 @@ function captureNetLabelRouteAnchors(
   resolver: SymbolResolver,
 ): NetLabelRouteAnchor[] {
   const polylines = document.routes.flatMap((route) => {
-    const polyline = routePolyline(document, resolver, route);
+    const polyline = resolveRouteEditPath(document, resolver, route);
     return polyline ? [{ route, polyline }] : [];
   });
   return document.annotations.flatMap((annotation) => {
@@ -1049,7 +1052,7 @@ function captureRouteMarkerAnchors(
       (candidate) => candidate.id === attachment.routeId,
     );
     if (!route) return [];
-    const polyline = routePolyline(document, resolver, route);
+    const polyline = resolveRouteEditPath(document, resolver, route);
     if (!polyline) return [];
     const from = polyline.points[attachment.segmentIndex];
     const to = polyline.points[attachment.segmentIndex + 1];
@@ -1121,7 +1124,7 @@ function followNetLabelsOnChangedRoutes(
       (candidate) => candidate.id === captured.routeId,
     );
     if (!annotation || annotation.kind !== "net-label" || !route) continue;
-    const polyline = routePolyline(draft, resolver, route);
+    const polyline = resolveRouteEditPath(draft, resolver, route);
     if (!polyline) continue;
     const segmentCount = polyline.points.length - 1;
     const attachment =
@@ -1181,7 +1184,7 @@ function followRouteMarkersOnChangedRoutes(
       (candidate) => candidate.id === captured.routeId,
     );
     if (!annotation || annotation.kind !== "route-marker" || !route) continue;
-    const polyline = routePolyline(draft, resolver, route);
+    const polyline = resolveRouteEditPath(draft, resolver, route);
     if (!polyline) continue;
     const segmentCount = polyline.points.length - 1;
     let attachment =
@@ -1251,7 +1254,9 @@ function remapRouteMarkersAfterSplit(
         const route = draft.routes.find(
           (candidate) => candidate.id === routeId,
         );
-        const polyline = route ? routePolyline(draft, resolver, route) : null;
+        const polyline = route
+          ? resolveRouteEditPath(draft, resolver, route)
+          : null;
         if (!route || !polyline) return [];
         const attachment = closestRouteMarkerAnchor(
           polyline.points,
@@ -1303,7 +1308,7 @@ function splitRoute(
   segmentIndex: number,
   resolver: SymbolResolver,
 ): { first: RouteBranch; second: RouteBranch } | string {
-  const polyline = routePolyline(document, resolver, route);
+  const polyline = resolveRouteEditPath(document, resolver, route);
   if (!polyline) return `Route ${route.id} has an unresolved endpoint`;
   if (segmentIndex >= polyline.points.length - 1) {
     return `Route split segment is out of range: ${segmentIndex}`;
@@ -1480,7 +1485,11 @@ function applyInstanceRouteFollow(
     const route = draft.routes.find(
       (candidate) => candidate.id === originalRoute.id,
     );
-    const original = routePolyline(originalDocument, resolver, originalRoute);
+    const original = resolveRouteEditPath(
+      originalDocument,
+      resolver,
+      originalRoute,
+    );
     const newFrom = route
       ? resolveEndpointPoint(draft, resolver, route.from)
       : null;
@@ -1886,7 +1895,8 @@ export function executeTransaction(
       ? document.routes.map((route) => [
           route.id,
           {
-            points: routePolyline(document, resolver, route)?.points ?? null,
+            points:
+              resolveRouteEditPath(document, resolver, route)?.points ?? null,
             error: validateRoute(document, route, resolver),
           },
         ])
@@ -2540,7 +2550,7 @@ export function executeTransaction(
         if (routeError) {
           return rejectAt("EDIT_PRECONDITION", routeError, [], [edit.routeId]);
         }
-        const polyline = routePolyline(draft, resolver, route)!;
+        const polyline = resolveRouteEditPath(draft, resolver, route)!;
         const normalized = normalizeRouteGeometry(
           polyline.points,
           route.segmentModes,
@@ -3878,7 +3888,7 @@ export function executeTransaction(
       const routeError = validateRoute(draft, route, resolver);
       const original = originalRouteStates.get(route.id);
       const resolvedPoints =
-        routePolyline(draft, resolver, route)?.points ?? null;
+        resolveRouteEditPath(draft, resolver, route)?.points ?? null;
       const resolvedGeometryChanged =
         original === undefined ||
         !sameResolvedRoutePoints(original.points, resolvedPoints);

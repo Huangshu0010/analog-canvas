@@ -3,18 +3,17 @@ import {
   type SchematicEdit,
   type WireSource,
 } from "@icm/edit-engine";
-import { resolveElectricalContactTargets, routePolyline } from "@icm/derived";
+import {
+  findRouteSegmentsAtPoint,
+  resolveDocumentRoutingGeometry,
+  resolveElectricalContactTargets,
+} from "@icm/derived";
 import type {
   ElectricalContactCandidate,
   ElectricalContactTarget,
 } from "@icm/derived";
 import { transformPoint } from "@icm/model";
-import type {
-  Instance,
-  Point,
-  RouteEndpoint,
-  SchematicDocument,
-} from "@icm/model";
+import type { Instance, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 const POWER_CONNECTION_BY_SYMBOL = {
@@ -82,24 +81,6 @@ function samePoint(
   return left.x === right.x && left.y === right.y;
 }
 
-function pointOnSegment(point: Point, from: Point, to: Point): boolean {
-  if (from.x === to.x) {
-    return (
-      point.x === from.x &&
-      point.y >= Math.min(from.y, to.y) &&
-      point.y <= Math.max(from.y, to.y)
-    );
-  }
-  if (from.y === to.y) {
-    return (
-      point.y === from.y &&
-      point.x >= Math.min(from.x, to.x) &&
-      point.x <= Math.max(from.x, to.x)
-    );
-  }
-  return false;
-}
-
 /**
  * A component may acquire electrical connectivity only from an exact visible
  * pin-to-pin, pin-to-Junction, or pin-to-Route contact. Grid coincidence alone
@@ -117,6 +98,7 @@ export function proposePlacementContact(
     target: ElectricalContactTarget;
   }> = [];
   let ambiguous = false;
+  const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
   for (const source of newInstanceEndpoints(resolver, instance)) {
     const candidates: ElectricalContactCandidate[] = targets
       .filter((target) => samePoint(source.point, target.point))
@@ -127,31 +109,22 @@ export function proposePlacementContact(
         netId: target.netId,
         endpoint: target.endpoint,
       }));
-    for (const route of document.routes) {
-      const polyline = routePolyline(document, resolver, route);
-      if (!polyline) continue;
-      for (
-        let segmentIndex = 0;
-        segmentIndex < polyline.points.length - 1;
-        segmentIndex += 1
-      ) {
-        if (
-          !pointOnSegment(
-            source.point,
-            polyline.points[segmentIndex]!,
-            polyline.points[segmentIndex + 1]!,
-          )
-        )
-          continue;
-        candidates.push({
-          kind: "route" as const,
-          id: `route:${route.id}:${segmentIndex}`,
-          point: source.point,
-          netId: route.netId,
-          routeId: route.id,
-          segmentIndex,
-        });
-      }
+    for (const address of findRouteSegmentsAtPoint(
+      routingGeometry,
+      source.point,
+    )) {
+      const route = document.routes.find(
+        (candidate) => candidate.id === address.routeId,
+      );
+      if (!route) continue;
+      candidates.push({
+        kind: "route" as const,
+        id: `route:${route.id}:${address.segmentIndex}`,
+        point: source.point,
+        netId: route.netId,
+        routeId: route.id,
+        segmentIndex: address.segmentIndex,
+      });
     }
     const groups = resolveElectricalContactTargets(
       document,

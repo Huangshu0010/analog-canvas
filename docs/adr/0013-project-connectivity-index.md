@@ -10,7 +10,8 @@ editor/Agent/ERC/export (consumers)
 ## Context
 
 The repository has no single read model for electrical connectivity. Today,
-schema, `packages/derived` (`endpoint.ts`, `connectivity.ts`, `routes.ts`),
+schema, `packages/derived` (`endpoint.ts`, `connectivity.ts`,
+`resolved-route-geometry.ts`),
 `packages/edit-engine`, `apps/editor`, and `packages/agent-routing` each query
 endpoint-to-Net membership, visible Route components, and hierarchy relations
 independently. The roadmap
@@ -50,7 +51,7 @@ interface DocumentConnectivityIndex {
   documentId: string;
   endpointToNet: ReadonlyMap<EndpointKey, string>;
   nets: ReadonlyMap<string, NetConnectivityRecord>;
-  routeGeometry: ReadonlyMap<string, ResolvedRouteGeometry>; // see ADR 0014
+  routingGeometry: ResolvedDocumentRoutingGeometry; // see ADR 0014
 }
 
 interface NetConnectivityRecord {
@@ -140,33 +141,16 @@ pinned change from the current `deriveFlightlines` behavior, recorded by the
 WP-R0 "pins the current from/to direction per partition" test which R2 will
 replace with the normalized expectation.
 
-## Amendment — 2026-08-12 recovery status
+## Implementation status — 2026-08-17
 
-The accepted **target contract** above remains the destination, not a claim
-about the additive prototype already present in the repository. That prototype
-builds endpoint, Net, hierarchy and object-index data, but it does **not** yet
-expose `DocumentConnectivityIndex.routeGeometry`, implement a revision cache,
-or provide the normalized flightline implementation described above.
+The current implementation exposes `DocumentConnectivityIndex.routingGeometry`
+as the document-level aggregate from ADR 0014. The index cache is keyed by the
+persisted document revision and relevant resolver inputs. Consumers must read
+this aggregate rather than reconstructing per-route geometry or calling a
+compatibility route helper.
 
-Until C4 of the roadmap recovery wave is complete:
-
-- `buildProjectConnectivityIndex()` is a pure snapshot builder, not a cache
-  API; consumers must not infer incremental invalidation from its existence.
-- `deriveFlightlines(document)` must be called at most once per Document build;
-  a per-Net full-document invocation is an implementation defect, not an
-  accepted trade-off.
-- `routeGeometry` remains a required field of the final interface, but is not
-  supplied by the prototype. C3 first defines the complete geometry result and
-  C4 owns adding it to this index.
-- Cache keys must be derived from the persisted document revision plus the
-  project/hierarchy and symbol-resolution inputs that affect the result. The
-  model currently has no independent Project revision, so this ADR does not
-  authorize inventing one merely to satisfy the wording above.
-
-This amendment deliberately distinguishes an accepted design from its staged
-implementation. New consumers may use the prototype only through its actual,
-tested fields; they may not rely on the final fields until C4 validates them.
-
+The flightline normalization and other staged recovery notes below are retained
+as decision history; the accepted runtime interface is the one declared above.
 ## Alternatives considered
 
 ### Alternative A — keep per-consumer derivation

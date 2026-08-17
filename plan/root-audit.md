@@ -106,6 +106,13 @@ experience. It aligns the Linux MCP artifact integrity pin with the Project
 protocol release candidate; local release verification passed and remote Linux
 validation remains the delivery gate.
 
+## 2026-08-17 Routing protocol unification execution
+
+`codex/routing-protocol-unification` starts from current `origin/main` in an
+isolated worktree. The completed behavior-baseline target restores direct
+geometry characterization before the active read, edit, and attachment
+clean-cut targets. No legacy routing surface is yet removed.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

@@ -6,13 +6,13 @@ import { parseProject } from "@icm/project-protocol";
 import {
   deriveCrossings,
   deriveFlightlines,
-  isOrthogonal,
-  routePolyline,
+  resolveRouteGeometry,
 } from "@icm/derived";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { executeTransaction } from "./transaction.js";
+import { isOrthogonal } from "./route-geometry-edit.js";
 import {
   proposeGroupMoveEdits,
   proposeEndpointRouteAttachment,
@@ -193,11 +193,11 @@ describe("routing Edit Engine", () => {
       resized.document.junctions.find((junction) => junction.id === "vdd-end"),
     ).toMatchObject({ position: { x: 160, y: 0 } });
     expect(
-      routePolyline(
+      resolveRouteGeometry(
         resized.document,
         resolver,
         resized.document.routes.find((route) => route.id === "rail-right")!,
-      )?.points,
+      )?.centerline,
     ).toEqual([
       { x: 50, y: 0 },
       { x: 160, y: 0 },
@@ -227,16 +227,18 @@ describe("routing Edit Engine", () => {
     );
     expect(railFragments).toHaveLength(2);
     for (const route of railFragments) {
-      expect(routePolyline(moved.document, resolver, route)?.points).toSatisfy(
-        (points: Array<{ x: number; y: number }>) => isOrthogonal(points),
+      expect(
+        resolveRouteGeometry(moved.document, resolver, route)?.centerline,
+      ).toSatisfy((points: Array<{ x: number; y: number }>) =>
+        isOrthogonal(points),
       );
     }
     expect(
-      routePolyline(
+      resolveRouteGeometry(
         moved.document,
         resolver,
         moved.document.routes.find((route) => route.id === "branch")!,
-      )?.points,
+      )?.centerline,
     ).toEqual([
       { x: 70, y: 20 },
       { x: 50, y: 20 },
@@ -367,8 +369,10 @@ describe("routing Edit Engine", () => {
     expect(moved.ok).toBe(true);
     if (!moved.ok) return;
     for (const route of moved.document.routes) {
-      expect(routePolyline(moved.document, resolver, route)?.points).toSatisfy(
-        (points: Array<{ x: number; y: number }>) => isOrthogonal(points),
+      expect(
+        resolveRouteGeometry(moved.document, resolver, route)?.centerline,
+      ).toSatisfy((points: Array<{ x: number; y: number }>) =>
+        isOrthogonal(points),
       );
     }
   });
@@ -402,6 +406,16 @@ describe("routing Edit Engine", () => {
     expect(plan.edits.some((edit) => edit.kind === "set_route_points")).toBe(
       true,
     );
+    expect(plan.preview?.routes).toEqual([
+      {
+        routeId: "route-h",
+        waypoints: [
+          { x: 150, y: 340 },
+          { x: 450, y: 340 },
+        ],
+        segmentModes: ["manual", "manual", "manual"],
+      },
+    ]);
     const moved = executeTransaction(
       routed.document,
       transaction(document.id, 1, plan.edits),
@@ -472,6 +486,10 @@ describe("routing Edit Engine", () => {
         position: { x: 300, y: 60 },
       },
     ]);
+    expect(proposal.preview?.junctions).toEqual([
+      { junctionId: "junction-center", position: { x: 100, y: 60 } },
+      { junctionId: "junction-right", position: { x: 300, y: 60 } },
+    ]);
 
     const moved = executeTransaction(
       document,
@@ -486,21 +504,21 @@ describe("routing Edit Engine", () => {
       )?.position,
     ).toEqual({ x: 100, y: 60 });
     expect(
-      routePolyline(
+      resolveRouteGeometry(
         moved.document,
         resolver,
         moved.document.routes.find((route) => route.id === "route-main")!,
-      )?.points,
+      )?.centerline,
     ).toEqual([
       { x: 100, y: 60 },
       { x: 300, y: 60 },
     ]);
     expect(
-      routePolyline(
+      resolveRouteGeometry(
         moved.document,
         resolver,
         moved.document.routes.find((route) => route.id === "route-left")!,
-      )?.points,
+      )?.centerline,
     ).toEqual([
       { x: 20, y: 100 },
       { x: 100, y: 100 },
@@ -621,7 +639,9 @@ describe("routing Edit Engine", () => {
     const route = result.document.routes[0]!;
     expect(route.segmentModes[0]).toBe("escape");
     expect(route.segmentModes.at(-1)).toBe("escape");
-    expect(routePolyline(result.document, resolver, route)?.points).toEqual([
+    expect(
+      resolveRouteGeometry(result.document, resolver, route)?.centerline,
+    ).toEqual([
       { x: 150, y: 300 },
       { x: 450, y: 300 },
     ]);
@@ -685,10 +705,14 @@ describe("routing Edit Engine", () => {
     const stretched = stretchedMove.document.routes.find(
       (r) => r.id === "route-h",
     )!;
-    const poly = routePolyline(stretchedMove.document, resolver, stretched);
-    expect(poly?.points.length).toBeGreaterThanOrEqual(2);
+    const poly = resolveRouteGeometry(
+      stretchedMove.document,
+      resolver,
+      stretched,
+    );
+    expect(poly?.centerline.length).toBeGreaterThanOrEqual(2);
     if (poly) {
-      expect(isOrthogonal(poly.points)).toBe(true);
+      expect(isOrthogonal(poly.centerline)).toBe(true);
     }
   });
 
@@ -910,11 +934,11 @@ describe("routing Edit Engine", () => {
     expect(moved.ok).toBe(true);
     if (!moved.ok) return;
     expect(
-      routePolyline(
+      resolveRouteGeometry(
         moved.document,
         resolver,
         moved.document.routes.find((route) => route.id === "route-h")!,
-      )?.points,
+      )?.centerline,
     ).toEqual([
       { x: 170, y: 320 },
       { x: 450, y: 320 },
@@ -942,11 +966,11 @@ describe("routing Edit Engine", () => {
     );
     if (!rotated.ok) throw new Error(rotated.error.message);
     expect(
-      routePolyline(
+      resolveRouteGeometry(
         rotated.document,
         resolver,
         rotated.document.routes.find((route) => route.id === "route-h")!,
-      )?.points,
+      )?.centerline,
     ).toEqual([
       { x: 160, y: 330 },
       { x: 450, y: 330 },
@@ -975,11 +999,11 @@ describe("routing Edit Engine", () => {
     expect(mirrored.ok).toBe(true);
     if (!mirrored.ok) return;
     expect(
-      routePolyline(
+      resolveRouteGeometry(
         mirrored.document,
         resolver,
         mirrored.document.routes.find((route) => route.id === "route-h")!,
-      )?.points,
+      )?.centerline,
     ).toEqual([
       { x: 160, y: 310 },
       { x: 450, y: 310 },
@@ -1223,7 +1247,11 @@ describe("routing Edit Engine", () => {
     const route = rotated.document.routes.find(
       (candidate) => candidate.id === "route-agent",
     )!;
-    const points = routePolyline(rotated.document, resolver, route)?.points;
+    const points = resolveRouteGeometry(
+      rotated.document,
+      resolver,
+      route,
+    )?.centerline;
     expect(points?.[0]).toEqual({ x: 140, y: 310 });
     expect(points && isOrthogonal(points)).toBe(true);
   });
@@ -1275,10 +1303,10 @@ describe("routing Edit Engine", () => {
     const stretched = bothMoved.document.routes.find(
       (r) => r.id === "route-h",
     )!;
-    const poly = routePolyline(bothMoved.document, resolver, stretched);
-    expect(poly?.points.length).toBeGreaterThanOrEqual(2);
+    const poly = resolveRouteGeometry(bothMoved.document, resolver, stretched);
+    expect(poly?.centerline.length).toBeGreaterThanOrEqual(2);
     if (poly) {
-      expect(isOrthogonal(poly.points)).toBe(true);
+      expect(isOrthogonal(poly.centerline)).toBe(true);
     }
   });
 
@@ -1473,15 +1501,21 @@ describe("routing Edit Engine", () => {
       "route-bend-b",
     ]);
     expect(
-      routePolyline(result.document, resolver, result.document.routes[0]!)
-        ?.points,
+      resolveRouteGeometry(
+        result.document,
+        resolver,
+        result.document.routes[0]!,
+      )?.centerline,
     ).toEqual([
       { x: 150, y: 300 },
       { x: 150, y: 200 },
     ]);
     expect(
-      routePolyline(result.document, resolver, result.document.routes[1]!)
-        ?.points,
+      resolveRouteGeometry(
+        result.document,
+        resolver,
+        result.document.routes[1]!,
+      )?.centerline,
     ).toEqual([
       { x: 150, y: 200 },
       { x: 450, y: 200 },

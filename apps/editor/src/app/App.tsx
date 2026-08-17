@@ -41,7 +41,6 @@ import {
   findHierarchyPath,
   isMosBulkTerminal,
   isVisibleEndpoint,
-  moveRouteSegment,
   diagnoseProject,
   resolveEndpointPoint,
   resolveDraftingObjectGeometry,
@@ -51,7 +50,8 @@ import {
   resolveNetLabelBinding,
   resolveMosBulkConnection,
   resolveSchematicStyleProfile,
-  routeAttachmentPlacement,
+  resolveRouteAttachment,
+  resolveRouteTap,
   traceHierarchyNet,
 } from "@icm/derived";
 import type {
@@ -60,7 +60,6 @@ import type {
   HierarchyFrame,
   HierarchyNetTraceHop,
   ObjectLocator,
-  RoutePolyline,
   SearchResult,
 } from "@icm/derived";
 import {
@@ -263,7 +262,6 @@ import {
   reflectOrientation,
 } from "../interaction/shortcut-orientation";
 import type { ScreenFlip } from "../interaction/shortcut-orientation";
-import { resolveRouteTap, type RouteTap } from "../features/wiring/route-tap";
 import {
   buildDraftingAnchors,
   buildInstanceAnchors,
@@ -1164,8 +1162,13 @@ export function App({
     return flightlines;
   }, [document, flightlines, highlightedNetId]);
   const crossings = useMemo(
-    () => deriveCrossings(document, resolver),
-    [document, resolver],
+    () =>
+      deriveCrossings(
+        document,
+        resolver,
+        projectConnectivityIndex.documents.get(document.id)?.routingGeometry,
+      ),
+    [document, projectConnectivityIndex, resolver],
   );
   const visualDiagnostics = useMemo(
     () => diagnoseVisualQuality(document, resolver),
@@ -1286,20 +1289,14 @@ export function App({
       );
     }
   }, [document, resolver, visibleEndpoints]);
-  const routePolylines = useMemo(
+  const routeGeometryRecords = useMemo(
     () =>
       document.routes.flatMap((route) => {
         const geometry = projectConnectivityIndex.documents
           .get(document.id)
-          ?.routeGeometry.get(route.id);
+          ?.routingGeometry.routes.get(route.id);
         if (!geometry) return [];
-        const polyline: RoutePolyline = {
-          routeId: geometry.routeId,
-          netId: geometry.netId,
-          points: [...geometry.centerline],
-          segmentModes: geometry.segments.map((segment) => segment.mode),
-        };
-        return [{ route, polyline }];
+        return [{ route, geometry }];
       }),
     [document, projectConnectivityIndex],
   );
@@ -1337,10 +1334,10 @@ export function App({
           document,
           resolver,
           editingAnnotation,
-          routePolylines,
+          routeGeometryRecords,
           styleProfile,
         ),
-        routePolylines,
+        routeGeometryRecords,
         styleProfile,
       )
     : editingDrafting?.kind === "text"
@@ -1672,7 +1669,7 @@ export function App({
       const centerline = route
         ? projectConnectivityIndex.documents
             .get(opened.id)
-            ?.routeGeometry.get(route.id)?.centerline
+            ?.routingGeometry.routes.get(route.id)?.centerline
         : undefined;
       if (centerline?.[0]) focusPoint(centerline[0]);
     } else if (locator.kind === "junction") {
@@ -1702,7 +1699,7 @@ export function App({
       const centerline = route
         ? projectConnectivityIndex.documents
             .get(opened.id)
-            ?.routeGeometry.get(route.id)?.centerline
+            ?.routingGeometry.routes.get(route.id)?.centerline
         : undefined;
       if (centerline?.[0]) focusPoint(centerline[0]);
     }
@@ -2521,19 +2518,23 @@ export function App({
       setStatus("Snap suppressed while Alt is held");
       return;
     }
-    const routeRecord = routePolylines.find(
+    const routeRecord = routeGeometryRecords.find(
       (candidate) => candidate.route.id === routeId,
     );
     if (!routeRecord) return;
+    const routeGeometry = projectConnectivityIndex.documents
+      .get(document.id)
+      ?.routingGeometry.routes.get(routeId);
+    if (!routeGeometry) return;
     const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
     const pointer = pointFromClient(event.clientX, event.clientY, svg, false);
     const tap = resolveRouteTap(
-      routeRecord.polyline.points,
+      routeGeometry,
       pointer,
       logicalRadiusForPixels(svg, 7),
     );
     if (tool === "pointer") {
-      const segmentIndex = tap?.segmentIndex ?? 0;
+      const segmentIndex = tap?.address.segmentIndex ?? 0;
       if (getCurrentInteractionState().kind === "moving-selection") {
         const movePlan = planSelectionMove(document, visualSelection);
         if (movePlan.previewObjectIds.length > 0) {
@@ -2560,9 +2561,13 @@ export function App({
       setStatus("Wire must start or end inside a route segment");
       return;
     }
-    const overlappingTargets = routePolylines.flatMap((candidate) => {
+    const overlappingTargets = routeGeometryRecords.flatMap((candidate) => {
+      const candidateGeometry = projectConnectivityIndex.documents
+        .get(document.id)
+        ?.routingGeometry.routes.get(candidate.route.id);
+      if (!candidateGeometry) return [];
       const candidateTap = resolveRouteTap(
-        candidate.polyline.points,
+        candidateGeometry,
         pointer,
         logicalRadiusForPixels(svg, 7),
       );
@@ -2570,11 +2575,11 @@ export function App({
         ? [
             {
               kind: "route" as const,
-              id: `route:${candidate.route.id}:${candidateTap.segmentIndex}`,
+              id: `route:${candidate.route.id}:${candidateTap.address.segmentIndex}`,
               point: candidateTap.point,
               netId: candidate.route.netId,
               routeId: candidate.route.id,
-              segmentIndex: candidateTap.segmentIndex,
+              segmentIndex: candidateTap.address.segmentIndex,
             },
           ]
         : [];
@@ -2592,7 +2597,7 @@ export function App({
       );
       return;
     }
-    const anchor = routeAnchor(routeId, tap.point, tap.segmentIndex);
+    const anchor = routeAnchor(routeId, tap.point, tap.address.segmentIndex);
     if (!wireSource) {
       setWireSource(anchor, document.revision);
       setWirePreviewPoint(tap.point);
@@ -2637,7 +2642,7 @@ export function App({
     canvasDragSessionRef.current?.cancel();
     const svg = hitTarget.ownerSVGElement!;
     const start = pointFromClient(event.clientX, event.clientY, svg, false);
-    const record = routePolylines.find(
+    const record = routeGeometryRecords.find(
       (candidate) => candidate.route.id === routeId,
     );
     if (!record) return;
@@ -2693,15 +2698,21 @@ export function App({
           return;
         }
         try {
-          const proposal = moveRouteSegment(
-            record.polyline,
+          const plan = proposeWireSegmentMove(
+            document,
+            resolver,
+            routeId,
             segmentIndex,
             point,
           );
+          const proposal = plan.preview?.routes.find(
+            (candidate) => candidate.routeId === routeId,
+          );
+          if (!proposal) return;
           dragVisual().setPolyline([
-            record.polyline.points[0]!,
+            record.geometry.centerline[0]!,
             ...proposal.waypoints,
-            record.polyline.points.at(-1)!,
+            record.geometry.centerline.at(-1)!,
           ]);
         } catch {
           // Keep the last valid preview; commit reports the geometry error.
@@ -2730,7 +2741,7 @@ export function App({
     preview: RouteStretchPreview,
     point: DerivedPoint,
   ): void {
-    const record = routePolylines.find(
+    const record = routeGeometryRecords.find(
       (candidate) => candidate.route.id === preview.routeId,
     );
     if (!record) return;
@@ -2858,16 +2869,16 @@ export function App({
       }
     }
     if (annotation.kind === "net-label" && annotation.netId) {
-      const candidates = routePolylines
+      const candidates = routeGeometryRecords
         .filter(({ route }) => route.netId === annotation.netId)
-        .flatMap(({ polyline }) =>
-          polyline.points
+        .flatMap(({ geometry }) =>
+          geometry.centerline
             .slice(0, -1)
             .map((from, index) =>
               closestPointOnSegment(
                 candidate,
                 from,
-                polyline.points[index + 1]!,
+                geometry.centerline[index + 1]!,
               ),
             ),
         );
@@ -2906,7 +2917,7 @@ export function App({
     const currentAttachment = effectiveRouteAttachment(annotation);
     if (isRoutedMarker(annotation) && currentAttachment) {
       const attached = dragRouteAttachmentAtPoint(
-        routePolylines,
+        routeGeometryRecords,
         candidate,
         currentAttachment,
       );
@@ -2929,7 +2940,7 @@ export function App({
     }
     if (annotation.kind === "net-label" && annotation.anchor.kind === "route") {
       const attached = dragNetLabelAttachmentAtPoint(
-        routePolylines,
+        routeGeometryRecords,
         candidate,
         annotation.anchor.routeId,
       );
@@ -3008,19 +3019,19 @@ export function App({
     );
     const currentAttachment = effectiveRouteAttachment(annotation);
     const record = currentAttachment
-      ? routePolylines.find(
+      ? routeGeometryRecords.find(
           ({ route }) => route.id === currentAttachment.routeId,
         )
       : undefined;
     const markerPlacement =
       record && currentAttachment
-        ? routeAttachmentPlacement(record.polyline, currentAttachment)
+        ? resolveRouteAttachment(record.geometry, currentAttachment)
         : null;
     const preview: AnnotationDragPreview = {
       annotationId: annotation.id,
       originalPosition: {
         ...(isRoutedMarker(annotation) && markerPlacement
-          ? markerPlacement.labelPosition
+          ? markerPlacement.labelPoint
           : annotation.anchor.kind === "free"
             ? annotation.anchor.position
             : annotation.anchor.fallbackPosition),
@@ -3213,14 +3224,14 @@ export function App({
     guides: SnapGuideLine[];
   } {
     if (suppressSnap) return { point, guides: [] };
-    const routeTargets = routePolylines.flatMap(({ route, polyline }) =>
-      polyline.points.slice(0, -1).map((from, segmentIndex) => ({
+    const routeTargets = routeGeometryRecords.flatMap(({ route, geometry }) =>
+      geometry.centerline.slice(0, -1).map((from, segmentIndex) => ({
         anchor: {
           id: `wire-route:${route.id}:${segmentIndex}`,
           point: closestPointOnSegment(
             point,
             from,
-            polyline.points[segmentIndex + 1]!,
+            geometry.centerline[segmentIndex + 1]!,
           ),
           kind: "route" as const,
         },
@@ -3973,8 +3984,8 @@ export function App({
       movePlan.looseRouteIds
         .map(
           (id) =>
-            routePolylines.find((record) => record.route.id === id)?.polyline
-              .points[0],
+            routeGeometryRecords.find((record) => record.route.id === id)
+              ?.geometry.centerline[0],
         )
         .find((point): point is Point => point !== undefined) ?? { x: 0, y: 0 };
     commandMoveSessionRef.current = {
@@ -4096,20 +4107,20 @@ export function App({
             x: moving.point.x + rawDelta.x,
             y: moving.point.y + rawDelta.y,
           };
-          return routePolylines.flatMap(({ route, polyline }) => {
+          return routeGeometryRecords.flatMap(({ route, geometry }) => {
             const belongsToMovingInstance = [route.from, route.to].some(
               (endpoint) =>
                 endpoint.kind === "terminal" &&
                 movingIds.has(endpoint.instanceId),
             );
             if (belongsToMovingInstance) return [];
-            return polyline.points
+            return geometry.centerline
               .slice(0, -1)
               .flatMap((from, segmentIndex) => {
                 const point = closestPointOnSegment(
                   movedPoint,
                   from,
-                  polyline.points[segmentIndex + 1]!,
+                  geometry.centerline[segmentIndex + 1]!,
                 );
                 if (
                   Math.hypot(point.x - movedPoint.x, point.y - movedPoint.y) >
@@ -5164,11 +5175,11 @@ export function App({
       selectedRouteSegmentIndex ?? 0,
       selectedRoute.segmentModes.length - 1,
     );
-    const record = routePolylines.find(
+    const record = routeGeometryRecords.find(
       ({ route }) => route.id === selectedRoute.id,
     );
-    const from = record?.polyline.points[segmentIndex];
-    const to = record?.polyline.points[segmentIndex + 1];
+    const from = record?.geometry.centerline[segmentIndex];
+    const to = record?.geometry.centerline[segmentIndex + 1];
     if (!from || !to) {
       setStatus("Selected wire segment cannot accept a current arrow");
       return;
@@ -5250,13 +5261,16 @@ export function App({
       (candidate) => candidate.id !== net.id && candidate.name === name,
     );
     const targetNetId = sameNameNet?.id ?? net.id;
-    const polyline = routePolylines.find(
+    const geometry = routeGeometryRecords.find(
       ({ route: candidate }) => candidate.id === route.id,
-    )?.polyline;
-    if (!polyline) return null;
-    const segment = Math.max(0, Math.floor((polyline.points.length - 1) / 2));
-    const from = polyline.points[segment]!;
-    const to = polyline.points[segment + 1] ?? from;
+    )?.geometry;
+    if (!geometry) return null;
+    const segment = Math.max(
+      0,
+      Math.floor((geometry.centerline.length - 1) / 2),
+    );
+    const from = geometry.centerline[segment]!;
+    const to = geometry.centerline[segment + 1] ?? from;
     const position = snapGridPoint(
       (existingLabel
         ? existingLabel.anchor.kind === "free"
@@ -6127,14 +6141,14 @@ export function App({
     const supplemental = clicked
       ? EMPTY_SUPPLEMENTAL_SELECTION
       : {
-          routeIds: routePolylines
-            .filter(({ polyline }) =>
-              polyline.points
+          routeIds: routeGeometryRecords
+            .filter(({ geometry }) =>
+              geometry.centerline
                 .slice(0, -1)
                 .some((from, index) =>
                   segmentIntersectsRect(
                     from,
-                    polyline.points[index + 1]!,
+                    geometry.centerline[index + 1]!,
                     rect,
                   ),
                 ),
@@ -6154,10 +6168,10 @@ export function App({
                       document,
                       resolver,
                       annotation,
-                      routePolylines,
+                      routeGeometryRecords,
                       styleProfile,
                     ),
-                    routePolylines,
+                    routeGeometryRecords,
                     styleProfile,
                   ),
                   rect,
@@ -6214,13 +6228,13 @@ export function App({
         guides: [],
       };
     }
-    const routeTargets = routePolylines.flatMap(({ route, polyline }) =>
-      polyline.points.slice(0, -1).map((from, segmentIndex) => ({
+    const routeTargets = routeGeometryRecords.flatMap(({ route, geometry }) =>
+      geometry.centerline.slice(0, -1).map((from, segmentIndex) => ({
         id: `route:${route.id}:${segmentIndex}`,
         point: closestPointOnSegment(
           point,
           from,
-          polyline.points[segmentIndex + 1]!,
+          geometry.centerline[segmentIndex + 1]!,
         ),
         kind: "route" as const,
       })),
@@ -8835,26 +8849,26 @@ export function App({
                 className="net-highlight-overlay"
                 pointerEvents="none"
               >
-                {routePolylines
+                {routeGeometryRecords
                   .filter(({ route }) =>
                     highlightedNet.routes.includes(route.id),
                   )
-                  .map(({ route, polyline }) => (
+                  .map(({ route, geometry }) => (
                     <polyline
                       key={route.id}
                       className="net-highlight-halo"
-                      points={serializePolylinePoints(polyline.points)}
+                      points={serializePolylinePoints(geometry.centerline)}
                     />
                   ))}
-                {routePolylines
+                {routeGeometryRecords
                   .filter(({ route }) =>
                     highlightedNet.routes.includes(route.id),
                   )
-                  .map(({ route, polyline }) => (
+                  .map(({ route, geometry }) => (
                     <polyline
                       key={`${route.id}-core`}
                       className="net-highlight-core"
-                      points={serializePolylinePoints(polyline.points)}
+                      points={serializePolylinePoints(geometry.centerline)}
                     />
                   ))}
                 {document.junctions
@@ -8950,16 +8964,16 @@ export function App({
               ) : null}
               {netLabelEditorOpen && selectedRoute
                 ? (() => {
-                    const polyline = routePolylines.find(
+                    const geometry = routeGeometryRecords.find(
                       ({ route }) => route.id === selectedRoute.id,
-                    )?.polyline;
-                    if (!polyline) return null;
+                    )?.geometry;
+                    if (!geometry) return null;
                     const segmentIndex = Math.min(
                       selectedRouteSegmentIndex ?? 0,
-                      polyline.points.length - 2,
+                      geometry.centerline.length - 2,
                     );
-                    const from = polyline.points[segmentIndex]!;
-                    const to = polyline.points[segmentIndex + 1]!;
+                    const from = geometry.centerline[segmentIndex]!;
+                    const to = geometry.centerline[segmentIndex + 1]!;
                     const x = Math.round((from.x + to.x) / 2 - 58);
                     const y = Math.round((from.y + to.y) / 2 - 34);
                     return (
@@ -9034,15 +9048,15 @@ export function App({
                 />
               ) : null}
               <g ref={snapGuideLayerRef} data-layer="snap-guides" />
-              {routePolylines
+              {routeGeometryRecords
                 .filter(({ route }) => route.id === selectedRouteId)
-                .map(({ route, polyline }) => {
+                .map(({ route, geometry }) => {
                   const segmentIndex = Math.min(
                     selectedRouteSegmentIndex ?? 0,
-                    polyline.points.length - 2,
+                    geometry.centerline.length - 2,
                   );
-                  const from = polyline.points[segmentIndex]!;
-                  const to = polyline.points[segmentIndex + 1]!;
+                  const from = geometry.centerline[segmentIndex]!;
+                  const to = geometry.centerline[segmentIndex + 1]!;
                   const translatesWholeRoute =
                     looseRouteAnchorIds(document, route) !== null;
                   const powerRail =
@@ -9061,7 +9075,7 @@ export function App({
                     )
                     .sort((left, right) => left.position.x - right.position.x);
                   const routeCenter = centerOfBounds(
-                    polylineBounds(polyline.points),
+                    polylineBounds(geometry.centerline),
                   );
                   const preview =
                     routeStretchPreview?.routeId === route.id
@@ -9189,7 +9203,7 @@ export function App({
                     />
                   );
                 })}
-              {routePolylines.map(({ route, polyline }) => (
+              {routeGeometryRecords.map(({ route, geometry }) => (
                 <polyline
                   key={route.id}
                   data-testid={`route-hit-${route.id}`}
@@ -9203,7 +9217,7 @@ export function App({
                       ? "route-hit selected"
                       : "route-hit"
                   }
-                  points={serializePolylinePoints(polyline.points)}
+                  points={serializePolylinePoints(geometry.centerline)}
                   onPointerDown={(event) =>
                     handleRoutePointerDown(event, route.id)
                   }
@@ -9322,13 +9336,13 @@ export function App({
                     document,
                     resolver,
                     annotation,
-                    routePolylines,
+                    routeGeometryRecords,
                     styleProfile,
                   );
                   const hitBox = annotationHitBox(
                     annotation,
                     anchor,
-                    routePolylines,
+                    routeGeometryRecords,
                     styleProfile,
                   );
                   const selected =

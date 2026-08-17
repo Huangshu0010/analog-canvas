@@ -1,14 +1,13 @@
-import type {
-  Annotation,
-  Point,
-  RouteEndpoint,
-  SchematicDocument,
-} from "@icm/model";
+import type { Annotation, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import { endpointKey, netEndpoints, resolveEndpointPoint } from "./endpoint.js";
 import { resolveVisualAnchor } from "./anchor.js";
-import { routePolyline } from "./routes.js";
+import { nearestRouteSegment } from "./route-query.js";
+import {
+  resolveDocumentRoutingGeometry,
+  type ResolvedDocumentRoutingGeometry,
+} from "./resolved-route-geometry.js";
 
 export interface ResolvedNetLabelBinding {
   annotationId: string;
@@ -16,29 +15,6 @@ export interface ResolvedNetLabelBinding {
   routeId?: string;
   segmentIndex?: number;
   endpoint: RouteEndpoint;
-}
-
-function squaredDistanceToSegment(
-  point: Point,
-  from: Point,
-  to: Point,
-): number {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const lengthSquared = dx * dx + dy * dy;
-  const t =
-    lengthSquared === 0
-      ? 0
-      : Math.max(
-          0,
-          Math.min(
-            1,
-            ((point.x - from.x) * dx + (point.y - from.y) * dy) / lengthSquared,
-          ),
-        );
-  const x = from.x + dx * t;
-  const y = from.y + dy * t;
-  return (point.x - x) ** 2 + (point.y - y) ** 2;
 }
 
 /**
@@ -52,6 +28,10 @@ export function resolveNetLabelBinding(
   document: SchematicDocument,
   resolver: SymbolResolver,
   annotation: Annotation,
+  routingGeometry: ResolvedDocumentRoutingGeometry = resolveDocumentRoutingGeometry(
+    document,
+    resolver,
+  ),
 ): ResolvedNetLabelBinding | null {
   if (
     (annotation.kind !== "net-label" && annotation.kind !== "power-label") ||
@@ -94,22 +74,23 @@ export function resolveNetLabelBinding(
     document,
     resolver,
     annotation.anchor,
+    routingGeometry,
   ).position;
   const routeCandidates = document.routes
     .filter((route) => route.netId === netId)
     .flatMap((route) => {
-      const polyline = routePolyline(document, resolver, route);
-      if (!polyline) return [];
-      return polyline.points.slice(0, -1).map((from, segmentIndex) => ({
-        distance: squaredDistanceToSegment(
-          position,
-          from,
-          polyline.points[segmentIndex + 1]!,
-        ),
-        endpoint: route.from,
-        routeId: route.id,
-        segmentIndex,
-      }));
+      const geometry = routingGeometry.routes.get(route.id);
+      const hit = geometry ? nearestRouteSegment(geometry, position) : null;
+      return hit
+        ? [
+            {
+              distance: hit.distanceSquared,
+              endpoint: route.from,
+              routeId: route.id,
+              segmentIndex: hit.address.segmentIndex,
+            },
+          ]
+        : [];
     })
     .sort(
       (left, right) =>
@@ -162,10 +143,19 @@ export function resolveNetLabelBindings(
   document: SchematicDocument,
   resolver: SymbolResolver,
   netId: string,
+  routingGeometry: ResolvedDocumentRoutingGeometry = resolveDocumentRoutingGeometry(
+    document,
+    resolver,
+  ),
 ): ResolvedNetLabelBinding[] {
   return document.annotations
     .flatMap((annotation) => {
-      const binding = resolveNetLabelBinding(document, resolver, annotation);
+      const binding = resolveNetLabelBinding(
+        document,
+        resolver,
+        annotation,
+        routingGeometry,
+      );
       return binding?.netId === netId ? [binding] : [];
     })
     .sort((left, right) =>

@@ -1,22 +1,40 @@
-import type { Point, RouteBranch, SchematicDocument } from "@icm/model";
+import type { Point, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import { endpointKey, resolveEndpointPoint } from "./endpoint.js";
 import {
+  deriveInternalGroupSelection as deriveRoutingInternalGroupSelection,
+  derivePowerRailComponent,
   resolveDocumentRoutingGeometry,
+  resolveEndpointPoint,
+  resolveRouteGeometry,
   type ResolvedDocumentRoutingGeometry,
-} from "./resolved-route-geometry.js";
+} from "@icm/derived";
 import {
   isOrthogonal,
   moveRouteSegment,
   normalizeRouteGeometry,
-} from "./routes.js";
-import type { RoutePolyline, SegmentMode } from "./routes.js";
+  type RouteEditPath,
+  type SegmentMode,
+} from "./route-geometry-edit.js";
 
 export interface RouteStretchProposal {
   routeId: string;
   waypoints: Point[];
   segmentModes: SegmentMode[];
+}
+
+export function resolveRouteEditPath(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  route: SchematicDocument["routes"][number],
+): RouteEditPath | null {
+  const geometry = resolveRouteGeometry(document, resolver, route);
+  return geometry
+    ? {
+        points: [...geometry.centerline],
+        segmentModes: geometry.segments.map((segment) => segment.mode),
+      }
+    : null;
 }
 
 export interface InstanceMoveProposal {
@@ -58,81 +76,6 @@ export interface WireSegmentDragProposal {
 }
 
 /**
- * The visually continuous subset of a VDD rail. A wire tap splits one stored
- * Route in two, but it must not turn the two resulting supply segments into
- * independent editor objects.
- */
-export interface PowerRailComponent {
-  routeIds: string[];
-  junctionIds: string[];
-  endpointJunctionIds: string[];
-}
-
-/**
- * Find the connected `power-rail` component containing `routeId`.
- *
- * Connectivity deliberately traverses only other power-rail fragments on the
- * same Net. Normal wires meeting a rail at a branch Junction remain branches,
- * rather than making every VDD conductor in the document one draggable rail.
- */
-export function derivePowerRailComponent(
-  document: SchematicDocument,
-  routeId: string,
-): PowerRailComponent | null {
-  const seed = document.routes.find((route) => route.id === routeId);
-  if (!seed || seed.presentation !== "power-rail") return null;
-  const candidates = document.routes.filter(
-    (route) =>
-      route.netId === seed.netId && route.presentation === "power-rail",
-  );
-  const byJunction = new Map<string, typeof candidates>();
-  for (const route of candidates) {
-    for (const endpoint of [route.from, route.to]) {
-      if (endpoint.kind !== "junction") continue;
-      const incident = byJunction.get(endpoint.junctionId) ?? [];
-      incident.push(route);
-      byJunction.set(endpoint.junctionId, incident);
-    }
-  }
-
-  const visited = new Set<string>([seed.id]);
-  const queue = [seed];
-  while (queue.length > 0) {
-    const route = queue.shift()!;
-    for (const endpoint of [route.from, route.to]) {
-      if (endpoint.kind !== "junction") continue;
-      for (const incident of byJunction.get(endpoint.junctionId) ?? []) {
-        if (visited.has(incident.id)) continue;
-        visited.add(incident.id);
-        queue.push(incident);
-      }
-    }
-  }
-
-  const railRoutes = candidates.filter((route) => visited.has(route.id));
-  const degreeByJunction = new Map<string, number>();
-  for (const route of railRoutes) {
-    for (const endpoint of [route.from, route.to]) {
-      if (endpoint.kind !== "junction") continue;
-      degreeByJunction.set(
-        endpoint.junctionId,
-        (degreeByJunction.get(endpoint.junctionId) ?? 0) + 1,
-      );
-    }
-  }
-  const order = (left: string, right: string) =>
-    left.localeCompare(right, "en");
-  const junctionIds = [...degreeByJunction.keys()].sort(order);
-  return {
-    routeIds: railRoutes.map((route) => route.id).sort(order),
-    junctionIds,
-    endpointJunctionIds: junctionIds
-      .filter((junctionId) => degreeByJunction.get(junctionId) === 1)
-      .sort(order),
-  };
-}
-
-/**
  * A persisted Junction is a topological vertex, not an absolute geometric
  * anchor. Dragging a segment that terminates at one therefore moves the vertex
  * and lets every incident Route stretch around it. Terminals remain hard
@@ -154,15 +97,13 @@ function protectedMode(mode: SegmentMode | undefined): boolean {
   return mode === "locked" || mode === "trunk";
 }
 
-function routePolylineFromGeometry(
+function routeEditPathFromGeometry(
   routingGeometry: ResolvedDocumentRoutingGeometry,
   routeId: string,
-): RoutePolyline | null {
+): RouteEditPath | null {
   const geometry = routingGeometry.routes.get(routeId);
   if (!geometry) return null;
   return {
-    routeId: geometry.routeId,
-    netId: geometry.netId,
     points: [...geometry.centerline],
     segmentModes: geometry.segments.map((segment) => segment.mode),
   };
@@ -268,7 +209,7 @@ export function proposeJunctionGroupTranslation(
         : undefined;
     if (!movedFrom && !movedTo) continue;
 
-    const polyline = routePolylineFromGeometry(routingGeometry, route.id);
+    const polyline = routeEditPathFromGeometry(routingGeometry, route.id);
     if (!polyline) throw new Error(`Route ${route.id} has unresolved geometry`);
     const points = polyline.points.map((point) => ({ ...point }));
     const modes = [...polyline.segmentModes];
@@ -352,7 +293,7 @@ export function proposeWireSegmentDrag(
   const selectedRoute = document.routes.find((route) => route.id === routeId);
   if (!selectedRoute) throw new Error(`Route not found: ${routeId}`);
   const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
-  const selectedPolyline = routePolylineFromGeometry(routingGeometry, routeId);
+  const selectedPolyline = routeEditPathFromGeometry(routingGeometry, routeId);
   if (!selectedPolyline)
     throw new Error(`Route ${routeId} has unresolved geometry`);
   if (segmentIndex < 0 || segmentIndex >= selectedPolyline.points.length - 1) {
@@ -458,7 +399,7 @@ export function proposeWireSegmentDrag(
     const movedFrom = fromAnchor ? movedJunctions.get(fromAnchor) : undefined;
     const movedTo = toAnchor ? movedJunctions.get(toAnchor) : undefined;
     if (!movedFrom && !movedTo) continue;
-    const polyline = routePolylineFromGeometry(routingGeometry, route.id);
+    const polyline = routeEditPathFromGeometry(routingGeometry, route.id);
     if (!polyline) throw new Error(`Route ${route.id} has unresolved geometry`);
     const points = polyline.points.map((point) => ({ ...point }));
     const modes = [...polyline.segmentModes];
@@ -497,101 +438,6 @@ export function proposeWireSegmentDrag(
   };
 }
 
-export interface InternalGroupSelection {
-  netIds: string[];
-  routeIds: string[];
-  junctionIds: string[];
-}
-
-export function deriveInternalGroupSelection(
-  document: SchematicDocument,
-  instanceIds: readonly string[],
-): InternalGroupSelection {
-  const selectedIds = new Set(instanceIds);
-  const netIds = document.nets
-    .filter(
-      (net) =>
-        net.terminals.length > 0 &&
-        net.terminals.every((terminal) => selectedIds.has(terminal.instanceId)),
-    )
-    .map((net) => net.id)
-    .sort((left, right) => left.localeCompare(right, "en"));
-  const internalRouteIds = new Set<string>();
-  const internalJunctionIds = new Set<string>();
-  const routesByNetId = new Map<string, RouteBranch[]>();
-  for (const route of document.routes) {
-    const netRoutes = routesByNetId.get(route.netId) ?? [];
-    netRoutes.push(route);
-    routesByNetId.set(route.netId, netRoutes);
-  }
-
-  for (const net of document.nets) {
-    const netRoutes = [...(routesByNetId.get(net.id) ?? [])].sort(
-      (left, right) => left.id.localeCompare(right.id, "en"),
-    );
-    const routesByEndpoint = new Map<string, typeof netRoutes>();
-    for (const route of netRoutes) {
-      for (const endpoint of [route.from, route.to]) {
-        const key = endpointKey(endpoint);
-        const incident = routesByEndpoint.get(key) ?? [];
-        incident.push(route);
-        routesByEndpoint.set(key, incident);
-      }
-    }
-
-    const unvisited = new Set(netRoutes.map((route) => route.id));
-    for (const seed of netRoutes) {
-      if (!unvisited.has(seed.id)) continue;
-      const component = [] as typeof netRoutes;
-      const queue = [seed];
-      unvisited.delete(seed.id);
-      while (queue.length > 0) {
-        const route = queue.shift()!;
-        component.push(route);
-        for (const endpoint of [route.from, route.to]) {
-          for (const incident of routesByEndpoint.get(endpointKey(endpoint)) ??
-            []) {
-            if (!unvisited.delete(incident.id)) continue;
-            queue.push(incident);
-          }
-        }
-      }
-
-      const componentEndpoints = new Map(
-        component
-          .flatMap((route) => [route.from, route.to])
-          .map((endpoint) => [endpointKey(endpoint), endpoint] as const),
-      );
-      let hasSelectedTerminal = false;
-      let crossesSelectionBoundary = false;
-      for (const endpoint of componentEndpoints.values()) {
-        if (endpoint.kind === "terminal") {
-          if (selectedIds.has(endpoint.instanceId)) hasSelectedTerminal = true;
-          else crossesSelectionBoundary = true;
-        }
-      }
-      if (!hasSelectedTerminal || crossesSelectionBoundary) continue;
-
-      for (const route of component) internalRouteIds.add(route.id);
-      for (const endpoint of componentEndpoints.values()) {
-        if (endpoint.kind === "junction") {
-          internalJunctionIds.add(endpoint.junctionId);
-        }
-      }
-    }
-  }
-
-  return {
-    netIds,
-    routeIds: [...internalRouteIds].sort((left, right) =>
-      left.localeCompare(right, "en"),
-    ),
-    junctionIds: [...internalJunctionIds].sort((left, right) =>
-      left.localeCompare(right, "en"),
-    ),
-  };
-}
-
 export function proposeLocalStretch(
   document: SchematicDocument,
   resolver: SymbolResolver,
@@ -617,7 +463,7 @@ export function proposeLocalStretch(
     const movesTo =
       route.to.kind === "terminal" && route.to.instanceId === instanceId;
     if (!movesFrom && !movesTo) continue;
-    const original = routePolylineFromGeometry(routingGeometry, route.id);
+    const original = routeEditPathFromGeometry(routingGeometry, route.id);
     const newFrom = resolveEndpointPoint(movedDocument, resolver, route.from);
     const newTo = resolveEndpointPoint(movedDocument, resolver, route.to);
     if (!original || !newFrom || !newTo) continue;
@@ -703,7 +549,7 @@ export function proposeGroupMove(
   ) {
     throw new Error("Group members must move by one common delta");
   }
-  const internalSelection = deriveInternalGroupSelection(document, [
+  const internalSelection = deriveRoutingInternalGroupSelection(document, [
     ...moveByInstance.keys(),
   ]);
   const internalNetIds = new Set(internalSelection.netIds);

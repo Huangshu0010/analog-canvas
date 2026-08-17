@@ -51,6 +51,11 @@ marker attachment, diagnostics, export, and Agent Snapshot.
 `deriveDocumentContactEvidence` is the sole coincident-endpoint contact source;
 consumers do not infer contact independently from pixels or bounds.
 
+Route queries (tap, nearest segment, crossings) and attachment placement are
+read-only derived modules. Route normalization, escape authoring, segment
+movement, stretch, and the `RouteEditPlan` preview/commit boundary belong to
+`@icm/edit-engine`; no compatibility `RoutePolyline` protocol exists.
+
 For explicit same-Net endpoints at the same page coordinate, contact evidence
 records terminals/Junctions, independently authored Route arms, and incident
 directions. Route waypoints are not implicit contacts. A visible dot represents

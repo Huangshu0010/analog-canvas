@@ -385,7 +385,7 @@ function pushRoutingQualityMetrics(
   boundsById: Map<string, Rect>,
   routingGeometry: ResolvedDocumentRoutingGeometry,
 ): void {
-  const routePolylines = document.routes
+  const routeCenterlines = document.routes
     .map((route) => ({
       route,
       centerline: routingGeometry.routes.get(route.id)?.centerline,
@@ -406,7 +406,7 @@ function pushRoutingQualityMetrics(
 
   // 1. Wire-through-symbol: a Route segment passes through an instance
   //    silhouette that is not one of its terminal endpoints.
-  for (const { route, centerline } of routePolylines) {
+  for (const { route, centerline } of routeCenterlines) {
     const contactTerminalInstances = (endpoint: typeof route.from) =>
       new Set(
         (
@@ -454,14 +454,14 @@ function pushRoutingQualityMetrics(
   // 2. Same-Net route overlap: two Routes on the same Net share a collinear
   //    overlapping segment (not just a shared endpoint).
   const overlappingRouteIdsByNet = new Map<string, Set<string>>();
-  for (let leftIndex = 0; leftIndex < routePolylines.length; leftIndex += 1) {
+  for (let leftIndex = 0; leftIndex < routeCenterlines.length; leftIndex += 1) {
     for (
       let rightIndex = leftIndex + 1;
-      rightIndex < routePolylines.length;
+      rightIndex < routeCenterlines.length;
       rightIndex += 1
     ) {
-      const left = routePolylines[leftIndex]!;
-      const right = routePolylines[rightIndex]!;
+      const left = routeCenterlines[leftIndex]!;
+      const right = routeCenterlines[rightIndex]!;
       if (left.route.netId !== right.route.netId) continue;
       const overlap = firstCollinearOverlap(left.centerline, right.centerline);
       if (overlap) {
@@ -490,7 +490,7 @@ function pushRoutingQualityMetrics(
 
   // 3. Terminal departure: the first segment of a terminal-anchored Route
   //    should leave along the pin's outward direction. Reported as evidence.
-  for (const { route, centerline } of routePolylines) {
+  for (const { route, centerline } of routeCenterlines) {
     if (route.from.kind !== "terminal") continue;
     if (centerline.length < 2) continue;
     const outward = resolveEndpointOutwardDirection(

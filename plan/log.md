@@ -7827,3 +7827,42 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: committed and pushed on
   `codex/device-protocol-compatibility-plan`; remote required checks remain the
   mainline delivery gate.
+
+## 2026-08-17 - Characterize current routing behavior
+
+- Target: protect the retained routing read behavior before protocol clean-cut
+  work begins.
+- Changed areas: direct derived resolved-route geometry tests and target plan.
+- Validation: focused routing suite (9 files / 73 tests),
+  `pnpm test:impact -- --base origin/main`, and `git diff --check` passed.
+- Commit status: committed as `66c44cd` on
+  `codex/routing-protocol-unification`.
+
+## 2026-08-17 - Establish canonical routing read protocol
+
+- Target: remove parallel route-read facts and route all pure geometry queries
+  through one resolved document aggregate.
+- Changed areas: derived resolved geometry/query/attachment surfaces; renderer,
+  editor route hit/placement, Net Label binding, crossings, and connectivity
+  index consumers.
+- Validation: focused routing suite (11 files / 82 tests), `pnpm typecheck`,
+  `pnpm test:impact -- --base origin/main`, and `git diff --check` passed.
+- Commit status: committed as `0b425c8` on
+  `codex/routing-protocol-unification`.
+
+## 2026-08-17 - Unify route edit planning and remove compatibility paths
+
+- Target: make resolved geometry the sole read protocol and the Edit Engine the
+  sole route-writing owner without changing route, attachment, or power-rail
+  behavior.
+- Changed areas: moved route mutation/authoring helpers and their tests to
+  Edit Engine; deleted the `RoutePolyline` bridge; added `RouteEditPlan`
+  preview/commit parity; migrated editor and Agent names; updated current ADR,
+  spec, and recovery-status records.
+- Validation: focused route suite (8 files / 71 tests); targeted editor browser
+  route interaction (3 tests); `pnpm build`, `pnpm docs:check`,
+  `pnpm typecheck`, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
+- Commit status: committed as `2f210c3` and pushed to
+  `origin/codex/routing-protocol-unification`; remote review checks remain the
+  mainline delivery gate.

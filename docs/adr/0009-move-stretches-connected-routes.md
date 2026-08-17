@@ -152,4 +152,4 @@ invariant.
 - [`0008-agent-local-route-tree-expander.md`](0008-agent-local-route-tree-expander.md)
 - [`../specs/edit-engine.md`](../specs/edit-engine.md)
 - [`../specs/connectivity-and-routing.md`](../specs/connectivity-and-routing.md)
-- [`../../packages/derived/src/stretch.ts`](../../packages/derived/src/stretch.ts)
+- [`../../packages/edit-engine/src/route-operations.ts`](../../packages/edit-engine/src/route-operations.ts)

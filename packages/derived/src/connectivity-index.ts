@@ -18,7 +18,7 @@ import { directObjectLocator, type ObjectLocator } from "./object-locator.js";
 import { resolveNetLabelBindings } from "./net-label.js";
 import {
   resolveDocumentRoutingGeometry,
-  type ResolvedRouteGeometry,
+  type ResolvedDocumentRoutingGeometry,
 } from "./resolved-route-geometry.js";
 
 /**
@@ -61,7 +61,7 @@ export interface DocumentConnectivityIndex {
   documentId: string;
   endpointToNet: ReadonlyMap<string, string>;
   nets: ReadonlyMap<string, NetConnectivityRecord>;
-  routeGeometry: ReadonlyMap<string, ResolvedRouteGeometry>;
+  routingGeometry: ResolvedDocumentRoutingGeometry;
 }
 
 export interface HierarchyEdge {
@@ -180,11 +180,12 @@ function buildDocumentIndex(
     );
   }
 
+  const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
   const index = {
     documentId: document.id,
     endpointToNet,
     nets,
-    routeGeometry: resolveDocumentRoutingGeometry(document, resolver).routes,
+    routingGeometry,
   };
   documentIndexCache.set(document, {
     revision: document.revision,

@@ -13,7 +13,7 @@ import { parseProject } from "@icm/project-protocol";
 import {
   resolveEndpointPoint,
   resolveEndpointOutwardDirection,
-  routePolyline,
+  resolveRouteGeometry,
 } from "@icm/derived";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { executeTransaction } from "@icm/edit-engine";
@@ -72,7 +72,7 @@ describe("expandRouteGraph → transact → actual geometry consistency", () => 
     };
     const expansion = expandRouteGraph(graph, {
       endpoints: new Map(),
-      existingRoutePolylines: [],
+      existingRoutePaths: [],
       instanceBoxes: [],
     });
 
@@ -90,11 +90,11 @@ describe("expandRouteGraph → transact → actual geometry consistency", () => 
     if (!result.ok) return;
 
     const route = result.document.routes[0]!;
-    const actualPolyline = routePolyline(
+    const actualPolyline = resolveRouteGeometry(
       result.document,
       resolver,
       route,
-    )?.points;
+    )?.centerline;
     const reportedPolyline = expansion.resolvedGeometry[0]!.points;
 
     expect(actualPolyline).toEqual(reportedPolyline);
@@ -125,7 +125,7 @@ describe("expandRouteGraph → transact → actual geometry consistency", () => 
       endpoints: new Map([
         ["epA", { id: "epA", endpoint: epA, point: pointA, outward: outwardA }],
       ]),
-      existingRoutePolylines: [],
+      existingRoutePaths: [],
       instanceBoxes: [],
     });
 
@@ -143,11 +143,11 @@ describe("expandRouteGraph → transact → actual geometry consistency", () => 
     if (!result.ok) return;
 
     const route = result.document.routes[0]!;
-    const actualPolyline = routePolyline(
+    const actualPolyline = resolveRouteGeometry(
       result.document,
       resolver,
       route,
-    )?.points;
+    )?.centerline;
     const reportedPolyline = expansion.resolvedGeometry[0]!.points;
 
     expect(actualPolyline).toEqual(reportedPolyline);
@@ -179,7 +179,7 @@ describe("expandRouteGraph → transact → actual geometry consistency", () => 
       endpoints: new Map([
         ["epA", { id: "epA", endpoint: epA, point: pointA, outward: outwardA }],
       ]),
-      existingRoutePolylines: [],
+      existingRoutePaths: [],
       instanceBoxes: [],
     });
 
@@ -218,7 +218,7 @@ describe("expandRouteGraph → transact → actual geometry consistency", () => 
       endpoints: new Map([
         ["epA", { id: "epA", endpoint: epA, point: pointA, outward: outwardA }],
       ]),
-      existingRoutePolylines: [],
+      existingRoutePaths: [],
       instanceBoxes: [],
     });
 
@@ -271,7 +271,7 @@ describe("expandRouteGraph → transact → actual geometry consistency", () => 
 
     const expansion = expandRouteGraph(graph, {
       endpoints: new Map(),
-      existingRoutePolylines: [],
+      existingRoutePaths: [],
       instanceBoxes,
     });
 
@@ -324,7 +324,7 @@ describe("expandRouteGraph → transact → actual geometry consistency", () => 
       endpoints: new Map([
         ["epA", { id: "epA", endpoint: epA, point: pointA, outward: outwardA }],
       ]),
-      existingRoutePolylines: [],
+      existingRoutePaths: [],
       instanceBoxes: [],
     });
 
