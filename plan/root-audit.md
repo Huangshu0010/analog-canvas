@@ -120,6 +120,13 @@ PR #109 rebased the Library example cards onto current `main`, passed the full
 local and remote delivery gates, and merged as `cd1cddd`; it is eligible for
 normal completed-plan retention handling.
 
+## 2026-08-17 Examples tool-rail closure
+
+`2026-08-17-examples-rail` is completed with resolved experience. PR #111
+placed the Examples entry in the far-left tool rail, passed local and remote
+delivery gates, and merged as `f7d961c`; it is eligible for normal completed-
+plan retention handling.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on
