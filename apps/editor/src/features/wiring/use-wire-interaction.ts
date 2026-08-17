@@ -48,6 +48,9 @@ export interface UseWireInteractionOptions {
   cancelInteraction: () => void;
   setBulkDrawInstanceId: (instanceId: string | null) => void;
   replaceRouteSelection: (routeIds: readonly string[]) => void;
+  selectOnly: (kind: "route", ids: readonly string[]) => void;
+  setSelectedRouteSegmentIndex: (segmentIndex: number | null) => void;
+  setSelectedEndpoint: (endpoint: WireSource | null) => void;
 }
 
 /**
@@ -254,6 +257,13 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     }
   };
 
+  const selectRoute = (routeId: string, segmentIndex = 0): void => {
+    options.selectOnly("route", [routeId]);
+    options.setSelectedRouteSegmentIndex(segmentIndex);
+    options.setSelectedEndpoint(null);
+    options.setStatus(`Selected route ${routeId}, segment ${segmentIndex + 1}`);
+  };
+
   const fixWirePoint = (point: Point): void => {
     if (!options.wireSource) {
       const source = freeWireAnchor(
@@ -297,5 +307,6 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     finishWireAtPoint,
     handleFlightline,
     handleWireEndpoint,
+    selectRoute,
   };
 }

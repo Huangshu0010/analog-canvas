@@ -1134,6 +1134,7 @@ export function App({
     handleFlightline,
     handleWireEndpoint,
     commitWire,
+    selectRoute,
   } = useWireInteraction({
     document,
     resolver,
@@ -1156,6 +1157,9 @@ export function App({
     setBulkDrawInstanceId,
     replaceRouteSelection: (routeIds) =>
       replaceSelectionKind("route", routeIds),
+    selectOnly,
+    setSelectedRouteSegmentIndex,
+    setSelectedEndpoint,
   });
 
   const textEditingTarget = textEditing
@@ -2281,13 +2285,6 @@ export function App({
     } else {
       commitWire(anchor);
     }
-  }
-
-  function selectRoute(routeId: string, segmentIndex = 0): void {
-    selectOnly("route", [routeId]);
-    setSelectedRouteSegmentIndex(segmentIndex);
-    setSelectedEndpoint(null);
-    setStatus(`Selected route ${routeId}, segment ${segmentIndex + 1}`);
   }
 
   function beginRouteStretch(
