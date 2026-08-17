@@ -25,8 +25,8 @@ The five domains are:
 | Step | Domain                            | State                                         | Commit                                                 |
 | ---: | --------------------------------- | --------------------------------------------- | ------------------------------------------------------ |
 |    1 | Wiring                            | completed                                     | `refactor(editor): extract wire interaction hook`      |
-|    2 | Selection and movement            | in progress: commands and pointer-drag sessions extracted; keyboard Move session pending | `refactor(editor): extract selection interaction hook` |
-|    3 | Component insertion and placement | in progress: dialog, recents, and placement commands extracted; commit orchestration pending | `refactor(editor): extract component placement hook`   |
+|    2 | Selection and movement            | completed: commands, pointer drags, and keyboard Move session have one Hook owner | `refactor(editor): complete selection interaction hook` |
+|    3 | Component insertion and placement | completed: dialog, recents, component/VDD placement, and transactions have one Hook owner | `refactor(editor): complete component placement hook`   |
 |    4 | Property editing                  | in progress: draft state extracted; commit/text lifecycle pending | `refactor(editor): extract properties editor hook`     |
 |    5 | Panels and dialogs                | in progress: generic shell state extracted; focus/persistence cleanup pending | `refactor(editor): extract editor panel state hook`    |
 
@@ -339,9 +339,9 @@ After all five steps:
 
 ## Test Impact
 
-- Decision: no-test-change for Step 1. Existing unit and browser contracts
-  cover the moved Wire behavior; the extraction does not change its protocol
-  or user-visible result.
+- Decision: no-test-change
+- Reason: existing unit and browser contracts cover the moved interactions;
+  the extraction does not change their protocol or user-visible result.
 - Contracts: wire creation/editing, selection/movement/copy, component/VDD
   placement, property/text editing, and panel/dialog behavior remain unchanged
   while their React ownership moves.

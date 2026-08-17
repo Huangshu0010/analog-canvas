@@ -314,17 +314,6 @@ const SNAP_CAPTURE_RADIUS_PX = 7;
 
 type DragPreview = InstanceMovePreview;
 
-/** A click-to-place Move command snapshot; never persisted. */
-interface CommandMoveSession {
-  documentId: string;
-  revision: number;
-  movePlan: SelectionMovePlan;
-  instancePreview: DragPreview | null;
-  pointerOrigin: Point;
-  visual: ReturnType<typeof startCanvasDragVisual> | null;
-  lastSnap?: SnapResult;
-  lastDelta: Point;
-}
 interface BoxPreview {
   start: DerivedPoint;
   end: DerivedPoint;
@@ -389,7 +378,6 @@ export function App({
       ).project,
   );
   const [status, setStatus] = useState("Ready");
-  const [, setInsertDialogOpen] = useState(false);
   const [agentPanelOpen, setAgentPanelOpen] = useState(false);
   const [agentDetailsOpen, setAgentDetailsOpen] = useState(false);
   const [agentStatusDismissed, setAgentStatusDismissed] = useState(false);
@@ -664,7 +652,6 @@ export function App({
   } | null>(null);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
-  const commandMoveSessionRef = useRef<CommandMoveSession | null>(null);
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const selectionShelfRef = useRef<HTMLButtonElement>(null);
@@ -1159,6 +1146,12 @@ export function App({
     mirrorPendingComponent: mirrorPendingComponentFromHook,
   } = useComponentPlacement({
     recentStorageKey: RECENT_COMPONENTS_STORAGE_KEY,
+    document,
+    resolver,
+    styleProfile,
+    visibleEndpoints,
+    transact,
+    selectOnly,
     cancelAllTransientInteraction,
     cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
     clearTransientCanvasState,
@@ -1169,6 +1162,10 @@ export function App({
     },
     rotateComponentPlacement,
     mirrorComponentPlacement,
+    componentPlacementRotation,
+    componentPlacementMirror,
+    completeVddRailPlacement,
+    setComponentPreviewPoint,
     setStatus,
     vddRailMode,
     vddRailStart,
@@ -1176,8 +1173,6 @@ export function App({
     pendingComponentPlacement,
     setVddRailStart,
     setVddRailPreviewPoint,
-    placeVddRail,
-    placeNewComponent,
   });
   const {
     beginCopyPlacement: beginCopyPlacementFromSelection,
@@ -2147,12 +2142,6 @@ export function App({
     );
   }
 
-  function openInsertComponentDialog(): void {
-    cancelAllTransientInteraction();
-    setInsertDialogOpen(true);
-    setStatus("Choose a component to place");
-  }
-
   function openLibraryExample(example: LibraryProjectExample): void {
     void guardDirtyReplacement(`Open ${example.name} example`, () => {
       const nextProject = createLibraryExampleProject(example.id);
@@ -2165,57 +2154,6 @@ export function App({
       setImportReviewOpen(false);
       setStatus(`Opened example: ${example.name}`);
     });
-  }
-
-  function beginInsertedComponentPlacement(
-    request: ComponentInsertRequest,
-  ): void {
-    const { symbolId, symbolName } = request;
-    const nextRecent = [
-      symbolId,
-      ...recentSymbolIds.filter((candidate) => candidate !== symbolId),
-    ].slice(0, 8);
-    setRecentSymbolIds(nextRecent);
-    try {
-      window.localStorage.setItem(
-        RECENT_COMPONENTS_STORAGE_KEY,
-        JSON.stringify(nextRecent),
-      );
-    } catch {
-      // Browsers may deny storage in private or embedded contexts. Recency is
-      // convenience-only and must never block component placement.
-    }
-    setInsertDialogOpen(false);
-    canvasDragSessionRef.current?.cancel();
-    clearTransientCanvasState();
-    paintSnapGuides([]);
-    if (request.kind === "vdd-rail") {
-      beginVddRailInteraction();
-      setStatus("Place VDD Rail: click the first end · Esc cancels");
-      return;
-    }
-    beginComponentPlacement(request);
-    setStatus(
-      `Place ${symbolName} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
-    );
-  }
-
-  function cancelComponentInsert(): void {
-    setInsertDialogOpen(false);
-    cancelAllTransientInteraction();
-    setStatus("Component insertion cancelled");
-  }
-
-  function rotatePendingComponent(delta: 90 | -90): void {
-    rotateComponentPlacement(delta);
-    setStatus(`Component rotation ${delta > 0 ? "+90°" : "−90°"}`);
-  }
-
-  function mirrorPendingComponent(direction: ScreenFlip): void {
-    mirrorComponentPlacement(direction);
-    setStatus(
-      `Place component mirrored ${direction === "left-right" ? "left/right" : "top/bottom"} · R rotates · Esc cancels`,
-    );
   }
 
   function rotatePendingCopy(delta: 90 | -90): void {
@@ -2986,217 +2924,6 @@ export function App({
     selectOnly("instance", [instanceId]);
   }
 
-  function placeNewComponent(
-    symbolId: string,
-    position: Point,
-    placementRequest: NonNullable<typeof pendingComponentPlacement>,
-  ): void {
-    const id = nextInstanceDesignator(document, symbolId);
-    const symbolVariantId = defaultRazaviSymbolVariantId(symbolId);
-    const instance = {
-      id,
-      symbolId,
-      ...(symbolVariantId ? { symbolVariantId } : {}),
-      placement: {
-        position,
-        rotation: componentPlacementRotation,
-        mirror: componentPlacementMirror,
-      },
-      properties: placementRequest.properties,
-      netlist: initialInstanceNetlist(
-        document,
-        symbolId,
-        placementRequest.properties,
-        netlistReferenceMatchesPlacement(symbolId) ? id : undefined,
-      ),
-    };
-    // The persisted annotation is the only visible instance-label authority.
-    const defaultLabel = defaultInstanceLabel(
-      document,
-      instance,
-      resolver,
-      styleProfile,
-    );
-    const instanceLabel =
-      placementRequest.showReference && defaultLabel
-        ? {
-            ...defaultLabel,
-            content: semanticTextDocument(
-              placementRequest.referenceText ?? instance.id,
-              "instance-label",
-            ),
-          }
-        : null;
-    // A default-off Value is never materialized as a hidden annotation:
-    // hidden annotations still extend export bounds. It is created on first
-    // show by the display toggle instead.
-    const instanceValue = placementRequest.showValue
-      ? defaultInstanceValue(document, instance, resolver, styleProfile)
-      : null;
-    const contact = proposePlacementContact(
-      document,
-      resolver,
-      instance,
-      visibleEndpoints,
-    );
-    const standalonePower =
-      contact.matched || contact.ambiguous
-        ? { edits: [], matched: false, ambiguous: false }
-        : proposedStandalonePowerConnection(document, instance);
-    // A placed VDD power port carries no label of its own; emit the shared
-    // power-label typography once its Net identity is actually established.
-    const powerNetId = standalonePower.powerNetId ?? contact.powerNetId;
-    const vddPowerLabel =
-      powerConnectionForSymbol(symbolId)?.domain === "vdd" && powerNetId
-        ? vddPowerLabelAnnotation({
-            instanceId: id,
-            netId: powerNetId,
-            position,
-          })
-        : null;
-    // Build only the future global-Net facts needed to decide hidden B policy.
-    // The real transaction below remains the sole persistence boundary.
-    const projectedDocument = structuredClone(document);
-    projectedDocument.instances.push(instance);
-    for (const edit of [...contact.edits, ...standalonePower.edits]) {
-      if (edit.kind !== "connect_endpoints" || !edit.newNetId) continue;
-      projectedDocument.nets.push({
-        id: edit.newNetId,
-        ...(edit.newNetName ? { name: edit.newNetName } : {}),
-        scope: edit.newNetScope ?? "local",
-        terminals: [edit.from, edit.to]
-          .filter(
-            (
-              endpoint,
-            ): endpoint is Extract<RouteEndpoint, { kind: "terminal" }> =>
-              endpoint.kind === "terminal",
-          )
-          .map(({ instanceId, pinName }) => ({ instanceId, pinName }))
-          .filter(
-            (terminal, index, terminals) =>
-              terminals.findIndex(
-                (candidate) =>
-                  candidate.instanceId === terminal.instanceId &&
-                  candidate.pinName === terminal.pinName,
-              ) === index,
-          ),
-      });
-    }
-    const bulkEdits = razaviManualBulkConnectionEdits(
-      projectedDocument,
-      projectedDocument.instances,
-    );
-    const result = transact(
-      [
-        {
-          kind: "add_instance",
-          instance,
-        },
-        ...contact.edits,
-        ...standalonePower.edits,
-        ...bulkEdits,
-        ...(vddPowerLabel
-          ? [
-              {
-                kind: "upsert_schematic_annotation" as const,
-                annotation: vddPowerLabel,
-              },
-            ]
-          : []),
-        ...(instanceLabel
-          ? [
-              {
-                kind: "upsert_schematic_annotation" as const,
-                annotation: instanceLabel,
-              },
-            ]
-          : []),
-        ...(instanceValue
-          ? [
-              {
-                kind: "upsert_schematic_annotation" as const,
-                annotation: instanceValue,
-              },
-            ]
-          : []),
-      ],
-      { preserveInteraction: true },
-    );
-    if (result.ok) {
-      selectOnly("instance", [id]);
-      setComponentPreviewPoint(position);
-      setStatus(
-        contact.ambiguous
-          ? `Added ${id} (${symbolId}); overlapping pins are ambiguous, wire explicitly · click to place another · Esc exits`
-          : contact.matched
-            ? `Added ${id} (${symbolId}) and connected its contacted pin · click to place another · Esc exits`
-            : `Added ${id} (${symbolId}) · click to place another · Esc exits`,
-      );
-    }
-  }
-
-  function placeVddRail(start: Point, end: Point): void {
-    const vddRailIdsExist = (candidate: string): boolean => {
-      const key = candidate.toLowerCase();
-      return (
-        document.instances.some((instance) => instance.id === candidate) ||
-        document.routes.some((route) => route.id === `route-${key}-rail`) ||
-        document.junctions.some(
-          (junction) =>
-            junction.id === `junction-${key}-start` ||
-            junction.id === `junction-${key}-end`,
-        ) ||
-        document.annotations.some(
-          (annotation) => annotation.id === `label-${candidate}`,
-        )
-      );
-    };
-    let sequence = 1;
-    while (vddRailIdsExist(`VDD${sequence}`)) sequence += 1;
-    const instanceId = `VDD${sequence}`;
-    const routeId = `route-${instanceId.toLowerCase()}-rail`;
-    const existingVddNet =
-      document.nets.find(
-        (net) =>
-          net.id === "net-global-vdd" &&
-          net.scope === "global" &&
-          (net.powerDomain ?? "none") === "vdd",
-      ) ??
-      document.nets.find(
-        (net) =>
-          net.scope === "global" && (net.powerDomain ?? "none") === "vdd",
-      );
-    const result = transact(
-      constructVddRailEdits({
-        instanceId,
-        start,
-        end,
-        ...(existingVddNet ? { netId: existingVddNet.id } : {}),
-      }),
-    );
-    if (!result.ok) return;
-    selectOnly("route", [routeId]);
-    completeVddRailPlacement();
-    setStatus(`Added VDD rail ${instanceId}`);
-  }
-
-  function commitPendingPlacementAt(point: Point): void {
-    if (vddRailMode) {
-      if (!vddRailStart) {
-        setVddRailStart(point);
-        setVddRailPreviewPoint(point);
-        setStatus("VDD rail: click the right end (Esc cancels)");
-      } else if (point.x === vddRailStart.x) {
-        setStatus("VDD rail needs a non-zero horizontal length");
-      } else {
-        placeVddRail(vddRailStart, { x: point.x, y: vddRailStart.y });
-      }
-      return;
-    }
-    if (!pendingSymbolId || !pendingComponentPlacement) return;
-    placeNewComponent(pendingSymbolId, point, pendingComponentPlacement);
-  }
-
   function selectionVisualMoveEdits(
     movePlan: SelectionMovePlan,
     delta: Point,
@@ -3293,160 +3020,6 @@ export function App({
         .find((point): point is Point => point !== undefined) ?? { x: 0, y: 0 }
     );
   }
-
-  /* Migrated to useSelectionInteraction; retained temporarily for diff review.
-  function beginKeyboardSelectionMove(): void {
-    const movePlan = planSelectionMove(document, visualSelection);
-    if (movePlan.previewObjectIds.length === 0 && !selectedRoute) {
-      setStatus("Selected objects are attached or locked and cannot move");
-      return;
-    }
-    const primaryInstanceId =
-      selectedIds.at(-1) ?? movePlan.instanceIds.at(0) ?? null;
-    const instancePreview = primaryInstanceId
-      ? (() => {
-          const primary = document.instances.find(
-            (instance) => instance.id === primaryInstanceId,
-          );
-          if (!primary?.placement) return null;
-          const originalPositions = Object.fromEntries(
-            movePlan.instanceIds.flatMap((id) => {
-              const instance = document.instances.find(
-                (candidate) => candidate.id === id,
-              );
-              return instance?.placement
-                ? [[id, { ...instance.placement.position }] as const]
-                : [];
-            }),
-          );
-          return {
-            instanceIds: movePlan.instanceIds,
-            primaryInstanceId,
-            originalPositions,
-            // The primary origin is the command's mouse-following anchor.
-            pointerStart: { ...primary.placement.position },
-            movePlan,
-          } satisfies DragPreview;
-        })()
-      : null;
-    const freeAnnotation = movePlan.freeAnnotationIds
-      .map((id) =>
-        document.annotations.find((annotation) => annotation.id === id),
-      )
-      .find((annotation) => annotation?.anchor.kind === "free");
-    const visualOrigin = movePlan.draftingIds
-      .flatMap((id) => {
-        const object = document.drafting?.objects.find(
-          (candidate) => candidate.id === id,
-        );
-        const origin = object ? draftingDragOrigin(object) : null;
-        return origin ? [origin] : [];
-      })
-      .find((point): point is Point => point !== null) ??
-      (freeAnnotation?.anchor.kind === "free"
-        ? freeAnnotation.anchor.position
-        : undefined) ??
-      movePlan.looseRouteIds
-        .map(
-          (id) =>
-            routeGeometryRecords.find((record) => record.route.id === id)
-              ?.geometry.centerline[0],
-        )
-        .find((point): point is Point => point !== undefined) ?? { x: 0, y: 0 };
-    commandMoveSessionRef.current = {
-      documentId: document.id,
-      revision: document.revision,
-      movePlan,
-      instancePreview,
-      pointerOrigin: instancePreview
-        ? instancePreview.pointerStart
-        : visualOrigin,
-      visual: null,
-      lastDelta: { x: 0, y: 0 },
-    };
-    beginSelectionMoveInteraction();
-    setStatus("Move: move the pointer, then click to place (Esc to cancel)");
-  }
-
-  function clearCommandMoveSession(): void {
-    commandMoveSessionRef.current?.visual?.restore();
-    commandMoveSessionRef.current = null;
-  }
-
-  function updateCommandMovePreview(
-    point: DerivedPoint,
-    svg: SVGSVGElement,
-    suppressSnap: boolean,
-  ): CommandMoveSession | null {
-    const session = commandMoveSessionRef.current;
-    if (!session || session.documentId !== document.id) return null;
-    if (!session.visual) {
-      session.visual = startCanvasDragVisual(
-        svg,
-        session.movePlan.previewObjectIds,
-      );
-    }
-    if (session.instancePreview) {
-      const resolved = instanceMoveAt(
-        session.instancePreview,
-        point,
-        logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
-        suppressSnap,
-        session.lastSnap,
-      );
-      session.lastSnap = resolved.snap;
-      const primary = resolved.moves.find(
-        (move) =>
-          move.instanceId === session.instancePreview!.primaryInstanceId,
-      );
-      const original =
-        session.instancePreview.originalPositions[
-          session.instancePreview.primaryInstanceId
-        ];
-      if (!primary || !original) return null;
-      session.lastDelta = {
-        x: primary.position.x - original.x,
-        y: primary.position.y - original.y,
-      };
-      paintSnapGuides(resolved.snap.guides);
-    } else {
-      session.lastDelta = {
-        x: snapCoordinate(
-          point.x - session.pointerOrigin.x,
-          document.presentation.grid,
-        ),
-        y: snapCoordinate(
-          point.y - session.pointerOrigin.y,
-          document.presentation.grid,
-        ),
-      };
-      paintSnapGuides([]);
-    }
-    session.visual.translate(session.lastDelta);
-    return session;
-  }
-
-  function commitCommandMove(point: DerivedPoint, svg: SVGSVGElement): void {
-    const session = updateCommandMovePreview(point, svg, false);
-    if (!session) return;
-    session.visual?.restore();
-    commandMoveSessionRef.current = null;
-    if (session.instancePreview) {
-      completeInstanceMove(
-        session.instancePreview,
-        point,
-        logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
-        false,
-        session.lastSnap,
-      );
-    } else {
-      completeVisualSelectionMove(session.movePlan, session.lastDelta);
-    }
-    paintSnapGuides([]);
-    cancelInteraction();
-  }
-
-  */
 
   function instanceMoveAt(
     preview: DragPreview,

@@ -8055,3 +8055,18 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: staged for
   `refactor(editor): extract editor shell panel state` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Complete selection and placement interaction Hooks
+
+- Target: finish the selection keyboard Move session and component/VDD
+  placement transaction ownership in their flat Hooks.
+- Changed areas: removed the last duplicate App move/placement handlers;
+  `useComponentPlacement` now builds and commits component connectivity,
+  labels, bulk reconciliation, and VDD rails directly.
+- Validation: focused component contracts (6 files / 31 tests), 3 focused
+  Playwright component/VDD/cancellation scenarios, Editor build,
+  `pnpm typecheck`, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
+- Commit status: staged for
+  `refactor(editor): complete selection and component placement hooks` on
+  `codex/app-transaction-module-layers`.

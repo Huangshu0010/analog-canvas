@@ -1,12 +1,48 @@
 import { useState } from "react";
 
+import type { SchematicEdit, WireSource } from "@icm/edit-engine";
+import type { SchematicStyleProfile } from "@icm/derived";
+import { semanticTextDocument } from "@icm/model";
+import type { Point, RouteEndpoint, SchematicDocument } from "@icm/model";
+import type { SymbolResolver } from "@icm/symbols";
+
 import type { ComponentInsertRequest } from "./insert-component-dialog";
+import {
+  powerConnectionForSymbol,
+  proposePlacementContact,
+  proposedStandalonePowerConnection,
+} from "./placement-connectivity";
+import { constructVddRailEdits } from "./vdd-rail";
+import { vddPowerLabelAnnotation } from "./vdd-power-label";
+import {
+  defaultInstanceLabel,
+  defaultInstanceValue,
+} from "../wiring/route-interaction-geometry";
+import {
+  initialInstanceNetlist,
+  netlistReferenceMatchesPlacement,
+  nextInstanceDesignator,
+} from "../netlist-export/netlist-authoring";
+import {
+  defaultRazaviSymbolVariantId,
+  razaviManualBulkConnectionEdits,
+} from "../../presentation/razavi-presentation";
 import type { ScreenFlip } from "../../interaction/shortcut-orientation";
-import type { Point } from "@icm/model";
 import type { PendingComponentPlacement } from "../../interaction/interaction-state";
+
+type TransactionResult = { ok: boolean; revision: number };
 
 export interface UseComponentPlacementOptions {
   recentStorageKey: string;
+  document: SchematicDocument;
+  resolver: SymbolResolver;
+  styleProfile: SchematicStyleProfile;
+  visibleEndpoints: readonly WireSource[];
+  transact: (
+    edits: SchematicEdit[],
+    options?: { preserveInteraction?: boolean },
+  ) => TransactionResult;
+  selectOnly: (kind: "instance" | "route", ids: readonly string[]) => void;
   cancelAllTransientInteraction: () => void;
   cancelCanvasDrag: () => void;
   clearTransientCanvasState: () => void;
@@ -15,6 +51,12 @@ export interface UseComponentPlacementOptions {
   beginComponentPlacement: (request: ComponentInsertRequest) => void;
   rotateComponentPlacement: (delta: 90 | -90) => void;
   mirrorComponentPlacement: (direction: ScreenFlip) => void;
+  componentPlacementRotation: 0 | 90 | 180 | 270;
+  componentPlacementMirror: NonNullable<
+    SchematicDocument["instances"][number]["placement"]
+  >["mirror"];
+  completeVddRailPlacement: () => void;
+  setComponentPreviewPoint: (point: Point) => void;
   setStatus: (status: string) => void;
   vddRailMode: boolean;
   vddRailStart: Point | null;
@@ -22,15 +64,9 @@ export interface UseComponentPlacementOptions {
   pendingComponentPlacement: PendingComponentPlacement | null;
   setVddRailStart: (point: Point) => void;
   setVddRailPreviewPoint: (point: Point) => void;
-  placeVddRail: (start: Point, end: Point) => void;
-  placeNewComponent: (
-    symbolId: string,
-    point: Point,
-    placement: PendingComponentPlacement,
-  ) => void;
 }
 
-/** Flat placement dialog and component-placement command owner. */
+/** Flat owner of component/VDD placement, dialog recents, and its transactions. */
 export function useComponentPlacement(options: UseComponentPlacementOptions) {
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
   const [recentSymbolIds, setRecentSymbolIds] = useState<string[]>(() => {
@@ -46,6 +82,196 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return [];
     }
   });
+
+  const placeNewComponent = (
+    symbolId: string,
+    position: Point,
+    placementRequest: PendingComponentPlacement,
+  ): void => {
+    const id = nextInstanceDesignator(options.document, symbolId);
+    const symbolVariantId = defaultRazaviSymbolVariantId(symbolId);
+    const instance = {
+      id,
+      symbolId,
+      ...(symbolVariantId ? { symbolVariantId } : {}),
+      placement: {
+        position,
+        rotation: options.componentPlacementRotation,
+        mirror: options.componentPlacementMirror,
+      },
+      properties: placementRequest.properties,
+      netlist: initialInstanceNetlist(
+        options.document,
+        symbolId,
+        placementRequest.properties,
+        netlistReferenceMatchesPlacement(symbolId) ? id : undefined,
+      ),
+    };
+    const defaultLabel = defaultInstanceLabel(
+      options.document,
+      instance,
+      options.resolver,
+      options.styleProfile,
+    );
+    const instanceLabel =
+      placementRequest.showReference && defaultLabel
+        ? {
+            ...defaultLabel,
+            content: semanticTextDocument(
+              placementRequest.referenceText ?? instance.id,
+              "instance-label",
+            ),
+          }
+        : null;
+    const instanceValue = placementRequest.showValue
+      ? defaultInstanceValue(
+          options.document,
+          instance,
+          options.resolver,
+          options.styleProfile,
+        )
+      : null;
+    const contact = proposePlacementContact(
+      options.document,
+      options.resolver,
+      instance,
+      options.visibleEndpoints,
+    );
+    const standalonePower =
+      contact.matched || contact.ambiguous
+        ? { edits: [], matched: false, ambiguous: false }
+        : proposedStandalonePowerConnection(options.document, instance);
+    const powerNetId = standalonePower.powerNetId ?? contact.powerNetId;
+    const vddPowerLabel =
+      powerConnectionForSymbol(symbolId)?.domain === "vdd" && powerNetId
+        ? vddPowerLabelAnnotation({
+            instanceId: id,
+            netId: powerNetId,
+            position,
+          })
+        : null;
+    const projectedDocument = structuredClone(options.document);
+    projectedDocument.instances.push(instance);
+    for (const edit of [...contact.edits, ...standalonePower.edits]) {
+      if (edit.kind !== "connect_endpoints" || !edit.newNetId) continue;
+      projectedDocument.nets.push({
+        id: edit.newNetId,
+        ...(edit.newNetName ? { name: edit.newNetName } : {}),
+        scope: edit.newNetScope ?? "local",
+        terminals: [edit.from, edit.to]
+          .filter(
+            (
+              endpoint,
+            ): endpoint is Extract<RouteEndpoint, { kind: "terminal" }> =>
+              endpoint.kind === "terminal",
+          )
+          .map(({ instanceId, pinName }) => ({ instanceId, pinName }))
+          .filter(
+            (terminal, index, terminals) =>
+              terminals.findIndex(
+                (candidate) =>
+                  candidate.instanceId === terminal.instanceId &&
+                  candidate.pinName === terminal.pinName,
+              ) === index,
+          ),
+      });
+    }
+    const result = options.transact(
+      [
+        { kind: "add_instance", instance },
+        ...contact.edits,
+        ...standalonePower.edits,
+        ...razaviManualBulkConnectionEdits(
+          projectedDocument,
+          projectedDocument.instances,
+        ),
+        ...(vddPowerLabel
+          ? [
+              {
+                kind: "upsert_schematic_annotation" as const,
+                annotation: vddPowerLabel,
+              },
+            ]
+          : []),
+        ...(instanceLabel
+          ? [
+              {
+                kind: "upsert_schematic_annotation" as const,
+                annotation: instanceLabel,
+              },
+            ]
+          : []),
+        ...(instanceValue
+          ? [
+              {
+                kind: "upsert_schematic_annotation" as const,
+                annotation: instanceValue,
+              },
+            ]
+          : []),
+      ],
+      { preserveInteraction: true },
+    );
+    if (!result.ok) return;
+    options.selectOnly("instance", [id]);
+    options.setComponentPreviewPoint(position);
+    options.setStatus(
+      contact.ambiguous
+        ? `Added ${id} (${symbolId}); overlapping pins are ambiguous, wire explicitly · click to place another · Esc exits`
+        : contact.matched
+          ? `Added ${id} (${symbolId}) and connected its contacted pin · click to place another · Esc exits`
+          : `Added ${id} (${symbolId}) · click to place another · Esc exits`,
+    );
+  };
+
+  const placeVddRail = (start: Point, end: Point): void => {
+    const idsExist = (candidate: string): boolean => {
+      const key = candidate.toLowerCase();
+      return (
+        options.document.instances.some(
+          (instance) => instance.id === candidate,
+        ) ||
+        options.document.routes.some(
+          (route) => route.id === `route-${key}-rail`,
+        ) ||
+        options.document.junctions.some(
+          (junction) =>
+            junction.id === `junction-${key}-start` ||
+            junction.id === `junction-${key}-end`,
+        ) ||
+        options.document.annotations.some(
+          (annotation) => annotation.id === `label-${candidate}`,
+        )
+      );
+    };
+    let sequence = 1;
+    while (idsExist(`VDD${sequence}`)) sequence += 1;
+    const instanceId = `VDD${sequence}`;
+    const routeId = `route-${instanceId.toLowerCase()}-rail`;
+    const existingVddNet =
+      options.document.nets.find(
+        (net) =>
+          net.id === "net-global-vdd" &&
+          net.scope === "global" &&
+          (net.powerDomain ?? "none") === "vdd",
+      ) ??
+      options.document.nets.find(
+        (net) =>
+          net.scope === "global" && (net.powerDomain ?? "none") === "vdd",
+      );
+    const result = options.transact(
+      constructVddRailEdits({
+        instanceId,
+        start,
+        end,
+        ...(existingVddNet ? { netId: existingVddNet.id } : {}),
+      }),
+    );
+    if (!result.ok) return;
+    options.selectOnly("route", [routeId]);
+    options.completeVddRailPlacement();
+    options.setStatus(`Added VDD rail ${instanceId}`);
+  };
 
   const openInsertComponentDialog = (): void => {
     options.cancelAllTransientInteraction();
@@ -113,7 +339,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       } else if (point.x === options.vddRailStart.x) {
         options.setStatus("VDD rail needs a non-zero horizontal length");
       } else {
-        options.placeVddRail(options.vddRailStart, {
+        placeVddRail(options.vddRailStart, {
           x: point.x,
           y: options.vddRailStart.y,
         });
@@ -121,7 +347,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return;
     }
     if (!options.pendingSymbolId || !options.pendingComponentPlacement) return;
-    options.placeNewComponent(
+    placeNewComponent(
       options.pendingSymbolId,
       point,
       options.pendingComponentPlacement,
@@ -132,11 +358,11 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     beginInsertedComponentPlacement,
     cancelComponentInsert,
     closeInsertDialog,
-    insertDialogOpen,
-    recentSymbolIds,
-    openInsertComponentDialog,
-    rotatePendingComponent,
-    mirrorPendingComponent,
     commitPendingPlacementAt,
+    insertDialogOpen,
+    mirrorPendingComponent,
+    openInsertComponentDialog,
+    recentSymbolIds,
+    rotatePendingComponent,
   };
 }
