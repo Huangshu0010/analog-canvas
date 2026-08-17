@@ -128,6 +128,37 @@ describe("Edit Transaction envelope", () => {
     expect(JSON.stringify(document)).toBe(before);
   });
 
+  it("rejects reassignment between non-empty power roles atomically", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({
+      id: "net-vdd",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+    });
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "set_net_power_domain",
+            netId: "net-vdd",
+            powerDomain: "ground",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+      document,
+    });
+  });
+
   it("sets a Cell bulk default by stable Net id before reconciliation", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({

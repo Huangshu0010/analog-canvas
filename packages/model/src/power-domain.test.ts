@@ -44,6 +44,29 @@ describe("power-domain facts", () => {
     document.nets.push(net);
 
     expect(powerDomainForNet(net)).toBe("none");
+    expect(powerNetNormalizations(document)).toEqual([
+      { netId: "net-pending", domain: "vdd" },
+    ]);
+  });
+
+  it("treats canonical supply names case-insensitively when normalizing", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.nets.push(
+      {
+        id: "net-vdd",
+        name: "vdd",
+        scope: "global",
+        powerDomain: "vdd",
+        terminals: [],
+      },
+      {
+        id: "net-pending",
+        scope: "local",
+        powerDomain: "vdd",
+        terminals: [],
+      },
+    );
+
     expect(powerNetNormalizations(document)).toEqual([]);
   });
 });

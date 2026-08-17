@@ -246,4 +246,43 @@ describe("component placement electrical contacts", () => {
       terminals: [{ instanceId: "VDD2", pinName: "P" }],
     });
   });
+
+  it("does not merge a VDD marker into a distinct AVDD supply", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.nets.push({
+      id: "net-avdd",
+      name: "AVDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+    });
+    const vddPort = {
+      id: "VDD2",
+      symbolId: "vdd-port",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+      properties: {},
+    };
+
+    const proposal = proposedStandalonePowerConnection(document, vddPort);
+
+    expect(proposal).toMatchObject({
+      powerNetId: "net-power-vdd2",
+      edits: [
+        {
+          kind: "connect_endpoints",
+          newNetName: "VDD",
+          newNetScope: "global",
+        },
+        {
+          kind: "set_net_power_domain",
+          netId: "net-power-vdd2",
+          powerDomain: "vdd",
+        },
+      ],
+    });
+  });
 });

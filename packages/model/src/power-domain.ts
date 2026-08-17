@@ -1,4 +1,5 @@
 import type { Net, NetPowerDomain, SchematicDocument } from "./schema.js";
+import { foldNetName } from "./net-contract.js";
 
 /** Explicit electrical supply identity stored by each current Net. */
 export type PowerDomain = "vdd" | "ground";
@@ -23,7 +24,9 @@ export function powerNetNormalizations(
     const hasName = Boolean(net.name?.trim());
     const canonicalNameAlreadyUsed = document.nets.some(
       (candidate) =>
-        candidate.id !== net.id && candidate.name === canonicalName,
+        candidate.id !== net.id &&
+        candidate.name !== undefined &&
+        foldNetName(candidate.name) === foldNetName(canonicalName),
     );
     const name =
       hasName || canonicalNameAlreadyUsed ? undefined : canonicalName;

@@ -1,3 +1,4 @@
+import { foldNetName } from "@icm/model";
 import type {
   Instance,
   Net,
@@ -68,16 +69,21 @@ function supplyDefaultNet(
   kind: MosBulkKind,
 ): Net | undefined {
   const domain = kind === "nmos" ? "ground" : "vdd";
+  const canonicalName = kind === "nmos" ? "0" : "VDD";
   const canonicalId = kind === "nmos" ? "net-global-0" : "net-global-vdd";
   return (
+    document.nets.find(
+      (net) =>
+        net.scope === "global" &&
+        net.name !== undefined &&
+        foldNetName(net.name) === foldNetName(canonicalName) &&
+        (net.powerDomain ?? "none") === domain,
+    ) ??
     document.nets.find(
       (net) =>
         net.id === canonicalId &&
         net.scope === "global" &&
         (net.powerDomain ?? "none") === domain,
-    ) ??
-    document.nets.find(
-      (net) => net.scope === "global" && (net.powerDomain ?? "none") === domain,
     )
   );
 }

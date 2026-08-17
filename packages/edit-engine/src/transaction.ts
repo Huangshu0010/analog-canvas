@@ -1440,7 +1440,9 @@ export function executeTransaction(
         if (
           existingSupplyNet &&
           (existingSupplyNet.scope !== "global" ||
-            (existingSupplyNet.powerDomain ?? "none") !== edit.domain)
+            (existingSupplyNet.powerDomain ?? "none") !== edit.domain ||
+            !existingSupplyNet.name ||
+            foldNetName(existingSupplyNet.name) !== foldNetName("VDD"))
         ) {
           return rejectAt(
             "EDIT_PRECONDITION",
@@ -1689,6 +1691,17 @@ export function executeTransaction(
           return rejectAt(
             "EDIT_PRECONDITION",
             "Power-domain edit does not change the Net",
+            [],
+            [net.id],
+          );
+        }
+        if (
+          (net.powerDomain ?? "none") !== "none" &&
+          edit.powerDomain !== "none"
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Cannot reassign Net power role from ${net.powerDomain} to ${edit.powerDomain}; merge or rename explicitly`,
             [],
             [net.id],
           );

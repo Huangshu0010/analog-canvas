@@ -8197,3 +8197,15 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   builds, test-impact, and diff checks passed.
 - Commit status: staged for `feat(net): add canonical name and merge
   primitives` on `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N2 power producers
+
+- Target: route Ground/VDD authoring and MOS supply selection through one
+  name-first power-Net planner.
+- Changed areas: Edit Engine power planner and role guard; power normalization,
+  MOS fallback, component placement, VDD rail construction, current contracts,
+  and focused regressions.
+- Validation: focused 5-file Vitest run (49 tests), Edit Engine/Derived/Editor
+  builds, test-impact, Prettier, documentation-link, and diff checks passed.
+- Commit status: staged for `feat(net): unify power net authoring` on
+  `codex/net-contract-unification-plan`.

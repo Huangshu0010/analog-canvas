@@ -48,6 +48,13 @@ editable Route/Junction rail geometry, and a power-label annotation. Ground is
 an ordinary `ground` Instance attached through pin `0`. No runtime path infers
 supply identity from names, IDs, labels, or retired assets.
 
+`powerDomain` is role metadata, not Net identity: `AVDD` and `DVDD` may both
+have role `vdd` while remaining distinct Nets. Canonical Ground and VDD
+attachment reuses a matching global Net by normalized name (`0` or `VDD`) and
+then checks its role; it never chooses the first Net with a matching role.
+Changing between non-`none` power roles is rejected atomically. The authored
+Net spelling remains persisted; normalized comparison is derived only.
+
 Canonical MOS Instances use `nmos`/`pmos` with D/G/S/B electrical pins. The
 default `textbook-3terminal` variant is presentation-only. B membership is
 explicit first, then materialized from a configured cell-default Net, then

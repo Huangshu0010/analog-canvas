@@ -119,6 +119,32 @@ describe("MOS bulk resolution", () => {
     },
   );
 
+  it("does not select AVDD as the default VDD supply", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.instances.push(mos("M1", "pmos"));
+    document.nets.push(
+      {
+        id: "net-avdd",
+        name: "AVDD",
+        scope: "global",
+        powerDomain: "vdd",
+        terminals: [],
+      },
+      {
+        id: "net-vdd",
+        name: "VDD",
+        scope: "global",
+        powerDomain: "vdd",
+        terminals: [],
+      },
+    );
+
+    expect(resolveMosBulkConnection(document, "M1")).toMatchObject({
+      status: "supply-default",
+      net: { id: "net-vdd" },
+    });
+  });
+
   it.each([
     ["nmos", "0"],
     ["pmos", "VDD"],

@@ -144,7 +144,12 @@ Phase 8 topology operations have these preconditions:
 - `connect_endpoints` creates a caller-named local Net when both endpoints are
   unowned, or attaches an unowned endpoint to the other endpoint's Net.
 - `set_net_name` requires a non-empty trimmed name. A name already owned by a
-  different Net is rejected; the caller must explicitly `merge_nets`.
+  different Net after case-folded comparison is rejected; the caller must
+  explicitly `merge_nets`.
+- `set_net_power_domain` may classify an unclassified Net or clear a role, but
+  cannot change directly between non-`none` roles. Canonical power authoring
+  selects by global Net name (`0` or `VDD`) before applying this edit; a power
+  role alone never selects a Net.
 - `move_junction` preserves topology and must be paired with `set_route_points`
   edits for every incident Route whose geometry changes in the same
   transaction. GUI movement planners always author those Route edits; Routes
