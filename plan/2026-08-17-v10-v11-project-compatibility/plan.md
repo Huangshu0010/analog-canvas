@@ -56,6 +56,23 @@ and this plan is updated first.
 5. Synchronize the review branch with the latest `main`, resolve overlapping
    protocol/test-governance documentation deliberately, repeat required local
    validation, and wait for required remote checks before mainline merge.
+6. Record the required test-impact declaration introduced by the synchronized
+   main branch, validate it against `origin/main`, and repeat remote delivery
+   checks before merging.
+
+## Test Impact
+
+- Decision: tests-updated
+- Contracts: schema-10 Project preservation and direct schema-11 upgrade;
+  migrated formal-file dirty/save behavior; recovery source-version and
+  canonical-text consistency; post-migration RichText fraction authoring and
+  save/reopen round-trip; rejection of unsupported Project versions.
+- Primary checks: `packages/model/src/persistence.test.ts`;
+  `apps/editor/src/document/project-file-service.test.ts`;
+  `apps/editor/src/document/browser-recovery-contract.test.ts`;
+  `apps/editor/src/document/browser-recovery-store.test.ts`;
+  `apps/editor/e2e/project-file.spec.ts` (schema-10 upgrade flow);
+  `pnpm test:impact -- --base origin/main`.
 
 ## Validation
 
@@ -102,4 +119,7 @@ both factual log histories, and repeated the clean-state mainline gate from a
 frozen install. Final local `pnpm ci:check` passed static contracts, 132 test
 files / 809 unit tests, all workspace builds, performance and golden checks,
 release/package smoke, and 144 Playwright tests. PR #106 carries the completed
-target for required GitHub Actions verification and merge.
+target for required GitHub Actions verification and merge. After main's
+test-impact governance was applied to this target, its explicit
+`tests-updated` declaration passed against `origin/main`; required GitHub
+Actions verification remains the final mainline gate.
