@@ -43,6 +43,9 @@ Agent credential-lifetime baseline—partially superseding clauses in ADR
 The rolling current-and-previous Project read policy, superseding ADR 0022's
 current-only compatibility clause, is
 [`0023-rolling-previous-project-compatibility.md`](0023-rolling-previous-project-compatibility.md).
+The independent current-device registry and Project compatibility-boundary
+decision is
+[`0024-device-protocol-and-compatibility-boundaries.md`](0024-device-protocol-and-compatibility-boundaries.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 
