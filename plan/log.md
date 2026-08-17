@@ -7721,3 +7721,15 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   static checks, 132 test files / 804 tests, workspace build, and production
   smoke.
 - Commit status: committed and pushed on `agent/merge-protocol-test-system`.
+
+## 2026-08-17 - Refresh MCP release checksum for combined branch
+
+- Target: align the canonical Linux MCP artifact integrity pin with the
+  protocol-resource-bearing integration commit so the release gate can verify
+  the exact published tarball.
+- Changed areas: `config/agent-mcp-distribution.json` checksum plus this target
+  plan and delivery record.
+- Validation: from a frozen dependency install, `pnpm ci:check` passed static
+  contracts, 804 unit tests, build and release/package smoke, and 143 browser
+  tests; `git diff --check` passed.
+- Commit status: pending push and remote GitHub Actions verification on PR 105.
