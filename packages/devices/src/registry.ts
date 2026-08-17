@@ -1,157 +1,66 @@
-import type { DeviceDescriptor } from "./contract.js";
+import type { DeviceDescriptor, DeviceRegistry } from "./contract.js";
+import {
+  capacitorDevice,
+  currentSourceDevice,
+  diodeDevice,
+  groundDevice,
+  inductorDevice,
+  nmosDevice,
+  npnDevice,
+  pmosDevice,
+  pnpDevice,
+  resistorDevice,
+  vddPortDevice,
+  voltageSourceDevice,
+} from "./descriptors/index.js";
+import { validateDeviceDescriptors } from "./validation.js";
 
-const definitions = [
-  {
-    symbolId: "resistor",
-    deviceClass: "resistor",
-    referencePrefix: "R",
-    pinOrder: ["1", "2"],
-    targetPolicy: "builtin",
-    requiredParameters: ["value"],
-    dialects: ["spice", "spectre"],
-    capabilities: {
-      supportsModel: false,
-      supportsBulkBinding: false,
-      supportsValueAnnotation: true,
-    },
-  },
-  {
-    symbolId: "capacitor",
-    deviceClass: "capacitor",
-    referencePrefix: "C",
-    pinOrder: ["1", "2"],
-    targetPolicy: "builtin",
-    requiredParameters: ["value"],
-    dialects: ["spice", "spectre"],
-    capabilities: {
-      supportsModel: false,
-      supportsBulkBinding: false,
-      supportsValueAnnotation: true,
-    },
-  },
-  {
-    symbolId: "inductor",
-    deviceClass: "inductor",
-    referencePrefix: "L",
-    pinOrder: ["1", "2"],
-    targetPolicy: "builtin",
-    requiredParameters: ["value"],
-    dialects: ["spice", "spectre"],
-    capabilities: {
-      supportsModel: false,
-      supportsBulkBinding: false,
-      supportsValueAnnotation: true,
-    },
-  },
-  ...(["nmos", "pmos"] as const).map((symbolId): DeviceDescriptor => ({
-    symbolId,
-    deviceClass: "mos",
-    referencePrefix: "M",
-    pinOrder: ["D", "G", "S", "B"],
-    targetPolicy: "required-model",
-    requiredParameters: ["w", "l"],
-    dialects: ["spice", "spectre"],
-    capabilities: {
-      supportsModel: true,
-      supportsBulkBinding: true,
-      supportsValueAnnotation: true,
-    },
-  })),
-  {
-    symbolId: "diode",
-    deviceClass: "diode",
-    referencePrefix: "D",
-    pinOrder: ["A", "K"],
-    targetPolicy: "required-model",
-    requiredParameters: [],
-    dialects: ["spice", "spectre"],
-    capabilities: {
-      supportsModel: true,
-      supportsBulkBinding: false,
-      supportsValueAnnotation: true,
-    },
-  },
-  ...(["npn", "pnp"] as const).map((symbolId): DeviceDescriptor => ({
-    symbolId,
-    deviceClass: "bjt",
-    referencePrefix: "Q",
-    pinOrder: ["C", "B", "E"],
-    targetPolicy: "required-model",
-    requiredParameters: [],
-    dialects: ["spice", "spectre"],
-    capabilities: {
-      supportsModel: true,
-      supportsBulkBinding: false,
-      supportsValueAnnotation: true,
-    },
-  })),
-  {
-    symbolId: "voltage-source",
-    deviceClass: "voltage-source",
-    referencePrefix: "V",
-    pinOrder: ["+", "-"],
-    targetPolicy: "builtin",
-    requiredParameters: ["dc"],
-    dialects: ["spice", "spectre"],
-    capabilities: {
-      supportsModel: false,
-      supportsBulkBinding: false,
-      supportsValueAnnotation: true,
-    },
-  },
-  {
-    symbolId: "current-source",
-    deviceClass: "current-source",
-    referencePrefix: "I",
-    pinOrder: ["+", "-"],
-    targetPolicy: "builtin",
-    requiredParameters: ["dc"],
-    dialects: ["spice", "spectre"],
-    capabilities: {
-      supportsModel: false,
-      supportsBulkBinding: false,
-      supportsValueAnnotation: true,
-    },
-  },
-  {
-    symbolId: "ground",
-    deviceClass: "net-marker",
-    referencePrefix: null,
-    pinOrder: ["0"],
-    targetPolicy: "none",
-    requiredParameters: [],
-    dialects: ["spice", "spectre"],
-    capabilities: {
-      supportsModel: false,
-      supportsBulkBinding: false,
-      supportsValueAnnotation: false,
-    },
-  },
-  {
-    symbolId: "vdd-port",
-    deviceClass: "net-marker",
-    referencePrefix: null,
-    pinOrder: ["P"],
-    targetPolicy: "none",
-    requiredParameters: [],
-    dialects: ["spice", "spectre"],
-    capabilities: {
-      supportsModel: false,
-      supportsBulkBinding: false,
-      supportsValueAnnotation: false,
-    },
-  },
-] satisfies readonly DeviceDescriptor[];
+export function defineDeviceRegistry(
+  descriptors: readonly DeviceDescriptor[],
+): DeviceRegistry {
+  const issues = validateDeviceDescriptors(descriptors);
+  if (issues.length > 0) {
+    throw new Error(
+      `Invalid device registry: ${issues.map((issue) => issue.message).join("; ")}`,
+    );
+  }
+  const byId = new Map(
+    descriptors.map((descriptor) => [descriptor.id, descriptor]),
+  );
+  const bySymbolId = new Map(
+    descriptors.map((descriptor) => [descriptor.symbolId, descriptor]),
+  );
+  return {
+    descriptors,
+    byId: (id) => byId.get(id),
+    bySymbolId: (symbolId) => bySymbolId.get(symbolId),
+  };
+}
+
+export const deviceRegistry = defineDeviceRegistry([
+  resistorDevice,
+  capacitorDevice,
+  inductorDevice,
+  nmosDevice,
+  pmosDevice,
+  diodeDevice,
+  npnDevice,
+  pnpDevice,
+  voltageSourceDevice,
+  currentSourceDevice,
+  groundDevice,
+  vddPortDevice,
+]);
 
 export const builtInDeviceDescriptors: readonly DeviceDescriptor[] =
-  definitions;
-
-const descriptorBySymbolId = new Map(
-  definitions.map((definition) => [definition.symbolId, definition]),
-);
+  deviceRegistry.descriptors;
 
 export function deviceDescriptor(
   symbolId: string,
 ): DeviceDescriptor | undefined {
-  return descriptorBySymbolId.get(symbolId);
+  return deviceRegistry.bySymbolId(symbolId);
+}
+
+export function deviceDescriptorById(id: string): DeviceDescriptor | undefined {
+  return deviceRegistry.byId(id);
 }

@@ -1,0 +1,17 @@
+import type { DeviceDescriptor } from "../contract.js";
+
+export const npnDevice = {
+  id: "npn",
+  symbolId: "npn",
+  deviceClass: "bjt",
+  referencePrefix: "Q",
+  pinOrder: ["C", "B", "E"],
+  targetPolicy: "required-model",
+  requiredParameters: [],
+  dialects: ["spice", "spectre"],
+  capabilities: {
+    supportsModel: true,
+    supportsBulkBinding: false,
+    supportsValueAnnotation: true,
+  },
+} satisfies DeviceDescriptor;

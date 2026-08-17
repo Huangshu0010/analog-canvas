@@ -2,7 +2,8 @@ import { z } from "zod";
 
 import { CURRENT_PROJECT_SCHEMA_VERSION, StableIdSchema } from "./common.js";
 import { SourceManifestSchema, SymbolLibraryLockSchema } from "./source.js";
-import { SchematicDocumentSchema, reportDuplicateIds } from "./document.js";
+import { SchematicDocumentSchema } from "./document.js";
+import { reportDuplicateIds } from "./validation.js";
 export const CircuitProjectSchema = z
   .strictObject({
     schemaVersion: z.literal(CURRENT_PROJECT_SCHEMA_VERSION),

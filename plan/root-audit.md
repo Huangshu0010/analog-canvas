@@ -9,7 +9,7 @@ an archive. Completed plans with resolved experience are stored under
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
 | `active`                  |     0 | No active root plan remains.                                                       |
-| `completed` + `none`      |    39 | Verify commit/log evidence, then archive according to routine retention policy.   |
+| `completed` + `none`      |    40 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
@@ -84,6 +84,13 @@ The single device descriptor registry, current-only modular model, bounded
 Project protocol adapter, editor/recovery migration, focused browser evidence,
 and branch-wide verification are present; it is eligible for normal completed
 plan retention after commit evidence is recorded.
+
+## 2026-08-17 Protocol architecture gap closure
+
+`2026-08-17-protocol-architecture-gap-closure` is completed with resolved
+experience. It reconciles the previously delivered foundation with the accepted
+fine-grained device, model-schema, and Project-protocol architecture, while
+retaining the current fixture and single-adapter compatibility policy.
 
 ## Legacy Metadata Sweep
 

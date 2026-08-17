@@ -10,6 +10,9 @@ export interface DeviceCapabilities {
 }
 
 export interface DeviceDescriptor {
+  /** Stable device-protocol identity; it is not persisted in Project JSON. */
+  readonly id: string;
+  /** The exact current Symbol artwork this device uses. */
   readonly symbolId: StableId;
   readonly deviceClass: NetlistDeviceClass;
   readonly referencePrefix: string | null;
@@ -20,13 +23,19 @@ export interface DeviceDescriptor {
   readonly capabilities: DeviceCapabilities;
 }
 
-/** Existing public term retained for netlist consumers. */
-export type DeviceNetlistDefinition = Omit<DeviceDescriptor, "capabilities">;
-
 export interface DeviceDescriptorIssue {
-  readonly symbolId: string;
+  readonly deviceId: string;
   readonly message: string;
 }
 
-/** Existing public term retained for netlist consumers. */
-export type DeviceNetlistDefinitionIssue = DeviceDescriptorIssue;
+/** Minimal visual contract used only to validate registry/Symbol parity. */
+export interface DeviceSymbolContract {
+  readonly id: string;
+  readonly pins: readonly { readonly name: string }[];
+}
+
+export interface DeviceRegistry {
+  readonly descriptors: readonly DeviceDescriptor[];
+  byId(id: string): DeviceDescriptor | undefined;
+  bySymbolId(symbolId: string): DeviceDescriptor | undefined;
+}

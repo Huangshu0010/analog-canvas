@@ -3,21 +3,18 @@ import { z } from "zod";
 import { StableIdSchema } from "./common.js";
 import { SourceSpanSchema } from "./source.js";
 import { InstanceSchema, NetlistIdentifierSchema } from "./instance.js";
+import { NetSchema, NoConnectSchema } from "./connectivity.js";
+import { JunctionSchema, RouteBranchSchema } from "./routing.js";
+import { AnnotationSchema, VisualAnchorSchema } from "./annotations.js";
+import { DraftingLayerSchema } from "./drafting.js";
 import {
-  JunctionSchema,
-  NetSchema,
-  NoConnectSchema,
-  RouteBranchSchema,
-} from "./connectivity.js";
-import { AnnotationSchema, VisualAnchorSchema } from "./annotation.js";
-import {
-  DraftingLayerSchema,
   LayoutConstraintSchema,
   LayoutGroupSchema,
   MosBulkDefaultsSchema,
   PresentationIntentSchema,
-} from "./drafting.js";
+} from "./presentation.js";
 import type { DraftingObject, GridPoint, VisualAnchor } from "./types.js";
+import { reportDuplicateIds } from "./validation.js";
 export const SourceBindingSchema = z.strictObject({
   cellName: z.string().min(1),
   sourceRef: SourceSpanSchema,
@@ -64,24 +61,6 @@ const SchematicDocumentBaseSchema = z.strictObject({
   // factories and persisted fixtures write an explicit empty layer.
   drafting: DraftingLayerSchema.optional(),
 });
-
-export function reportDuplicateIds(
-  entries: ReadonlyArray<{ id: string }>,
-  path: string,
-  context: z.RefinementCtx,
-): void {
-  const seen = new Set<string>();
-  for (const [index, entry] of entries.entries()) {
-    if (seen.has(entry.id)) {
-      context.addIssue({
-        code: "custom",
-        message: `Duplicate ID: ${entry.id}`,
-        path: [path, index, "id"],
-      });
-    }
-    seen.add(entry.id);
-  }
-}
 
 function reportGridPoint(
   point: GridPoint,

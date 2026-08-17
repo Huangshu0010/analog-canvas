@@ -7782,3 +7782,19 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   `feat(protocol): isolate device and project compatibility` on
   `codex/device-protocol-compatibility-plan` and pushed; remote required checks
   remain the mainline delivery gate.
+
+## 2026-08-17 - Close device and Project protocol architecture gaps
+
+- Target: reconcile the executable implementation with the final modular
+  architecture without changing built-in device behavior or schema-11 Project
+  data.
+- Changed areas: per-device descriptor files and self-validating registry;
+  removal of Symbols electrical-definition facade with retained parity test;
+  fine-grained model schema and Project-protocol source boundaries; explicit
+  no-historic-fixture audit; current architecture/spec wording.
+- Validation: focused device/Symbol/model/protocol contracts; schema-10
+  Project-file browser flow; `pnpm test:impact -- --base main`; and
+  `pnpm verify:branch` (134 files / 816 tests, workspace build, production
+  smoke); `git diff --check` passed.
+- Commit status: pending target commit on
+  `codex/device-protocol-compatibility-plan`.

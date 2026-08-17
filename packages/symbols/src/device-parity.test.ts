@@ -1,19 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { builtInSymbols } from "./builtins.js";
 import {
-  deviceNetlistDefinition,
-  deviceNetlistDefinitions,
-  validateDeviceNetlistDefinitions,
-} from "./netlist.js";
+  builtInDeviceDescriptors,
+  deviceDescriptor,
+  deviceRegistry,
+  validateDeviceRegistry,
+} from "@icm/devices";
 
-describe("reviewed device netlist definitions", () => {
+import { builtInSymbols } from "./builtins.js";
+
+describe("built-in device/Symbol parity", () => {
   it("matches every registered definition to canonical Symbol pin order", () => {
-    expect(validateDeviceNetlistDefinitions(builtInSymbols)).toEqual([]);
+    expect(validateDeviceRegistry(deviceRegistry, builtInSymbols)).toEqual([]);
   });
 
   it("preserves hidden MOS bulk as the fourth electrical pin", () => {
-    expect(deviceNetlistDefinition("nmos")).toMatchObject({
+    expect(deviceDescriptor("nmos")).toMatchObject({
       deviceClass: "mos",
       referencePrefix: "M",
       pinOrder: ["D", "G", "S", "B"],
@@ -23,17 +25,17 @@ describe("reviewed device netlist definitions", () => {
   });
 
   it("defines Ground artwork as a non-emitting Net marker", () => {
-    expect(deviceNetlistDefinition("ground")).toMatchObject({
+    expect(deviceDescriptor("ground")).toMatchObject({
       deviceClass: "net-marker",
       referencePrefix: null,
       pinOrder: ["0"],
       targetPolicy: "none",
     });
-    expect(deviceNetlistDefinition("vdd")).toBeUndefined();
+    expect(deviceDescriptor("vdd")).toBeUndefined();
   });
 
   it("defines the VDD power port as a non-emitting Net marker", () => {
-    expect(deviceNetlistDefinition("vdd-port")).toMatchObject({
+    expect(deviceDescriptor("vdd-port")).toMatchObject({
       deviceClass: "net-marker",
       referencePrefix: null,
       pinOrder: ["P"],
@@ -50,8 +52,8 @@ describe("reviewed device netlist definitions", () => {
       "port",
       "port-filled",
     ]) {
-      expect(deviceNetlistDefinition(symbolId)).toBeUndefined();
+      expect(deviceDescriptor(symbolId)).toBeUndefined();
     }
-    expect(deviceNetlistDefinitions.length).toBeGreaterThan(0);
+    expect(builtInDeviceDescriptors.length).toBeGreaterThan(0);
   });
 });

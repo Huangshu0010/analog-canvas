@@ -1,6 +1,5 @@
 export * from "./builtins.js";
 export * from "./hierarchical-block.js";
-export * from "./netlist.js";
 export * from "./pdk-registry.js";
 export * from "./razavi-catalog.js";
 export * from "./resolver.js";

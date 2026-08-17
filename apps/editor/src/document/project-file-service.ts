@@ -38,6 +38,9 @@ export interface ProjectFileOpenDiagnostic {
     | "INVALID_JSON"
     | "INVALID_PROJECT"
     | "UNSUPPORTED_SCHEMA_VERSION"
+    | "UNKNOWN_DEVICE"
+    | "INVALID_DEVICE_PIN"
+    | "UNRESOLVED_REFERENCE"
     | "UNSUPPORTED_SYMBOL";
   message: string;
   path?: ReadonlyArray<string | number>;

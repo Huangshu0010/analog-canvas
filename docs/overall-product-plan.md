@@ -17,17 +17,18 @@ recovery copies are not authoritative Project data.
 
 The authoritative sources are deliberately separate:
 
-| Concern                            | Authority                                                                        |
-| ---------------------------------- | -------------------------------------------------------------------------------- |
-| Persisted circuit facts            | Current Project schema in `@icm/model`                                           |
-| Project file compatibility         | Bounded parse/migrate/serialize boundary in `@icm/project-protocol`              |
-| Built-in device facts              | Single descriptor registry in `@icm/devices`                                     |
-| Human and Agent mutations          | `@icm/edit-engine` transactions                                                  |
-| Symbol electrical semantics        | `@icm/symbols`                                                                   |
-| Visual construction and acceptance | Razavi reference manifest and [visual contract](specs/razavi-visual-contract.md) |
-| SPICE import                       | `@icm/spice` transient Circuit IR                                                |
-| Design-netlist export              | `@icm/netlist` transient DesignNetlistIR                                         |
-| Browser Agent session              | accepted [web-session spec](specs/web-agent-session.md)                          |
+| Concern                              | Authority                                                                        |
+| ------------------------------------ | -------------------------------------------------------------------------------- |
+| Persisted circuit facts              | Current Project schema in `@icm/model`                                           |
+| Project file compatibility           | Bounded parse/migrate/serialize boundary in `@icm/project-protocol`              |
+| Built-in device facts                | Single descriptor registry in `@icm/devices`                                     |
+| Human and Agent mutations            | `@icm/edit-engine` transactions                                                  |
+| Built-in device electrical semantics | `@icm/devices`                                                                   |
+| Symbol artwork and pin anchors       | `@icm/symbols`                                                                   |
+| Visual construction and acceptance   | Razavi reference manifest and [visual contract](specs/razavi-visual-contract.md) |
+| SPICE import                         | `@icm/spice` transient Circuit IR                                                |
+| Design-netlist export                | `@icm/netlist` transient DesignNetlistIR                                         |
+| Browser Agent session                | accepted [web-session spec](specs/web-agent-session.md)                          |
 
 ## System shape
 
