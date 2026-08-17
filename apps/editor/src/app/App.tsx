@@ -46,7 +46,6 @@ import {
   resolveDraftingObjectGeometry,
   resolveElectricalContactTargets,
   displayableInstanceValue,
-  type InstanceValueSource,
   resolveNetLabelBinding,
   resolveMosBulkConnection,
   resolveSchematicStyleProfile,
@@ -139,6 +138,18 @@ import {
   componentParameters,
   effectiveComponentParameterValue,
 } from "../features/component-insert/component-parameters";
+import {
+  endpointTestId,
+  instanceLabelAnnotationFor,
+  maxRoutingCounter,
+  previewInstanceValueSource,
+} from "./editor-document-helpers";
+import {
+  compactLayoutMatches,
+  dismissOpenCommandMenus,
+  isTypingTarget,
+  RenderCrashProbe,
+} from "./editor-runtime-helpers";
 import {
   initialInstanceNetlist,
   netlistReferenceMatchesPlacement,
@@ -379,105 +390,6 @@ export interface AppProps {
   publicAgentUiEnabled?: boolean;
 }
 
-function dismissOpenCommandMenus(): boolean {
-  const openMenus = Array.from(
-    globalThis.document.querySelectorAll<HTMLDetailsElement>(
-      ".command-menu[open]",
-    ),
-  );
-  for (const menu of openMenus) menu.open = false;
-  return openMenus.length > 0;
-}
-
-function endpointTestId(endpoint: RouteEndpoint): string {
-  switch (endpoint.kind) {
-    case "terminal":
-      return `terminal-${endpoint.instanceId}-${endpoint.pinName}`;
-    case "junction":
-      return `junction-${endpoint.junctionId}`;
-  }
-}
-
-function maxRoutingCounter(document: SchematicDocument): number {
-  const ids = [
-    ...document.instances.map((item) => item.id),
-    ...document.nets.map((item) => item.id),
-    ...document.routes.map((item) => item.id),
-    ...document.junctions.map((item) => item.id),
-    ...document.annotations.map((item) => item.id),
-    ...document.layoutGroups.map((item) => item.id),
-    ...document.constraints.map((item) => item.id),
-  ];
-  let maximum = 0;
-  for (const id of ids) {
-    for (const match of id.matchAll(
-      /(?:route-ui|junction-ui|net-ui)-(\d+)/gu,
-    )) {
-      maximum = Math.max(maximum, Number(match[1]));
-    }
-  }
-  return maximum;
-}
-
-function isTypingTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    Boolean(target.closest("input, textarea, select, [contenteditable='true']"))
-  );
-}
-
-/**
- * Project the instance's not-yet-committed parameter draft into the value
- * formatter's structural input, using the same merge rule as
- * `instancePropertyEdits`: typed values replace committed ones, blank values
- * remove the parameter.
- */
-function previewInstanceValueSource(
-  instance: SchematicDocument["instances"][number],
-  draft: { instanceId: string | null; parameters: Record<string, string> },
-): InstanceValueSource {
-  if (draft.instanceId !== instance.id) return instance;
-  const parameters = { ...(instance.netlist?.parameters ?? {}) };
-  for (const parameter of componentParameters(instance.symbolId)) {
-    const value = (draft.parameters[parameter.key] ?? "").trim();
-    if (value === "") delete parameters[parameter.key];
-    else parameters[parameter.key] = value;
-  }
-  return {
-    symbolId: instance.symbolId,
-    netlist: Object.keys(parameters).length > 0 ? { parameters } : undefined,
-    properties: instance.properties,
-  };
-}
-
-function instanceLabelAnnotationFor(
-  document: SchematicDocument,
-  instanceId: string,
-): Annotation | undefined {
-  return document.annotations.find(
-    (annotation) =>
-      annotation.kind === "instance-label" &&
-      annotation.anchor.kind === "object" &&
-      annotation.anchor.objectId === instanceId,
-  );
-}
-
-/**
- * DEV-only probe that throws during render so browser tests can exercise the
- * root error boundary. Never mounted in production builds.
- */
-function RenderCrashProbe(): never {
-  throw new Error("render crashed (test hook)");
-}
-
-function compactLayoutMatches(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia(COMPACT_LAYOUT_MEDIA_QUERY).matches
-  );
-}
-
 export function App({
   project: initialProject,
   visitStats,
@@ -502,7 +414,9 @@ export function App({
       return true;
     }
   });
-  const [compactLayout, setCompactLayout] = useState(compactLayoutMatches);
+  const [compactLayout, setCompactLayout] = useState(() =>
+    compactLayoutMatches(COMPACT_LAYOUT_MEDIA_QUERY),
+  );
   const [compactLibraryPanelOpen, setCompactLibraryPanelOpen] = useState(false);
   const [leftPanelMode, setLeftPanelMode] = useState<"library" | "examples">(
     "library",

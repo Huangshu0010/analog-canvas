@@ -7945,3 +7945,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: included in
   `refactor(edit-engine): layer transaction execution helpers` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Layer Editor App document and runtime helpers
+
+- Target: remove remaining file-level document-query and browser-runtime
+  helpers from `App.tsx` without altering editor state orchestration.
+- Changed areas: added document and runtime helper modules, switched App
+  imports, and added direct document-helper contracts.
+- Validation: focused App/helper suite (2 files / 16 tests), Editor production
+  build, `pnpm typecheck`, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
+- Commit status: included in
+  `refactor(editor): layer App document runtime helpers` on
+  `codex/app-transaction-module-layers`.
