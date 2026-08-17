@@ -8,7 +8,7 @@ an archive. Completed plans with resolved experience are stored under
 
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
-| `active`                  |     0 | No active root plan remains.                                                       |
+| `active`                  |     1 | PR #117 CI repair is awaiting its remote required checks.                          |
 | `completed` + `none`      |    42 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
@@ -144,6 +144,13 @@ interaction-Hook integration target.
 
 The connected Route edit stabilization and narrow Library browser timing
 repairs are completed mainline work and remain part of this merge baseline.
+
+## 2026-08-17 PR 117 CI repair
+
+`2026-08-17-fix-pr117-ci` is locally validated and remains active on
+`codex/app-transaction-module-layers`. It restores the merged connected-route
+drag projection and refreshes the Linux MCP integrity pin; the repair is
+awaiting its remote required-check result before PR #117 can merge.
 
 ## Legacy Metadata Sweep
 

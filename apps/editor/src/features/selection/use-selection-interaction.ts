@@ -12,9 +12,11 @@ import {
 import type { SchematicClipboard } from "../clipboard/clipboard";
 import {
   proposeVisualRouteDeletion,
+  proposeGroupMoveEdits,
   type SchematicEdit,
   type WireSource,
 } from "@icm/edit-engine";
+import { resolveEndpointPoint } from "@icm/derived";
 import type { Orientation, Point, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 import type { SnapGuideLine, SnapResult } from "../../snap/engine";
@@ -343,8 +345,62 @@ export function useSelectionInteraction(
       movePlan,
     };
     let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
+    let routeVisual: ReturnType<typeof startCanvasDragVisual> | null = null;
+    const routeIdSet = new Set(
+      options.document.routes.map((route) => route.id),
+    );
     const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, movePlan.previewObjectIds));
+      (visual ??= startCanvasDragVisual(
+        svg,
+        movePlan.previewObjectIds.filter((id) => !routeIdSet.has(id)),
+      ));
+    const paintMovePreview = (
+      moves: readonly { instanceId: string; position: Point }[],
+      delta: Point,
+    ): void => {
+      dragVisual().translate(delta);
+      const groupMove = proposeGroupMoveEdits(
+        options.document,
+        options.resolver,
+        moves,
+      );
+      if (groupMove.preview.routes.length === 0) return;
+      routeVisual ??= startCanvasDragVisual(
+        svg,
+        groupMove.preview.routes.map((route) => route.routeId),
+      );
+      const projected = structuredClone(options.document);
+      for (const move of moves) {
+        const instance = projected.instances.find(
+          (candidate) => candidate.id === move.instanceId,
+        );
+        if (instance?.placement) instance.placement.position = move.position;
+      }
+      for (const move of groupMove.preview.junctions) {
+        const junction = projected.junctions.find(
+          (candidate) => candidate.id === move.junctionId,
+        );
+        if (junction) junction.position = move.position;
+      }
+      for (const routeMove of groupMove.preview.routes) {
+        const route = projected.routes.find(
+          (candidate) => candidate.id === routeMove.routeId,
+        );
+        if (!route) continue;
+        const from = resolveEndpointPoint(
+          projected,
+          options.resolver,
+          route.from,
+        );
+        const to = resolveEndpointPoint(projected, options.resolver, route.to);
+        if (!from || !to) continue;
+        routeVisual.setObjectPolyline(route.id, [
+          from,
+          ...routeMove.waypoints,
+          to,
+        ]);
+      }
+    };
     const tolerance = options.logicalRadiusForPixels(svg, 7);
     let lastSnap: SnapResult | undefined;
     options.canvasDragSessionRef.current = startCanvasDragSession({
@@ -366,14 +422,22 @@ export function useSelectionInteraction(
           (move) => move.instanceId === preview.primaryInstanceId,
         )!;
         const original = preview.originalPositions[preview.primaryInstanceId]!;
-        dragVisual().translate({
+        const delta = {
           x: primary.position.x - original.x,
           y: primary.position.y - original.y,
-        });
+        };
+        try {
+          paintMovePreview(resolved.moves, delta);
+        } catch {
+          // Final edits surface protected or unresolved geometry on release;
+          // retain the responsive Instance preview during the gesture.
+          dragVisual().translate(delta);
+        }
       },
       onFinish: ({ client, dragged }) => {
         options.canvasDragSessionRef.current = null;
         visual?.restore();
+        routeVisual?.restore();
         options.snapGuides([]);
         if (dragged) {
           options.completeInstanceMove(
@@ -388,6 +452,7 @@ export function useSelectionInteraction(
       onCancel: () => {
         options.canvasDragSessionRef.current = null;
         visual?.restore();
+        routeVisual?.restore();
         options.snapGuides([]);
       },
     });

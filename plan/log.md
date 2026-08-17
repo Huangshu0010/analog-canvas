@@ -8162,3 +8162,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: included in
   `merge: integrate manual hierarchy with interaction hooks` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Repair PR 117 CI contracts
+
+- Target: restore the connected-route drag preview and update the MCP release
+  integrity pin reported by PR #117's Linux CI.
+- Changed areas: `useSelectionInteraction` now projects planned moved route
+  endpoints and waypoints during an instance-led drag; the MCP distribution
+  SHA-256 matches the CI-produced Linux artifact.
+- Validation: the 2 targeted connected-route Playwright tests, release
+  verification, test-impact, frozen dependency install, full `pnpm ci:check`
+  (including final Playwright status `passed`), and diff checks passed.
+- Commit status: staged for `fix(editor): restore connected wire drag previews`
+  on `codex/app-transaction-module-layers`; GitHub required checks pending.
