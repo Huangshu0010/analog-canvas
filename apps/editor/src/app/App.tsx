@@ -114,6 +114,11 @@ import {
   closestPointOnSegment,
   normalizedBearing,
   normalizedRect,
+  pointInRect,
+  polylineBounds,
+  rectangleBoundaryIntersectsRect,
+  rectsIntersect,
+  segmentIntersectsRect,
   serializePolylinePoints,
 } from "../canvas/canvas-geometry";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
@@ -167,6 +172,11 @@ import type {
   DraftingStylePatch,
 } from "../features/drafting/drafting-manipulation";
 import { DraftingCreatePreview } from "../features/drafting/drafting-create-preview";
+import {
+  draftingPathData,
+  quadraticMidpoint,
+  quadraticTangentAngle,
+} from "../features/drafting/drafting-path";
 import {
   resolveEditorShortcut,
   stepBoundedScale,
@@ -388,58 +398,6 @@ function endpointTestId(endpoint: RouteEndpoint): string {
   }
 }
 
-function draftingPathData(
-  points: readonly Point[],
-  curveControls: readonly (Point | null)[],
-): string {
-  const start = points[0]!;
-  let data = `M ${start.x} ${start.y}`;
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const end = points[index + 1]!;
-    const control = curveControls[index];
-    data += control
-      ? ` Q ${control.x} ${control.y} ${end.x} ${end.y}`
-      : ` L ${end.x} ${end.y}`;
-  }
-  return data;
-}
-
-function quadraticMidpoint(
-  from: Point,
-  control: Point | null,
-  to: Point,
-): Point {
-  return control
-    ? {
-        x: (from.x + 2 * control.x + to.x) / 4,
-        y: (from.y + 2 * control.y + to.y) / 4,
-      }
-    : { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
-}
-
-// A quadratic Bézier evaluated at t=0.5 is (P0 + 2C + P1)/4. Inverting it
-// makes the visible midpoint the direct manipulation handle the user drags.
-function quadraticTangentAngle(
-  from: Point,
-  control: Point | null,
-  to: Point,
-): number {
-  if (!control) return 0;
-  const start = { x: control.x - from.x, y: control.y - from.y };
-  const end = { x: to.x - control.x, y: to.y - control.y };
-  const startLength = Math.hypot(start.x, start.y);
-  const endLength = Math.hypot(end.x, end.y);
-  if (startLength < 1e-6 || endLength < 1e-6) return 0;
-  const cosine = Math.max(
-    -1,
-    Math.min(
-      1,
-      (start.x * end.x + start.y * end.y) / (startLength * endLength),
-    ),
-  );
-  return (Math.acos(cosine) * 180) / Math.PI;
-}
-
 function maxRoutingCounter(document: SchematicDocument): number {
   const ids = [
     ...document.instances.map((item) => item.id),
@@ -459,70 +417,6 @@ function maxRoutingCounter(document: SchematicDocument): number {
     }
   }
   return maximum;
-}
-
-function rectsIntersect(left: Rect, right: Rect): boolean {
-  return (
-    left.x <= right.x + right.width &&
-    left.x + left.width >= right.x &&
-    left.y <= right.y + right.height &&
-    left.y + left.height >= right.y
-  );
-}
-
-function pointInRect(point: Point, rect: Rect): boolean {
-  return (
-    point.x >= rect.x &&
-    point.x <= rect.x + rect.width &&
-    point.y >= rect.y &&
-    point.y <= rect.y + rect.height
-  );
-}
-
-function segmentIntersectsRect(from: Point, to: Point, rect: Rect): boolean {
-  if (pointInRect(from, rect) || pointInRect(to, rect)) return true;
-
-  const delta = { x: to.x - from.x, y: to.y - from.y };
-  let entry = 0;
-  let exit = 1;
-  const boundaries: ReadonlyArray<readonly [number, number]> = [
-    [-delta.x, from.x - rect.x],
-    [delta.x, rect.x + rect.width - from.x],
-    [-delta.y, from.y - rect.y],
-    [delta.y, rect.y + rect.height - from.y],
-  ];
-
-  for (const [direction, distance] of boundaries) {
-    if (direction === 0) {
-      if (distance < 0) return false;
-      continue;
-    }
-    const ratio = distance / direction;
-    if (direction < 0) entry = Math.max(entry, ratio);
-    else exit = Math.min(exit, ratio);
-    if (entry > exit) return false;
-  }
-  return true;
-}
-
-function rectangleBoundaryIntersectsRect(
-  corners: readonly Point[],
-  rect: Rect,
-): boolean {
-  return corners.some((corner, index) =>
-    segmentIntersectsRect(corner, corners[(index + 1) % corners.length]!, rect),
-  );
-}
-
-function polylineBounds(points: readonly Point[]): Rect {
-  const xs = points.map((point) => point.x);
-  const ys = points.map((point) => point.y);
-  return {
-    x: Math.min(...xs),
-    y: Math.min(...ys),
-    width: Math.max(1, Math.max(...xs) - Math.min(...xs)),
-    height: Math.max(1, Math.max(...ys) - Math.min(...ys)),
-  };
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {

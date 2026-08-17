@@ -7917,3 +7917,18 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: included in
   `refactor(edit-engine): separate transaction protocol layers` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Extract Editor App pure geometry layers
+
+- Target: remove stateless canvas-selection and drafting-path calculations
+  from `App.tsx` without changing React state, interaction timing, or edit
+  dispatch.
+- Changed areas: expanded the canvas geometry module; added a drafting path
+  module; switched App call sites to imports; added direct unit coverage for
+  the extracted contracts.
+- Validation: focused canvas/drafting/App suite (3 files / 22 tests), Editor
+  production build, `pnpm typecheck`, `pnpm test:impact -- --base
+  origin/main`, and `git diff --check` passed.
+- Commit status: included in
+  `refactor(editor): extract App canvas geometry helpers` on
+  `codex/app-transaction-module-layers`.

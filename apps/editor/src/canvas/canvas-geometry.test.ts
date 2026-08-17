@@ -5,7 +5,12 @@ import {
   closestPointOnSegment,
   normalizedBearing,
   normalizedRect,
+  pointInRect,
+  polylineBounds,
+  rectangleBoundaryIntersectsRect,
+  rectsIntersect,
   rotatePointByDegrees,
+  segmentIntersectsRect,
   serializePolylinePoints,
 } from "./canvas-geometry";
 
@@ -47,5 +52,56 @@ describe("canvas geometry primitives", () => {
         { x: 3, y: 4 },
       ]),
     ).toBe("1,2 3,4");
+  });
+
+  it("uses inclusive rectangle and point boundaries", () => {
+    const rect = { x: 10, y: 10, width: 20, height: 10 };
+
+    expect(rectsIntersect(rect, { x: 30, y: 15, width: 5, height: 5 })).toBe(
+      true,
+    );
+    expect(rectsIntersect(rect, { x: 31, y: 15, width: 5, height: 5 })).toBe(
+      false,
+    );
+    expect(pointInRect({ x: 30, y: 20 }, rect)).toBe(true);
+    expect(pointInRect({ x: 31, y: 20 }, rect)).toBe(false);
+  });
+
+  it("detects segment and closed-boundary selection intersections", () => {
+    const selection = { x: 8, y: 8, width: 4, height: 4 };
+
+    expect(
+      segmentIntersectsRect({ x: 0, y: 10 }, { x: 20, y: 10 }, selection),
+    ).toBe(true);
+    expect(
+      segmentIntersectsRect({ x: 0, y: 4 }, { x: 20, y: 4 }, selection),
+    ).toBe(false);
+    expect(
+      rectangleBoundaryIntersectsRect(
+        [
+          { x: 0, y: 0 },
+          { x: 10, y: 0 },
+          { x: 10, y: 10 },
+          { x: 0, y: 10 },
+        ],
+        selection,
+      ),
+    ).toBe(true);
+  });
+
+  it("calculates polyline bounds with a visible minimum extent", () => {
+    expect(
+      polylineBounds([
+        { x: 5, y: 9 },
+        { x: 5, y: 20 },
+        { x: -3, y: 20 },
+      ]),
+    ).toEqual({ x: -3, y: 9, width: 8, height: 11 });
+    expect(polylineBounds([{ x: 4, y: 7 }])).toEqual({
+      x: 4,
+      y: 7,
+      width: 1,
+      height: 1,
+    });
   });
 });
