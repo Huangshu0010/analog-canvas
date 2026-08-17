@@ -1,8 +1,4 @@
-import {
-  executeTransaction,
-  planRepairPowerNetDuplicates,
-  type SchematicEdit,
-} from "@icm/edit-engine";
+import { executeTransaction, type SchematicEdit } from "@icm/edit-engine";
 import { mosBulkShouldBeVisible, resolveMosBulkConnection } from "@icm/derived";
 import { replaceProjectDocument } from "../document/editor-session";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
@@ -58,39 +54,10 @@ export function razaviManualBulkConnectionEdits(
  */
 export function materializeRazaviProjectBulkConnections(
   project: CircuitProject,
-): { project: CircuitProject; instanceCount: number; repairCount: number } {
+): { project: CircuitProject; instanceCount: number } {
   let nextProject = structuredClone(project);
   let instanceCount = 0;
-  let repairCount = 0;
   for (const sourceDocument of [...nextProject.documents]) {
-    const repairEdits = planRepairPowerNetDuplicates(sourceDocument);
-    if (repairEdits.length > 0) {
-      const repair = executeTransaction(
-        sourceDocument,
-        {
-          transactionId: `net-contract-entry-${sourceDocument.id}`,
-          documentId: sourceDocument.id,
-          expectedRevision: sourceDocument.revision,
-          actor: { kind: "human", id: "net-contract-entry" },
-          edits: repairEdits,
-        },
-        {
-          symbolResolver: createProjectSymbolResolver(
-            nextProject,
-            builtInSymbols,
-          ),
-        },
-      );
-      if (!repair.ok) {
-        throw new Error(
-          `Cannot repair legacy power Nets for ${sourceDocument.id}: ${repair.error.message}`,
-        );
-      }
-      nextProject = replaceProjectDocument(nextProject, repair.document);
-      repairCount += repairEdits.filter(
-        (edit) => edit.kind === "merge_nets",
-      ).length;
-    }
     const document = nextProject.documents.find(
       (candidate) => candidate.id === sourceDocument.id,
     )!;
@@ -126,7 +93,7 @@ export function materializeRazaviProjectBulkConnections(
     nextProject = replaceProjectDocument(nextProject, result.document);
     instanceCount += affectedCount;
   }
-  return { project: nextProject, instanceCount, repairCount };
+  return { project: nextProject, instanceCount };
 }
 
 export function razaviBulkAnchorIsVisible(

@@ -1,10 +1,7 @@
 import { createEmptyDocument } from "@icm/model";
 import { describe, expect, it } from "vitest";
 
-import {
-  planEnsurePowerNet,
-  planRepairPowerNetDuplicates,
-} from "./power-net-planner.js";
+import { planEnsurePowerNet } from "./power-net-planner.js";
 
 describe("power Net planner", () => {
   it("selects canonical VDD by name rather than the first VDD-role Net", () => {
@@ -86,33 +83,5 @@ describe("power Net planner", () => {
         domain: "ground",
       }),
     ).toMatchObject({ ok: false, relatedNetIds: ["net-avdd"] });
-  });
-
-  it("plans a deterministic merge for legacy duplicate canonical ground Nets", () => {
-    const document = createEmptyDocument("main", "Main");
-    document.nets.push(
-      {
-        id: "net-ground-b",
-        name: "0",
-        scope: "global",
-        powerDomain: "ground",
-        terminals: [],
-      },
-      {
-        id: "net-global-0",
-        name: "0",
-        scope: "global",
-        powerDomain: "ground",
-        terminals: [],
-      },
-    );
-
-    expect(planRepairPowerNetDuplicates(document)).toEqual([
-      {
-        kind: "merge_nets",
-        targetNetId: "net-global-0",
-        sourceNetId: "net-ground-b",
-      },
-    ]);
   });
 });

@@ -1,7 +1,6 @@
 import {
   createEmptyDocument,
   createEmptyProject,
-  semanticTextDocument,
   validateNetContract,
 } from "@icm/model";
 import { describe, expect, it } from "vitest";
@@ -140,10 +139,9 @@ describe("Razavi hidden bulk policy", () => {
     );
   });
 
-  it("repairs compatible legacy ground duplicates before installing the Project", () => {
+  it("does not repair duplicate canonical Nets at Project entry", () => {
     const project = createEmptyProject("project-entry", "Entry");
-    const document = project.documents[0]!;
-    document.nets.push(
+    project.documents[0]!.nets.push(
       {
         id: "net-ground-a",
         name: "0",
@@ -162,118 +160,13 @@ describe("Razavi hidden bulk policy", () => {
 
     const prepared = materializeRazaviProjectBulkConnections(project);
 
-    expect(prepared.repairCount).toBe(1);
-    expect(prepared.project.documents[0]!.nets).toEqual([
-      expect.objectContaining({ id: "net-ground-a", name: "0" }),
-    ]);
-    expect(validateNetContract(prepared.project.documents[0]!)).toEqual([]);
-    expect(project.documents[0]!.nets).toHaveLength(2);
-  });
-
-  it("retargets every source-Net reference during legacy ground repair", () => {
-    const project = createEmptyProject("project-entry", "Entry");
-    const document = project.documents[0]!;
-    document.instances.push(
+    expect(prepared.project.documents[0]!.nets).toHaveLength(2);
+    expect(validateNetContract(prepared.project.documents[0]!)).toEqual([
       {
-        id: "GND1",
-        symbolId: "ground",
-        placement: null,
-        properties: {},
+        code: "DUPLICATE_NET_NAME",
+        foldedName: "0",
+        netIds: ["net-ground-a", "net-ground-b"],
       },
-      {
-        ...manualMos("M1", "nmos"),
-        mosBulkBinding: { origin: "supply-default", netId: "net-ground-b" },
-      },
-    );
-    document.nets.push(
-      {
-        id: "net-ground-a",
-        name: "0",
-        scope: "global",
-        powerDomain: "ground",
-        terminals: [],
-      },
-      {
-        id: "net-ground-b",
-        name: "0",
-        scope: "global",
-        powerDomain: "ground",
-        terminals: [
-          { instanceId: "GND1", pinName: "0" },
-          { instanceId: "M1", pinName: "B" },
-        ],
-      },
-    );
-    document.junctions.push(
-      {
-        id: "junction-source-a",
-        netId: "net-ground-b",
-        position: { x: 100, y: 100 },
-      },
-      {
-        id: "junction-source-b",
-        netId: "net-ground-b",
-        position: { x: 200, y: 100 },
-      },
-    );
-    document.routes.push({
-      id: "route-source",
-      netId: "net-ground-b",
-      from: { kind: "junction", junctionId: "junction-source-a" },
-      to: { kind: "junction", junctionId: "junction-source-b" },
-      waypoints: [],
-      segmentModes: ["manual"],
-    });
-    document.annotations.push({
-      id: "label-source",
-      kind: "net-label",
-      content: semanticTextDocument("0", "net-label"),
-      netId: "net-ground-b",
-      anchor: {
-        kind: "route",
-        routeId: "route-source",
-        segmentIndex: 0,
-        t: 0.5,
-        normalOffset: -10,
-        direction: "forward",
-        orientation: "follow",
-        fallbackPosition: { x: 150, y: 90 },
-      },
-      alignment: "middle",
-      rotation: 0,
-      locked: false,
-    });
-    document.netlist!.terminals.push({ name: "VSS", netId: "net-ground-b" });
-
-    const prepared = materializeRazaviProjectBulkConnections(project);
-    const repaired = prepared.project.documents[0]!;
-
-    expect(prepared.repairCount).toBe(1);
-    expect(repaired.nets).toEqual([
-      expect.objectContaining({
-        id: "net-ground-a",
-        terminals: [
-          { instanceId: "GND1", pinName: "0" },
-          { instanceId: "M1", pinName: "B" },
-        ],
-      }),
-    ]);
-    expect(repaired.routes).toEqual([
-      expect.objectContaining({ netId: "net-ground-a" }),
-    ]);
-    expect(repaired.junctions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ netId: "net-ground-a" }),
-      ]),
-    );
-    expect(repaired.annotations).toEqual([
-      expect.objectContaining({ netId: "net-ground-a" }),
-    ]);
-    expect(repaired.instances.find((item) => item.id === "M1")).toMatchObject({
-      mosBulkBinding: { netId: "net-ground-a" },
-    });
-    expect(repaired.netlist!.terminals).toEqual([
-      { name: "VSS", netId: "net-ground-a" },
     ]);
   });
 });

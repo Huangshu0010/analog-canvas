@@ -62,7 +62,7 @@ for readability; these groups do not create separate mutation endpoints:
   `move_junction`, `make_flightline`, `cut_connection`, `connect_endpoints`,
   `disconnect_endpoint`;
 - Net/power/MOS: `add_power_rail`, `merge_nets`, `set_net_name`,
-  `set_net_power_domain`, `normalize_power_nets`, `set_mos_bulk_defaults`,
+  `set_net_power_domain`, `set_mos_bulk_defaults`,
   `reconcile_mos_bulk`, `clear_mos_bulk_default`;
 - explicit open terminal: `add_no_connect`, `remove_no_connect`;
 - presentation/layout: `set_presentation_style`,
@@ -155,11 +155,10 @@ Phase 8 topology operations have these preconditions:
   cannot change directly between non-`none` roles. Canonical power authoring
   selects by global Net name (`0` or `VDD`) before applying this edit; a power
   role alone never selects a Net.
-- `normalize_power_nets` remains a typed compatibility operation for an
-  explicit caller; the editor never invokes it automatically on a loaded
-  Document. Normal production authoring uses the name-first power and named-Net
-  planners, while Project entry performs only the documented legacy duplicate
-  repair.
+- Power-Net normalization is not an edit operation. Normal production
+  authoring uses the name-first power and named-Net planners; a transaction
+  cannot silently add a canonical name, change scope, or repair a duplicate
+  Net after the caller's explicit edits have run.
 - `move_junction` preserves topology and must be paired with `set_route_points`
   edits for every incident Route whose geometry changes in the same
   transaction. GUI movement planners always author those Route edits; Routes

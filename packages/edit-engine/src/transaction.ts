@@ -61,7 +61,6 @@ import {
   endpointOwnerNetId,
   lockedLayoutOwner,
   netEndpointGroups,
-  normalizePowerNets,
   pointOnSegment,
   replaceLayoutReference,
   routeFromEdit,
@@ -1711,12 +1710,6 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
-      case "normalize_power_nets": {
-        if (normalizePowerNets(draft, changedObjectIds)) {
-          connectivityChanged = true;
-        }
-        break;
-      }
       case "set_mos_bulk_defaults": {
         if (edit.nmosNetId === undefined && edit.pmosNetId === undefined) {
           return rejectAt(
@@ -2158,13 +2151,6 @@ export function executeTransaction(
       }
     }
     geometryChanged = true;
-  }
-
-  // A power symbol's terminal membership, rather than an incidental Net name
-  // or the specific UI operation used to create it, owns power-Net semantics.
-  // This catches wiring, endpoint joins, and merges through the same boundary.
-  if (normalizePowerNets(draft, changedObjectIds)) {
-    connectivityChanged = true;
   }
 
   const introducedNetContractIssue = validateNetContract(draft).find(

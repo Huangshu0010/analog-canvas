@@ -8304,3 +8304,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   passed 144 test files / 866 tests, workspace builds, and production smoke.
 - Commit status: pending `docs(net): close contract unification roadmap` on
   `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N11 legacy compatibility retirement
+
+- Target: remove the obsolete power normalizer and Project-entry duplicate-Net
+  repair rather than retain old Project or raw edit compatibility.
+- Changed areas: model/Edit Engine normalizer path, Agent schema and generated
+  artifacts, editor entry presentation, current contract docs, and focused
+  regressions.
+- Validation: focused 4-file Vitest (46 tests), generated Agent/MCP checks,
+  typecheck, test-impact, diff check, and `pnpm verify:branch` (143 test files
+  / 860 tests, workspace build, production smoke) passed.
+- Commit status: pending `refactor(net): retire legacy normalization
+  compatibility` on `codex/net-contract-unification-plan`.

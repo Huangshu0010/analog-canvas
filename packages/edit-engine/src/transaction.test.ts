@@ -64,6 +64,9 @@ describe("Edit Transaction envelope", () => {
         annotationId: "label",
       }).success,
     ).toBe(false);
+    expect(
+      SchematicEditSchema.safeParse({ kind: "normalize_power_nets" }).success,
+    ).toBe(false);
   });
 
   it("rejects an invalid power rail atomically", () => {
@@ -444,7 +447,7 @@ describe("Edit Transaction envelope", () => {
     expect(document.revision).toBe(0);
   });
 
-  it("normalizes an explicitly tagged supply Net without a supply symbol", () => {
+  it("does not silently normalize an explicitly tagged supply Net", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "M2",
@@ -480,8 +483,7 @@ describe("Edit Transaction envelope", () => {
         nets: [
           {
             id: "net-ui-2",
-            name: "VDD",
-            scope: "global",
+            scope: "local",
             powerDomain: "vdd",
             terminals: [],
           },

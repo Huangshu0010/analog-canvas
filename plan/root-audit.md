@@ -203,6 +203,14 @@ recorded in `plan/log.md`.
 module split, explicit non-goals, and final branch verification; it is eligible
 for normal completed-plan retention handling.
 
+## 2026-08-17 Net contract legacy-compatibility retirement
+
+`2026-08-17-net-contract-n11-retire-legacy-compat` is completed on
+`codex/net-contract-unification-plan`. It supersedes the earlier compatibility
+decision: no legacy power-normalization edit or Project-entry duplicate-Net
+repair remains; normal authoring uses only current typed planners and explicit
+merges. Validation and commit evidence are recorded in `plan/log.md`.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

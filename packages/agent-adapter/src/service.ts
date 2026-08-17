@@ -163,7 +163,6 @@ export function agentEditCategory(
     case "merge_nets":
     case "set_net_name":
     case "set_net_power_domain":
-    case "normalize_power_nets":
     case "clear_document":
     case "set_mos_bulk_defaults":
     case "reconcile_mos_bulk":

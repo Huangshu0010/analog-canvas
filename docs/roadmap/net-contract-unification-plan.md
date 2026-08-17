@@ -31,7 +31,7 @@ This plan is a prerequisite refinement for the larger connectivity/debugging
 roadmap. It does not replace route geometry, search, or ERC plans. It fixes the
 smaller contract on which those features depend.
 
-## 2. Current inconsistency
+## 2. Initial inconsistency (resolved)
 
 The persisted shape is already sufficient, but current producers and consumers
 interpret it differently:
@@ -228,24 +228,13 @@ Export remains deterministic:
 - Route, Junction, label artwork, flightlines, and visual diagnostics never
   affect emitted connectivity.
 
-## 7. Existing Project repair
+## 7. Existing Project handling
 
 The persisted shape does not change, so no Project schema bump is planned.
-Previously produced same-name power duplicates need one deterministic repair:
-
-1. On open/import, identify same-Document Nets with the same folded name.
-2. If scopes and power roles are compatible, build the same merge transaction
-   used by normal authoring and mark the Project as needing save.
-3. Preserve the chosen canonical Net deterministically: preferred canonical
-   supply ID when present, otherwise lowest stable ID.
-4. If roles conflict or names express different electrical intent, do not
-   guess. Open the Project with a blocking repair diagnostic and offer the
-   explicit merge/rename path.
-5. Repository fixtures created by the old producer are normalized once and
-   committed with their affected regression expectations.
-
-This is value normalization, not an additional compatibility model. The editor
-continues to operate on one current Project shape.
+There is no duplicate-Net compatibility repair: a Project with same-Document
+same-folded names is invalid and is diagnosed until the author explicitly uses
+the current typed rename or merge operations. The editor operates on one
+current Project shape and does not silently rewrite an opened Project.
 
 ## 8. Delivery slices
 
@@ -270,11 +259,10 @@ Exit: all observed divergences have deterministic regression fixtures.
 Exit: one transaction can create, reuse, merge, reject, undo, and dry-run a
 named/global Net without an editor dependency.
 
-### N2 — Producer migration and repair
+### N2 — Producer migration
 
 - Migrate Ground, VDD rail, labels, SPICE import, MOS defaults, and Agent
   intent producers one at a time.
-- Add deterministic open/import repair and update affected fixtures.
 - Remove domain-only Net selection.
 
 Exit: no production producer creates duplicate canonical `0` or `VDD` Nets;
@@ -293,8 +281,8 @@ flightlines, and exported netlist.
 ### N4 — Consumer cleanup
 
 - Remove superseded editor-local power orchestration after `rg` proves no
-  production consumer. Retain `normalize_power_nets` as an explicit typed
-  compatibility edit; do not run it as a hidden editor load effect.
+  production consumer; do not retain a compatibility normalizer or hidden
+  editor load effect.
 - Update current specs, Agent documentation, and user-facing repair guidance.
 - Run branch integration verification.
 
@@ -317,10 +305,10 @@ semantics.
 | Imported logical Net without visible label/wire | Membership exports correctly; flightline may guide routing |
 | Unnamed local Net | Deterministic generated export name |
 | Unnamed global Net | Shared blocking diagnostic in ERC and export |
-| Repair of legacy duplicate power Nets | All Routes, Junctions, annotations, MOS bindings, and formal terminals retarget |
+| Duplicate same-folded names in an opened Project | Shared blocking diagnostic; no silent repair |
 
-The Project-entry repair regression exercises this full reference set directly;
-the repair itself remains an ordinary Edit Engine `merge_nets` transaction.
+The current authoring regressions exercise the typed explicit merge path;
+project entry never repairs duplicate Net identities.
 
 ## 10. Explicit non-goals
 
@@ -333,8 +321,7 @@ This work does not add:
 - a second mutation API beside the Edit Engine;
 - full simulator-dialect quoting or expression syntax;
 - route-geometry, crossing, junction, or visual-overlap redesign;
-- automatic ERC repair beyond the deterministic duplicate-Net normalization
-  described above.
+- automatic ERC or Project-entry Net repair.
 
 Those concerns can build on this contract later without changing its identity
 rules.
@@ -351,8 +338,8 @@ Focused implementation targets must cover:
 - flightline semantic-bridge positive and negative cases;
 - ERC/export diagnostic parity;
 - SPICE and Spectre global emission and structural reparse;
-- schema-10 direct upgrade followed by current-value normalization;
-- save/reopen stability after repair;
+- schema-10 direct upgrade without Net mutation;
+- save/reopen stability for a valid current Project;
 - `pnpm test:impact -- --base <base-ref>` and the normal branch gate at the
   delivery boundary.
 
@@ -370,11 +357,11 @@ The completed implementation keeps the protocol deliberately small:
 | Authoring | `packages/edit-engine` | Existing typed edits plus the named-Net and power-Net planners; the latter is only a role-aware wrapper and does not define a second Net identity. |
 | Read-side electrical equivalence | `packages/derived` | `ProjectConnectivityIndex` local, hierarchy, and named-global edges; semantic flightline and trace consumers. |
 | Export and diagnostics | `packages/netlist`, `packages/derived` | Shared contract validation, deterministic local generated names, and explicit global emission. |
-| Legacy entry | `apps/editor` | Deterministic compatible duplicate-power repair through the same `merge_nets` transaction, with explicit save-needed state. |
+| Project entry | `apps/editor` | Installs the validated Project without Net repair; current MOS bulk materialization remains a separate presentation operation. |
 | Agent intent | `packages/agent-client`, `packages/agent-adapter` | Semantic Net rename reuses the same named-Net planner as GUI; raw typed transactions remain strict. |
 
 Final branch verification passed on 2026-08-17: `pnpm verify:branch` completed
-static checks, 144 test files / 866 tests, all workspace builds, and the
+static checks, 143 test files / 860 tests, all workspace builds, and the
 editor production-preview smoke check. The size warning emitted by Vite is
 non-blocking and is unrelated to Net semantics.
 

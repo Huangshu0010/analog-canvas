@@ -50,12 +50,9 @@ A migrated formal file is marked as needing save. The editor does not silently
 overwrite the source selected through the browser file input. Browser recovery
 records may be canonicalized to v11 only after a successful validated write.
 
-At editor entry, compatible legacy duplicate canonical supply Nets (`0` or
-`VDD` with the same compatible role in one Document) are deterministically
-merged through the Edit Engine before history is installed. This only changes
-the in-memory working copy; an opened file is marked as needing save and is
-never overwritten without an explicit **Save Project** action. Incompatible
-role evidence remains rejected/diagnosed rather than being guessed.
+Project entry does not repair duplicate canonical supply Nets (`0` or `VDD`).
+Duplicate folded Net names are invalid input and remain a blocking diagnostic
+until the author explicitly renames or merges the Nets.
 
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in

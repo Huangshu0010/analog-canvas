@@ -173,36 +173,3 @@ export function planEnsurePowerNet(
         : [],
   };
 }
-
-/**
- * Deterministically repairs legacy same-Cell canonical supply duplicates. It
- * deliberately leaves differently named supplies (AVDD/DVDD) and incompatible
- * role evidence untouched for the shared ERC/export diagnostic.
- */
-export function planRepairPowerNetDuplicates(
-  document: SchematicDocument,
-): readonly SchematicEdit[] {
-  const edits: SchematicEdit[] = [];
-  for (const domain of ["ground", "vdd"] as const) {
-    const candidates = sortedCanonicalCandidates(document, domain).filter(
-      (net) => !powerDomainConflict(domain, net.powerDomain ?? "none"),
-    );
-    if (candidates.length < 2) continue;
-    const target = candidates[0]!;
-    for (const source of candidates.slice(1)) {
-      edits.push({
-        kind: "merge_nets",
-        targetNetId: target.id,
-        sourceNetId: source.id,
-      });
-    }
-    if ((target.powerDomain ?? "none") === "none") {
-      edits.push({
-        kind: "set_net_power_domain",
-        netId: target.id,
-        powerDomain: domain,
-      });
-    }
-  }
-  return edits;
-}

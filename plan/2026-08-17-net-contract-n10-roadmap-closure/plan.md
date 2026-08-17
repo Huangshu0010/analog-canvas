@@ -50,9 +50,10 @@ Read-only: implementation and test records in `packages/model`,
 ## Test Impact
 
 - Decision: no-test-change
-- Evidence: no runtime behavior changes; the immediately preceding N9
-  integration regression and `pnpm verify:branch` (144 files / 866 tests,
-  workspace build, production smoke) protect the delivered behavior.
+- Reason: documentation-only target with no runtime behavior change.
+- Existing protection: the immediately preceding N9 integration regression and
+  `pnpm verify:branch` (144 files / 866 tests, workspace build, production
+  smoke) protect the delivered behavior.
 
 ## Commit Intent
 
