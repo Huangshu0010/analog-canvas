@@ -829,6 +829,9 @@ export function App({
     setInstancePropertyDraft,
     setNetLabelDraft,
     setNetLabelEditorOpen,
+    setReferenceLabelsVisible,
+    setValueLabelsVisible,
+    showSelectedInstanceValue,
     textEditing,
     updateTextEditing,
   } = usePropertiesEditor({
@@ -848,6 +851,8 @@ export function App({
     netLabelForRoute,
     netLabelEditsForRoute,
     instancePropertyEdits,
+    referenceLabelVisibilityEdits,
+    valueVisibilityEdits,
   });
   const hasRotatableSelection =
     selectedIds.some((id) =>
@@ -4231,10 +4236,10 @@ export function App({
     return edits;
   }
 
-  function setReferenceLabelsVisible(
+  function referenceLabelVisibilityEdits(
     instanceIds: readonly string[],
     visible: boolean,
-  ): void {
+  ): SchematicEdit[] {
     const edits: SchematicEdit[] = [];
     for (const instanceId of instanceIds) {
       const instance = document.instances.find(
@@ -4263,20 +4268,7 @@ export function App({
         }
       }
     }
-    if (edits.length === 0) {
-      setStatus(
-        visible
-          ? "No reference labels are available for this selection"
-          : "Selected components have no reference labels",
-      );
-      return;
-    }
-    const result = transact(edits);
-    if (result.ok) {
-      setStatus(
-        `${visible ? "Showing" : "Hiding"} reference labels on ${edits.length} component${edits.length === 1 ? "" : "s"}`,
-      );
-    }
+    return edits;
   }
 
   function valueVisibilityEdits(
@@ -4326,64 +4318,6 @@ export function App({
       }
     }
     return edits;
-  }
-
-  function setValueLabelsVisible(
-    instanceIds: readonly string[],
-    visible: boolean,
-  ): void {
-    const edits = valueVisibilityEdits(document, instanceIds, visible);
-    if (edits.length === 0) {
-      setStatus(
-        visible
-          ? "No component values are available for this selection"
-          : "Selected components have no value displays",
-      );
-      return;
-    }
-    const result = transact(edits);
-    if (result.ok) {
-      setStatus(
-        `${visible ? "Showing" : "Hiding"} component values on ${edits.length} component${edits.length === 1 ? "" : "s"}`,
-      );
-    }
-  }
-
-  /**
-   * Show the selected instance's value from its live property draft. The
-   * typed parameters are committed in the same transaction so the displayed
-   * value is always the committed electrical truth. Geometry edits in the
-   * draft stay uncommitted — only the netlist projection is claimed.
-   */
-  function showSelectedInstanceValue(): void {
-    if (!selectedInstance) return;
-    const propertyEdits =
-      instancePropertyDraft.instanceId === selectedInstance.id
-        ? instancePropertyEdits(instancePropertyDraft).edits.filter(
-            (edit) => edit.kind === "set_instance_netlist",
-          )
-        : [];
-    const projected = structuredClone(document);
-    for (const edit of propertyEdits) {
-      if (edit.kind !== "set_instance_netlist") continue;
-      const target = projected.instances.find(
-        (item) => item.id === edit.instanceId,
-      );
-      if (target) target.netlist = structuredClone(edit.netlist);
-    }
-    const valueEdits = valueVisibilityEdits(
-      projected,
-      [selectedInstance.id],
-      true,
-    );
-    if (propertyEdits.length === 0 && valueEdits.length === 0) {
-      setStatus("No component value is available for this selection");
-      return;
-    }
-    const result = transact([...propertyEdits, ...valueEdits]);
-    if (result.ok) {
-      setStatus(`Showing component value for ${selectedInstance.id}`);
-    }
   }
 
   function instancePropertyEdits(draft: {

@@ -8084,3 +8084,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: staged for
   `refactor(editor): continue properties editor hook` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Complete properties interaction Hook
+
+- Target: give `usePropertiesEditor` the remaining reference/value display
+  action ownership while retaining its pure edit planners.
+- Changed areas: reference visibility, value visibility, and live-draft value
+  projection now commit through the properties Hook; App retains only pure
+  edit construction and JSX wiring.
+- Validation: focused Playwright reference/value projection passed, together
+  with `pnpm typecheck` and formatting.
+- Commit status: staged for
+  `refactor(editor): complete properties editor hook` on
+  `codex/app-transaction-module-layers`.

@@ -60,6 +60,15 @@ export interface UsePropertiesEditorOptions {
     edits: SchematicEdit[];
     invalidPosition: boolean;
   };
+  referenceLabelVisibilityEdits: (
+    instanceIds: readonly string[],
+    visible: boolean,
+  ) => SchematicEdit[];
+  valueVisibilityEdits: (
+    source: SchematicDocument,
+    instanceIds: readonly string[],
+    visible: boolean,
+  ) => SchematicEdit[];
 }
 
 /** Flat owner for property drafts, Net Labels, and canvas text sessions. */
@@ -224,6 +233,81 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     );
   };
 
+  const setReferenceLabelsVisible = (
+    instanceIds: readonly string[],
+    visible: boolean,
+  ): void => {
+    const edits = options.referenceLabelVisibilityEdits(instanceIds, visible);
+    if (edits.length === 0) {
+      options.setStatus(
+        visible
+          ? "No reference labels are available for this selection"
+          : "Selected components have no reference labels",
+      );
+      return;
+    }
+    if (options.transact(edits).ok) {
+      options.setStatus(
+        `${visible ? "Showing" : "Hiding"} reference labels on ${edits.length} component${edits.length === 1 ? "" : "s"}`,
+      );
+    }
+  };
+
+  const setValueLabelsVisible = (
+    instanceIds: readonly string[],
+    visible: boolean,
+  ): void => {
+    const edits = options.valueVisibilityEdits(
+      options.document,
+      instanceIds,
+      visible,
+    );
+    if (edits.length === 0) {
+      options.setStatus(
+        visible
+          ? "No component values are available for this selection"
+          : "Selected components have no value displays",
+      );
+      return;
+    }
+    if (options.transact(edits).ok) {
+      options.setStatus(
+        `${visible ? "Showing" : "Hiding"} component values on ${edits.length} component${edits.length === 1 ? "" : "s"}`,
+      );
+    }
+  };
+
+  const showSelectedInstanceValue = (): void => {
+    const instance = options.selectedInstance;
+    if (!instance) return;
+    const propertyEdits =
+      instancePropertyDraft.instanceId === instance.id
+        ? options
+            .instancePropertyEdits(instancePropertyDraft)
+            .edits.filter((edit) => edit.kind === "set_instance_netlist")
+        : [];
+    const projected = structuredClone(options.document);
+    for (const edit of propertyEdits) {
+      if (edit.kind !== "set_instance_netlist") continue;
+      const target = projected.instances.find(
+        (item) => item.id === edit.instanceId,
+      );
+      if (target) target.netlist = structuredClone(edit.netlist);
+    }
+    const valueEdits = options.valueVisibilityEdits(
+      projected,
+      [instance.id],
+      true,
+    );
+    if (propertyEdits.length === 0 && valueEdits.length === 0) {
+      options.setStatus("No component value is available for this selection");
+      return;
+    }
+    if (options.transact([...propertyEdits, ...valueEdits]).ok) {
+      options.setStatus(`Showing component value for ${instance.id}`);
+    }
+  };
+
   const beginNetLabelEditing = (): void => {
     if (!options.selectedRoute || options.wireSourceActive) {
       options.setStatus("Select a wire segment before adding a Net Label");
@@ -309,6 +393,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     setInstancePropertyDraft,
     setNetLabelDraft,
     setNetLabelEditorOpen,
+    setReferenceLabelsVisible,
+    setValueLabelsVisible,
+    showSelectedInstanceValue,
     textEditing,
     updateTextEditing,
   };
