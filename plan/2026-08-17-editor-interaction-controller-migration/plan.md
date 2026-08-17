@@ -27,8 +27,8 @@ The five domains are:
 |    1 | Wiring                            | completed                                     | `refactor(editor): extract wire interaction hook`      |
 |    2 | Selection and movement            | in progress: commands and pointer-drag sessions extracted; keyboard Move session pending | `refactor(editor): extract selection interaction hook` |
 |    3 | Component insertion and placement | in progress: dialog, recents, and placement commands extracted; commit orchestration pending | `refactor(editor): extract component placement hook`   |
-|    4 | Property editing                  | pending                                       | `refactor(editor): extract properties editor hook`     |
-|    5 | Panels and dialogs                | pending                                       | `refactor(editor): extract editor panel state hook`    |
+|    4 | Property editing                  | in progress: draft state extracted; commit/text lifecycle pending | `refactor(editor): extract properties editor hook`     |
+|    5 | Panels and dialogs                | in progress: generic shell state extracted; focus/persistence cleanup pending | `refactor(editor): extract editor panel state hook`    |
 
 ## State and Ownership
 
