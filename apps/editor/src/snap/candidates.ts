@@ -106,6 +106,28 @@ export function buildDraftingAnchors(
   });
 }
 
+export function buildRectangleEdgeSnapAnchors(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+): SnapAnchor[] {
+  return (document.drafting?.objects ?? []).flatMap((object) => {
+    if (object.kind !== "rectangle") return [];
+    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
+    if (geometry.kind !== "rectangle") return [];
+    return geometry.corners.map((corner, index): SnapAnchor => {
+      const next = geometry.corners[(index + 1) % geometry.corners.length]!;
+      return {
+        id: `drafting:${object.id}:edge-center:${index}`,
+        point: {
+          x: (corner.x + next.x) / 2,
+          y: (corner.y + next.y) / 2,
+        },
+        kind: "drafting",
+      };
+    });
+  });
+}
+
 export function buildInstanceAnchors(
   document: SchematicDocument,
   resolver: SymbolResolver,

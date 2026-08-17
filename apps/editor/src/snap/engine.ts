@@ -115,7 +115,13 @@ export const SNAP_PROFILES = {
     gridAlignedTranslation: false,
   },
   wire: {
-    kinds: new Set<SnapTargetKind>(["grid", "pin", "junction", "route"]),
+    kinds: new Set<SnapTargetKind>([
+      "grid",
+      "pin",
+      "junction",
+      "route",
+      "drafting",
+    ]),
     exactElectrical: true,
     gridAlignedTranslation: false,
   },
