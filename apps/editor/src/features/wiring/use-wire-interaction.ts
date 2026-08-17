@@ -6,6 +6,7 @@ import type {
 import {
   buildManualWirePath,
   createFreeWireAnchor,
+  proposeVisualRouteDeletion,
   proposeWireCommitThroughContacts,
   type SchematicEdit,
   type WireSource,
@@ -27,6 +28,7 @@ export interface UseWireInteractionOptions {
   document: SchematicDocument;
   resolver: SymbolResolver;
   selectedInstance: SchematicDocument["instances"][number] | undefined;
+  selectedRouteId: string | null;
   visibleEndpoints: readonly WireSource[];
   wireSource: WireSource | null;
   wireSourceRevision: number | null;
@@ -45,6 +47,7 @@ export interface UseWireInteractionOptions {
   clearTransientCanvasState: () => void;
   cancelInteraction: () => void;
   setBulkDrawInstanceId: (instanceId: string | null) => void;
+  replaceRouteSelection: (routeIds: readonly string[]) => void;
 }
 
 /**
@@ -236,6 +239,21 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     options.setStatus(`Drawing ${instance.id}.B bulk connection`);
   };
 
+  const deleteSelectedRouteConnection = (): void => {
+    if (!options.selectedRouteId) return;
+    const route = options.document.routes.find(
+      (candidate) => candidate.id === options.selectedRouteId,
+    );
+    if (!route) return;
+    const result = options.transact(
+      proposeVisualRouteDeletion(options.document, [route.id], []).edits,
+    );
+    if (result.ok) {
+      options.replaceRouteSelection([]);
+      options.setStatus(`Deleted wire ${route.id}`);
+    }
+  };
+
   const fixWirePoint = (point: Point): void => {
     if (!options.wireSource) {
       const source = freeWireAnchor(
@@ -273,6 +291,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
 
   return {
     commitWire,
+    deleteSelectedRouteConnection,
     drawSelectedMosBulk,
     fixWirePoint,
     finishWireAtPoint,

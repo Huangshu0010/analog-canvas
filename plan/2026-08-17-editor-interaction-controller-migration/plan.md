@@ -24,7 +24,7 @@ The five domains are:
 
 | Step | Domain                            | State                                         | Commit                                                 |
 | ---: | --------------------------------- | --------------------------------------------- | ------------------------------------------------------ |
-|    1 | Wiring                            | in progress: wire session extracted; route selection/stretch pending | `refactor(editor): extract wire interaction hook`      |
+|    1 | Wiring                            | in progress: wire session and route deletion extracted; route selection/stretch pending | `refactor(editor): extract wire interaction hook`      |
 |    2 | Selection and movement            | pending                                       | `refactor(editor): extract selection interaction hook` |
 |    3 | Component insertion and placement | pending                                       | `refactor(editor): extract component placement hook`   |
 |    4 | Property editing                  | pending                                       | `refactor(editor): extract properties editor hook`     |

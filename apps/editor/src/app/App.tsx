@@ -1128,6 +1128,7 @@ export function App({
   );
   const {
     drawSelectedMosBulk,
+    deleteSelectedRouteConnection,
     fixWirePoint,
     finishWireAtPoint,
     handleFlightline,
@@ -1137,6 +1138,7 @@ export function App({
     document,
     resolver,
     selectedInstance,
+    selectedRouteId,
     visibleEndpoints,
     wireSource,
     wireSourceRevision,
@@ -1152,6 +1154,8 @@ export function App({
     clearTransientCanvasState,
     cancelInteraction,
     setBulkDrawInstanceId,
+    replaceRouteSelection: (routeIds) =>
+      replaceSelectionKind("route", routeIds),
   });
 
   const textEditingTarget = textEditing
@@ -2284,21 +2288,6 @@ export function App({
     setSelectedRouteSegmentIndex(segmentIndex);
     setSelectedEndpoint(null);
     setStatus(`Selected route ${routeId}, segment ${segmentIndex + 1}`);
-  }
-
-  function deleteSelectedRouteConnection(): void {
-    if (!selectedRouteId) return;
-    const route = document.routes.find(
-      (candidate) => candidate.id === selectedRouteId,
-    );
-    if (!route) return;
-    const result = transact(
-      proposeVisualRouteDeletion(document, [route.id], []).edits,
-    );
-    if (result.ok) {
-      replaceSelectionKind("route", []);
-      setStatus(`Deleted wire ${route.id}`);
-    }
   }
 
   function beginRouteStretch(
