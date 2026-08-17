@@ -3,11 +3,13 @@ import type { Point } from "@icm/model";
 export interface CanvasDragVisual {
   translate(delta: Point): void;
   setPolyline(points: readonly Point[]): void;
+  setObjectPolyline(objectId: string, points: readonly Point[]): void;
   restore(): void;
 }
 
 interface SavedElement {
   element: Element;
+  objectId: string;
   transform: string | null;
   points: string | null;
 }
@@ -36,6 +38,9 @@ export function startCanvasDragVisual(
   });
   const saved: SavedElement[] = elements.map((element) => ({
     element,
+    objectId:
+      element.getAttribute("data-drag-object-id") ??
+      element.getAttribute("data-object-id")!,
     transform: element.getAttribute("transform"),
     points: element.getAttribute("points"),
   }));
@@ -54,6 +59,14 @@ export function startCanvasDragVisual(
       const value = pointList(points);
       for (const item of saved) {
         if (item.points !== null) item.element.setAttribute("points", value);
+      }
+    },
+    setObjectPolyline(objectId, points) {
+      const value = pointList(points);
+      for (const item of saved) {
+        if (item.objectId === objectId && item.points !== null) {
+          item.element.setAttribute("points", value);
+        }
       }
     },
     restore() {

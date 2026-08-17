@@ -127,6 +127,13 @@ placed the Examples entry in the far-left tool rail, passed local and remote
 delivery gates, and merged as `f7d961c`; it is eligible for normal completed-
 plan retention handling.
 
+## 2026-08-17 Connected-Wire editing stabilization closure
+
+`2026-08-17-connected-wire-move-delete` is completed with resolved experience.
+Connected Route drag previews, local endpoint stretch, and branch-isolated
+visual deletion have focused unit and browser regression evidence; the target
+is ready for its review commit and remote required checks.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

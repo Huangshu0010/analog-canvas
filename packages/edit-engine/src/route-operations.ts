@@ -467,45 +467,29 @@ export function proposeLocalStretch(
     const newFrom = resolveEndpointPoint(movedDocument, resolver, route.from);
     const newTo = resolveEndpointPoint(movedDocument, resolver, route.to);
     if (!original || !newFrom || !newTo) continue;
-    const adjacentMode = movesFrom
-      ? route.segmentModes[0]
-      : route.segmentModes.at(-1);
-    if (adjacentMode === "locked" || adjacentMode === "trunk") {
-      throw new Error(`Route ${route.id} has a protected adjacent segment`);
-    }
-    const waypoints = route.waypoints.map((point) => ({ ...point }));
-    let modes = [...route.segmentModes];
-    if (waypoints.length === 0) {
-      if (newFrom.x !== newTo.x && newFrom.y !== newTo.y) {
-        waypoints.push({ x: newTo.x, y: newFrom.y });
-        const mode = route.segmentModes[0] ?? "escape";
-        modes = [mode, mode];
-      }
-    } else if (movesFrom) {
-      const oldFrom = original.points[0]!;
-      const first = waypoints[0]!;
-      if (oldFrom.x === first.x) first.x = newFrom.x;
-      else first.y = newFrom.y;
-    } else if (movesTo) {
-      const oldTo = original.points.at(-1)!;
-      const last = waypoints.at(-1)!;
-      if (oldTo.x === last.x) last.x = newTo.x;
-      else last.y = newTo.y;
-    }
-    const normalized = normalizeRouteGeometry(
-      [newFrom, ...waypoints, newTo],
-      modes,
-    );
-    if (!isOrthogonal(normalized.points)) {
-      throw new Error(
-        `Local stretch would make route ${route.id} non-orthogonal`,
+    const points = original.points.map((point) => ({ ...point }));
+    const modes = [...original.segmentModes];
+    if (movesFrom) {
+      stretchRouteEndpoint(
+        route.id,
+        points,
+        modes,
+        "from",
+        original.points[0]!,
+        newFrom,
       );
     }
-    proposals.push({
-      routeId: route.id,
-      waypoints: normalized.points.slice(1, -1),
-      segmentModes: normalized.segmentModes,
-    });
+    if (movesTo) {
+      stretchRouteEndpoint(
+        route.id,
+        points,
+        modes,
+        "to",
+        original.points.at(-1)!,
+        newTo,
+      );
+    }
+    proposals.push(normalizeProposal(route.id, points, modes));
   }
   return proposals.sort((left, right) =>
     left.routeId.localeCompare(right.routeId, "en"),
@@ -554,6 +538,7 @@ export function proposeGroupMove(
   ]);
   const internalNetIds = new Set(internalSelection.netIds);
   const movableJunctionIds = new Set(internalSelection.junctionIds);
+  const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
 
   const proposals = new Map<string, RouteStretchProposal>();
   for (const route of document.routes) {
@@ -600,18 +585,25 @@ export function proposeGroupMove(
         `Route ${route.id} cannot stretch endpoints by different group deltas`,
       );
     }
-    const instanceId =
-      route.from.kind === "terminal" &&
-      moveByInstance.has(route.from.instanceId)
-        ? route.from.instanceId
-        : route.to.kind === "terminal"
-          ? route.to.instanceId
-          : null;
-    if (!instanceId) continue;
-    const position = moveByInstance.get(instanceId)!;
-    const local = proposeLocalStretch(document, resolver, instanceId, position);
-    const proposal = local.find((candidate) => candidate.routeId === route.id);
-    if (proposal) proposals.set(route.id, proposal);
+    const original = routeEditPathFromGeometry(routingGeometry, route.id);
+    if (!original) throw new Error(`Route ${route.id} has unresolved geometry`);
+    const points = original.points.map((point) => ({ ...point }));
+    const modes = [...original.segmentModes];
+    if (resolvedFromDelta) {
+      const from = original.points[0]!;
+      stretchRouteEndpoint(route.id, points, modes, "from", from, {
+        x: from.x + resolvedFromDelta.x,
+        y: from.y + resolvedFromDelta.y,
+      });
+    }
+    if (toDelta) {
+      const to = original.points.at(-1)!;
+      stretchRouteEndpoint(route.id, points, modes, "to", to, {
+        x: to.x + toDelta.x,
+        y: to.y + toDelta.y,
+      });
+    }
+    proposals.set(route.id, normalizeProposal(route.id, points, modes));
   }
   const internalRouteIds = internalSelection.routeIds;
   const internallyMovedObjectIds = new Set<string>([

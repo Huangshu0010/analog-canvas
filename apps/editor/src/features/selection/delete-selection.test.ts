@@ -10,6 +10,7 @@ import {
   collectVisualRouteDeletion,
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
+  proposeSelectionRouteDeletion,
 } from "./delete-selection";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
@@ -159,6 +160,50 @@ function documentWithJunctionRoute() {
   return document;
 }
 
+function documentWithBranchedJunction() {
+  const document = createEmptyProject("delete-branch", "Delete branch")
+    .documents[0]!;
+  document.nets.push({
+    id: "net-1",
+    name: "N1",
+    scope: "local",
+    terminals: [],
+  });
+  document.junctions.push(
+    { id: "junction-center", netId: "net-1", position: { x: 100, y: 100 } },
+    { id: "junction-left", netId: "net-1", position: { x: 0, y: 100 } },
+    { id: "junction-right", netId: "net-1", position: { x: 200, y: 100 } },
+    { id: "junction-bottom", netId: "net-1", position: { x: 100, y: 200 } },
+  );
+  document.routes.push(
+    {
+      id: "route-left",
+      netId: "net-1",
+      from: { kind: "junction", junctionId: "junction-left" },
+      to: { kind: "junction", junctionId: "junction-center" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    },
+    {
+      id: "route-right",
+      netId: "net-1",
+      from: { kind: "junction", junctionId: "junction-center" },
+      to: { kind: "junction", junctionId: "junction-right" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    },
+    {
+      id: "route-branch",
+      netId: "net-1",
+      from: { kind: "junction", junctionId: "junction-center" },
+      to: { kind: "junction", junctionId: "junction-bottom" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    },
+  );
+  return document;
+}
+
 describe("collectVisualRouteDeletion", () => {
   it("cleans both orphan junction endpoints when a route is deleted", () => {
     expect(
@@ -179,6 +224,47 @@ describe("collectVisualRouteDeletion", () => {
     ).toEqual({
       routeIds: ["route-1"],
       junctionIds: ["junction-left", "junction-right"],
+    });
+  });
+
+  it("deletes only the selected branch when its shared Junction is also inside the marquee", () => {
+    const document = documentWithBranchedJunction();
+    expect(
+      collectVisualRouteDeletion(
+        document,
+        ["route-branch"],
+        ["junction-center"],
+      ),
+    ).toEqual({
+      routeIds: ["route-branch"],
+      junctionIds: ["junction-bottom"],
+    });
+    const proposal = proposeSelectionRouteDeletion(
+      document,
+      ["route-branch"],
+      ["junction-center"],
+    );
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "delete-one-branch",
+        documentId: document.id,
+        expectedRevision: 0,
+        actor: { kind: "human", id: "test" },
+        edits: proposal.edits,
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        routes: [{ id: "route-left" }, { id: "route-right" }],
+        junctions: [
+          { id: "junction-center" },
+          { id: "junction-left" },
+          { id: "junction-right" },
+        ],
+      },
     });
   });
 
