@@ -8,7 +8,7 @@ an archive. Completed plans with resolved experience are stored under
 
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
-| `active`                  |     0 | No active root plan remains.                                                       |
+| `active`                  |     1 | Execute the Editor interaction controller migration below.                        |
 | `completed` + `none`      |    42 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
@@ -126,6 +126,14 @@ normal completed-plan retention handling.
 placed the Examples entry in the far-left tool rail, passed local and remote
 delivery gates, and merged as `f7d961c`; it is eligible for normal completed-
 plan retention handling.
+
+## 2026-08-17 Editor interaction controller migration
+
+`2026-08-17-editor-interaction-controller-migration` is active on
+`codex/app-transaction-module-layers`. It defines five sequential, flat
+Hook extractions for wiring, selection/movement, component placement,
+property editing, and panel state. `App.tsx` remains the composition root;
+no generic controller framework or duplicate interaction state is authorized.
 
 ## Legacy Metadata Sweep
 

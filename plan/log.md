@@ -7958,3 +7958,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: included in
   `refactor(editor): layer App document runtime helpers` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Define flat Editor interaction migration
+
+- Target: define the bounded five-step extraction of wiring,
+  selection/movement, component placement, property editing, and panel state
+  from `App.tsx`.
+- Changed areas: active implementation plan and root-plan audit; no product
+  code changed.
+- Validation: `pnpm docs:check`, `git diff --check`, and worktree scope
+  review.
+- Commit status: included in
+  `plan(editor): define flat interaction hook migration` on
+  `codex/app-transaction-module-layers`.
