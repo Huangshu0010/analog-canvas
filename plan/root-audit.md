@@ -188,6 +188,14 @@ and commit evidence are recorded in `plan/log.md`.
 planner behavior while raw API transaction behavior remains strict; validation
 and commit evidence are recorded in `plan/log.md`.
 
+## 2026-08-17 Net contract acceptance-matrix closure
+
+`2026-08-17-net-contract-n9-acceptance-matrix` is completed on
+`codex/net-contract-unification-plan`. Repeated canonical Ground/VDD symbol
+placement is directly covered through the normal proposal and transaction
+boundary, including AVDD/DVDD separation; validation and commit evidence are
+recorded in `plan/log.md`.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

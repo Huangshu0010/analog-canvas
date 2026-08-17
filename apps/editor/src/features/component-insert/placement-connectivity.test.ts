@@ -1,5 +1,5 @@
 import { executeTransaction } from "@icm/edit-engine";
-import { createEmptyDocument } from "@icm/model";
+import { createEmptyDocument, validateNetContract } from "@icm/model";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
@@ -284,5 +284,111 @@ describe("component placement electrical contacts", () => {
         },
       ],
     });
+  });
+
+  it("converges four separately placed Ground symbols on one canonical Net", () => {
+    let document = createEmptyDocument("main", "Main");
+    for (const [index, id] of ["GND1", "GND2", "GND3", "GND4"].entries()) {
+      const ground = {
+        id,
+        symbolId: "ground",
+        placement: {
+          position: { x: 80 + index * 40, y: 100 },
+          rotation: 0 as const,
+          mirror: "none" as const,
+        },
+        properties: {},
+      };
+      const proposal = proposedStandalonePowerConnection(document, ground);
+      const result = executeTransaction(
+        document,
+        transaction(document.revision, [
+          { kind: "add_instance", instance: ground },
+          ...proposal.edits,
+        ]),
+        context,
+      );
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      document = result.document;
+    }
+
+    expect(document.nets).toEqual([
+      expect.objectContaining({
+        name: "0",
+        scope: "global",
+        powerDomain: "ground",
+        terminals: [
+          { instanceId: "GND1", pinName: "0" },
+          { instanceId: "GND2", pinName: "0" },
+          { instanceId: "GND3", pinName: "0" },
+          { instanceId: "GND4", pinName: "0" },
+        ],
+      }),
+    ]);
+    expect(validateNetContract(document)).toEqual([]);
+  });
+
+  it("converges three VDD symbols without merging AVDD or DVDD", () => {
+    let document = createEmptyDocument("main", "Main");
+    document.nets.push(
+      {
+        id: "net-avdd",
+        name: "AVDD",
+        scope: "global",
+        powerDomain: "vdd",
+        terminals: [],
+      },
+      {
+        id: "net-dvdd",
+        name: "DVDD",
+        scope: "global",
+        powerDomain: "vdd",
+        terminals: [],
+      },
+    );
+    for (const [index, id] of ["VDD1", "VDD2", "VDD3"].entries()) {
+      const vdd = {
+        id,
+        symbolId: "vdd-port",
+        placement: {
+          position: { x: 80 + index * 40, y: 100 },
+          rotation: 0 as const,
+          mirror: "none" as const,
+        },
+        properties: {},
+      };
+      const proposal = proposedStandalonePowerConnection(document, vdd);
+      const result = executeTransaction(
+        document,
+        transaction(document.revision, [
+          { kind: "add_instance", instance: vdd },
+          ...proposal.edits,
+        ]),
+        context,
+      );
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      document = result.document;
+    }
+
+    expect(document.nets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "VDD",
+          scope: "global",
+          powerDomain: "vdd",
+          terminals: [
+            { instanceId: "VDD1", pinName: "P" },
+            { instanceId: "VDD2", pinName: "P" },
+            { instanceId: "VDD3", pinName: "P" },
+          ],
+        }),
+        expect.objectContaining({ id: "net-avdd", name: "AVDD" }),
+        expect.objectContaining({ id: "net-dvdd", name: "DVDD" }),
+      ]),
+    );
+    expect(document.nets).toHaveLength(3);
+    expect(validateNetContract(document)).toEqual([]);
   });
 });

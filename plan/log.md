@@ -8284,3 +8284,13 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   unit files / 864 tests, full workspace build, production smoke) passed.
 - Commit status: pending `feat(agent): share named net authoring planner` on
   `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N9 acceptance matrix
+
+- Target: prove repeated canonical Ground/VDD placement converges through the
+  normal UI proposal and Edit Engine transaction boundary.
+- Changed areas: placement connectivity integration regressions.
+- Validation: focused placement Vitest run (8 tests), test-impact, and diff
+  checks passed.
+- Commit status: pending `test(net): cover repeated canonical power placement`
+  on `codex/net-contract-unification-plan`.
