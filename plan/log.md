@@ -8175,3 +8175,14 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   (including final Playwright status `passed`), and diff checks passed.
 - Commit status: staged for `fix(editor): restore connected wire drag previews`
   on `codex/app-transaction-module-layers`; GitHub required checks pending.
+
+## 2026-08-17 - Plan unified Net contract
+
+- Target: define the minimal shared Net identity, naming, scope, power-role,
+  hierarchy, authoring, ERC, tracing, and deterministic-export contract.
+- Changed areas: added the Net contract unification roadmap, its staged
+  acceptance matrix and non-goals, and linked it from the roadmap index.
+- Validation: documentation review, `pnpm test:impact -- --base main`, and
+  `git diff --check` passed.
+- Commit status: staged for `docs(net): plan unified connectivity contract` on
+  `codex/net-contract-unification-plan`.
