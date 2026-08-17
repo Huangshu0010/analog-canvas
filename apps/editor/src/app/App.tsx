@@ -133,10 +133,7 @@ import {
   proposePlacementContact,
   proposedStandalonePowerConnection,
 } from "../features/component-insert/placement-connectivity";
-import {
-  componentParameters,
-  effectiveComponentParameterValue,
-} from "../features/component-insert/component-parameters";
+import { componentParameters } from "../features/component-insert/component-parameters";
 import {
   endpointTestId,
   instanceLabelAnnotationFor,
@@ -213,14 +210,7 @@ import type { AgentFileCandidateSummary } from "@icm/agent-adapter";
 import { referencedDocumentId } from "../document/editor-session";
 import { useInteractionState } from "../interaction/interaction-state";
 import type { EditorTool } from "../interaction/interaction-state";
-import {
-  createTextEditingSession,
-  proposeTextEditingCommit,
-  resolveTextEditingTarget,
-  textDeletionEdit,
-  updateTextEditingSession,
-} from "../features/text-editing/text-editing";
-import type { TextEditingSession } from "../features/text-editing/text-editing";
+import { resolveTextEditingTarget } from "../features/text-editing/text-editing";
 import {
   defaultRazaviSymbolVariantId,
   materializeRazaviProjectBulkConnections,
@@ -633,18 +623,6 @@ export function App({
   const [bulkDrawInstanceId, setBulkDrawInstanceId] = useState<string | null>(
     null,
   );
-  const netLabelDraftRouteRef = useRef<string | null>(null);
-  const {
-    instancePropertyDraft,
-    netLabelDraft,
-    netLabelEditorOpen,
-    setInstancePropertyDraft,
-    setNetLabelDraft,
-    setNetLabelEditorOpen,
-  } = usePropertiesEditor();
-  const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
-    null,
-  );
   const [highlightedNetOrigin, setHighlightedNetOrigin] = useState<{
     documentId: string;
     netId: string;
@@ -831,6 +809,46 @@ export function App({
         (object) => object.id === selectedDraftingId,
       )
     : undefined;
+  const {
+    applyInstanceProperties,
+    applyNetLabel,
+    beginAnnotationTextEditing,
+    beginDraftingTextEditing,
+    beginNetLabelEditing,
+    commitInstancePropertyDraft,
+    commitNetLabelEditing,
+    commitPendingNetLabelDraft,
+    commitTextEditing,
+    clearTextEditing,
+    deleteSelectedRouteNetLabel,
+    deleteTextEditing,
+    discardInstancePropertyDraft,
+    instancePropertyDraft,
+    netLabelDraft,
+    netLabelEditorOpen,
+    setInstancePropertyDraft,
+    setNetLabelDraft,
+    setNetLabelEditorOpen,
+    textEditing,
+    updateTextEditing,
+  } = usePropertiesEditor({
+    document,
+    selectedRoute,
+    selectedRouteNetLabel: selectedRouteNetLabel ?? null,
+    selectedRouteNetLabels,
+    selectedInstance,
+    wireSourceActive: wireSource !== null,
+    netLabelEditorInputRef,
+    transact,
+    setStatus,
+    replaceSelectionKind: (kind, ids) => replaceSelectionKind(kind, ids),
+    selectOnly: (kind, ids) => selectOnly(kind, ids),
+    selectDraftingObject,
+    clearSelectionKinds,
+    netLabelForRoute,
+    netLabelEditsForRoute,
+    instancePropertyEdits,
+  });
   const hasRotatableSelection =
     selectedIds.some((id) =>
       document.instances.some(
@@ -1361,64 +1379,6 @@ export function App({
     if (pruned !== visualSelection) replaceSelection(pruned);
   }, [document, visualSelection]);
 
-  useEffect(() => {
-    // Leaving a route (selection cleared or moved on) commits a pending Net
-    // label draft instead of silently discarding it.
-    commitPendingNetLabelDraft();
-    if (!selectedRoute) {
-      setNetLabelDraft("");
-      setNetLabelEditorOpen(false);
-      return;
-    }
-    setNetLabelDraft(
-      selectedRouteNetLabel
-        ? flattenRichText(selectedRouteNetLabel.content)
-        : "",
-    );
-    netLabelDraftRouteRef.current = selectedRoute.id;
-  }, [selectedRoute, selectedRouteNetLabel]);
-
-  const lastSelectedInstanceIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    // Leaving a component (selection cleared or moved to another instance)
-    // commits pending property edits instead of silently discarding them.
-    // Keying on the id, not the record, keeps unrelated document updates
-    // from replaying a stale draft.
-    const previousInstanceId = lastSelectedInstanceIdRef.current;
-    lastSelectedInstanceIdRef.current = selectedInstance?.id ?? null;
-    if ((selectedInstance?.id ?? null) !== previousInstanceId) {
-      const pending = instancePropertyEdits(instancePropertyDraft);
-      if (pending.edits.length > 0) transact(pending.edits);
-    }
-    if (!selectedInstance) {
-      setInstancePropertyDraft({
-        instanceId: null,
-        parameters: {},
-        x: "",
-        y: "",
-        rotation: "0",
-      });
-      return;
-    }
-    setInstancePropertyDraft({
-      instanceId: selectedInstance.id,
-      parameters: Object.fromEntries(
-        componentParameters(selectedInstance.symbolId).map((parameter) => [
-          parameter.key,
-          effectiveComponentParameterValue(selectedInstance, parameter),
-        ]),
-      ),
-      x: selectedInstance.placement
-        ? String(selectedInstance.placement.position.x)
-        : "",
-      y: selectedInstance.placement
-        ? String(selectedInstance.placement.position.y)
-        : "",
-      rotation: String(selectedInstance.placement?.rotation ?? 0) as
-        "0" | "90" | "180" | "270",
-    });
-  }, [selectedInstance]);
-
   function openProperties(): void {
     setImportReviewOpen(false);
     setSelectionOpen(true);
@@ -1491,7 +1451,7 @@ export function App({
     cancelAllTransientInteraction();
     resetSelection();
     setSelectedRouteSegmentIndex(null);
-    setTextEditing(null);
+    clearTextEditing();
     setSelectedEndpoint(null);
   }
 
@@ -4271,77 +4231,6 @@ export function App({
     return edits;
   }
 
-  function commitPendingNetLabelDraft(): void {
-    const routeId = netLabelDraftRouteRef.current;
-    netLabelDraftRouteRef.current = null;
-    if (!routeId) return;
-    const route = document.routes.find((candidate) => candidate.id === routeId);
-    if (!route) return;
-    const existing = netLabelForRoute(route);
-    const draftName = netLabelDraft.trim();
-    const currentName = existing
-      ? flattenRichText(existing.content).trim()
-      : "";
-    if (existing ? draftName === currentName : draftName === "") return;
-    const edits = netLabelEditsForRoute(route, netLabelDraft);
-    if (!edits) return;
-    const result = transact(edits);
-    if (result.ok) {
-      setStatus(
-        draftName ? `Saved Net Label ${draftName}` : "Removed Net Label",
-      );
-    }
-  }
-
-  function applyNetLabel(): void {
-    if (!selectedRoute) return;
-    const existingLabel = netLabelForRoute(selectedRoute);
-    const name = netLabelDraft.trim();
-    if (!name && !existingLabel) {
-      setStatus("Selected Route has no Net Label");
-      return;
-    }
-    const edits = netLabelEditsForRoute(selectedRoute, netLabelDraft);
-    if (!edits) return;
-    const result = transact(edits);
-    if (!result.ok) return;
-    netLabelDraftRouteRef.current = null;
-    if (!name) {
-      replaceSelectionKind("annotation", []);
-      setStatus(`Deleted Net Label ${flattenRichText(existingLabel!.content)}`);
-      return;
-    }
-    replaceSelectionKind("annotation", [
-      existingLabel?.id ?? `net-label-${selectedRoute.id}`,
-    ]);
-    setStatus(
-      edits.some((edit) => edit.kind === "merge_nets")
-        ? `Connected Nets through label ${name}`
-        : `Named Net ${name}`,
-    );
-  }
-
-  function deleteSelectedRouteNetLabel(): void {
-    if (!selectedRoute) return;
-    const label = selectedRouteNetLabel;
-    if (!label) {
-      setStatus(
-        selectedRouteNetLabels.length > 1
-          ? "This Net has multiple labels; select the label to delete"
-          : "Selected Route has no Net Label",
-      );
-      return;
-    }
-    const result = transact([
-      { kind: "remove_schematic_annotation", annotationId: label.id },
-    ]);
-    if (result.ok) {
-      replaceSelectionKind("annotation", []);
-      setNetLabelDraft("");
-      setStatus(`Deleted Net Label ${flattenRichText(label.content)}`);
-    }
-  }
-
   function setReferenceLabelsVisible(
     instanceIds: readonly string[],
     visible: boolean,
@@ -4564,131 +4453,6 @@ export function App({
       }
     }
     return { edits, invalidPosition };
-  }
-
-  function commitInstancePropertyDraft(): boolean {
-    const { edits, invalidPosition } = instancePropertyEdits(
-      instancePropertyDraft,
-    );
-    if (invalidPosition || edits.length === 0) return false;
-    return transact(edits).ok;
-  }
-
-  function applyInstanceProperties(): void {
-    if (
-      !selectedInstance ||
-      instancePropertyDraft.instanceId !== selectedInstance.id
-    ) {
-      return;
-    }
-    const { edits, invalidPosition } = instancePropertyEdits(
-      instancePropertyDraft,
-    );
-    if (invalidPosition) {
-      setStatus("Position must contain finite X and Y coordinates");
-      return;
-    }
-    if (edits.length === 0) {
-      setStatus("Component properties are unchanged");
-      return;
-    }
-    const result = transact(edits);
-    if (result.ok) setStatus(`Updated properties for ${selectedInstance.id}`);
-  }
-
-  function discardInstancePropertyDraft(): void {
-    if (!selectedInstance) return;
-    setInstancePropertyDraft({
-      instanceId: selectedInstance.id,
-      parameters: Object.fromEntries(
-        componentParameters(selectedInstance.symbolId).map((parameter) => [
-          parameter.key,
-          effectiveComponentParameterValue(selectedInstance, parameter),
-        ]),
-      ),
-      x: selectedInstance.placement
-        ? String(selectedInstance.placement.position.x)
-        : "",
-      y: selectedInstance.placement
-        ? String(selectedInstance.placement.position.y)
-        : "",
-      rotation: String(selectedInstance.placement?.rotation ?? 0) as
-        "0" | "90" | "180" | "270",
-    });
-    setStatus(`Discarded property edits for ${selectedInstance.id}`);
-  }
-
-  function beginNetLabelEditing(): void {
-    if (!selectedRoute || wireSource) {
-      setStatus("Select a wire segment before adding a Net Label");
-      return;
-    }
-    setNetLabelEditorOpen(true);
-    requestAnimationFrame(() => netLabelEditorInputRef.current?.focus());
-  }
-
-  function commitNetLabelEditing(): void {
-    applyNetLabel();
-    setNetLabelEditorOpen(false);
-  }
-
-  function beginAnnotationTextEditing(annotation: Annotation): void {
-    selectOnly("annotation", [annotation.id]);
-    setTextEditing(
-      createTextEditingSession({
-        owner: "annotation",
-        object: annotation,
-      }),
-    );
-  }
-
-  function beginDraftingTextEditing(
-    object: Extract<DraftingObject, { kind: "text" }>,
-  ): void {
-    selectDraftingObject(object.id);
-    setTextEditing(
-      createTextEditingSession({
-        owner: "drafting",
-        object,
-      }),
-    );
-  }
-
-  function updateTextEditing(
-    change: Partial<Pick<TextEditingSession, "content" | "sizeScale">>,
-  ): void {
-    setTextEditing((current) =>
-      current ? updateTextEditingSession(current, change) : null,
-    );
-  }
-
-  function deleteTextEditing(): void {
-    if (!textEditing) return;
-    const result = transact([textDeletionEdit(textEditing)]);
-    if (result.ok) {
-      clearSelectionKinds(["annotation", "drafting"]);
-      setTextEditing(null);
-      setStatus(`Deleted text ${textEditing.id}`);
-    }
-  }
-
-  function commitTextEditing(): void {
-    if (!textEditing) return;
-    const proposal = proposeTextEditingCommit(document, textEditing);
-    if (proposal.kind === "blocked") return;
-    if (proposal.kind === "unchanged") {
-      setTextEditing(null);
-      return;
-    }
-    const result = transact([proposal.edit]);
-    if (!result.ok) return;
-    if (proposal.kind === "delete") {
-      clearSelectionKinds(["annotation", "drafting"]);
-      setStatus(`Deleted text ${proposal.id}`);
-    } else {
-      setStatus(`Updated text ${proposal.id}`);
-    }
-    setTextEditing(null);
   }
 
   /*

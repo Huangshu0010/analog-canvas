@@ -8070,3 +8070,17 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: staged for
   `refactor(editor): complete selection and component placement hooks` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Continue properties interaction Hook
+
+- Target: move property-draft, Net Label, and canvas text session lifecycles
+  out of `App.tsx` without changing the transaction boundary.
+- Changed areas: `usePropertiesEditor` now owns selection-transition commits,
+  Net Label open/apply/delete, instance apply/cancel, and text editing
+  sessions; the remaining label visibility actions stay explicitly pending.
+- Validation: focused properties/text contracts (3 files / 22 tests), 5
+  focused Playwright property/Net Label/text scenarios, and `pnpm typecheck`
+  passed.
+- Commit status: staged for
+  `refactor(editor): continue properties editor hook` on
+  `codex/app-transaction-module-layers`.
