@@ -110,20 +110,27 @@ export function buildRectangleEdgeSnapAnchors(
   document: SchematicDocument,
   resolver: SymbolResolver,
 ): SnapAnchor[] {
+  const fractions = [
+    { id: "quarter", value: 1 / 4 },
+    { id: "third", value: 1 / 3 },
+    { id: "center", value: 1 / 2 },
+    { id: "two-thirds", value: 2 / 3 },
+    { id: "three-quarters", value: 3 / 4 },
+  ] as const;
   return (document.drafting?.objects ?? []).flatMap((object) => {
     if (object.kind !== "rectangle") return [];
     const geometry = resolveDraftingObjectGeometry(document, resolver, object);
     if (geometry.kind !== "rectangle") return [];
-    return geometry.corners.map((corner, index): SnapAnchor => {
+    return geometry.corners.flatMap((corner, index): SnapAnchor[] => {
       const next = geometry.corners[(index + 1) % geometry.corners.length]!;
-      return {
-        id: `drafting:${object.id}:edge-center:${index}`,
+      return fractions.map(({ id, value }) => ({
+        id: `drafting:${object.id}:edge-${index}:${id}`,
         point: {
-          x: (corner.x + next.x) / 2,
-          y: (corner.y + next.y) / 2,
+          x: corner.x + (next.x - corner.x) * value,
+          y: corner.y + (next.y - corner.y) * value,
         },
         kind: "drafting",
-      };
+      }));
     });
   });
 }

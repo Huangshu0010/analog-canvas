@@ -7915,3 +7915,15 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   `git diff --check` passed.
 - Commit status: committed on `codex/wire-snap-rectangle-edge-centers`;
   remote required checks remain the mainline delivery gate.
+
+## 2026-08-17 - Expand rectangle-edge Wire snap fractions
+
+- Target: expose `1/4`, `1/3`, `1/2`, `2/3`, and `3/4` Wire snap positions on
+  every drafting rectangle edge while preserving the non-electrical boundary.
+- Changed areas: rectangle-edge Snap candidate interpolation, axis-aligned and
+  rotated regression coverage, and target plan.
+- Validation: focused Snap suites (2 files / 16 tests), `pnpm typecheck`,
+  `pnpm build`, formatting check, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
+- Commit status: committed on `codex/wire-snap-rectangle-edge-fractions`;
+  remote required checks remain the mainline delivery gate.
