@@ -532,6 +532,20 @@ describe("migrateLegacyProjectRecovery", () => {
     expect(firstSession(read).latest?.source).toBe("recovered");
   });
 
+  it("stores a schema-10 legacy slot as internally consistent schema 11", async () => {
+    const { store } = freshStore();
+    const previousText = JSON.stringify({
+      ...JSON.parse(projectText),
+      schemaVersion: 10,
+    });
+    const storage = memoryStorage({ [PROJECT_RECOVERY_KEY]: previousText });
+
+    expect(await migrate(storage, store)).toMatchObject({ status: "migrated" });
+    const latest = firstSession(await store.readAll()).latest!;
+    expect(latest.projectSchemaVersion).toBe(11);
+    expect(JSON.parse(latest.projectText).schemaVersion).toBe(11);
+  });
+
   it("retains an unsupported-schema legacy slot", async () => {
     const { store } = freshStore();
     const futureText = JSON.stringify({

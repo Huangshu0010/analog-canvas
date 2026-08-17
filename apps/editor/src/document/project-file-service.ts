@@ -19,7 +19,7 @@
 // handle into Project JSON or a recovery record.
 
 import {
-  parseProject,
+  parseProjectWithMetadata,
   serializeProject,
   ProjectFormatError,
   type CircuitProject,
@@ -50,6 +50,8 @@ export type ProjectFileOpenOutcome =
       project: CircuitProject;
       fileName: string;
       topDocumentRevision: number;
+      sourceSchemaVersion: number;
+      migrated: boolean;
     }
   | { status: "rejected"; diagnostics: ProjectFileOpenDiagnostic[] };
 
@@ -328,9 +330,9 @@ export async function stageProjectFile(
       diagnostics: [{ code: "READ_FAILED", message: errorMessage(error) }],
     };
   }
-  let project: CircuitProject;
+  let parsedProject;
   try {
-    project = parseProject(serialized);
+    parsedProject = parseProjectWithMetadata(serialized);
   } catch (error) {
     if (error instanceof ProjectFormatError) {
       return {
@@ -354,6 +356,7 @@ export async function stageProjectFile(
       ],
     };
   }
+  const project = parsedProject.project;
   const unsupported = findUnsupportedSymbols(project);
   if (unsupported.length > 0) {
     return {
@@ -385,6 +388,8 @@ export async function stageProjectFile(
     project,
     fileName: file.name,
     topDocumentRevision: topDocument.revision,
+    sourceSchemaVersion: parsedProject.sourceSchemaVersion,
+    migrated: parsedProject.migrated,
   };
 }
 

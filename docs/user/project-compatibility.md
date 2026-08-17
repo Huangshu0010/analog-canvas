@@ -3,13 +3,18 @@
 The released Project schema version is `11` (v10 added the `instance-value`
 annotation kind; v11 restores the RichText `fraction` run). A canonical v11
 file can be opened, saved, reopened, and saved again without byte drift.
-Older and newer schema versions are rejected; the editor has no compatibility
-reader or migration registry.
+Schema v10 is accepted through one direct, lossless upgrade to v11. It does not
+remain a v10 Project in the editor: all subsequent edits can use v11 features,
+including RichText fractions, and the next save writes v11. The original file
+is never overwritten silently. Schema v9 and older, and versions newer than
+v11, are rejected; there is no accumulating migration registry.
 
-The current-only corpus at
+The canonical-current corpus at
 [`fixtures/projects/compatibility-corpus.json`](../../fixtures/projects/compatibility-corpus.json)
 lists every shipped Project fixture. It distinguishes byte-stable accepted
-files from named rejected inputs. Retired fields such as first-class
+files from named rejected inputs. Previous-version compatibility uses a
+focused synthetic regression instead of retaining historic Project assets.
+Retired fields such as first-class
 `Document.ports`, `Net.ports`, `spice.*`, and `routeAttachment` are invalid.
 
 An incompatible Project is rejected before it can replace the current browser

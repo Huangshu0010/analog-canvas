@@ -7,9 +7,11 @@ Current Project schema: `11`
 Primary owner: `packages/model`
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`parseProject` accepts exactly Project schema 11, validates the full strict
-schema, and rejects every older or newer version. There is no migration
-registry, compatibility reader, or second in-memory Project shape.
+`parseProject` accepts Project schema 11 and schema 10. Schema 10 advances
+directly to 11 without rewriting content, then passes the full strict current
+validation. Every reader returns the sole schema-11 in-memory Project shape;
+schema 9 and older and all future versions are rejected. There is no sequential
+migration registry or second in-memory Project shape.
 
 ## Current authorities
 
@@ -32,14 +34,18 @@ registry, compatibility reader, or second in-memory Project shape.
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 11
--> strict validation -> open
+read text -> parse JSON -> require Project schema 10 or 11
+-> direct v10-to-v11 upgrade when needed -> strict schema-11 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```
 
 An invalid candidate never replaces the current browser Project. File Resource
 staging is non-mutating; a staged Project can replace the live Project only
 after explicit human approval in the editor.
+
+A migrated formal file is marked as needing save. The editor does not silently
+overwrite the source selected through the browser file input. Browser recovery
+records may be canonicalized to v11 only after a successful validated write.
 
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in

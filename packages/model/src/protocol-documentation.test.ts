@@ -13,7 +13,7 @@ function readRepositoryText(relativePath: string): string {
 }
 
 describe("Project protocol documentation", () => {
-  it("tracks the executable current-only Project schema", () => {
+  it("tracks the executable current Project schema and rolling read policy", () => {
     const version = CURRENT_PROJECT_SCHEMA_VERSION;
     const expectations = [
       ["docs/overall-product-plan.md", `schema-${version}`],
@@ -22,8 +22,8 @@ describe("Project protocol documentation", () => {
       ["docs/specs/project-file-format.md", `Project schema: \`${version}\``],
       ["docs/specs/editor-interaction.md", `schema-${version}`],
       [
-        "docs/adr/0022-current-protocol-baseline.md",
-        `Project format is schema ${version}`,
+        "docs/adr/0023-rolling-previous-project-compatibility.md",
+        `schema-${version} in-memory Project shape`,
       ],
       [
         "docs/user/project-compatibility.md",

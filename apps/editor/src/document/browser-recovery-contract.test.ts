@@ -184,6 +184,23 @@ describe("reviewBrowserRecoveryProject", () => {
     }
   });
 
+  it("accepts a schema-10 recovery envelope after upgrading its Project", () => {
+    const previousText = JSON.stringify({
+      ...JSON.parse(projectText),
+      schemaVersion: 10,
+    });
+    const review = reviewBrowserRecoveryProject(
+      finalizeBrowserRecoveryRecord(
+        draft({ projectText: previousText, projectSchemaVersion: 10 }),
+      ),
+    );
+
+    expect(review.status).toBe("valid");
+    if (review.status === "valid") {
+      expect(review.project.schemaVersion).toBe(11);
+    }
+  });
+
   it("classifies envelope disagreement as corrupt", () => {
     expect(
       reviewBrowserRecoveryProject(

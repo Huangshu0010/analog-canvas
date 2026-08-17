@@ -239,6 +239,27 @@ describe("stageProjectFile", () => {
       status: "opened",
       fileName: "amp.icproj.json",
       topDocumentRevision: 0,
+      sourceSchemaVersion: 11,
+      migrated: false,
+    });
+  });
+
+  it("stages schema 10 as an upgraded schema-11 Project", async () => {
+    const previousText = JSON.stringify({
+      ...JSON.parse(serializeProject(project)),
+      schemaVersion: 10,
+    });
+    const outcome = await stageProjectFile(
+      fakeFile("amp-v10.icproj.json", previousText),
+      () => [],
+    );
+
+    expect(outcome).toMatchObject({
+      status: "opened",
+      fileName: "amp-v10.icproj.json",
+      sourceSchemaVersion: 10,
+      migrated: true,
+      project: { schemaVersion: 11 },
     });
   });
 

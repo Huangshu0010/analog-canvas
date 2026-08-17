@@ -7697,3 +7697,20 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: committed locally as
   `docs(protocol): ratify current schema and agent contracts` on
   `chore/unify-current-protocol-baseline`; not pushed.
+
+## 2026-08-17 - Add rolling schema-10 Project compatibility
+
+- Target: open schema-10 Project JSON through one direct, content-preserving
+  upgrade to the sole schema-11 runtime and save format, without restoring the
+  historic sequential migration registry or fixture archive.
+- Changed areas: model parsing metadata and v10 adapter; formal-file staging,
+  dirty/save UX, recovery envelope/storage consistency; accepted ADR 0023 and
+  current compatibility documentation; focused unit and browser contracts.
+- Validation: 101 affected unit tests; dedicated v10 upload/recovery/v11-save
+  Playwright flow; typecheck, documentation links, and formatting; full
+  `pnpm verify:branch` with 798 unit tests, all workspace builds, and production
+  editor smoke; `git diff --check`.
+- Commit status: committed with this target close-out on
+  `chore/unify-current-protocol-baseline` as
+  `feat(model): accept schema v10 through a direct v11 upgrade`; push status is
+  recorded in the handoff.
