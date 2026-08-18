@@ -10,10 +10,7 @@ import {
   planCreateCellPort,
   planPlaceCellInstance,
 } from "@icm/edit-engine";
-import {
-  defaultInstanceLabelPlacement,
-  type SchematicStyleProfile,
-} from "@icm/derived";
+import type { SchematicStyleProfile } from "@icm/derived";
 import { defaultDraftTextDocument, semanticTextDocument } from "@icm/model";
 import type {
   CircuitProject,
@@ -285,43 +282,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.resolver,
       options.styleProfile,
     );
-    const instanceLabel =
-      placementRequest.showReference && defaultLabel
-        ? {
-            ...defaultLabel,
-            content: semanticTextDocument(
-              placementRequest.referenceText ?? instance.id,
-              "instance-label",
-            ),
-          }
-        : null;
-    const resolved = options.resolver.resolve(instance.symbolId);
-    const valuePlacement =
-      resolved &&
-      defaultInstanceLabelPlacement(
-        instance,
-        resolved,
-        options.styleProfile,
-        options.document.presentation.grid,
-        "value",
-      );
-    const instanceValue = valuePlacement
+    const instanceValue = defaultLabel
       ? {
+          ...defaultLabel,
           id: `instance-value-${instance.id}`,
           kind: "instance-value" as const,
           content: defaultDraftTextDocument(placementRequest.cellName),
-          anchor: {
-            kind: "object" as const,
-            objectId: instance.id,
-            localOffset: {
-              x: valuePlacement.position.x - instance.placement!.position.x,
-              y: valuePlacement.position.y - instance.placement!.position.y,
-            },
-            fallbackPosition: valuePlacement.position,
-          },
-          alignment: valuePlacement.alignment,
-          rotation: 0 as const,
-          locked: false,
         }
       : null;
     const committed = options.transactProject(
@@ -330,7 +296,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         options.project,
         options.document.id,
         instance,
-        [instanceLabel, instanceValue].filter(
+        [instanceValue].filter(
           (annotation): annotation is NonNullable<typeof annotation> =>
             annotation !== null,
         ),

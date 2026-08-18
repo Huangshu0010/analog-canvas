@@ -1,12 +1,62 @@
 import { describe, expect, it } from "vitest";
-import { createEmptyDocument } from "@icm/model";
-import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
+import { createEmptyDocument, createEmptyProject } from "@icm/model";
+import {
+  builtInSymbols,
+  createProjectSymbolResolver,
+  hierarchicalSymbolId,
+  InMemorySymbolResolver,
+} from "@icm/symbols";
 
 import { renderDocumentSvg } from "./render.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("current rendering contract", () => {
+  it("renders hierarchical pin names with Razavi math typography", () => {
+    const top = createEmptyDocument("top", "Top");
+    const child = createEmptyDocument("child", "GainStage");
+    child.netlist!.terminals.push({
+      id: "terminal-v-in",
+      name: "V_in",
+      netId: "net-in",
+      direction: "input",
+      interfaceInstanceId: "P1",
+    });
+    top.instances.push({
+      id: "X1",
+      symbolId: hierarchicalSymbolId(child.netlist!.name),
+      properties: {},
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+      netlist: {
+        reference: "X1",
+        parameters: {},
+        terminals: [{ sourcePosition: 0, pinName: "V_in" }],
+        binding: {
+          kind: "subcircuit",
+          childDocumentId: child.id,
+          name: child.netlist!.name,
+        },
+      },
+    });
+    const project = createEmptyProject("project", "Hierarchy", top.id);
+    project.documents[0] = top;
+    project.documents.push(child);
+
+    const svg = renderDocumentSvg(
+      top,
+      createProjectSymbolResolver(project, builtInSymbols),
+    );
+
+    expect(svg).toContain('data-pin-name="V_in"');
+    expect(svg).toContain("font-style:italic;font-weight:700");
+    expect(svg).toContain('data-text-run="subscript"');
+    expect(svg).toContain("font-style:normal;font-weight:700");
+  });
+
   it("renders both Port assets as symbols and labels only from annotations", () => {
     const document = createEmptyDocument("doc", "Ports");
     document.instances.push(

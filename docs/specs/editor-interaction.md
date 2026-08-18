@@ -14,8 +14,9 @@ The insertion UI lists exact reviewed Symbol IDs plus the current Project's
 eligible Cell definitions in a dynamic **Cells** section. A Cell selection
 uses the same cursor preview, grid snap, rotation, mirror, and cancellation
 state as a Symbol; its commit factory alone differs, creating one typed
-subcircuit Instance through a Project structural transaction and ordinary
-object-anchored `Xn`/Cell-name annotations. Both `port` and `port-filled`
+subcircuit Instance through a Project structural transaction. `Xn` remains the
+internal netlist reference; the canvas has one object-anchored Cell-name
+annotation in the ordinary reference-label position. Both `port` and `port-filled`
 remain ordinary manually reachable components. Choosing either starts the same
 placement state as any component; terminal `P` participates in ordinary snap,
 wire, move/stretch, selection, clipboard, and delete behavior. Placement
@@ -27,13 +28,15 @@ one atomic interface revision. Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.
 
-**Add Cell Port** is the primary formal-interface authoring action. Its small
+Only non-top Cells expose the **Cell → Edit Interface…** command because the
+top Cell is an export root, not a reusable symbol definition. **Add Port** in
+that dialog is the primary formal-interface authoring action. Its small
 declaration dialog produces one pending `port` or `port-filled` placement. At
 commit, an exact unambiguous pin/route contact reuses that Net; otherwise one
 local Net is created for pin `P`. The Port Instance, connection, and appended
 formal terminal are then committed together through the Project transaction.
-The Cell Interface table uses existing terminal-direction/order edits and the
-definition-level Cell-symbol presentation edit; it never rewrites caller Net
+The bounded Cell Interface dialog uses existing terminal-direction/order edits
+and the definition-level Cell-symbol presentation edit; it never rewrites caller Net
 endpoints merely to move a visual pin.
 
 Canonical `nmos`/`pmos` use the asset's `textbook-3terminal` visual variant by

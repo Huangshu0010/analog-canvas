@@ -1,4 +1,5 @@
 import {
+  defaultDraftTextDocument,
   RectSchema,
   SchematicDocumentSchema,
   transformPoint,
@@ -335,7 +336,7 @@ function renderVisiblePinNames(
         profile.id === "textbook-monochrome-v1"
           ? ' style="font-size:8px"'
           : schematicTextSizeAttribute("pin-name", profile);
-      return `<text data-pin-name="${escapeXml(pin.name)}" x="${x}" y="${y}" text-anchor="${alignment}"${sizeAttribute}>${renderRichTextDocument({ runs: [{ kind: "text", value: pin.name }] }, profile)}</text>`;
+      return `<text data-pin-name="${escapeXml(pin.name)}" x="${x}" y="${y}" text-anchor="${alignment}"${sizeAttribute}>${renderRichTextDocument(defaultDraftTextDocument(pin.name), profile)}</text>`;
     })
     .join("");
 }

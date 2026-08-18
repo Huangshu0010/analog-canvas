@@ -6,10 +6,28 @@ test.beforeEach(async ({ page }) => {
   await emulateDownloadOnlyBrowser(page);
 });
 
+async function runCellCommand(
+  page: import("@playwright/test").Page,
+  name: "Manage Cells…" | "Place Cell" | "Edit Interface…",
+): Promise<void> {
+  const menu = page.getByTestId("cell-command-menu");
+  await menu.locator("summary").click();
+  await menu.getByRole("button", { name, exact: true }).click();
+}
+
+async function createCell(
+  page: import("@playwright/test").Page,
+  name: string,
+): Promise<void> {
+  await runCellCommand(page, "Manage Cells…");
+  const manager = page.getByRole("dialog", { name: "Cell Manager" });
+  page.once("dialog", (dialog) => dialog.accept(name));
+  await manager.getByRole("button", { name: "New Cell" }).click();
+}
+
 test("creates and deletes an unreferenced reusable Cell", async ({ page }) => {
   await page.goto("/");
-  page.once("dialog", (dialog) => dialog.accept("ReusableStage"));
-  await page.getByRole("button", { name: "New Cell" }).click();
+  await createCell(page, "ReusableStage");
 
   await expect(page.getByTestId("document-count")).toHaveText("2");
   await expect(page.getByTestId("document-selector")).toHaveValue(/document-/u);
@@ -17,8 +35,10 @@ test("creates and deletes an unreferenced reusable Cell", async ({ page }) => {
     "Created Cell ReusableStage",
   );
 
+  await runCellCommand(page, "Manage Cells…");
+  const manager = page.getByRole("dialog", { name: "Cell Manager" });
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Delete Cell" }).click();
+  await manager.getByRole("button", { name: "Delete" }).last().click();
   await expect(page.getByTestId("document-count")).toHaveText("1");
   await expect(page.getByTestId("active-document-id")).toHaveText(
     "document-main",
@@ -30,10 +50,9 @@ test("creates and deletes an unreferenced reusable Cell", async ({ page }) => {
 
 test("manages Cell rename and lists callers", async ({ page }) => {
   await page.goto("/");
-  page.once("dialog", (dialog) => dialog.accept("ReusableStage"));
-  await page.getByRole("button", { name: "New Cell" }).click();
+  await createCell(page, "ReusableStage");
   await page.getByRole("button", { name: "Top" }).click();
-  await page.getByRole("button", { name: "Place Cell" }).click();
+  await runCellCommand(page, "Place Cell");
   const insert = page.getByRole("dialog", { name: "Insert Component" });
   await insert.getByRole("option", { name: /ReusableStage/u }).click();
   await insert.getByRole("button", { name: "Apply" }).click();
@@ -42,7 +61,7 @@ test("manages Cell rename and lists callers", async ({ page }) => {
     .click({ position: { x: 320, y: 180 } });
   await page.keyboard.press("Escape");
 
-  await page.getByRole("button", { name: "Cells…" }).click();
+  await runCellCommand(page, "Manage Cells…");
   const manager = page.getByRole("dialog", { name: "Cell Manager" });
   await expect(manager).toContainText("1 callers");
   page.once("dialog", (dialog) => dialog.accept("Stage"));
@@ -56,10 +75,13 @@ test("manages Cell rename and lists callers", async ({ page }) => {
 
 test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await page.goto("/");
-  page.once("dialog", (dialog) => dialog.accept("ReusableStage"));
-  await page.getByRole("button", { name: "New Cell" }).click();
+  await createCell(page, "ReusableStage");
 
-  await page.getByRole("button", { name: "Add Cell Port" }).click();
+  await runCellCommand(page, "Edit Interface…");
+  const cellInterface = page.getByRole("dialog", {
+    name: /Cell Interface/u,
+  });
+  await cellInterface.getByRole("button", { name: "Add Port" }).click();
   const portDialog = page.getByRole("dialog", { name: "Add Cell Port" });
   await portDialog.getByLabel("Port name").fill("IN");
   await portDialog.getByLabel("Cell Port direction").selectOption("input");
@@ -70,8 +92,7 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await expect(page.getByTestId("active-instance-count")).toHaveText("1");
   await expect(page.getByTestId("status")).toContainText("Added Cell port IN");
 
-  const cellInterface = page.getByLabel("Cell Interface");
-  await cellInterface.locator("summary").click();
+  await runCellCommand(page, "Edit Interface…");
   await cellInterface.getByLabel("IN direction").selectOption("output");
   await expect(page.getByTestId("status")).toContainText(
     "Updated Cell port direction",
@@ -83,9 +104,14 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
     "Updated Cell port presentation",
   );
 
-  await page.keyboard.press("Escape");
+  await cellInterface.getByRole("button", { name: "Close" }).click();
   await page.getByRole("button", { name: "Top" }).click();
-  await page.getByRole("button", { name: "Place Cell" }).click();
+  await expect(
+    page
+      .getByTestId("cell-command-menu")
+      .getByRole("button", { name: "Edit Interface…" }),
+  ).toHaveCount(0);
+  await runCellCommand(page, "Place Cell");
   const insertDialog = page.getByRole("dialog", { name: "Insert Component" });
   await insertDialog.getByRole("option", { name: /ReusableStage/u }).click();
   await insertDialog.getByRole("button", { name: "Apply" }).click();
@@ -98,11 +124,10 @@ test("places an existing Cell and blocks deleting its shared definition", async 
   page,
 }) => {
   await page.goto("/");
-  page.once("dialog", (dialog) => dialog.accept("ReusableStage"));
-  await page.getByRole("button", { name: "New Cell" }).click();
+  await createCell(page, "ReusableStage");
   await page.getByRole("button", { name: "Top" }).click();
 
-  await page.getByRole("button", { name: "Place Cell" }).click();
+  await runCellCommand(page, "Place Cell");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await expect(dialog.getByText("Cells", { exact: true })).toBeVisible();
   await expect(dialog.getByTestId("insert-component-nmos")).toHaveCount(0);
@@ -122,13 +147,16 @@ test("places an existing Cell and blocks deleting its shared definition", async 
   await expect(page.getByTestId("status")).toContainText(
     "Placed ReusableStage as X1",
   );
+  await expect(canvas.locator('[data-kind="instance-value"]')).toContainText(
+    "ReusableStage",
+  );
+  await expect(canvas.locator('[data-kind="instance-label"]')).toHaveCount(0);
   await page.keyboard.press("Escape");
 
-  await page.getByTestId("document-selector").selectOption({
-    label: "ReusableStage",
-  });
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Delete Cell" }).click();
+  await runCellCommand(page, "Manage Cells…");
+  const manager = page.getByRole("dialog", { name: "Cell Manager" });
+  await expect(
+    manager.getByRole("button", { name: "Delete" }).last(),
+  ).toBeDisabled();
   await expect(page.getByTestId("document-count")).toHaveText("2");
-  await expect(page.getByTestId("status")).toContainText("still referenced");
 });

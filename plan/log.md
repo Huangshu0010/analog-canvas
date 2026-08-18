@@ -3219,3 +3219,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   the replacement PR run passed all six required checks.
 - Commit status: merged through [PR #121](https://github.com/chenzc24/Analog-Canvas/pull/121)
   at `0319a73` on `origin/main`.
+
+## 2026-08-18 - Hierarchy UI and visual polish
+
+- Changed areas: root/child Cell command semantics, grouped hierarchy menu,
+  bounded Cell Interface dialog, Cell instance annotation placement, Razavi pin
+  RichText, closed hierarchical body geometry, focused tests, and current
+  hierarchy documentation.
+- Validation: focused Vitest (4 files / 24 tests), hierarchy Playwright (4
+  scenarios), docs check, typecheck, test-impact, diff check, and
+  `pnpm verify:branch` passed (146 unit files / 888 tests, workspace build and
+  production smoke).
+- Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.

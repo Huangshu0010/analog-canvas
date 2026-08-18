@@ -50,6 +50,16 @@ describe("hierarchical block formal terminals", () => {
       viewBox: { x: -50, y: -30, width: 100, height: 60 },
       pins: [],
     });
+    expect(symbol?.primitives[0]).toMatchObject({
+      kind: "polygon",
+      fill: "none",
+      stroke: "foreground",
+    });
+    expect(
+      symbol?.primitives[0]?.kind === "polygon"
+        ? symbol.primitives[0].points
+        : [],
+    ).toHaveLength(4);
   });
 
   it("uses direction-aware sides, adaptive body width, and stable explicit pin placement", () => {
