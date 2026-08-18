@@ -3157,3 +3157,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   production smoke).
 - Commit status: pending `feat(editor): place Cells through shared component placement`
   on `codex/hierarchy-authoring-visual-plan`.
+
+## 2026-08-18 - Hierarchy authoring and visual H3
+
+- Changed areas: declared Cell Port dialog, shared pending-placement commit
+  factory, exact-contact Net identity, Cell Interface direction/order/visual
+  controls, hierarchy browser coverage, and current documentation.
+- Validation: focused App/placement/interaction Vitest (31 tests), hierarchy
+  Playwright (3 scenarios), typecheck, docs check, test-impact, diff check,
+  and `pnpm verify:branch` passed (144 unit files / 880 tests, workspace
+  build, production smoke).
+- Commit status: pending `feat(hierarchy): add direct Cell Port authoring` on
+  `codex/hierarchy-authoring-visual-plan`.

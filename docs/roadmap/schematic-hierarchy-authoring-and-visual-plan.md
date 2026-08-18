@@ -287,7 +287,7 @@ keyboard-accessible exact control. There are no per-instance pin overrides.
   for preview, transform, cancel, commit, labels, undo/redo, save/reopen, and
   rectangle-conversion parity.
 
-### H3 — One-step port authoring and interface inspector
+### H3 — One-step port authoring and interface inspector (completed)
 
 - **Goal:** reduce the normal formal-port workflow to declaration plus canvas
   placement while retaining the existing advanced adoption path.

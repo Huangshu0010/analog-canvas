@@ -24,6 +24,7 @@ import {
   planExposePortInstance,
   planRemoveCellTerminal,
   planRenameCellTerminal,
+  planSetCellSymbolPresentation,
   type ProjectStructureEdit,
   type EditTransactionResult,
   type SchematicEdit,
@@ -169,6 +170,7 @@ import {
 } from "../features/editor-shell/shapes-panel";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
+import { CellPortDialog } from "../features/hierarchy/cell-port-dialog";
 import {
   createLibraryExampleProject,
   type LibraryProjectExample,
@@ -527,6 +529,7 @@ export function App({
     null,
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
+  const [cellPortDialogOpen, setCellPortDialogOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
     useState<AgentFileCandidateSummary | null>(null);
   const browserAgentFileHost = useMemo(
@@ -1185,9 +1188,7 @@ export function App({
     clearTransientCanvasState,
     paintSnapGuides,
     beginVddRailInteraction,
-    beginComponentPlacement: (request) => {
-      if (request.kind !== "vdd-rail") beginComponentPlacement(request);
-    },
+    beginComponentPlacement,
     rotateComponentPlacement,
     mirrorComponentPlacement,
     componentPlacementRotation,
@@ -1529,6 +1530,89 @@ export function App({
     }
     openInsertComponentDialogFromHook(true);
     setStatus("Choose a Cell, then place it on the canvas");
+  }
+
+  function openCellPortDialog(): void {
+    if (!document.netlist) {
+      setStatus("The active Document cannot define a Cell interface");
+      return;
+    }
+    setCellPortDialogOpen(true);
+  }
+
+  function updateCellPortDirection(
+    terminalId: string,
+    direction: "input" | "output" | "inout" | "passive",
+  ): void {
+    if (!document.netlist) return;
+    if (
+      commitStructure("update-cell-port-direction", [
+        {
+          kind: "transact_document",
+          documentId: document.id,
+          expectedRevision: document.revision,
+          edits: [{ kind: "update_cell_terminal", terminalId, direction }],
+        },
+      ])
+    ) {
+      setStatus("Updated Cell port direction");
+    }
+  }
+
+  function reorderCellPort(terminalId: string, delta: -1 | 1): void {
+    const terminals = document.netlist?.terminals ?? [];
+    const index = terminals.findIndex((terminal) => terminal.id === terminalId);
+    const next = index + delta;
+    if (index < 0 || next < 0 || next >= terminals.length) return;
+    const ids = terminals.map((terminal) => terminal.id);
+    [ids[index], ids[next]] = [ids[next]!, ids[index]!];
+    if (
+      commitStructure("reorder-cell-ports", [
+        {
+          kind: "transact_document",
+          documentId: document.id,
+          expectedRevision: document.revision,
+          edits: [{ kind: "reorder_cell_terminals", terminalIds: ids }],
+        },
+      ])
+    ) {
+      setStatus("Reordered Cell ports");
+    }
+  }
+
+  function setCellPortPlacement(
+    terminalId: string,
+    side: "auto" | "north" | "east" | "south" | "west",
+    offset: number,
+  ): void {
+    if (!Number.isInteger(offset) || offset % 10 !== 0) {
+      setStatus("Cell Port position must be a multiple of 10");
+      return;
+    }
+    const current = document.presentation.cellSymbol;
+    const pinPlacements = (current?.pinPlacements ?? []).filter(
+      (placement) => placement.terminalId !== terminalId,
+    );
+    if (side !== "auto") pinPlacements.push({ terminalId, side, offset });
+    try {
+      if (
+        commitStructure(
+          "set-cell-port-placement",
+          planSetCellSymbolPresentation(project, document.id, {
+            ...(current?.minimumBodySize
+              ? { minimumBodySize: current.minimumBodySize }
+              : {}),
+            ...(pinPlacements.length > 0 ? { pinPlacements } : {}),
+          }),
+        )
+      ) {
+        setStatus("Updated Cell port presentation");
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not update Cell port",
+      );
+    }
   }
 
   const selectedFormalTerminal = selectedInstance
@@ -6029,6 +6113,9 @@ export function App({
             >
               Delete Cell
             </button>
+            <button type="button" onClick={openCellPortDialog}>
+              Add Cell Port
+            </button>
             <button
               type="button"
               onClick={exposeSelectedPort}
@@ -6052,6 +6139,115 @@ export function App({
               Delete Port
             </button>
           </div>
+          {document.netlist ? (
+            <details
+              className="cell-interface-panel"
+              aria-label="Cell Interface"
+            >
+              <summary>
+                Cell Interface ({document.netlist.terminals.length})
+              </summary>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Port</th>
+                    <th>Direction</th>
+                    <th>Side</th>
+                    <th>Offset</th>
+                    <th>Order</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {document.netlist.terminals.map((terminal, index) => {
+                    const placement =
+                      document.presentation.cellSymbol?.pinPlacements?.find(
+                        (candidate) => candidate.terminalId === terminal.id,
+                      );
+                    const side = placement?.side ?? "auto";
+                    return (
+                      <tr key={terminal.id}>
+                        <td>{terminal.name}</td>
+                        <td>
+                          <select
+                            aria-label={`${terminal.name} direction`}
+                            value={terminal.direction}
+                            onChange={(event) =>
+                              updateCellPortDirection(
+                                terminal.id,
+                                event.currentTarget
+                                  .value as typeof terminal.direction,
+                              )
+                            }
+                          >
+                            <option value="input">Input</option>
+                            <option value="output">Output</option>
+                            <option value="inout">Inout</option>
+                            <option value="passive">Passive</option>
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            aria-label={`${terminal.name} side`}
+                            value={side}
+                            onChange={(event) =>
+                              setCellPortPlacement(
+                                terminal.id,
+                                event.currentTarget.value as
+                                  "auto" | "north" | "east" | "south" | "west",
+                                placement?.offset ?? 0,
+                              )
+                            }
+                          >
+                            <option value="auto">Auto</option>
+                            <option value="west">West</option>
+                            <option value="east">East</option>
+                            <option value="north">North</option>
+                            <option value="south">South</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            aria-label={`${terminal.name} offset`}
+                            type="number"
+                            step="10"
+                            defaultValue={placement?.offset ?? 0}
+                            disabled={side === "auto"}
+                            onBlur={(event) =>
+                              setCellPortPlacement(
+                                terminal.id,
+                                side,
+                                Number(event.currentTarget.value),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            aria-label={`Move ${terminal.name} earlier`}
+                            disabled={index === 0}
+                            onClick={() => reorderCellPort(terminal.id, -1)}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Move ${terminal.name} later`}
+                            disabled={
+                              index === document.netlist!.terminals.length - 1
+                            }
+                            onClick={() => reorderCellPort(terminal.id, 1)}
+                          >
+                            ↓
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </details>
+          ) : null}
         </div>
         <div data-testid="editor-test-telemetry" hidden>
           <output data-testid="selected-internal-route-count">
@@ -6153,6 +6349,15 @@ export function App({
         cellOnly={cellInsertOnly}
         onApply={beginInsertedComponentPlacementFromHook}
         onCancel={cancelComponentInsertFromHook}
+      />
+      <CellPortDialog
+        open={cellPortDialogOpen}
+        suggestedName={`P${(document.netlist?.terminals.length ?? 0) + 1}`}
+        onApply={(request) => {
+          setCellPortDialogOpen(false);
+          beginInsertedComponentPlacementFromHook(request);
+        }}
+        onCancel={() => setCellPortDialogOpen(false)}
       />
       {publicAgentUiEnabled ? (
         <ConnectAgentPanel

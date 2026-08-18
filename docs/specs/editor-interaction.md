@@ -27,6 +27,15 @@ one atomic interface revision. Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.
 
+**Add Cell Port** is the primary formal-interface authoring action. Its small
+declaration dialog produces one pending `port` or `port-filled` placement. At
+commit, an exact unambiguous pin/route contact reuses that Net; otherwise one
+local Net is created for pin `P`. The Port Instance, connection, and appended
+formal terminal are then committed together through the Project transaction.
+The Cell Interface table uses existing terminal-direction/order edits and the
+definition-level Cell-symbol presentation edit; it never rewrites caller Net
+endpoints merely to move a visual pin.
+
 Canonical `nmos`/`pmos` use the asset's `textbook-3terminal` visual variant by
 default while retaining D/G/S/B electrically. A manual MOS uses explicit B
 membership first, then a configured cell default, then the canonical supply

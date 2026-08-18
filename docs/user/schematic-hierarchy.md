@@ -17,11 +17,19 @@ more than one path reaches it, which is reported in the status bar.
 
 To define a real Cell port:
 
-1. Place a `port` or `port-filled` component inside the child Cell and connect
-   pin `P` to the intended Net using the normal wiring tools.
-2. Select that Port Instance and choose **Expose Port**.
-3. Enter the formal pin name and direction (`input`, `output`, `inout`, or
-   `passive`).
+1. Choose **Add Cell Port**, give it a name, direction (`input`, `output`,
+   `inout`, or `passive`), and optional filled marker.
+2. Click an exact existing electrical contact to attach to its Net, or click
+   empty grid space to create a new local Net.
+
+The command commits an ordinary `port`/`port-filled` Instance, its pin-`P`
+connection, and the formal Cell terminal as one revision. **Expose Port**
+remains the advanced adoption path for an already drawn and connected marker.
+
+Open **Cell Interface** in the navigation bar to edit each formal port's
+direction, order, and definition-level visual side/offset. Direction is an
+electrical fact; side and offset only change the generated external symbol and
+therefore affect every caller without changing Net membership.
 
 The visible marker remains an ordinary Instance, so selection, move, wiring,
 clipboard, and normal Instance deletion use the same editor protocol as other

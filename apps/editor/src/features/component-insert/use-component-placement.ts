@@ -67,7 +67,7 @@ export interface UseComponentPlacementOptions {
   clearTransientCanvasState: () => void;
   paintSnapGuides: (guides: []) => void;
   beginVddRailInteraction: () => void;
-  beginComponentPlacement: (request: ComponentInsertRequest) => void;
+  beginComponentPlacement: (request: PendingComponentPlacement) => void;
   rotateComponentPlacement: (delta: 90 | -90) => void;
   mirrorComponentPlacement: (direction: ScreenFlip) => void;
   componentPlacementRotation: 0 | 90 | 180 | 270;
@@ -354,6 +354,105 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     );
   };
 
+  const placeNewCellPort = (
+    symbolId: "port" | "port-filled",
+    position: Point,
+    placementRequest: PendingComponentPlacement,
+  ): void => {
+    if (
+      placementRequest.kind !== "cell-port" ||
+      !placementRequest.formalName ||
+      !placementRequest.direction ||
+      options.document.netlist?.terminals.some(
+        (terminal) => terminal.name === placementRequest.formalName,
+      )
+    ) {
+      options.setStatus(
+        `Cell port ${placementRequest.formalName ?? ""} already exists`,
+      );
+      return;
+    }
+    const id = nextInstanceDesignator(options.document, symbolId);
+    const instance = {
+      id,
+      symbolId,
+      placement: {
+        position,
+        rotation: options.componentPlacementRotation,
+        mirror: options.componentPlacementMirror,
+      },
+      properties: {},
+      netlist: initialInstanceNetlist(options.document, symbolId, {}),
+    };
+    const contact = proposePlacementContact(
+      options.document,
+      options.resolver,
+      instance,
+      options.visibleEndpoints,
+    );
+    if (contact.rejected || contact.ambiguous) {
+      options.setStatus(
+        contact.rejected ?? "Port overlaps multiple Nets; choose one contact",
+      );
+      return;
+    }
+    const baseNetId = `net-cell-port-${id.toLowerCase()}`;
+    let netId = contact.netId ?? baseNetId;
+    let netSuffix = 2;
+    while (
+      !contact.netId &&
+      options.document.nets.some((net) => net.id.toLowerCase() === netId)
+    ) {
+      netId = `${baseNetId}-${netSuffix}`;
+      netSuffix += 1;
+    }
+    const committed = options.transactProject("place-cell-port", [
+      {
+        kind: "transact_document",
+        documentId: options.document.id,
+        expectedRevision: options.document.revision,
+        edits: [
+          { kind: "add_instance", instance },
+          ...contact.edits,
+          ...(contact.matched
+            ? []
+            : [
+                {
+                  kind: "connect_endpoints" as const,
+                  from: {
+                    kind: "terminal" as const,
+                    instanceId: id,
+                    pinName: "P",
+                  },
+                  to: {
+                    kind: "terminal" as const,
+                    instanceId: id,
+                    pinName: "P",
+                  },
+                  newNetId: netId,
+                },
+              ]),
+          {
+            kind: "add_cell_terminal",
+            terminal: {
+              id: `terminal-${id.toLowerCase()}`,
+              name: placementRequest.formalName,
+              netId,
+              direction: placementRequest.direction,
+              interfaceInstanceId: id,
+            },
+          },
+        ],
+      },
+    ]);
+    if (!committed) return;
+    options.selectOnly("instance", [id]);
+    options.setComponentPreviewPoint(position);
+    options.setStatus(
+      `Added Cell port ${placementRequest.formalName} · click to place another · Esc exits`,
+    );
+  };
+
   const placeVddRail = (start: Point, end: Point): void => {
     const idsExist = (candidate: string): boolean => {
       const key = candidate.toLowerCase();
@@ -429,7 +528,21 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.setStatus("Place VDD Rail: click the first end · Esc cancels");
       return;
     }
-    options.beginComponentPlacement(request);
+    options.beginComponentPlacement(
+      request.kind === "cell-port"
+        ? {
+            kind: "cell-port",
+            symbolId: request.symbolId,
+            properties: {},
+            initialRotation: request.initialRotation,
+            showReference: false,
+            referenceText: null,
+            showValue: false,
+            formalName: request.formalName,
+            direction: request.direction,
+          }
+        : request,
+    );
     options.setStatus(
       `Place ${request.symbolName} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
     );
@@ -476,7 +589,13 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return;
     }
     if (!options.pendingSymbolId || !options.pendingComponentPlacement) return;
-    if (options.pendingComponentPlacement.kind === "cell") {
+    if (options.pendingComponentPlacement.kind === "cell-port") {
+      placeNewCellPort(
+        options.pendingSymbolId as "port" | "port-filled",
+        point,
+        options.pendingComponentPlacement,
+      );
+    } else if (options.pendingComponentPlacement.kind === "cell") {
       placeNewCell(
         options.pendingSymbolId,
         point,

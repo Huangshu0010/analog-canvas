@@ -28,5 +28,17 @@ export interface CellInsertRequest {
   showValue: true;
 }
 
+export interface CellPortInsertRequest {
+  kind: "cell-port";
+  symbolId: "port" | "port-filled";
+  symbolName: string;
+  formalName: string;
+  direction: "input" | "output" | "inout" | "passive";
+  initialRotation: 0 | 90 | 180 | 270;
+}
+
 export type ComponentInsertRequest =
-  SymbolInsertRequest | CellInsertRequest | VddRailInsertRequest;
+  | SymbolInsertRequest
+  | CellInsertRequest
+  | CellPortInsertRequest
+  | VddRailInsertRequest;

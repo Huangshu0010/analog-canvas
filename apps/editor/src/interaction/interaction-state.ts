@@ -23,7 +23,7 @@ export type DrawingTool = Extract<
 export type InteractionMode = InteractionState<unknown>["kind"];
 
 export interface PendingComponentPlacement {
-  kind: "symbol" | "cell";
+  kind: "symbol" | "cell" | "cell-port";
   symbolId: string;
   properties: Record<string, string>;
   initialRotation: 0 | 90 | 180 | 270;
@@ -32,6 +32,8 @@ export interface PendingComponentPlacement {
   showValue: boolean;
   childDocumentId?: string;
   cellName?: string;
+  formalName?: string;
+  direction?: "input" | "output" | "inout" | "passive";
 }
 
 export interface CopyPlacement<TClipboard> {
@@ -158,7 +160,9 @@ function sameComponentPlacement(
     left.referenceText !== right.referenceText ||
     left.showValue !== right.showValue ||
     left.childDocumentId !== right.childDocumentId ||
-    left.cellName !== right.cellName
+    left.cellName !== right.cellName ||
+    left.formalName !== right.formalName ||
+    left.direction !== right.direction
   ) {
     return false;
   }
