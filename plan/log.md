@@ -3193,3 +3193,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   build, production smoke).
 - Commit status: included in `3760374` on
   `codex/hierarchy-authoring-visual-plan`.
+
+## 2026-08-18 - Hierarchy domain orchestration refactor
+
+- Changed areas: shared Edit Engine hierarchy Instance/planner APIs, Derived
+  Cell/caller summaries, thin Editor hierarchy call sites, planner/query tests,
+  and accepted architecture guidance.
+- Validation: focused Vitest (5 files / 28 tests), hierarchy Playwright (4
+  scenarios), typecheck, docs check, test-impact, diff check, and
+  `pnpm verify:branch` passed (146 unit files / 887 tests, workspace build and
+  production smoke).
+- Commit status: included in the hierarchy refactor commit on
+  `codex/hierarchy-authoring-visual-plan`.

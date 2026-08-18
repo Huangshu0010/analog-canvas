@@ -1,4 +1,8 @@
-import { executeProjectTransaction } from "@icm/edit-engine";
+import {
+  createHierarchyInstance,
+  executeProjectTransaction,
+  planCreateCellFromDraftingObject,
+} from "@icm/edit-engine";
 import {
   CircuitProjectSchema,
   createEmptyDocument,
@@ -6,8 +10,6 @@ import {
   type Rotation,
   type SchematicDocument,
 } from "@icm/model";
-
-import { createHierarchyInstance } from "./hierarchy-instance";
 
 export interface RectangleToCellConversion {
   project: CircuitProject;
@@ -123,24 +125,13 @@ export function convertRectangleToHierarchy(
     projectId: project.id,
     expectedStructureRevision: project.structureRevision,
     actor: { kind: "human", id: "human-local" },
-    edits: [
-      {
-        kind: "add_document",
-        document: child,
-      },
-      {
-        kind: "transact_document",
-        documentId: parent.id,
-        expectedRevision: parent.revision,
-        edits: [
-          { kind: "remove_drafting_object", objectId: rectangleId },
-          {
-            kind: "add_instance",
-            instance,
-          },
-        ],
-      },
-    ],
+    edits: planCreateCellFromDraftingObject(
+      project,
+      parent.id,
+      child,
+      instance,
+      rectangleId,
+    ),
   });
   if (!transaction.ok || !transaction.applied) {
     const detail = transaction.diagnostics[0]?.message;

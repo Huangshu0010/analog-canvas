@@ -21,10 +21,15 @@ import {
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
   planEnsureNamedNet,
+  planCreateCell,
+  planDeleteCell,
   planExposePortInstance,
+  planRenameCell,
+  planReorderCellTerminal,
   planRemoveCellTerminal,
   planRenameCellTerminal,
-  planSetCellSymbolPresentation,
+  planSetCellTerminalPlacement,
+  planUpdateCellTerminalDirection,
   type ProjectStructureEdit,
   type EditTransactionResult,
   type SchematicEdit,
@@ -57,6 +62,7 @@ import {
   resolveSchematicStyleProfile,
   resolveRouteAttachment,
   resolveRouteTap,
+  summarizeProjectCells,
   traceHierarchyNet,
 } from "@icm/derived";
 import type {
@@ -1495,13 +1501,7 @@ export function App({
     const child = createEmptyDocument(createId("document"), name);
     child.netlist!.name = name;
     child.presentation = structuredClone(document.presentation);
-    if (
-      commitStructure(
-        "create-cell",
-        [{ kind: "add_document", document: child }],
-        child.id,
-      )
-    ) {
+    if (commitStructure("create-cell", planCreateCell(child), child.id)) {
       setDocumentStack([]);
       setStatus(`Created Cell ${name}`);
     }
@@ -1516,7 +1516,7 @@ export function App({
     if (
       commitStructure(
         "delete-cell",
-        [{ kind: "remove_document", documentId: document.id }],
+        planDeleteCell(project, document.id),
         project.topDocumentId,
       )
     ) {
@@ -1533,9 +1533,7 @@ export function App({
     const name = window.prompt("Rename Cell", target.name)?.trim();
     if (!name || name === target.name) return;
     if (
-      commitStructure("rename-cell", [
-        { kind: "rename_document", documentId, name },
-      ])
+      commitStructure("rename-cell", planRenameCell(project, documentId, name))
     ) {
       setStatus(`Renamed Cell to ${name}`);
     }
@@ -1559,27 +1557,7 @@ export function App({
   }
 
   const cellManagerEntries = useMemo(
-    () =>
-      project.documents.map((candidate) => ({
-        id: candidate.id,
-        name: candidate.name,
-        isTop: candidate.id === project.topDocumentId,
-        portCount: candidate.netlist?.terminals.length ?? 0,
-        callers: project.documents.flatMap((parent) =>
-          parent.instances.flatMap((instance) =>
-            instance.netlist?.binding?.kind === "subcircuit" &&
-            instance.netlist.binding.childDocumentId === candidate.id
-              ? [
-                  {
-                    documentId: parent.id,
-                    documentName: parent.name,
-                    instanceId: instance.id,
-                  },
-                ]
-              : [],
-          ),
-        ),
-      })),
+    () => summarizeProjectCells(project),
     [project],
   );
 
@@ -1606,36 +1584,28 @@ export function App({
   ): void {
     if (!document.netlist) return;
     if (
-      commitStructure("update-cell-port-direction", [
-        {
-          kind: "transact_document",
-          documentId: document.id,
-          expectedRevision: document.revision,
-          edits: [{ kind: "update_cell_terminal", terminalId, direction }],
-        },
-      ])
+      commitStructure(
+        "update-cell-port-direction",
+        planUpdateCellTerminalDirection(
+          project,
+          document.id,
+          terminalId,
+          direction,
+        ),
+      )
     ) {
       setStatus("Updated Cell port direction");
     }
   }
 
   function reorderCellPort(terminalId: string, delta: -1 | 1): void {
-    const terminals = document.netlist?.terminals ?? [];
-    const index = terminals.findIndex((terminal) => terminal.id === terminalId);
-    const next = index + delta;
-    if (index < 0 || next < 0 || next >= terminals.length) return;
-    const ids = terminals.map((terminal) => terminal.id);
-    [ids[index], ids[next]] = [ids[next]!, ids[index]!];
-    if (
-      commitStructure("reorder-cell-ports", [
-        {
-          kind: "transact_document",
-          documentId: document.id,
-          expectedRevision: document.revision,
-          edits: [{ kind: "reorder_cell_terminals", terminalIds: ids }],
-        },
-      ])
-    ) {
+    const edits = planReorderCellTerminal(
+      project,
+      document.id,
+      terminalId,
+      delta,
+    );
+    if (edits.length > 0 && commitStructure("reorder-cell-ports", edits)) {
       setStatus("Reordered Cell ports");
     }
   }
@@ -1645,25 +1615,17 @@ export function App({
     side: "auto" | "north" | "east" | "south" | "west",
     offset: number,
   ): void {
-    if (!Number.isInteger(offset) || offset % 10 !== 0) {
-      setStatus("Cell Port position must be a multiple of 10");
-      return;
-    }
-    const current = document.presentation.cellSymbol;
-    const pinPlacements = (current?.pinPlacements ?? []).filter(
-      (placement) => placement.terminalId !== terminalId,
-    );
-    if (side !== "auto") pinPlacements.push({ terminalId, side, offset });
     try {
       if (
         commitStructure(
           "set-cell-port-placement",
-          planSetCellSymbolPresentation(project, document.id, {
-            ...(current?.minimumBodySize
-              ? { minimumBodySize: current.minimumBodySize }
-              : {}),
-            ...(pinPlacements.length > 0 ? { pinPlacements } : {}),
-          }),
+          planSetCellTerminalPlacement(
+            project,
+            document.id,
+            terminalId,
+            side,
+            offset,
+          ),
         )
       ) {
         setStatus("Updated Cell port presentation");
@@ -6447,7 +6409,7 @@ export function App({
           if (
             commitStructure(
               "delete-cell",
-              [{ kind: "remove_document", documentId }],
+              planDeleteCell(project, documentId),
               project.topDocumentId,
             )
           ) {

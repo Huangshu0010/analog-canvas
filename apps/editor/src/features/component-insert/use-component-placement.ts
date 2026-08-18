@@ -6,6 +6,11 @@ import type {
   WireSource,
 } from "@icm/edit-engine";
 import {
+  createHierarchyInstance,
+  planCreateCellPort,
+  planPlaceCellInstance,
+} from "@icm/edit-engine";
+import {
   defaultInstanceLabelPlacement,
   type SchematicStyleProfile,
 } from "@icm/derived";
@@ -27,7 +32,6 @@ import {
 } from "./placement-connectivity";
 import { planVddRailEdits } from "./vdd-rail";
 import { vddPowerLabelAnnotation } from "./vdd-power-label";
-import { createHierarchyInstance } from "../hierarchy/hierarchy-instance";
 import {
   defaultInstanceLabel,
   defaultInstanceValue,
@@ -320,32 +324,18 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           locked: false,
         }
       : null;
-    const committed = options.transactProject("place-cell-instance", [
-      {
-        kind: "transact_document",
-        documentId: options.document.id,
-        expectedRevision: options.document.revision,
-        edits: [
-          { kind: "add_instance", instance },
-          ...(instanceLabel
-            ? [
-                {
-                  kind: "upsert_schematic_annotation" as const,
-                  annotation: instanceLabel,
-                },
-              ]
-            : []),
-          ...(instanceValue
-            ? [
-                {
-                  kind: "upsert_schematic_annotation" as const,
-                  annotation: instanceValue,
-                },
-              ]
-            : []),
-        ],
-      },
-    ]);
+    const committed = options.transactProject(
+      "place-cell-instance",
+      planPlaceCellInstance(
+        options.project,
+        options.document.id,
+        instance,
+        [instanceLabel, instanceValue].filter(
+          (annotation): annotation is NonNullable<typeof annotation> =>
+            annotation !== null,
+        ),
+      ),
+    );
     if (!committed) return;
     options.selectOnly("instance", [id]);
     options.setComponentPreviewPoint(position);
@@ -406,45 +396,41 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       netId = `${baseNetId}-${netSuffix}`;
       netSuffix += 1;
     }
-    const committed = options.transactProject("place-cell-port", [
-      {
-        kind: "transact_document",
-        documentId: options.document.id,
-        expectedRevision: options.document.revision,
-        edits: [
-          { kind: "add_instance", instance },
-          ...contact.edits,
-          ...(contact.matched
-            ? []
-            : [
-                {
-                  kind: "connect_endpoints" as const,
-                  from: {
-                    kind: "terminal" as const,
-                    instanceId: id,
-                    pinName: "P",
-                  },
-                  to: {
-                    kind: "terminal" as const,
-                    instanceId: id,
-                    pinName: "P",
-                  },
-                  newNetId: netId,
-                },
-              ]),
-          {
-            kind: "add_cell_terminal",
-            terminal: {
-              id: `terminal-${id.toLowerCase()}`,
-              name: placementRequest.formalName,
-              netId,
-              direction: placementRequest.direction,
-              interfaceInstanceId: id,
+    const connectionEdits: SchematicEdit[] = [
+      ...contact.edits,
+      ...(contact.matched
+        ? []
+        : [
+            {
+              kind: "connect_endpoints" as const,
+              from: {
+                kind: "terminal" as const,
+                instanceId: id,
+                pinName: "P",
+              },
+              to: {
+                kind: "terminal" as const,
+                instanceId: id,
+                pinName: "P",
+              },
+              newNetId: netId,
             },
-          },
-        ],
-      },
-    ]);
+          ]),
+    ];
+    const committed = options.transactProject(
+      "place-cell-port",
+      planCreateCellPort(options.project, options.document.id, {
+        instance,
+        connectionEdits,
+        terminal: {
+          id: `terminal-${id.toLowerCase()}`,
+          name: placementRequest.formalName,
+          netId,
+          direction: placementRequest.direction,
+          interfaceInstanceId: id,
+        },
+      }),
+    );
     if (!committed) return;
     options.selectOnly("instance", [id]);
     options.setComponentPreviewPoint(position);

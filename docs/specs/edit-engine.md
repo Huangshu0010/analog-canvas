@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.10`
+Version: `1.11`
 
 Owning phase: `Phase 0/1/8`
 
@@ -110,6 +110,14 @@ Document while preserving Document identity, presentation, source binding,
 and transaction history. Because it crosses topology and presentation, it
 advances revision once, marks connectivity modified, and is restored by one
 Undo.
+
+`hierarchy-planner.ts` is the shared pure orchestration boundary above these
+edits. It constructs canonical subcircuit Instances and plans Cell
+creation/placement, rename/delete, formal-Port lifecycle, and terminal visual
+intent as ordinary Project structure edits. It does not execute transactions,
+own UI state, or define another hierarchy representation. Canvas-dependent
+contact detection and placement previews remain consumer concerns; read-only
+Cell/caller summaries are derived data owned by `@icm/derived`.
 
 ## Invariants
 

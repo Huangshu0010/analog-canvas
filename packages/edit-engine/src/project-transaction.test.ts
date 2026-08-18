@@ -4,6 +4,7 @@ import { createEmptyDocument, createEmptyProject } from "@icm/model";
 import { hierarchicalSymbolId } from "@icm/symbols";
 
 import {
+  planRenameCell,
   planRemoveCellTerminal,
   planRenameCellTerminal,
   planSetCellSymbolPresentation,
@@ -50,7 +51,7 @@ describe("Project structural transaction", () => {
       projectId: project.id,
       expectedStructureRevision: project.structureRevision,
       actor: { kind: "human", id: "human-local" },
-      edits: [{ kind: "rename_document", documentId: child.id, name: "Stage" }],
+      edits: planRenameCell(project, child.id, "Stage"),
     });
 
     expect(result).toMatchObject({
