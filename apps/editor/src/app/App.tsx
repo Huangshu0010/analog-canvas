@@ -171,6 +171,7 @@ import {
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellPortDialog } from "../features/hierarchy/cell-port-dialog";
+import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
 import {
   createLibraryExampleProject,
   type LibraryProjectExample,
@@ -530,6 +531,7 @@ export function App({
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [cellPortDialogOpen, setCellPortDialogOpen] = useState(false);
+  const [cellManagerOpen, setCellManagerOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
     useState<AgentFileCandidateSummary | null>(null);
   const browserAgentFileHost = useMemo(
@@ -1522,6 +1524,64 @@ export function App({
       setStatus(`Deleted Cell ${document.name}`);
     }
   }
+
+  function renameCell(documentId: string): void {
+    const target = project.documents.find(
+      (candidate) => candidate.id === documentId,
+    );
+    if (!target) return;
+    const name = window.prompt("Rename Cell", target.name)?.trim();
+    if (!name || name === target.name) return;
+    if (
+      commitStructure("rename-cell", [
+        { kind: "rename_document", documentId, name },
+      ])
+    ) {
+      setStatus(`Renamed Cell to ${name}`);
+    }
+  }
+
+  function jumpToCaller(parentDocumentId: string, instanceId: string): void {
+    const path = findHierarchyPath(
+      projectConnectivityIndex,
+      project.topDocumentId,
+      parentDocumentId,
+    );
+    if (!path) {
+      setStatus("Caller path could not be resolved");
+      return;
+    }
+    setDocumentStack([...path]);
+    switchDocument(parentDocumentId);
+    selectOnly("instance", [instanceId]);
+    setCellManagerOpen(false);
+    setStatus(`Opened caller ${parentDocumentId}.${instanceId}`);
+  }
+
+  const cellManagerEntries = useMemo(
+    () =>
+      project.documents.map((candidate) => ({
+        id: candidate.id,
+        name: candidate.name,
+        isTop: candidate.id === project.topDocumentId,
+        portCount: candidate.netlist?.terminals.length ?? 0,
+        callers: project.documents.flatMap((parent) =>
+          parent.instances.flatMap((instance) =>
+            instance.netlist?.binding?.kind === "subcircuit" &&
+            instance.netlist.binding.childDocumentId === candidate.id
+              ? [
+                  {
+                    documentId: parent.id,
+                    documentName: parent.name,
+                    instanceId: instance.id,
+                  },
+                ]
+              : [],
+          ),
+        ),
+      })),
+    [project],
+  );
 
   function placeCellInstance(): void {
     if (cellInsertCandidates.length === 0) {
@@ -6099,6 +6159,9 @@ export function App({
             <button type="button" onClick={createCell}>
               New Cell
             </button>
+            <button type="button" onClick={() => setCellManagerOpen(true)}>
+              Cells…
+            </button>
             <button
               type="button"
               onClick={placeCellInstance}
@@ -6358,6 +6421,41 @@ export function App({
           beginInsertedComponentPlacementFromHook(request);
         }}
         onCancel={() => setCellPortDialogOpen(false)}
+      />
+      <CellManagerDialog
+        open={cellManagerOpen}
+        cells={cellManagerEntries}
+        onClose={() => setCellManagerOpen(false)}
+        onCreate={() => {
+          setCellManagerOpen(false);
+          createCell();
+        }}
+        onOpen={(documentId) => {
+          setCellManagerOpen(false);
+          switchDocument(documentId);
+        }}
+        onRename={renameCell}
+        onDelete={(documentId) => {
+          const target = project.documents.find(
+            (candidate) => candidate.id === documentId,
+          );
+          if (
+            !target ||
+            !window.confirm(`Delete unreferenced Cell "${target.name}"?`)
+          )
+            return;
+          if (
+            commitStructure(
+              "delete-cell",
+              [{ kind: "remove_document", documentId }],
+              project.topDocumentId,
+            )
+          ) {
+            setCellManagerOpen(false);
+            setStatus(`Deleted Cell ${target.name}`);
+          }
+        }}
+        onJumpToCaller={jumpToCaller}
       />
       {publicAgentUiEnabled ? (
         <ConnectAgentPanel

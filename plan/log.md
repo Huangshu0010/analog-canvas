@@ -3169,3 +3169,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   build, production smoke).
 - Commit status: pending `feat(hierarchy): add direct Cell Port authoring` on
   `codex/hierarchy-authoring-visual-plan`.
+
+## 2026-08-18 - Hierarchy authoring and visual H4
+
+- Changed areas: Project-level Cell rename/reconciliation, caller-aware Cell
+  Manager dialog, caller-jump browser workflow, hierarchy lifecycle tests, and
+  current user/roadmap documentation.
+- Validation: focused Project-transaction Vitest (10 tests), hierarchy
+  Playwright (4 scenarios), typecheck, docs check, test-impact, diff check,
+  and `pnpm verify:branch` passed (144 unit files / 881 tests, workspace
+  build, production smoke).
+- Commit status: pending `feat(hierarchy): add caller-aware Cell Manager` on
+  `codex/hierarchy-authoring-visual-plan`.

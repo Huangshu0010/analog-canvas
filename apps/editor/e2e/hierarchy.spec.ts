@@ -28,6 +28,32 @@ test("creates and deletes an unreferenced reusable Cell", async ({ page }) => {
   );
 });
 
+test("manages Cell rename and lists callers", async ({ page }) => {
+  await page.goto("/");
+  page.once("dialog", (dialog) => dialog.accept("ReusableStage"));
+  await page.getByRole("button", { name: "New Cell" }).click();
+  await page.getByRole("button", { name: "Top" }).click();
+  await page.getByRole("button", { name: "Place Cell" }).click();
+  const insert = page.getByRole("dialog", { name: "Insert Component" });
+  await insert.getByRole("option", { name: /ReusableStage/u }).click();
+  await insert.getByRole("button", { name: "Apply" }).click();
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 320, y: 180 } });
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Cells…" }).click();
+  const manager = page.getByRole("dialog", { name: "Cell Manager" });
+  await expect(manager).toContainText("1 callers");
+  page.once("dialog", (dialog) => dialog.accept("Stage"));
+  await manager.getByRole("button", { name: "Rename" }).last().click();
+  await expect(manager).toContainText("Stage");
+  await manager.getByRole("button", { name: "Jump to caller" }).click();
+  await expect(page.getByTestId("active-document-id")).toHaveText(
+    "document-main",
+  );
+});
+
 test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await page.goto("/");
   page.once("dialog", (dialog) => dialog.accept("ReusableStage"));

@@ -4,6 +4,12 @@ Analog Canvas treats every Project Document as one reusable schematic Cell.
 The top Cell is the export root; other Cells may be instantiated any number of
 times or kept unreferenced while they are being authored.
 
+Use **Cells…** to manage the Project's definitions in one place. It shows each
+Cell's formal port and caller counts, opens or renames a definition, and lists
+each caller with **Jump to caller**. A referenced Cell's delete control is
+disabled; delete its caller Instances normally before deleting the now
+unreferenced definition.
+
 Use **New Cell** in the Cell navigation bar to create a module without first
 drawing a rectangle. **Place Cell** opens the normal Insert dialog with a
 searchable **Cells** section. Select a definition, then place its ordinary

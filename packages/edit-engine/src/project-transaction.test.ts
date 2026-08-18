@@ -37,6 +37,41 @@ function hierarchyInstance(
 }
 
 describe("Project structural transaction", () => {
+  it("renames a Cell and reconciles every caller binding", () => {
+    const project = createEmptyProject("project", "Project");
+    const child = createEmptyDocument("document-child", "Child");
+    project.documents.push(child);
+    project.documents[0]!.instances.push(
+      hierarchyInstance("X1", "Child", child.id),
+    );
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "rename-child",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "human-local" },
+      edits: [{ kind: "rename_document", documentId: child.id, name: "Stage" }],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      applied: true,
+      project: {
+        documents: [
+          {
+            instances: [
+              {
+                symbolId: hierarchicalSymbolId("Stage"),
+                netlist: { binding: { name: "Stage" } },
+              },
+            ],
+          },
+          { name: "Stage", netlist: { name: "Stage" } },
+        ],
+      },
+    });
+  });
+
   it("atomically creates a child Cell and its parent Instance", () => {
     const project = createEmptyProject("project", "Project");
     const child = createEmptyDocument("document-child", "Child");

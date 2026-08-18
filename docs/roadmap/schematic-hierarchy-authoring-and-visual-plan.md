@@ -299,7 +299,7 @@ keyboard-accessible exact control. There are no per-instance pin overrides.
   shared-caller rename; direction versus side independence; deletion blockers;
   pointer and keyboard browser workflows; netlist terminal order.
 
-### H4 — Cell Manager and caller-aware lifecycle
+### H4 — Cell Manager and caller-aware lifecycle (completed)
 
 - **Goal:** make reusable Cell creation, rename, navigation, and deletion
   discoverable without weakening lifecycle rules.

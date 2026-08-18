@@ -4,7 +4,11 @@ import {
   type CircuitProject,
   type SchematicDocument,
 } from "@icm/model";
-import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
+import {
+  builtInSymbols,
+  createProjectSymbolResolver,
+  hierarchicalSymbolId,
+} from "@icm/symbols";
 import { z } from "zod";
 
 import { SchematicEditSchema, type EditActor } from "./edit-schema.js";
@@ -23,6 +27,11 @@ export const ProjectStructureEditSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("remove_document"),
     documentId: z.string().min(1),
+  }),
+  z.strictObject({
+    kind: z.literal("rename_document"),
+    documentId: z.string().min(1),
+    name: z.string().min(1).max(128),
   }),
   z.strictObject({
     kind: z.literal("transact_document"),
@@ -222,6 +231,57 @@ export function executeProjectTransaction(
       }
       candidate.documents.splice(index, 1);
       changedDocumentIds.add(edit.documentId);
+      structuralChange = true;
+      continue;
+    }
+
+    if (edit.kind === "rename_document") {
+      const document = candidate.documents.find(
+        (item) => item.id === edit.documentId,
+      );
+      if (!document) {
+        return rejectProjectTransaction(
+          project,
+          "OBJECT_NOT_FOUND",
+          `Document does not exist: ${edit.documentId}`,
+        );
+      }
+      if (
+        candidate.documents.some(
+          (item) =>
+            item.id !== document.id &&
+            item.name.toLowerCase() === edit.name.toLowerCase(),
+        )
+      ) {
+        return rejectProjectTransaction(
+          project,
+          "EDIT_PRECONDITION",
+          `Cell name already exists: ${edit.name}`,
+        );
+      }
+      if (document.name === edit.name) continue;
+      document.name = edit.name;
+      if (document.netlist) document.netlist.name = edit.name;
+      document.revision += 1;
+      changedDocumentIds.add(document.id);
+      for (const parent of candidate.documents) {
+        let changed = false;
+        for (const instance of parent.instances) {
+          const binding = instance.netlist?.binding;
+          if (
+            binding?.kind !== "subcircuit" ||
+            binding.childDocumentId !== document.id
+          )
+            continue;
+          instance.symbolId = hierarchicalSymbolId(edit.name);
+          binding.name = edit.name;
+          changed = true;
+        }
+        if (changed) {
+          parent.revision += 1;
+          changedDocumentIds.add(parent.id);
+        }
+      }
       structuralChange = true;
       continue;
     }
