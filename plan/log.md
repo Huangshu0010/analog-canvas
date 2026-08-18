@@ -3214,5 +3214,8 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: `pnpm install --frozen-lockfile` and `pnpm ci:check` passed:
   146 unit files / 887 tests, workspace build, release verification, and 152
   E2E scenarios.
-- Commit status: fast-forward promotion to `origin/main` pending this target
-  record commit.
+- Remote CI initially rejected the stale Linux MCP tarball checksum. Updated
+  `config/agent-mcp-distribution.json` to the observed canonical Linux hash;
+  the replacement PR run passed all six required checks.
+- Commit status: merged through [PR #121](https://github.com/chenzc24/Analog-Canvas/pull/121)
+  at `0319a73` on `origin/main`.
