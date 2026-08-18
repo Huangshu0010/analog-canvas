@@ -3122,3 +3122,12 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   tests, workspace build, production smoke).
 - Commit status: included in the `codex/schematic-hierarchy-v12` review branch
   delivery.
+
+## 2026-08-18 - Hierarchy authoring and adaptive symbol plan
+
+- Changed areas: proposed hierarchy interaction/visual roadmap, roadmap index,
+  and target planning record only.
+- Validation: `pnpm docs:check`, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
+- Commit status: included in the `codex/hierarchy-authoring-visual-plan`
+  branch delivery.
