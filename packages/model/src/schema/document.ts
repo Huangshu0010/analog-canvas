@@ -26,8 +26,11 @@ export const SourceBindingSchema = z.strictObject({
  */
 export const FlightlineGuidanceSchema = z.enum(["active", "dismissed"]);
 export const CellNetlistTerminalSchema = z.strictObject({
+  id: StableIdSchema,
   name: NetlistIdentifierSchema,
   netId: StableIdSchema,
+  direction: z.enum(["input", "output", "inout", "passive"]),
+  interfaceInstanceId: StableIdSchema,
 });
 export const CellNetlistInterfaceSchema = z.strictObject({
   name: NetlistIdentifierSchema,
@@ -214,11 +217,21 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       }
     }
     if (document.netlist) {
+      const terminalIds = new Set<string>();
       const terminalNames = new Set<string>();
+      const interfaceInstanceIds = new Set<string>();
       for (const [
         terminalIndex,
         terminal,
       ] of document.netlist.terminals.entries()) {
+        if (terminalIds.has(terminal.id)) {
+          context.addIssue({
+            code: "custom",
+            message: `Duplicate netlist terminal ID: ${terminal.id}`,
+            path: ["netlist", "terminals", terminalIndex, "id"],
+          });
+        }
+        terminalIds.add(terminal.id);
         const normalizedName = terminal.name.toLowerCase();
         if (terminalNames.has(normalizedName)) {
           context.addIssue({
@@ -228,10 +241,58 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
           });
         }
         terminalNames.add(normalizedName);
+        if (interfaceInstanceIds.has(terminal.interfaceInstanceId)) {
+          context.addIssue({
+            code: "custom",
+            message: `Cell interface Instance is assigned to multiple terminals: ${terminal.interfaceInstanceId}`,
+            path: [
+              "netlist",
+              "terminals",
+              terminalIndex,
+              "interfaceInstanceId",
+            ],
+          });
+        }
+        interfaceInstanceIds.add(terminal.interfaceInstanceId);
         if (!document.nets.some((net) => net.id === terminal.netId)) {
           context.addIssue({
             code: "custom",
             message: `Unknown netlist terminal Net: ${terminal.netId}`,
+            path: ["netlist", "terminals", terminalIndex, "netId"],
+          });
+        }
+        const interfaceInstance = document.instances.find(
+          (instance) => instance.id === terminal.interfaceInstanceId,
+        );
+        if (
+          !interfaceInstance ||
+          !["port", "port-filled"].includes(interfaceInstance.symbolId)
+        ) {
+          context.addIssue({
+            code: "custom",
+            message: `Cell terminal requires a port or port-filled interface Instance: ${terminal.interfaceInstanceId}`,
+            path: [
+              "netlist",
+              "terminals",
+              terminalIndex,
+              "interfaceInstanceId",
+            ],
+          });
+        }
+        const terminalNet = document.nets.find(
+          (net) => net.id === terminal.netId,
+        );
+        if (
+          terminalNet &&
+          !terminalNet.terminals.some(
+            (candidate) =>
+              candidate.instanceId === terminal.interfaceInstanceId &&
+              candidate.pinName === "P",
+          )
+        ) {
+          context.addIssue({
+            code: "custom",
+            message: `Cell terminal interface Instance ${terminal.interfaceInstanceId}.P is not connected to Net ${terminal.netId}`,
             path: ["netlist", "terminals", terminalIndex, "netId"],
           });
         }

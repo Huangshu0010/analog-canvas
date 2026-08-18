@@ -1,5 +1,6 @@
 import {
   AnnotationSchema,
+  CellNetlistTerminalSchema,
   DraftingObjectSchema,
   InstanceNetlistDataSchema,
   InstancePropertyValueSchema,
@@ -92,6 +93,25 @@ export const SetInstanceNetlistEditSchema = z.strictObject({
   kind: z.literal("set_instance_netlist"),
   instanceId: StableIdSchema,
   netlist: InstanceNetlistDataSchema,
+});
+export const AddCellTerminalEditSchema = z.strictObject({
+  kind: z.literal("add_cell_terminal"),
+  terminal: CellNetlistTerminalSchema,
+  index: z.number().int().nonnegative().optional(),
+});
+export const UpdateCellTerminalEditSchema = z.strictObject({
+  kind: z.literal("update_cell_terminal"),
+  terminalId: StableIdSchema,
+  name: z.string().min(1).max(128).optional(),
+  direction: z.enum(["input", "output", "inout", "passive"]).optional(),
+});
+export const RemoveCellTerminalEditSchema = z.strictObject({
+  kind: z.literal("remove_cell_terminal"),
+  terminalId: StableIdSchema,
+});
+export const ReorderCellTerminalsEditSchema = z.strictObject({
+  kind: z.literal("reorder_cell_terminals"),
+  terminalIds: z.array(StableIdSchema).max(128),
 });
 export const SetRoutePointsEditSchema = z.strictObject({
   kind: z.literal("set_route_points"),
@@ -276,6 +296,10 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MirrorInstanceEditSchema,
   PatchInstancePropertiesEditSchema,
   SetInstanceNetlistEditSchema,
+  AddCellTerminalEditSchema,
+  UpdateCellTerminalEditSchema,
+  RemoveCellTerminalEditSchema,
+  ReorderCellTerminalsEditSchema,
   SetRoutePointsEditSchema,
   RouteOrthogonalEditSchema,
   AddJunctionEditSchema,

@@ -46,7 +46,7 @@ export function createHierarchicalBlockSymbol(
 }
 
 export function createProjectHierarchicalSymbols(
-  project: Pick<CircuitProject, "documents">,
+  project: Pick<CircuitProject, "documents" | "topDocumentId">,
 ): SymbolDefinition[] {
   const referencedChildIds = new Set(
     project.documents.flatMap((document) =>
@@ -57,7 +57,11 @@ export function createProjectHierarchicalSymbols(
     ),
   );
   return project.documents.flatMap((document) => {
-    if (!document.sourceBinding && !referencedChildIds.has(document.id)) {
+    if (
+      document.id === project.topDocumentId &&
+      !document.sourceBinding &&
+      !referencedChildIds.has(document.id)
+    ) {
       return [];
     }
     const definition = createHierarchicalBlockSymbol(document);

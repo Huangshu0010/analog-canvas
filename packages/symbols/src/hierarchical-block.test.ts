@@ -17,8 +17,20 @@ describe("hierarchical block formal terminals", () => {
       netlist: {
         name: "child",
         terminals: [
-          { name: "IN", netId: "net-in" },
-          { name: "OUT", netId: "net-out" },
+          {
+            id: "cell-terminal-in",
+            name: "IN",
+            netId: "net-in",
+            direction: "input",
+            interfaceInstanceId: "P1",
+          },
+          {
+            id: "cell-terminal-out",
+            name: "OUT",
+            netId: "net-out",
+            direction: "output",
+            interfaceInstanceId: "P2",
+          },
         ],
       },
     });

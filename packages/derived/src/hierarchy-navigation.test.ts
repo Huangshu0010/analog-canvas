@@ -54,14 +54,48 @@ describe("hierarchy navigation", () => {
     const child = createEmptyProject("child-project", "Child", "child")
       .documents[0]!;
     child.nets.push(
-      { id: "child-l", scope: "local", terminals: [] },
-      { id: "child-r", scope: "local", terminals: [] },
+      {
+        id: "child-l",
+        scope: "local",
+        terminals: [{ instanceId: "P1", pinName: "P" }],
+      },
+      {
+        id: "child-r",
+        scope: "local",
+        terminals: [{ instanceId: "P2", pinName: "P" }],
+      },
+    );
+    child.instances.push(
+      {
+        id: "P1",
+        symbolId: "port",
+        placement: null,
+        properties: {},
+      },
+      {
+        id: "P2",
+        symbolId: "port",
+        placement: null,
+        properties: {},
+      },
     );
     child.netlist = {
       name: "Child",
       terminals: [
-        { name: "L", netId: "child-l" },
-        { name: "R", netId: "child-r" },
+        {
+          id: "cell-terminal-l",
+          name: "L",
+          netId: "child-l",
+          direction: "passive",
+          interfaceInstanceId: "P1",
+        },
+        {
+          id: "cell-terminal-r",
+          name: "R",
+          netId: "child-r",
+          direction: "passive",
+          interfaceInstanceId: "P2",
+        },
       ],
     };
     project.documents.push(child);

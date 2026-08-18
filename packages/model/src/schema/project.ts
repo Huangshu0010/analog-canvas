@@ -11,6 +11,7 @@ export const CircuitProjectSchema = z
     name: z.string().min(1),
     source: SourceManifestSchema,
     symbolLibrary: SymbolLibraryLockSchema,
+    structureRevision: z.number().int().nonnegative(),
     topDocumentId: StableIdSchema,
     documents: z.array(SchematicDocumentSchema).min(1),
   })
@@ -40,6 +41,174 @@ export const CircuitProjectSchema = z
         path: ["topDocumentId"],
       });
     }
+    const documentById = new Map(
+      project.documents.map((document) => [document.id, document]),
+    );
+    const childrenByDocument = new Map<string, string[]>();
+    for (const [documentIndex, document] of project.documents.entries()) {
+      const children: string[] = [];
+      for (const [instanceIndex, instance] of document.instances.entries()) {
+        const binding = instance.netlist?.binding;
+        if (binding?.kind !== "subcircuit") continue;
+        const child = documentById.get(binding.childDocumentId);
+        if (!child) {
+          context.addIssue({
+            code: "custom",
+            message: `Hierarchy binding references unknown Document: ${binding.childDocumentId}`,
+            path: [
+              "documents",
+              documentIndex,
+              "instances",
+              instanceIndex,
+              "netlist",
+              "binding",
+              "childDocumentId",
+            ],
+          });
+          continue;
+        }
+        if (!child.netlist) {
+          context.addIssue({
+            code: "custom",
+            message: `Hierarchy binding requires child Document ${child.id} to define a Cell interface`,
+            path: [
+              "documents",
+              documentIndex,
+              "instances",
+              instanceIndex,
+              "netlist",
+              "binding",
+            ],
+          });
+          continue;
+        }
+        if (binding.name.toLowerCase() !== child.netlist.name.toLowerCase()) {
+          context.addIssue({
+            code: "custom",
+            message: `Hierarchy binding name ${binding.name} does not match child Cell ${child.netlist.name}`,
+            path: [
+              "documents",
+              documentIndex,
+              "instances",
+              instanceIndex,
+              "netlist",
+              "binding",
+              "name",
+            ],
+          });
+        }
+        const childPinNames = new Set(
+          child.netlist.terminals.map((terminal) => terminal.name),
+        );
+        const referencedPins: Array<{
+          pinName: string;
+          path: Array<string | number>;
+        }> = [];
+        for (const [netIndex, net] of document.nets.entries()) {
+          for (const [terminalIndex, terminal] of net.terminals.entries()) {
+            if (terminal.instanceId !== instance.id) continue;
+            referencedPins.push({
+              pinName: terminal.pinName,
+              path: [
+                "documents",
+                documentIndex,
+                "nets",
+                netIndex,
+                "terminals",
+                terminalIndex,
+                "pinName",
+              ],
+            });
+          }
+        }
+        for (const [routeIndex, route] of document.routes.entries()) {
+          for (const endpointName of ["from", "to"] as const) {
+            const endpoint = route[endpointName];
+            if (
+              endpoint.kind !== "terminal" ||
+              endpoint.instanceId !== instance.id
+            )
+              continue;
+            referencedPins.push({
+              pinName: endpoint.pinName,
+              path: [
+                "documents",
+                documentIndex,
+                "routes",
+                routeIndex,
+                endpointName,
+                "pinName",
+              ],
+            });
+          }
+        }
+        for (const [
+          noConnectIndex,
+          noConnect,
+        ] of document.noConnects.entries()) {
+          if (noConnect.endpoint.instanceId !== instance.id) continue;
+          referencedPins.push({
+            pinName: noConnect.endpoint.pinName,
+            path: [
+              "documents",
+              documentIndex,
+              "noConnects",
+              noConnectIndex,
+              "endpoint",
+              "pinName",
+            ],
+          });
+        }
+        for (const [terminalIndex, terminal] of (
+          instance.netlist?.terminals ?? []
+        ).entries()) {
+          referencedPins.push({
+            pinName: terminal.pinName,
+            path: [
+              "documents",
+              documentIndex,
+              "instances",
+              instanceIndex,
+              "netlist",
+              "terminals",
+              terminalIndex,
+              "pinName",
+            ],
+          });
+        }
+        for (const reference of referencedPins) {
+          if (childPinNames.has(reference.pinName)) continue;
+          context.addIssue({
+            code: "custom",
+            message: `Hierarchy Instance ${instance.id} references unknown child terminal ${reference.pinName}`,
+            path: reference.path,
+          });
+        }
+        children.push(child.id);
+      }
+      childrenByDocument.set(document.id, children);
+    }
+
+    const visiting = new Set<string>();
+    const visited = new Set<string>();
+    const visit = (documentId: string, path: string[]): void => {
+      if (visiting.has(documentId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Hierarchy cycle: ${[...path, documentId].join(" -> ")}`,
+          path: ["documents"],
+        });
+        return;
+      }
+      if (visited.has(documentId)) return;
+      visiting.add(documentId);
+      for (const childId of childrenByDocument.get(documentId) ?? []) {
+        visit(childId, [...path, documentId]);
+      }
+      visiting.delete(documentId);
+      visited.add(documentId);
+    };
+    for (const document of project.documents) visit(document.id, []);
   });
 
 export const CircuitProjectJsonSchema = z.toJSONSchema(CircuitProjectSchema, {

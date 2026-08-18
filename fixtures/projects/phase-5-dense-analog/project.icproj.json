@@ -347,13 +347,14 @@
   ],
   "id": "project-phase-5-dense-analog",
   "name": "Current Differential Stage",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "source": {
     "dialect": "none",
     "entry": null,
     "files": [],
     "sourcePolicy": "copy"
   },
+  "structureRevision": 0,
   "symbolLibrary": {
     "hash": "razavi-reference-v1",
     "id": "razavi-symbols",

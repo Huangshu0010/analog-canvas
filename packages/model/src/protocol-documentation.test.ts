@@ -22,7 +22,7 @@ describe("Project protocol documentation", () => {
       ["docs/specs/project-file-format.md", `Project schema: \`${version}\``],
       ["docs/specs/editor-interaction.md", `schema-${version}`],
       [
-        "docs/adr/0023-rolling-previous-project-compatibility.md",
+        "docs/adr/0025-schematic-hierarchy-and-formal-ports.md",
         `schema-${version} in-memory Project shape`,
       ],
       [

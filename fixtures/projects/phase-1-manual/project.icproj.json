@@ -52,13 +52,14 @@
   ],
   "id": "project-phase-1-manual",
   "name": "Phase 1 Manual Editor",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "source": {
     "dialect": "none",
     "entry": null,
     "files": [],
     "sourcePolicy": "copy"
   },
+  "structureRevision": 0,
   "symbolLibrary": {
     "hash": "razavi-reference-v1",
     "id": "razavi-symbols",

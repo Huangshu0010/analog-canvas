@@ -1,0 +1,314 @@
+import {
+  CircuitProjectSchema,
+  SchematicDocumentSchema,
+  type CircuitProject,
+  type SchematicDocument,
+} from "@icm/model";
+import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
+import { z } from "zod";
+
+import { SchematicEditSchema, type EditActor } from "./edit-schema.js";
+import { executeTransaction } from "./transaction.js";
+import type {
+  EditDiagnostic,
+  EditTransactionResult,
+} from "./transaction-result.js";
+
+export const ProjectStructureEditSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("add_document"),
+    document: SchematicDocumentSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("remove_document"),
+    documentId: z.string().min(1),
+  }),
+  z.strictObject({
+    kind: z.literal("transact_document"),
+    documentId: z.string().min(1),
+    expectedRevision: z.number().int().nonnegative(),
+    edits: z.array(SchematicEditSchema).min(1).max(256),
+  }),
+]);
+
+export const ProjectTransactionSchema = z.strictObject({
+  transactionId: z.string().min(1),
+  projectId: z.string().min(1),
+  expectedStructureRevision: z.number().int().nonnegative(),
+  actor: z.strictObject({
+    kind: z.enum(["human", "agent"]),
+    id: z.string().min(1),
+  }),
+  dryRun: z.boolean().optional(),
+  edits: z.array(ProjectStructureEditSchema).min(1).max(256),
+});
+
+export type ProjectStructureEdit = z.infer<typeof ProjectStructureEditSchema>;
+export type ProjectTransaction = z.infer<typeof ProjectTransactionSchema>;
+
+export type ProjectTransactionErrorCode =
+  | "INVALID_TRANSACTION"
+  | "PROJECT_MISMATCH"
+  | "STALE_STRUCTURE_REVISION"
+  | "OBJECT_NOT_FOUND"
+  | "EDIT_PRECONDITION"
+  | "DOCUMENT_TRANSACTION_REJECTED"
+  | "INVALID_RESULT";
+
+export interface AppliedProjectTransaction {
+  ok: true;
+  applied: boolean;
+  structureRevision: number;
+  proposedStructureRevision: number;
+  project: CircuitProject;
+  proposedProject: CircuitProject;
+  changedDocumentIds: readonly string[];
+  documentResults: readonly EditTransactionResult[];
+  diagnostics: readonly EditDiagnostic[];
+}
+
+export interface RejectedProjectTransaction {
+  ok: false;
+  applied: false;
+  structureRevision: number;
+  project: CircuitProject;
+  error: { code: ProjectTransactionErrorCode; message: string };
+  diagnostics: readonly EditDiagnostic[];
+}
+
+export type ProjectTransactionResult =
+  AppliedProjectTransaction | RejectedProjectTransaction;
+
+function rejectProjectTransaction(
+  project: CircuitProject,
+  code: ProjectTransactionErrorCode,
+  message: string,
+  diagnostics: readonly EditDiagnostic[] = [
+    { code, severity: "error", message },
+  ],
+): RejectedProjectTransaction {
+  return {
+    ok: false,
+    applied: false,
+    structureRevision: project.structureRevision,
+    project,
+    error: { code, message },
+    diagnostics,
+  };
+}
+
+export function rejectProjectStructureTransaction(
+  project: CircuitProject,
+  code: ProjectTransactionErrorCode,
+  message: string,
+): RejectedProjectTransaction {
+  return rejectProjectTransaction(project, code, message);
+}
+
+function replaceDocument(
+  project: CircuitProject,
+  document: SchematicDocument,
+): void {
+  const index = project.documents.findIndex(
+    (candidate) => candidate.id === document.id,
+  );
+  if (index < 0) throw new Error(`Document not found: ${document.id}`);
+  project.documents[index] = document;
+}
+
+/**
+ * Applies structural and existing per-Document edits to one cloned Project.
+ * Intermediate values may temporarily be incomplete (for example, a child is
+ * added before its parent Instance); only the final Project is committed and
+ * validated. No caller receives a partially applied value.
+ */
+export function executeProjectTransaction(
+  sourceProject: CircuitProject,
+  input: ProjectTransaction | unknown,
+): ProjectTransactionResult {
+  const project = CircuitProjectSchema.parse(sourceProject);
+  const parsed = ProjectTransactionSchema.safeParse(input);
+  if (!parsed.success) {
+    return rejectProjectTransaction(
+      project,
+      "INVALID_TRANSACTION",
+      "Project transaction schema validation failed",
+      parsed.error.issues.map((issue) => ({
+        code: "INVALID_TRANSACTION",
+        severity: "error" as const,
+        message: issue.message,
+        path: issue.path.map((segment) =>
+          typeof segment === "symbol"
+            ? (segment.description ?? "symbol")
+            : segment,
+        ),
+      })),
+    );
+  }
+  const transaction = parsed.data;
+  if (transaction.projectId !== project.id) {
+    return rejectProjectTransaction(
+      project,
+      "PROJECT_MISMATCH",
+      `Transaction targets Project ${transaction.projectId}, not ${project.id}`,
+    );
+  }
+  if (transaction.expectedStructureRevision !== project.structureRevision) {
+    return rejectProjectTransaction(
+      project,
+      "STALE_STRUCTURE_REVISION",
+      `Expected Project structure revision ${transaction.expectedStructureRevision}, found ${project.structureRevision}`,
+    );
+  }
+
+  const candidate = structuredClone(project);
+  const changedDocumentIds = new Set<string>();
+  const documentResults: EditTransactionResult[] = [];
+  let structuralChange = false;
+
+  for (const [editIndex, edit] of transaction.edits.entries()) {
+    if (edit.kind === "add_document") {
+      if (
+        candidate.documents.some((document) => document.id === edit.document.id)
+      ) {
+        return rejectProjectTransaction(
+          project,
+          "EDIT_PRECONDITION",
+          `Document already exists: ${edit.document.id}`,
+        );
+      }
+      candidate.documents.push(structuredClone(edit.document));
+      changedDocumentIds.add(edit.document.id);
+      structuralChange = true;
+      continue;
+    }
+
+    if (edit.kind === "remove_document") {
+      const index = candidate.documents.findIndex(
+        (document) => document.id === edit.documentId,
+      );
+      if (index < 0) {
+        return rejectProjectTransaction(
+          project,
+          "OBJECT_NOT_FOUND",
+          `Document does not exist: ${edit.documentId}`,
+        );
+      }
+      if (edit.documentId === candidate.topDocumentId) {
+        return rejectProjectTransaction(
+          project,
+          "EDIT_PRECONDITION",
+          "The top Cell cannot be deleted",
+        );
+      }
+      const caller = candidate.documents.flatMap((document) =>
+        document.instances.flatMap((instance) => {
+          const binding = instance.netlist?.binding;
+          return binding?.kind === "subcircuit" &&
+            binding.childDocumentId === edit.documentId
+            ? [{ documentId: document.id, instanceId: instance.id }]
+            : [];
+        }),
+      )[0];
+      if (caller) {
+        return rejectProjectTransaction(
+          project,
+          "EDIT_PRECONDITION",
+          `Cell ${edit.documentId} is still referenced by ${caller.documentId}.${caller.instanceId}`,
+        );
+      }
+      candidate.documents.splice(index, 1);
+      changedDocumentIds.add(edit.documentId);
+      structuralChange = true;
+      continue;
+    }
+
+    if (
+      edit.edits.some(
+        (documentEdit) =>
+          documentEdit.kind === "undo" || documentEdit.kind === "redo",
+      )
+    ) {
+      return rejectProjectTransaction(
+        project,
+        "EDIT_PRECONDITION",
+        "Project transactions cannot contain Document history edits",
+      );
+    }
+    const document = candidate.documents.find(
+      (item) => item.id === edit.documentId,
+    );
+    if (!document) {
+      return rejectProjectTransaction(
+        project,
+        "OBJECT_NOT_FOUND",
+        `Document does not exist: ${edit.documentId}`,
+      );
+    }
+    const resolver = createProjectSymbolResolver(candidate, builtInSymbols);
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: `${transaction.transactionId}-document-${editIndex}`,
+        documentId: edit.documentId,
+        expectedRevision: edit.expectedRevision,
+        actor: transaction.actor as EditActor,
+        edits: edit.edits,
+      },
+      { symbolResolver: resolver },
+    );
+    documentResults.push(result);
+    if (!result.ok) {
+      return rejectProjectTransaction(
+        project,
+        "DOCUMENT_TRANSACTION_REJECTED",
+        result.error.message,
+        result.diagnostics,
+      );
+    }
+    if (result.applied) {
+      replaceDocument(candidate, result.document);
+      changedDocumentIds.add(edit.documentId);
+    }
+  }
+
+  const applied =
+    structuralChange ||
+    documentResults.some((result) => result.ok && result.applied);
+  const proposedStructureRevision =
+    project.structureRevision + (applied ? 1 : 0);
+  candidate.structureRevision = proposedStructureRevision;
+  const validated = CircuitProjectSchema.safeParse(candidate);
+  if (!validated.success) {
+    return rejectProjectTransaction(
+      project,
+      "INVALID_RESULT",
+      "Project transaction produced an invalid Project",
+      validated.error.issues.map((issue) => ({
+        code: "INVALID_RESULT",
+        severity: "error" as const,
+        message: issue.message,
+        path: issue.path.map((segment) =>
+          typeof segment === "symbol"
+            ? (segment.description ?? "symbol")
+            : segment,
+        ),
+      })),
+    );
+  }
+  const proposedProject = validated.data;
+  return {
+    ok: true,
+    applied: transaction.dryRun === true ? false : applied,
+    structureRevision:
+      transaction.dryRun === true
+        ? project.structureRevision
+        : proposedStructureRevision,
+    proposedStructureRevision,
+    project: transaction.dryRun === true ? project : proposedProject,
+    proposedProject,
+    changedDocumentIds: [...changedDocumentIds].sort(),
+    documentResults,
+    diagnostics: [],
+  };
+}

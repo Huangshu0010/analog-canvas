@@ -1,5 +1,6 @@
 import {
   AnnotationSchema,
+  CellNetlistTerminalSchema,
   DraftingObjectSchema,
   InstanceSchema,
   JunctionSchema,
@@ -429,6 +430,14 @@ export function executeTransaction(
             }
           }
         }
+        for (const noConnect of draft.noConnects) {
+          if (noConnect.endpoint.instanceId === edit.instanceId) {
+            currentPins.add(noConnect.endpoint.pinName);
+          }
+        }
+        for (const terminal of instance.netlist?.terminals ?? []) {
+          currentPins.add(terminal.pinName);
+        }
         const pinMap = edit.pinMap ?? {};
         for (const sourcePin of Object.keys(pinMap)) {
           if (!currentPins.has(sourcePin)) {
@@ -477,6 +486,12 @@ export function executeTransaction(
             }
           }
           if (changed) changedObjectIds.add(route.id);
+        }
+        for (const noConnect of draft.noConnects) {
+          if (noConnect.endpoint.instanceId !== edit.instanceId) continue;
+          noConnect.endpoint.pinName =
+            pinMap[noConnect.endpoint.pinName] ?? noConnect.endpoint.pinName;
+          changedObjectIds.add(noConnect.id);
         }
         if (instance.netlist?.terminals) {
           instance.netlist.terminals = instance.netlist.terminals.map(
@@ -782,6 +797,98 @@ export function executeTransaction(
           changedObjectIds,
         );
         changedObjectIds.add(edit.instanceId);
+        connectivityChanged = true;
+        break;
+      }
+      case "add_cell_terminal": {
+        if (!draft.netlist) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Document has no formal Cell interface",
+          );
+        }
+        const terminal = CellNetlistTerminalSchema.parse(edit.terminal);
+        if (
+          draft.netlist.terminals.some(
+            (candidate) => candidate.id === terminal.id,
+          )
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Cell terminal already exists: ${terminal.id}`,
+          );
+        }
+        const index = edit.index ?? draft.netlist.terminals.length;
+        if (index > draft.netlist.terminals.length) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Cell terminal index ${index} exceeds interface length ${draft.netlist.terminals.length}`,
+          );
+        }
+        draft.netlist.terminals.splice(index, 0, terminal);
+        changedObjectIds.add(terminal.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "update_cell_terminal": {
+        const terminal = draft.netlist?.terminals.find(
+          (candidate) => candidate.id === edit.terminalId,
+        );
+        if (!terminal) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Cell terminal does not exist: ${edit.terminalId}`,
+          );
+        }
+        if (edit.name !== undefined) terminal.name = edit.name;
+        if (edit.direction !== undefined) terminal.direction = edit.direction;
+        changedObjectIds.add(terminal.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "remove_cell_terminal": {
+        const index =
+          draft.netlist?.terminals.findIndex(
+            (candidate) => candidate.id === edit.terminalId,
+          ) ?? -1;
+        if (index < 0 || !draft.netlist) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Cell terminal does not exist: ${edit.terminalId}`,
+          );
+        }
+        draft.netlist.terminals.splice(index, 1);
+        changedObjectIds.add(edit.terminalId);
+        connectivityChanged = true;
+        break;
+      }
+      case "reorder_cell_terminals": {
+        if (!draft.netlist) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Document has no formal Cell interface",
+          );
+        }
+        const currentIds = draft.netlist.terminals.map(
+          (terminal) => terminal.id,
+        );
+        if (
+          edit.terminalIds.length !== currentIds.length ||
+          new Set(edit.terminalIds).size !== currentIds.length ||
+          currentIds.some((id) => !edit.terminalIds.includes(id))
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Cell terminal order must contain every existing terminal exactly once",
+          );
+        }
+        const terminalById = new Map(
+          draft.netlist.terminals.map((terminal) => [terminal.id, terminal]),
+        );
+        draft.netlist.terminals = edit.terminalIds.map((id) =>
+          terminalById.get(id)!,
+        );
+        for (const id of edit.terminalIds) changedObjectIds.add(id);
         connectivityChanged = true;
         break;
       }

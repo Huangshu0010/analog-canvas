@@ -130,13 +130,14 @@
   ],
   "id": "project-routing",
   "name": "Phase 3 Routing Demo",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "source": {
     "dialect": "none",
     "entry": null,
     "files": [],
     "sourcePolicy": "copy"
   },
+  "structureRevision": 0,
   "symbolLibrary": {
     "hash": "razavi-reference-v1",
     "id": "razavi-symbols",

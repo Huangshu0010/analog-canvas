@@ -182,14 +182,16 @@ Q2 collector base emitter QPREF
       ),
     ).toEqual([]);
     const document = imported.project!.documents[0]!;
-    expect(document.instances.map((instance) => instance.symbolId)).toEqual([
-      "nmos",
-      "nmos",
-      "pmos",
-      "pmos",
-      "nmos",
-      "nmos",
-    ]);
+    const interfaceInstanceIds = new Set(
+      document.netlist!.terminals.map(
+        (terminal) => terminal.interfaceInstanceId,
+      ),
+    );
+    expect(
+      document.instances
+        .filter((instance) => !interfaceInstanceIds.has(instance.id))
+        .map((instance) => instance.symbolId),
+    ).toEqual(["nmos", "nmos", "pmos", "pmos", "nmos", "nmos"]);
     expect(document.instances[0]!.properties).toEqual({
       "symbol.mapping.registry": "sky130-nfet-four-terminal",
     });

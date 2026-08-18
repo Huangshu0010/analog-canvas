@@ -29,13 +29,14 @@
   ],
   "id": "project-minimal",
   "name": "Minimal Project",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "source": {
     "dialect": "none",
     "entry": null,
     "files": [],
     "sourcePolicy": "copy"
   },
+  "structureRevision": 0,
   "symbolLibrary": {
     "hash": "development",
     "id": "builtin-analog",
