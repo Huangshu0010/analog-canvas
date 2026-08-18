@@ -1,4 +1,4 @@
-import { executeTransaction } from "@icm/edit-engine";
+import { executeProjectTransaction } from "@icm/edit-engine";
 import {
   CircuitProjectSchema,
   createEmptyDocument,
@@ -6,11 +6,7 @@ import {
   type Rotation,
   type SchematicDocument,
 } from "@icm/model";
-import {
-  builtInSymbols,
-  createProjectSymbolResolver,
-  hierarchicalSymbolId,
-} from "@icm/symbols";
+import { hierarchicalSymbolId } from "@icm/symbols";
 
 export interface RectangleToCellConversion {
   project: CircuitProject;
@@ -123,10 +119,6 @@ export function convertRectangleToHierarchy(
   const { cellName, documentId: childDocumentId } = nextCellIdentity(project);
   const child = createEmptyDocument(childDocumentId, cellName);
   child.presentation = structuredClone(parent.presentation);
-  const projectWithChild = CircuitProjectSchema.parse({
-    ...project,
-    documents: [...project.documents, child],
-  });
   const instanceId = nextHierarchyInstanceId(parent);
   const instance: SchematicDocument["instances"][number] = {
     id: instanceId,
@@ -148,32 +140,30 @@ export function convertRectangleToHierarchy(
       },
     },
   };
-  const resolverProject = CircuitProjectSchema.parse({
-    ...projectWithChild,
-    documents: projectWithChild.documents.map((document) =>
-      document.id === parent.id
-        ? { ...document, instances: [...document.instances, instance] }
-        : document,
-    ),
+  const transaction = executeProjectTransaction(project, {
+    transactionId: `rectangle-to-cell-${parent.id}-${rectangleId}`,
+    projectId: project.id,
+    expectedStructureRevision: project.structureRevision,
+    actor: { kind: "human", id: "human-local" },
+    edits: [
+      {
+        kind: "add_document",
+        document: child,
+      },
+      {
+        kind: "transact_document",
+        documentId: parent.id,
+        expectedRevision: parent.revision,
+        edits: [
+          { kind: "remove_drafting_object", objectId: rectangleId },
+          {
+            kind: "add_instance",
+            instance,
+          },
+        ],
+      },
+    ],
   });
-  const resolver = createProjectSymbolResolver(resolverProject, builtInSymbols);
-  const transaction = executeTransaction(
-    parent,
-    {
-      transactionId: `rectangle-to-cell-${parent.id}-${rectangleId}`,
-      documentId: parent.id,
-      expectedRevision: parent.revision,
-      actor: { kind: "human", id: "human-local" },
-      edits: [
-        { kind: "remove_drafting_object", objectId: rectangleId },
-        {
-          kind: "add_instance",
-          instance,
-        },
-      ],
-    },
-    { symbolResolver: resolver },
-  );
   if (!transaction.ok || !transaction.applied) {
     const detail = transaction.diagnostics[0]?.message;
     throw new Error(
@@ -183,14 +173,8 @@ export function convertRectangleToHierarchy(
     );
   }
 
-  const nextProject = CircuitProjectSchema.parse({
-    ...projectWithChild,
-    documents: projectWithChild.documents.map((document) =>
-      document.id === parent.id ? transaction.document : document,
-    ),
-  });
   return {
-    project: nextProject,
+    project: transaction.project,
     parentDocumentId: parent.id,
     childDocumentId,
     instanceId,

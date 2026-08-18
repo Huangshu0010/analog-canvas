@@ -1,6 +1,7 @@
 import { resolveDocumentRoutingGeometry, sha256Hex } from "@icm/derived";
 import {
   executeTransaction,
+  executeProjectTransaction,
   proposeWireIntent,
   SchematicEditSchema,
 } from "@icm/edit-engine";
@@ -8,7 +9,11 @@ import type { SchematicEdit } from "@icm/edit-engine";
 import { flattenRichText } from "@icm/model";
 import type { CircuitProject, Point, SchematicDocument } from "@icm/model";
 import { buildSvgScene, renderDocumentSvg } from "@icm/render-svg";
-import type { SymbolResolver } from "@icm/symbols";
+import {
+  builtInSymbols,
+  createProjectSymbolResolver,
+  type SymbolResolver,
+} from "@icm/symbols";
 
 import { base64EncodeUtf8, utf8ByteLength } from "./platform.js";
 import {
@@ -63,6 +68,7 @@ export interface AgentDocumentStore {
   getDocument(documentId?: string): SchematicDocument;
   commitDocument(document: SchematicDocument): void;
   getProject?(): CircuitProject;
+  commitProject?(project: CircuitProject): void;
 }
 
 export interface AgentCircuitServiceOptions {
@@ -150,6 +156,10 @@ export function agentEditCategory(
     case "patch_instance_properties":
       return "presentation";
     case "set_instance_netlist":
+    case "add_cell_terminal":
+    case "update_cell_terminal":
+    case "remove_cell_terminal":
+    case "reorder_cell_terminals":
       return "connectivity";
     case "set_route_points":
     case "route_orthogonal":
@@ -421,6 +431,151 @@ export function createAgentCircuitService(
               documentId: semantic.documentId,
               objectIds: [...semantic.objectIds],
               ...(semantic.netId ? { netId: semantic.netId } : {}),
+            },
+          });
+        }
+        if (request.structureEdits) {
+          if (!project) {
+            return fail(
+              "transact",
+              "PROJECT_CONTEXT_REQUIRED",
+              "Structural edits require a Project-aware Agent host",
+              document.revision,
+            );
+          }
+          if (!options.permissions.edit.connectivity) {
+            return fail(
+              "transact",
+              "PERMISSION_DENIED",
+              "Structural edits require connectivity edit permission",
+              document.revision,
+            );
+          }
+          const nestedEdits = request.structureEdits.flatMap((edit) =>
+            edit.kind === "transact_document" ? edit.edits : [],
+          );
+          if (
+            request.structureEdits.length + nestedEdits.length >
+            limits.maxTransactionEdits
+          ) {
+            return fail(
+              "transact",
+              "LIMIT_EXCEEDED",
+              `A transaction may contain at most ${limits.maxTransactionEdits} edits`,
+              document.revision,
+            );
+          }
+          for (const edit of nestedEdits) {
+            const category = agentEditCategory(edit.kind);
+            if (category === "unsupported") {
+              return fail(
+                "transact",
+                "UNSUPPORTED_EDIT",
+                `Edit ${edit.kind} is not exposed by Agent Circuit API ${request.apiVersion}`,
+                document.revision,
+              );
+            }
+            if (!options.permissions.edit[category]) {
+              return fail(
+                "transact",
+                "PERMISSION_DENIED",
+                `${category} edit permission is not granted`,
+                document.revision,
+              );
+            }
+          }
+          const transaction = {
+            transactionId: request.transactionId,
+            projectId: project.id,
+            expectedStructureRevision: request.expectedStructureRevision!,
+            actor: { kind: "agent" as const, id: options.agentId },
+            ...(request.dryRun === undefined ? {} : { dryRun: request.dryRun }),
+            edits: request.structureEdits,
+          };
+          if (host && !host.dispatchProjectTransaction) {
+            return fail(
+              "transact",
+              "PROJECT_COMMIT_UNAVAILABLE",
+              "This Agent host cannot dispatch structural Project edits",
+              document.revision,
+            );
+          }
+          const result = host
+            ? host.dispatchProjectTransaction!(transaction)
+            : executeProjectTransaction(project, transaction);
+          if (!result.ok) {
+            return fail(
+              "transact",
+              result.error.code,
+              result.error.message,
+              document.revision,
+              result.diagnostics.map((item) => ({
+                code: item.code,
+                severity: item.severity,
+                message: item.message,
+                ...(item.objectIds ? { objectIds: [...item.objectIds] } : {}),
+                ...(item.path ? { path: [...item.path] } : {}),
+              })),
+            );
+          }
+          if (result.applied && !useHost) {
+            if (!storeOptions!.store.commitProject) {
+              return fail(
+                "transact",
+                "PROJECT_COMMIT_UNAVAILABLE",
+                "This Agent store cannot commit structural Project edits",
+                document.revision,
+              );
+            }
+            storeOptions!.store.commitProject(result.project);
+          }
+          const proposedDocument =
+            result.proposedProject.documents.find(
+              (item) => item.id === document.id,
+            ) ?? document;
+          const documentResults = result.documentResults.filter(
+            (item) => item.ok,
+          );
+          const changedObjectIds = [
+            ...new Set([
+              ...result.changedDocumentIds,
+              ...documentResults.flatMap((item) => item.diff.changedObjectIds),
+            ]),
+          ].sort();
+          const effectiveResolver = createProjectSymbolResolver(
+            result.proposedProject,
+            builtInSymbols,
+          );
+          const diagnostics = agentProjectDiagnostics(
+            result.proposedProject,
+            effectiveResolver,
+            proposedDocument.id,
+            proposedDocument.revision,
+          );
+          return response({
+            apiVersion: request.apiVersion,
+            requestId: request.requestId,
+            operation: "transact",
+            ok: true,
+            applied: result.applied,
+            revision: result.applied
+              ? proposedDocument.revision
+              : document.revision,
+            proposedRevision: proposedDocument.revision,
+            diff: {
+              documentId: document.id,
+              fromRevision: document.revision,
+              toRevision: proposedDocument.revision,
+              editKinds: request.structureEdits.map(
+                (edit) => `project:${edit.kind}`,
+              ),
+              changedObjectIds,
+            },
+            diagnostics,
+            projectStructure: {
+              fromRevision: project.structureRevision,
+              toRevision: result.proposedStructureRevision,
+              changedDocumentIds: [...result.changedDocumentIds],
             },
           });
         }

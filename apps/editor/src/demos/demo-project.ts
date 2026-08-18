@@ -19,6 +19,7 @@ const demoProject = CircuitProjectSchema.parse({
     version: "1",
     hash: "razavi-reference-v1",
   },
+  structureRevision: 0,
   topDocumentId: "document-main",
   documents: [
     {

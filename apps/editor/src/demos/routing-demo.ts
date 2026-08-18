@@ -30,6 +30,7 @@ export function createRoutingDemoProject(): CircuitProject {
       version: "1",
       hash: "razavi-reference-v1",
     },
+    structureRevision: 0,
     topDocumentId: "document-routing",
     documents: [
       {

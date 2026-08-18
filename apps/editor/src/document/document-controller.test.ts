@@ -159,6 +159,7 @@ describe("EditorDocumentController", () => {
         },
       },
     });
+    project.structureRevision += 1;
 
     const active = controller.commitProjectStructure(project);
 
@@ -167,8 +168,26 @@ describe("EditorDocumentController", () => {
     expect(
       controller.resolver.resolve(hierarchicalSymbolId("Cell1")),
     ).toBeDefined();
-    expect(controller.canUndo).toBe(false);
+    expect(controller.canUndo).toBe(true);
     expect(controller.openDocument(child.id)?.id).toBe(child.id);
+    const undo = controller.transact([{ kind: "undo" }]);
+    expect(undo.ok && undo.applied).toBe(true);
+    expect(controller.project.documents).toHaveLength(2);
+    expect(
+      controller.project.documents.some(
+        (document) => document.id === "document-cell-1",
+      ),
+    ).toBe(false);
+    expect(controller.document.id).toBe(controller.project.topDocumentId);
+    expect(controller.canRedo).toBe(true);
+
+    const redo = controller.transact([{ kind: "redo" }]);
+    expect(redo.ok && redo.applied).toBe(true);
+    expect(
+      controller.project.documents.some(
+        (document) => document.id === "document-cell-1",
+      ),
+    ).toBe(true);
   });
 
   it("dispatches an Agent transaction as one undo item and refreshes state", () => {

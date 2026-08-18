@@ -82,7 +82,7 @@ function serviceFixture(
   permissions: AgentPermissions = allPermissions,
   limits: Parameters<typeof createAgentCircuitService>[0]["limits"] = {},
 ) {
-  const project = fixtureProject();
+  let project = fixtureProject();
   let document = structuredClone(project.documents[0]!);
   const service = createAgentCircuitService({
     agentId: "agent-test",
@@ -98,9 +98,17 @@ function serviceFixture(
         );
       },
       getProject: () => project,
+      commitProject: (next) => {
+        project = next;
+        document =
+          next.documents.find((candidate) => candidate.id === document.id) ??
+          next.documents.find(
+            (candidate) => candidate.id === next.topDocumentId,
+          )!;
+      },
     },
   });
-  return { service, getDocument: () => document };
+  return { service, getDocument: () => document, getProject: () => project };
 }
 
 describe("current Agent Circuit API service", () => {
@@ -421,6 +429,34 @@ describe("current Agent Circuit API service", () => {
     expect(resolver.resolve("port")?.definition.pins).toEqual([
       expect.objectContaining({ name: "P" }),
     ]);
+  });
+
+  it("adds a reusable Cell through the existing transact operation", () => {
+    const fixture = serviceFixture();
+    const child = createEmptyDocument("document-agent-child", "Agent Child");
+    const response = fixture.service.handle({
+      apiVersion: "2.0",
+      requestId: "add-agent-child",
+      operation: "transact",
+      documentId: fixture.getDocument().id,
+      transactionId: "add-agent-child",
+      expectedRevision: fixture.getDocument().revision,
+      expectedStructureRevision: fixture.getProject().structureRevision,
+      structureEdits: [{ kind: "add_document", document: child }],
+    });
+
+    expect(response).toMatchObject({
+      ok: true,
+      applied: true,
+      projectStructure: {
+        fromRevision: 0,
+        toRevision: 1,
+        changedDocumentIds: ["document-agent-child"],
+      },
+    });
+    expect(fixture.getProject().documents).toContainEqual(
+      expect.objectContaining({ id: "document-agent-child" }),
+    );
   });
 
   it("applies an instance property patch through the same presentation boundary", () => {

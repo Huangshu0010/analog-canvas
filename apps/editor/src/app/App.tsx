@@ -21,6 +21,10 @@ import {
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
   planEnsureNamedNet,
+  planExposePortInstance,
+  planRemoveCellTerminal,
+  planRenameCellTerminal,
+  type ProjectStructureEdit,
   type EditTransactionResult,
   type SchematicEdit,
   type WireSource,
@@ -40,6 +44,7 @@ import {
   diagnoseVisualQuality,
   endpointKey,
   findHierarchyPath,
+  findHierarchyPaths,
   isMosBulkTerminal,
   isVisibleEndpoint,
   resolveEndpointPoint,
@@ -64,6 +69,8 @@ import type {
 } from "@icm/derived";
 import {
   createEmptyProject,
+  createEmptyDocument,
+  createId,
   defaultDraftTextDocument,
   flattenRichText,
   snapGridPoint,
@@ -85,7 +92,11 @@ import { buildSvgScene } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import { renderCrashRequested, sceneCrashRequested } from "./crash-test-hooks";
 import { buildSceneSafely } from "./scene-safety";
-import { builtInSymbols, findUnsupportedProjectSymbolIds } from "@icm/symbols";
+import {
+  builtInSymbols,
+  findUnsupportedProjectSymbolIds,
+  hierarchicalSymbolId,
+} from "@icm/symbols";
 import { clipboardPreviewDocument } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import { startCanvasDragSession } from "../canvas/canvas-drag-session";
@@ -466,6 +477,7 @@ export function App({
     openDocument,
     replaceProject,
     commitProjectStructure,
+    dispatchProjectTransaction,
     transact: transactDocument,
     controller: editorDocumentController,
     projectSessionId,
@@ -751,15 +763,6 @@ export function App({
     selectedIds.length === 1
       ? document.instances.find((instance) => instance.id === selectedId)
       : undefined;
-  const hasHierarchy = useMemo(
-    () =>
-      project.documents.some((candidate) =>
-        candidate.instances.some(
-          (instance) => referencedDocumentId(project, instance) !== null,
-        ),
-      ),
-    [project],
-  );
   const selectedRoute = selectedRouteId
     ? document.routes.find((route) => route.id === selectedRouteId)
     : undefined;
@@ -1431,6 +1434,234 @@ export function App({
     );
     resetInteractionState();
     setStatus(`Opened Cell ${nextDocument.name}`);
+  }
+
+  function commitStructure(
+    transactionId: string,
+    edits: ProjectStructureEdit[],
+    activeDocumentId = document.id,
+  ): boolean {
+    const result = dispatchProjectTransaction(
+      {
+        transactionId,
+        projectId: project.id,
+        expectedStructureRevision: project.structureRevision,
+        actor: { kind: "human", id: "human-local" },
+        edits,
+      },
+      activeDocumentId,
+    );
+    if (result.ok && result.applied) return true;
+    const message = result.ok
+      ? "The structural transaction made no change"
+      : (result.diagnostics[0]?.message ?? result.error.message);
+    setStatus(`Could not update Cell structure: ${message}`);
+    return false;
+  }
+
+  function createCell(): void {
+    const fallbackName = `Cell${project.documents.length}`;
+    const name = window.prompt("New Cell name", fallbackName)?.trim();
+    if (!name) return;
+    const child = createEmptyDocument(createId("document"), name);
+    child.netlist!.name = name;
+    child.presentation = structuredClone(document.presentation);
+    if (
+      commitStructure(
+        "create-cell",
+        [{ kind: "add_document", document: child }],
+        child.id,
+      )
+    ) {
+      setDocumentStack([]);
+      setStatus(`Created Cell ${name}`);
+    }
+  }
+
+  function deleteCurrentCell(): void {
+    if (document.id === project.topDocumentId) {
+      setStatus("The top Cell cannot be deleted");
+      return;
+    }
+    if (!window.confirm(`Delete unreferenced Cell "${document.name}"?`)) return;
+    if (
+      commitStructure(
+        "delete-cell",
+        [{ kind: "remove_document", documentId: document.id }],
+        project.topDocumentId,
+      )
+    ) {
+      setDocumentStack([]);
+      setStatus(`Deleted Cell ${document.name}`);
+    }
+  }
+
+  function placeCellInstance(): void {
+    const candidates = project.documents.filter(
+      (candidate) => candidate.id !== document.id && candidate.netlist,
+    );
+    if (candidates.length === 0) {
+      setStatus("Create another Cell before placing a hierarchical Instance");
+      return;
+    }
+    const requested = window
+      .prompt(
+        `Cell to place: ${candidates.map((candidate) => candidate.netlist!.name).join(", ")}`,
+        candidates[0]!.netlist!.name,
+      )
+      ?.trim()
+      .toLowerCase();
+    if (!requested) return;
+    const child = candidates.find(
+      (candidate) =>
+        candidate.id.toLowerCase() === requested ||
+        candidate.netlist!.name.toLowerCase() === requested,
+    );
+    if (!child?.netlist) {
+      setStatus(`Cell not found: ${requested}`);
+      return;
+    }
+    const symbolId = hierarchicalSymbolId(child.netlist.name);
+    const instanceId = nextInstanceDesignator(document, symbolId);
+    const position = snapGridPoint(
+      {
+        x: viewBox.x + viewBox.width / 2,
+        y: viewBox.y + viewBox.height / 2,
+      },
+      document.presentation.grid,
+    );
+    const edits: ProjectStructureEdit[] = [
+      {
+        kind: "transact_document",
+        documentId: document.id,
+        expectedRevision: document.revision,
+        edits: [
+          {
+            kind: "add_instance",
+            instance: {
+              id: instanceId,
+              symbolId,
+              placement: { position, rotation: 0, mirror: "none" },
+              properties: {},
+              netlist: {
+                reference: instanceId,
+                parameters: {},
+                terminals: child.netlist.terminals.map(
+                  (terminal, sourcePosition) => ({
+                    sourcePosition,
+                    pinName: terminal.name,
+                  }),
+                ),
+                binding: {
+                  kind: "subcircuit",
+                  childDocumentId: child.id,
+                  name: child.netlist.name,
+                },
+              },
+            },
+          },
+        ],
+      },
+    ];
+    if (commitStructure("place-cell-instance", edits)) {
+      setStatus(`Placed ${child.netlist.name} as ${instanceId}`);
+    }
+  }
+
+  const selectedFormalTerminal = selectedInstance
+    ? document.netlist?.terminals.find(
+        (terminal) => terminal.interfaceInstanceId === selectedInstance.id,
+      )
+    : undefined;
+  const selectedPortNet = selectedInstance
+    ? document.nets.find((net) =>
+        net.terminals.some(
+          (terminal) =>
+            terminal.instanceId === selectedInstance.id &&
+            terminal.pinName === "P",
+        ),
+      )
+    : undefined;
+  const canExposeSelectedPort = Boolean(
+    selectedInstance &&
+    (selectedInstance.symbolId === "port" ||
+      selectedInstance.symbolId === "port-filled") &&
+    selectedPortNet &&
+    !selectedFormalTerminal,
+  );
+
+  function exposeSelectedPort(): void {
+    if (!selectedInstance || !selectedPortNet || !canExposeSelectedPort) return;
+    const name = window
+      .prompt(
+        "Formal port name",
+        `P${(document.netlist?.terminals.length ?? 0) + 1}`,
+      )
+      ?.trim();
+    if (!name) return;
+    const requestedDirection = window
+      .prompt("Port direction: input, output, inout, or passive", "passive")
+      ?.trim()
+      .toLowerCase();
+    if (!requestedDirection) return;
+    if (!["input", "output", "inout", "passive"].includes(requestedDirection)) {
+      setStatus(`Unsupported port direction: ${requestedDirection}`);
+      return;
+    }
+    const edits = planExposePortInstance(project, document.id, {
+      id: createId("terminal"),
+      name,
+      netId: selectedPortNet.id,
+      direction: requestedDirection as "input" | "output" | "inout" | "passive",
+      interfaceInstanceId: selectedInstance.id,
+    });
+    if (commitStructure("expose-cell-port", edits)) {
+      setStatus(`Exposed formal port ${name}`);
+    }
+  }
+
+  function renameSelectedFormalPort(): void {
+    if (!selectedFormalTerminal) return;
+    const name = window
+      .prompt("Rename formal port", selectedFormalTerminal.name)
+      ?.trim();
+    if (!name || name === selectedFormalTerminal.name) return;
+    try {
+      const edits = planRenameCellTerminal(
+        project,
+        document.id,
+        selectedFormalTerminal.id,
+        name,
+      );
+      if (commitStructure("rename-cell-port", edits)) {
+        setStatus(`Renamed formal port to ${name}`);
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not rename port",
+      );
+    }
+  }
+
+  function deleteSelectedFormalPort(): void {
+    if (!selectedFormalTerminal) return;
+    if (!window.confirm(`Delete formal port "${selectedFormalTerminal.name}"?`))
+      return;
+    try {
+      const edits = planRemoveCellTerminal(
+        project,
+        document.id,
+        selectedFormalTerminal.id,
+      );
+      if (commitStructure("delete-cell-port", edits)) {
+        resetSelection();
+        setStatus(`Deleted formal port ${selectedFormalTerminal.name}`);
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not delete port",
+      );
+    }
   }
 
   function navigateToLocator(
@@ -5760,57 +5991,105 @@ export function App({
             </button>
           </div>
         </div>
-        {hasHierarchy ? (
-          <div className="toolbar-row" aria-label="Document hierarchy">
-            <div
-              className="document-nav"
-              aria-label="Cell navigation"
-              data-testid="cell-navigation"
+        <div className="toolbar-row" aria-label="Document hierarchy">
+          <div
+            className="document-nav"
+            aria-label="Cell navigation"
+            data-testid="cell-navigation"
+          >
+            <button
+              type="button"
+              onClick={returnToParentDocument}
+              disabled={documentStack.length === 0}
+              title="Return to the parent Cell (Shift+E)"
             >
-              <button
-                type="button"
-                onClick={returnToParentDocument}
-                disabled={documentStack.length === 0}
-                title="Return to the parent Cell (Shift+E)"
-              >
-                Up
-              </button>
-              <button
-                type="button"
-                onClick={returnToTopDocument}
-                disabled={document.id === project.topDocumentId}
-                title="Return to the top Cell"
-              >
-                Top
-              </button>
-              <select
-                aria-label="Cells"
-                data-testid="document-selector"
-                value={document.id}
-                onChange={(event) => {
-                  setDocumentStack([]);
-                  switchDocument(event.currentTarget.value);
-                }}
-              >
-                {project.documents.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.id === project.topDocumentId
-                      ? `${candidate.name} (top)`
-                      : candidate.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={enterSelectedHierarchy}
-                disabled={!hasHierarchyEnterSelection}
-                title="Enter the selected Cell, or create one from a rectangle (E)"
-              >
-                Enter Cell
-              </button>
-            </div>
+              Up
+            </button>
+            <button
+              type="button"
+              onClick={returnToTopDocument}
+              disabled={document.id === project.topDocumentId}
+              title="Return to the top Cell"
+            >
+              Top
+            </button>
+            <select
+              aria-label="Cells"
+              data-testid="document-selector"
+              value={document.id}
+              onChange={(event) => {
+                const nextDocumentId = event.currentTarget.value;
+                const paths = findHierarchyPaths(
+                  projectConnectivityIndex,
+                  project.topDocumentId,
+                  nextDocumentId,
+                );
+                setDocumentStack(paths?.length === 1 ? [...paths[0]!] : []);
+                switchDocument(nextDocumentId);
+                if (paths && paths.length > 1) {
+                  setStatus(
+                    `Opened shared Cell without caller context (${paths.length} instance paths)`,
+                  );
+                }
+              }}
+            >
+              {project.documents.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.id === project.topDocumentId
+                    ? `${candidate.name} (top)`
+                    : candidate.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={enterSelectedHierarchy}
+              disabled={!hasHierarchyEnterSelection}
+              title="Enter the selected Cell, or create one from a rectangle (E)"
+            >
+              Enter Cell
+            </button>
+            <button type="button" onClick={createCell}>
+              New Cell
+            </button>
+            <button
+              type="button"
+              onClick={placeCellInstance}
+              disabled={project.documents.length < 2}
+            >
+              Place Cell
+            </button>
+            <button
+              type="button"
+              onClick={deleteCurrentCell}
+              disabled={document.id === project.topDocumentId}
+            >
+              Delete Cell
+            </button>
+            <button
+              type="button"
+              onClick={exposeSelectedPort}
+              disabled={!canExposeSelectedPort}
+              title="Expose a selected, connected Port instance as a formal Cell port"
+            >
+              Expose Port
+            </button>
+            <button
+              type="button"
+              onClick={renameSelectedFormalPort}
+              disabled={!selectedFormalTerminal}
+            >
+              Rename Port
+            </button>
+            <button
+              type="button"
+              onClick={deleteSelectedFormalPort}
+              disabled={!selectedFormalTerminal}
+            >
+              Delete Port
+            </button>
           </div>
-        ) : null}
+        </div>
         <div data-testid="editor-test-telemetry" hidden>
           <output data-testid="selected-internal-route-count">
             {internalSelection.routeIds.length}

@@ -6,7 +6,10 @@ import type {
 } from "@icm/agent-adapter";
 import {
   rejectTransaction,
+  rejectProjectStructureTransaction,
   type EditTransactionResult,
+  type ProjectTransaction,
+  type ProjectTransactionResult,
 } from "@icm/edit-engine";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
@@ -74,6 +77,21 @@ export class BrowserAgentHost implements AgentOperationHost {
     if (result.ok && result.applied) {
       this.onTransactionCommitted?.();
     }
+    return result;
+  }
+
+  dispatchProjectTransaction(
+    request: ProjectTransaction,
+  ): ProjectTransactionResult {
+    if (this.controller.projectSessionId !== this.boundProjectSessionId) {
+      return rejectProjectStructureTransaction(
+        this.controller.project,
+        "PROJECT_MISMATCH",
+        "The Agent session is bound to a Project that has been replaced",
+      );
+    }
+    const result = this.controller.dispatchProjectTransaction(request);
+    if (result.ok && result.applied) this.onTransactionCommitted?.();
     return result;
   }
 

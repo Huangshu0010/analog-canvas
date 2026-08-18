@@ -99,10 +99,11 @@ describe("editor shell", () => {
     expect(markup).not.toContain("Cell netlist interface");
     expect(markup).not.toContain("Component reference");
     expect(markup).not.toContain("Component model");
-    expect(markup).not.toContain('data-testid="cell-navigation"');
+    expect(markup).toContain('data-testid="cell-navigation"');
+    expect(markup).toContain("New Cell");
   });
 
-  it("only exposes cell navigation for a resolvable imported subcircuit", () => {
+  it("shows a resolvable imported subcircuit in Cell navigation", () => {
     const project = createEmptyProject("imported-hierarchy", "Imported");
     const topDocument = project.documents[0]!;
     const childDocument = {

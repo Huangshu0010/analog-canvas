@@ -156,6 +156,7 @@ function projectIndex(options: BuildAgentSessionSnapshotOptions) {
   return {
     id: options.project?.id ?? `project-${options.document.id}`,
     name: options.project?.name ?? options.document.name,
+    structureRevision: options.project?.structureRevision ?? 0,
     topDocumentId: options.project?.topDocumentId ?? options.document.id,
     documents: [...documents]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))

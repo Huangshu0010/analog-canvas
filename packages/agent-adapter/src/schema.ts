@@ -22,7 +22,10 @@ import {
   SymbolLocalPointSchema,
 } from "@icm/model";
 import { ObjectLocatorSchema } from "@icm/derived";
-import { SchematicEditSchema } from "@icm/edit-engine";
+import {
+  ProjectStructureEditSchema,
+  SchematicEditSchema,
+} from "@icm/edit-engine";
 import { z } from "zod";
 
 export const AGENT_API_VERSION = "2.0" as const;
@@ -136,6 +139,17 @@ export const AgentSemanticIntentSchema = z.discriminatedUnion("kind", [
  */
 export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
   (edit, context) => {
+    if (
+      edit.kind === "add_cell_terminal" ||
+      edit.kind === "update_cell_terminal" ||
+      edit.kind === "remove_cell_terminal" ||
+      edit.kind === "reorder_cell_terminals"
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Cell interface edits must be wrapped in structureEdits",
+      });
+    }
     if (edit.kind === "add_instance") {
       if (edit.instance.symbolId === "vdd") {
         context.addIssue({
@@ -175,12 +189,34 @@ export const AgentTransactRequestSchema = RequestBaseSchema.extend({
   edits: z.array(AgentSchematicEditSchema).min(1).max(256).optional(),
   wireIntent: AgentWireIntentSchema.optional(),
   semanticIntent: AgentSemanticIntentSchema.optional(),
+  expectedStructureRevision: z.number().int().nonnegative().optional(),
+  structureEdits: z
+    .array(ProjectStructureEditSchema)
+    .min(1)
+    .max(256)
+    .optional(),
 }).superRefine((request, context) => {
-  const forms = [request.edits, request.wireIntent, request.semanticIntent];
+  const forms = [
+    request.edits,
+    request.wireIntent,
+    request.semanticIntent,
+    request.structureEdits,
+  ];
   if (forms.filter((form) => form !== undefined).length !== 1) {
     context.addIssue({
       code: "custom",
-      message: "Provide exactly one of edits, wireIntent, or semanticIntent",
+      message:
+        "Provide exactly one of edits, wireIntent, semanticIntent, or structureEdits",
+    });
+  }
+  if (
+    request.structureEdits &&
+    request.expectedStructureRevision === undefined
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["expectedStructureRevision"],
+      message: "Structural transactions require expectedStructureRevision",
     });
   }
 });
@@ -213,13 +249,35 @@ const AgentProductionTransactRequestSchema = ProductionRequestBaseSchema.extend(
     edits: z.array(AgentSchematicEditSchema).min(1).max(256).optional(),
     wireIntent: AgentWireIntentSchema.optional(),
     semanticIntent: AgentSemanticIntentSchema.optional(),
+    expectedStructureRevision: z.number().int().nonnegative().optional(),
+    structureEdits: z
+      .array(ProjectStructureEditSchema)
+      .min(1)
+      .max(256)
+      .optional(),
   },
 ).superRefine((request, context) => {
-  const forms = [request.edits, request.wireIntent, request.semanticIntent];
+  const forms = [
+    request.edits,
+    request.wireIntent,
+    request.semanticIntent,
+    request.structureEdits,
+  ];
   if (forms.filter((form) => form !== undefined).length !== 1) {
     context.addIssue({
       code: "custom",
-      message: "Provide exactly one of edits, wireIntent, or semanticIntent",
+      message:
+        "Provide exactly one of edits, wireIntent, semanticIntent, or structureEdits",
+    });
+  }
+  if (
+    request.structureEdits &&
+    request.expectedStructureRevision === undefined
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["expectedStructureRevision"],
+      message: "Structural transactions require expectedStructureRevision",
     });
   }
 });
@@ -413,8 +471,11 @@ export const AgentSnapshotDocumentSchema = z.strictObject({
       name: z.string().min(1),
       terminals: z.array(
         z.strictObject({
+          id: StableIdSchema,
           name: z.string().min(1),
           netId: StableIdSchema,
+          direction: z.enum(["input", "output", "inout", "passive"]),
+          interfaceInstanceId: StableIdSchema,
         }),
       ),
     })
@@ -467,6 +528,7 @@ export const AgentSessionSnapshotSchema = z.strictObject({
   project: z.strictObject({
     id: StableIdSchema,
     name: z.string().min(1),
+    structureRevision: z.number().int().nonnegative(),
     topDocumentId: StableIdSchema,
     documents: z.array(AgentProjectIndexDocumentSchema).min(1),
   }),
@@ -539,6 +601,13 @@ export const AgentTransactSuccessResponseSchema = ResponseBaseSchema.extend({
     .optional(),
   /** Present only for a successful non-persisting semantic transaction. */
   semantic: AgentSemanticIntentResultSchema.optional(),
+  projectStructure: z
+    .strictObject({
+      fromRevision: z.number().int().nonnegative(),
+      toRevision: z.number().int().nonnegative(),
+      changedDocumentIds: z.array(StableIdSchema),
+    })
+    .optional(),
 });
 export const AgentRenderResponseSchema = ResponseBaseSchema.extend({
   operation: z.literal("render"),

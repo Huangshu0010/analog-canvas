@@ -8,7 +8,12 @@
  * "Browser host dispatch contract".
  */
 
-import type { EditTransactionResult, SchematicEdit } from "@icm/edit-engine";
+import type {
+  EditTransactionResult,
+  ProjectTransaction,
+  ProjectTransactionResult,
+  SchematicEdit,
+} from "@icm/edit-engine";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 import type { AgentSemanticIntent } from "./schema.js";
@@ -53,6 +58,9 @@ export interface AgentOperationHost {
   dispatchTransaction(
     request: AgentHostTransactionRequest,
   ): EditTransactionResult;
+  dispatchProjectTransaction?(
+    request: ProjectTransaction,
+  ): ProjectTransactionResult;
   /** Optional because loopback/in-process hosts deliberately have no GUI. */
   applySemanticIntent?(
     request: AgentHostSemanticIntentRequest,
