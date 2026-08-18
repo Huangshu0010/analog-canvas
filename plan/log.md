@@ -3231,3 +3231,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `pnpm verify:branch` passed (146 unit files / 888 tests, workspace build and
   production smoke).
 - Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.
+
+## 2026-08-18 - Hierarchy UI behavior-preservation correction
+
+- Changed areas: top-Cell interface command reachability, hierarchy-only pin
+  RichText selection, ordinary visible-pin regression coverage, hierarchy
+  browser coverage, and current hierarchy documentation.
+- Validation: focused Vitest (2 files / 18 tests), hierarchy Playwright (4
+  scenarios), test-impact, diff check, and `pnpm verify:branch` passed (146
+  unit files / 889 tests, workspace build and production smoke).
+- Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.

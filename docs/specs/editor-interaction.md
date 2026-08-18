@@ -28,9 +28,10 @@ one atomic interface revision. Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.
 
-Only non-top Cells expose the **Cell → Edit Interface…** command because the
-top Cell is an export root, not a reusable symbol definition. **Add Port** in
-that dialog is the primary formal-interface authoring action. Its small
+Every Cell retains the **Cell → Edit Interface…** command so grouping the
+toolbar does not change action reachability. The top Cell remains the export
+root rather than a normally instantiated symbol. **Add Port** in that dialog
+is the primary formal-interface authoring action. Its small
 declaration dialog produces one pending `port` or `port-filled` placement. At
 commit, an exact unambiguous pin/route contact reuses that Net; otherwise one
 local Net is created for pin `P`. The Port Instance, connection, and appended

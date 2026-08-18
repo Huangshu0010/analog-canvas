@@ -1556,10 +1556,6 @@ export function App({
   }
 
   function openCellPortDialog(): void {
-    if (document.id === project.topDocumentId) {
-      setStatus("The top Cell does not have a reusable symbol interface");
-      return;
-    }
     if (!document.netlist) {
       setStatus("The active Document cannot define a Cell interface");
       return;
@@ -6124,14 +6120,12 @@ export function App({
                 >
                   Place Cell
                 </button>
-                {document.id !== project.topDocumentId ? (
-                  <button
-                    type="button"
-                    onClick={() => setCellInterfaceDialogOpen(true)}
-                  >
-                    Edit Interface…
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setCellInterfaceDialogOpen(true)}
+                >
+                  Edit Interface…
+                </button>
               </div>
             </details>
           </div>
@@ -6247,11 +6241,7 @@ export function App({
         onCancel={() => setCellPortDialogOpen(false)}
       />
       <CellInterfaceDialog
-        open={
-          cellInterfaceDialogOpen &&
-          document.id !== project.topDocumentId &&
-          Boolean(document.netlist)
-        }
+        open={cellInterfaceDialogOpen && Boolean(document.netlist)}
         cellName={document.name}
         terminals={document.netlist?.terminals ?? []}
         pinPlacements={document.presentation.cellSymbol?.pinPlacements ?? []}

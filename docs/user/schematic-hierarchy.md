@@ -21,9 +21,9 @@ Instance. **Up** follows the actual parent Instance path; **Top** returns to
 the root. Opening a shared Cell from the selector has no caller context when
 more than one path reaches it, which is reported in the status bar.
 
-Only a non-top Cell has a reusable symbol interface: the top Cell is the
-Project export root and is never instantiated as a symbol. To define a real
-port on a non-top Cell:
+The top Cell is the Project export root and is not normally instantiated as a
+symbol, but the same interface actions remain available for compatibility and
+uniform editing. To define a real Cell port:
 
 1. Choose **Cell → Edit Interface… → Add Port**, give it a name, direction (`input`, `output`,
    `inout`, or `passive`), and optional filled marker.

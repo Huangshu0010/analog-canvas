@@ -106,11 +106,9 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
 
   await cellInterface.getByRole("button", { name: "Close" }).click();
   await page.getByRole("button", { name: "Top" }).click();
-  await expect(
-    page
-      .getByTestId("cell-command-menu")
-      .getByRole("button", { name: "Edit Interface…" }),
-  ).toHaveCount(0);
+  await runCellCommand(page, "Edit Interface…");
+  await expect(cellInterface).toBeVisible();
+  await cellInterface.getByRole("button", { name: "Close" }).click();
   await runCellCommand(page, "Place Cell");
   const insertDialog = page.getByRole("dialog", { name: "Insert Component" });
   await insertDialog.getByRole("option", { name: /ReusableStage/u }).click();
