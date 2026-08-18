@@ -33,6 +33,27 @@ const EMPTY_INSTANCE_PROPERTY_DRAFT: InstancePropertyDraft = {
   rotation: "0",
 };
 
+function sameInstancePropertyDraft(
+  left: InstancePropertyDraft,
+  right: InstancePropertyDraft,
+): boolean {
+  if (
+    left.instanceId !== right.instanceId ||
+    left.x !== right.x ||
+    left.y !== right.y ||
+    left.rotation !== right.rotation
+  ) {
+    return false;
+  }
+  const keys = new Set([
+    ...Object.keys(left.parameters),
+    ...Object.keys(right.parameters),
+  ]);
+  return [...keys].every(
+    (key) => left.parameters[key] === right.parameters[key],
+  );
+}
+
 type TransactionResult = { ok: boolean; revision: number };
 type Route = SchematicDocument["routes"][number];
 type Instance = SchematicDocument["instances"][number];
@@ -82,6 +103,12 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   );
   const netLabelDraftRouteRef = useRef<string | null>(null);
   const lastSelectedInstanceIdRef = useRef<string | null>(null);
+  const instancePropertyDraftRef = useRef<InstancePropertyDraft>(
+    EMPTY_INSTANCE_PROPERTY_DRAFT,
+  );
+  const instancePropertyBaselineRef = useRef<InstancePropertyDraft>(
+    EMPTY_INSTANCE_PROPERTY_DRAFT,
+  );
 
   const draftForInstance = (instance: Instance): InstancePropertyDraft => ({
     instanceId: instance.id,
@@ -136,18 +163,32 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   }, [options.selectedRoute, options.selectedRouteNetLabel]);
 
   useEffect(() => {
-    const previousInstanceId = lastSelectedInstanceIdRef.current;
-    lastSelectedInstanceIdRef.current = options.selectedInstance?.id ?? null;
-    if ((options.selectedInstance?.id ?? null) !== previousInstanceId) {
-      const pending = options.instancePropertyEdits(instancePropertyDraft);
-      if (pending.edits.length > 0) options.transact(pending.edits);
-    }
-    setInstancePropertyDraft(
-      options.selectedInstance
-        ? draftForInstance(options.selectedInstance)
-        : EMPTY_INSTANCE_PROPERTY_DRAFT,
-    );
+    const instanceId = options.selectedInstance?.id ?? null;
+    if (instanceId === lastSelectedInstanceIdRef.current) return;
+    lastSelectedInstanceIdRef.current = instanceId;
+    const nextDraft = options.selectedInstance
+      ? draftForInstance(options.selectedInstance)
+      : EMPTY_INSTANCE_PROPERTY_DRAFT;
+    instancePropertyDraftRef.current = nextDraft;
+    instancePropertyBaselineRef.current = nextDraft;
+    setInstancePropertyDraft(nextDraft);
   }, [options.selectedInstance]);
+
+  const updateInstancePropertyDraft = (
+    update: (current: InstancePropertyDraft) => InstancePropertyDraft,
+  ): void => {
+    const nextDraft = update(instancePropertyDraftRef.current);
+    instancePropertyDraftRef.current = nextDraft;
+    setInstancePropertyDraft(nextDraft);
+    if (
+      !options.selectedInstance ||
+      nextDraft.instanceId !== options.selectedInstance.id
+    ) {
+      return;
+    }
+    const { edits, invalidPosition } = options.instancePropertyEdits(nextDraft);
+    if (!invalidPosition && edits.length > 0) options.transact(edits);
+  };
 
   const applyNetLabel = (): void => {
     const route = options.selectedRoute;
@@ -178,6 +219,23 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     );
   };
 
+  const updateNetLabelDraft = (draft: string): void => {
+    setNetLabelDraft(draft);
+    const route = options.selectedRoute;
+    if (!route) return;
+    const existing = options.netLabelForRoute(route);
+    const nextName = draft.trim();
+    const currentName = existing
+      ? flattenRichText(existing.content).trim()
+      : "";
+    if (nextName === currentName || (!nextName && !existing)) return;
+    const edits = options.netLabelEditsForRoute(route, draft);
+    if (!edits || !options.transact(edits).ok) return;
+    options.setStatus(
+      nextName ? `Saved Net Label ${nextName}` : "Removed Net Label",
+    );
+  };
+
   const deleteSelectedRouteNetLabel = (): void => {
     const label = options.selectedRouteNetLabel;
     if (!options.selectedRoute || !label) {
@@ -201,36 +259,20 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
 
   const commitInstancePropertyDraft = (): boolean => {
     const { edits, invalidPosition } = options.instancePropertyEdits(
-      instancePropertyDraft,
+      instancePropertyDraftRef.current,
     );
     return !invalidPosition && edits.length > 0 && options.transact(edits).ok;
   };
 
-  const applyInstanceProperties = (): void => {
-    const instance = options.selectedInstance;
-    if (!instance || instancePropertyDraft.instanceId !== instance.id) return;
-    const { edits, invalidPosition } = options.instancePropertyEdits(
-      instancePropertyDraft,
-    );
-    if (invalidPosition) {
-      options.setStatus("Position must contain finite X and Y coordinates");
-      return;
-    }
-    if (edits.length === 0) {
-      options.setStatus("Component properties are unchanged");
-      return;
-    }
-    if (options.transact(edits).ok) {
-      options.setStatus(`Updated properties for ${instance.id}`);
-    }
-  };
-
   const discardInstancePropertyDraft = (): void => {
-    if (!options.selectedInstance) return;
-    setInstancePropertyDraft(draftForInstance(options.selectedInstance));
-    options.setStatus(
-      `Discarded property edits for ${options.selectedInstance.id}`,
-    );
+    const instance = options.selectedInstance;
+    const baseline = instancePropertyBaselineRef.current;
+    if (!instance || baseline.instanceId !== instance.id) return;
+    const { edits, invalidPosition } = options.instancePropertyEdits(baseline);
+    if (!invalidPosition && edits.length > 0) options.transact(edits);
+    instancePropertyDraftRef.current = baseline;
+    setInstancePropertyDraft(baseline);
+    options.setStatus(`Discarded property edits for ${instance.id}`);
   };
 
   const setReferenceLabelsVisible = (
@@ -374,7 +416,6 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   };
 
   return {
-    applyInstanceProperties,
     applyNetLabel,
     beginAnnotationTextEditing,
     beginDraftingTextEditing,
@@ -388,10 +429,14 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     deleteTextEditing,
     discardInstancePropertyDraft,
     instancePropertyDraft,
+    hasInstancePropertyDraftChanges: !sameInstancePropertyDraft(
+      instancePropertyDraft,
+      instancePropertyBaselineRef.current,
+    ),
     netLabelDraft,
     netLabelEditorOpen,
-    setInstancePropertyDraft,
-    setNetLabelDraft,
+    updateInstancePropertyDraft,
+    updateNetLabelDraft,
     setNetLabelEditorOpen,
     setReferenceLabelsVisible,
     setValueLabelsVisible,

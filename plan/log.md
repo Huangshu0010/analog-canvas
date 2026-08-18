@@ -3272,3 +3272,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   canonical CI; that complete gate will be rerun from the correction commit
   before mainline delivery.
 - Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.
+
+## 2026-08-18 - Simplify Properties panel
+
+- Changed areas: immediate component and Net-label editing, dirty-only
+  component Discard, compact selected-object identity, paired canvas-label
+  controls, persistent position/rotation, labelled component More actions,
+  and severity-only Issues filters.
+- Validation: focused Vitest (2 files / 18 tests), focused Playwright (10
+  scenarios), TypeScript typecheck, test-impact against `origin/main`, diff
+  check, and desktop visual inspection passed.
+- Commit status: committed locally on `codex/properties-panel-simplify`.

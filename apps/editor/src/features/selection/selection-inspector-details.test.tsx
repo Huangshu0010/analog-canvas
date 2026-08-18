@@ -127,17 +127,16 @@ describe("selection inspector details", () => {
       />,
     );
     expect(markup).toContain('data-testid="project-diagnostics"');
-    expect(markup).toContain('data-testid="diagnostic-domain-erc"');
-    expect(markup).not.toContain('data-testid="diagnostic-domain-visual"');
+    expect(markup).not.toContain('data-testid="diagnostic-domain-erc"');
     expect(markup).toContain('data-testid="diagnostic-severity-warning"');
+    expect(markup).not.toContain('data-testid="diagnostic-severity-error"');
     expect(markup).toContain('data-document-id="document-child"');
     expect(markup).toContain("Cell: Bias Child Cell");
     expect(markup).toContain("ERC / ERC_UNCONNECTED_PIN");
     expect(markup).not.toContain("VISUAL / VISUAL_SHORT_SEGMENT");
     expect(markup).toContain('data-testid="diagnostic-observations-toggle"');
     expect(markup).toContain("Show non-blocking observations (1)");
-    expect(markup).toContain("Live evidence for project-fixture");
-    expect(markup).toContain("Bias Child Cell r7");
+    expect(markup).toContain("Issues (1)");
   });
 
   it("renders concrete, navigable hierarchy Net hops", () => {

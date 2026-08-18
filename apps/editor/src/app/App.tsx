@@ -810,7 +810,6 @@ export function App({
     selectedDrafting?.kind === "rectangle",
   );
   const {
-    applyInstanceProperties,
     applyNetLabel,
     beginAnnotationTextEditing,
     beginDraftingTextEditing,
@@ -823,17 +822,18 @@ export function App({
     deleteSelectedRouteNetLabel,
     deleteTextEditing,
     discardInstancePropertyDraft,
+    hasInstancePropertyDraftChanges,
     instancePropertyDraft,
     netLabelDraft,
     netLabelEditorOpen,
-    setInstancePropertyDraft,
-    setNetLabelDraft,
     setNetLabelEditorOpen,
     setReferenceLabelsVisible,
     setValueLabelsVisible,
     showSelectedInstanceValue,
     textEditing,
+    updateInstancePropertyDraft,
     updateTextEditing,
+    updateNetLabelDraft,
   } = usePropertiesEditor({
     document,
     selectedRoute,
@@ -877,6 +877,24 @@ export function App({
     selectedDrafting ||
     selectedEndpoint,
   );
+  const selectionShelfSummary = selectedInstance
+    ? `${selectedInstance.id} · ${selectedInstance.symbolId}`
+    : selectedIds.length > 1
+      ? `${selectedIds.length} components`
+      : selectedRoute
+        ? `Route · ${
+            document.nets.find((net) => net.id === selectedRoute.netId)?.name ??
+            selectedRoute.netId
+          }`
+        : selectedAnnotation
+          ? `Annotation · ${selectedAnnotation.kind}`
+          : selectedDrafting
+            ? `Drawing · ${selectedDrafting.kind}`
+            : selectedEndpoint?.endpoint.kind === "junction"
+              ? "Junction"
+              : selectedEndpoint
+                ? "Endpoint"
+                : "None";
   const selectedInstanceLabel = selectedInstance
     ? instanceLabelAnnotationFor(document, selectedInstance.id)
     : undefined;
@@ -6401,12 +6419,7 @@ export function App({
                 ) : null}
               </span>
               <span className="selection-shelf-summary">
-                {selectedIds.length > 0
-                  ? selectedIds.join(", ")
-                  : (selectedRouteId ??
-                    selectedAnnotationId ??
-                    selectedDraftingId ??
-                    "None")}
+                {selectionShelfSummary}
                 {hasInspectableSelection ? (
                   <span
                     className="selection-shelf-indicator"
@@ -6420,14 +6433,12 @@ export function App({
                 <p className="inspect-empty">Select an object to inspect.</p>
               ) : null}
               {selectedIds.length > 1 ? (
-                <section className="selection-overview">
-                  <span>Component group</span>
-                  <h2>{selectedIds.length} components</h2>
-                  <p>{selectedIds.join(", ")}</p>
-                  <div
-                    className="display-toggle-row"
-                    aria-label="Group display toggles"
-                  >
+                <section
+                  className="property-section"
+                  aria-label="Group display toggles"
+                >
+                  <div className="property-section-heading">Canvas labels</div>
+                  <div className="display-toggle-row">
                     <DisplayToggle
                       label="Reference"
                       checked={selectedGroupLabelsAllVisible}
@@ -6451,22 +6462,11 @@ export function App({
                   </div>
                 </section>
               ) : null}
-              {selectedInstance?.placement ? (
-                <section className="selection-overview">
-                  <span>Component</span>
-                  <h2>{selectedInstance.id}</h2>
-                  <dl>
-                    <dt>Symbol</dt>
-                    <dd>{selectedInstance.symbolId}</dd>
-                  </dl>
-                </section>
-              ) : null}
               {selectedInstance ? (
                 <section
-                  className="context-actions"
+                  className="property-section component-properties"
                   aria-label="Component properties"
                 >
-                  <h2>Component properties</h2>
                   {selectedFormalTerminal ? (
                     <div
                       className="formal-port-properties"
@@ -6514,6 +6514,7 @@ export function App({
                       </small>
                     </div>
                   ) : null}
+                  <div className="property-section-heading">Canvas labels</div>
                   <div
                     className="display-toggle-row"
                     aria-label="Component display toggles"
@@ -6571,7 +6572,7 @@ export function App({
                           placeholder={parameter.placeholder}
                           onChange={(event) => {
                             const value = event.currentTarget.value;
-                            setInstancePropertyDraft((current) => ({
+                            updateInstancePropertyDraft((current) => ({
                               ...current,
                               parameters: {
                                 ...current.parameters,
@@ -6585,6 +6586,9 @@ export function App({
                   )}
                   {selectedInstance.placement ? (
                     <>
+                      <div className="property-section-heading">
+                        Position &amp; orientation
+                      </div>
                       <div
                         className="component-geometry-row"
                         aria-label="Component geometry"
@@ -6597,7 +6601,7 @@ export function App({
                             value={instancePropertyDraft.x}
                             onChange={(event) => {
                               const x = event.currentTarget.value;
-                              setInstancePropertyDraft((current) => ({
+                              updateInstancePropertyDraft((current) => ({
                                 ...current,
                                 x,
                               }));
@@ -6612,7 +6616,7 @@ export function App({
                             value={instancePropertyDraft.y}
                             onChange={(event) => {
                               const y = event.currentTarget.value;
-                              setInstancePropertyDraft((current) => ({
+                              updateInstancePropertyDraft((current) => ({
                                 ...current,
                                 y,
                               }));
@@ -6627,7 +6631,7 @@ export function App({
                             onChange={(event) => {
                               const rotation = event.currentTarget.value as
                                 "0" | "90" | "180" | "270";
-                              setInstancePropertyDraft((current) => ({
+                              updateInstancePropertyDraft((current) => ({
                                 ...current,
                                 rotation,
                               }));
@@ -6640,6 +6644,9 @@ export function App({
                           </select>
                         </label>
                       </div>
+                      <div className="property-section-heading more-actions-heading">
+                        More actions
+                      </div>
                       <div
                         className="component-mirror-row"
                         aria-label="Mirror component"
@@ -6650,7 +6657,7 @@ export function App({
                           title="Mirror left/right (Shift+R)"
                           onClick={() => mirrorSelected("left-right")}
                         >
-                          ↔ Shift+R
+                          Mirror left/right
                         </button>
                         <button
                           type="button"
@@ -6658,57 +6665,20 @@ export function App({
                           title="Mirror top/bottom (Ctrl+R)"
                           onClick={() => mirrorSelected("top-bottom")}
                         >
-                          ↕ Ctrl+R
+                          Mirror top/bottom
                         </button>
                       </div>
                     </>
                   ) : null}
-                  <button type="button" onClick={applyInstanceProperties}>
-                    Apply component properties
-                  </button>
-                  <button type="button" onClick={discardInstancePropertyDraft}>
-                    Cancel property edits
-                  </button>
-                </section>
-              ) : null}
-              {selectedRoute ? (
-                <section className="selection-overview">
-                  <span>Electrical route</span>
-                  <h2>{selectedRoute.id}</h2>
-                  <dl>
-                    <dt>Net</dt>
-                    <dd>
-                      {document.nets.find(
-                        (net) => net.id === selectedRoute.netId,
-                      )?.name ?? selectedRoute.netId}
-                    </dd>
-                    <dt>Segment</dt>
-                    <dd>{(selectedRouteSegmentIndex ?? 0) + 1}</dd>
-                  </dl>
-                </section>
-              ) : null}
-              {selectedAnnotation ? (
-                <section className="selection-overview">
-                  <span>Annotation</span>
-                  <h2>{selectedAnnotation.id}</h2>
-                  <dl>
-                    <dt>Kind</dt>
-                    <dd>{selectedAnnotation.kind}</dd>
-                    <dt>Locked</dt>
-                    <dd>{selectedAnnotation.locked ? "Yes" : "No"}</dd>
-                  </dl>
-                </section>
-              ) : null}
-              {selectedDrafting ? (
-                <section className="selection-overview">
-                  <span>Drawing</span>
-                  <h2>{selectedDrafting.id}</h2>
-                  <dl>
-                    <dt>Kind</dt>
-                    <dd>{selectedDrafting.kind}</dd>
-                    <dt>Locked</dt>
-                    <dd>{selectedDrafting.locked ? "Yes" : "No"}</dd>
-                  </dl>
+                  {hasInstancePropertyDraftChanges ? (
+                    <button
+                      type="button"
+                      className="property-discard"
+                      onClick={discardInstancePropertyDraft}
+                    >
+                      Discard changes
+                    </button>
+                  ) : null}
                 </section>
               ) : null}
               {selectedDrafting
@@ -7042,8 +7012,7 @@ export function App({
               ) : null}
               {selectedRouteId ? (
                 <section className="context-actions" aria-label="Route actions">
-                  <h2>Route</h2>
-                  <p>Segment {(selectedRouteSegmentIndex ?? 0) + 1} selected</p>
+                  <h2>Electrical route</h2>
                   <label>
                     Electrical Net label
                     <input
@@ -7051,13 +7020,10 @@ export function App({
                       aria-label="Electrical Net label"
                       value={netLabelDraft}
                       onChange={(event) =>
-                        setNetLabelDraft(event.currentTarget.value)
+                        updateNetLabelDraft(event.currentTarget.value)
                       }
                     />
                   </label>
-                  <button type="button" onClick={applyNetLabel}>
-                    Apply Net label
-                  </button>
                   <button type="button" onClick={deleteSelectedRouteNetLabel}>
                     Delete Net label
                   </button>
@@ -7650,7 +7616,7 @@ export function App({
                             aria-label="Net Label"
                             value={netLabelDraft}
                             onChange={(event) =>
-                              setNetLabelDraft(event.currentTarget.value)
+                              updateNetLabelDraft(event.currentTarget.value)
                             }
                             onKeyDown={(event) => {
                               if (event.key === "Escape") {

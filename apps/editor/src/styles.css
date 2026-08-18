@@ -1693,6 +1693,30 @@ body {
   font-size: var(--icm-font-md);
 }
 
+.diagnostic-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.45rem 0 0.55rem;
+}
+
+.diagnostic-filters button {
+  min-height: 1.65rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  color: var(--icm-text-muted);
+  background: var(--icm-surface-muted);
+  box-shadow: none;
+  font-size: var(--icm-font-xs);
+}
+
+.diagnostic-filters button[aria-pressed="true"] {
+  border-color: rgb(var(--icm-accent-rgb) / 45%);
+  color: var(--icm-text);
+  background: var(--icm-accent-soft);
+}
+
 .diagnostics ul {
   max-height: 12rem;
   overflow: auto;
@@ -2147,7 +2171,8 @@ body {
   box-shadow: none;
 }
 
-.context-actions label {
+.context-actions label,
+.property-section label {
   display: grid;
   gap: 0.25rem;
   color: var(--icm-text-muted);
@@ -2155,7 +2180,9 @@ body {
 }
 
 .context-actions input,
-.context-actions select {
+.context-actions select,
+.property-section input,
+.property-section select {
   min-width: 0;
   min-height: var(--icm-control-h-lg);
   padding: 0.45rem 0.55rem;
@@ -2164,6 +2191,47 @@ body {
   background: var(--icm-surface);
   color: var(--icm-text);
   font: inherit;
+}
+
+.property-section {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--icm-border);
+}
+
+.selection-panel > .property-section:first-of-type,
+.component-properties {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.property-section-heading {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.selection-panel .display-toggle-row {
+  gap: 0.45rem;
+}
+
+.selection-panel .display-toggle {
+  gap: 0.4rem;
+  min-height: var(--icm-control-h);
+  padding: 0 0.5rem;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  background: var(--icm-surface-muted);
+}
+
+.selection-panel .display-toggle:has(input:checked) {
+  border-color: rgb(var(--icm-accent-rgb) / 45%);
+  background: var(--icm-accent-soft);
 }
 
 .formal-port-properties {
@@ -2198,7 +2266,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.3fr);
   gap: 0.35rem;
-  margin-top: 0.55rem;
+  margin-top: -0.15rem;
 }
 
 .component-geometry-row label {
@@ -2214,14 +2282,34 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.35rem;
-  margin-top: 0.35rem;
+  margin-top: -0.15rem;
 }
 
 .component-mirror-row button {
   min-width: 0;
   padding: 0.3rem 0.45rem;
   font-size: var(--icm-font-sm);
-  white-space: nowrap;
+  white-space: normal;
+}
+
+.more-actions-heading {
+  margin-top: 0.15rem;
+}
+
+.property-discard {
+  justify-self: end;
+  margin-top: -0.1rem;
+  padding: 0.2rem 0;
+  border: 0;
+  color: var(--icm-text-muted);
+  background: transparent;
+  box-shadow: none;
+  font-size: var(--icm-font-sm);
+}
+
+.property-discard:hover:not(:disabled) {
+  color: var(--icm-text);
+  background: transparent;
 }
 
 .property-source-fact {

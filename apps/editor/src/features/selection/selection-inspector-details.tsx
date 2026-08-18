@@ -4,7 +4,6 @@ import {
 } from "@icm/derived";
 import type {
   Diagnostic,
-  DiagnosticDomain,
   DiagnosticSeverity,
   GlobalNetTraceHop,
   HierarchyNetTrace,
@@ -200,69 +199,41 @@ const DIAGNOSTIC_SEVERITY_FILTERS: readonly DiagnosticSeverityFilter[] = [
   "info",
 ];
 
-type ProjectDomainFilter = "all" | DiagnosticDomain;
-
 function DiagnosticFilters({
   diagnostics,
-  domainFilter,
   severityFilter,
-  onDomainFilterChange,
   onSeverityFilterChange,
 }: {
   diagnostics: readonly Diagnostic[];
-  domainFilter: ProjectDomainFilter;
   severityFilter: DiagnosticSeverityFilter;
-  onDomainFilterChange(filter: ProjectDomainFilter): void;
   onSeverityFilterChange(filter: DiagnosticSeverityFilter): void;
 }) {
-  const domains = [
-    "all" as const,
-    ...[...new Set(diagnostics.map((diagnostic) => diagnostic.domain))].sort(),
-  ];
+  const filters = DIAGNOSTIC_SEVERITY_FILTERS.filter(
+    (filter) =>
+      filter === "all" ||
+      diagnostics.some((diagnostic) => diagnostic.severity === filter),
+  );
   return (
-    <>
-      <div className="diagnostic-filters" aria-label="Diagnostic domains">
-        {domains.map((filter) => {
-          const count =
-            filter === "all"
-              ? diagnostics.length
-              : diagnostics.filter((diagnostic) => diagnostic.domain === filter)
-                  .length;
-          return (
-            <button
-              key={filter}
-              type="button"
-              data-testid={`diagnostic-domain-${filter}`}
-              aria-pressed={domainFilter === filter}
-              onClick={() => onDomainFilterChange(filter)}
-            >
-              {filter === "all" ? "All domains" : filter} ({count})
-            </button>
-          );
-        })}
-      </div>
-      <div className="diagnostic-filters" aria-label="Diagnostic severities">
-        {DIAGNOSTIC_SEVERITY_FILTERS.map((filter) => {
-          const count =
-            filter === "all"
-              ? diagnostics.length
-              : diagnostics.filter(
-                  (diagnostic) => diagnostic.severity === filter,
-                ).length;
-          return (
-            <button
-              key={filter}
-              type="button"
-              data-testid={`diagnostic-severity-${filter}`}
-              aria-pressed={severityFilter === filter}
-              onClick={() => onSeverityFilterChange(filter)}
-            >
-              {filter === "all" ? "All severities" : filter} ({count})
-            </button>
-          );
-        })}
-      </div>
-    </>
+    <div className="diagnostic-filters" aria-label="Issue severities">
+      {filters.map((filter) => {
+        const count =
+          filter === "all"
+            ? diagnostics.length
+            : diagnostics.filter((diagnostic) => diagnostic.severity === filter)
+                .length;
+        return (
+          <button
+            key={filter}
+            type="button"
+            data-testid={`diagnostic-severity-${filter}`}
+            aria-pressed={severityFilter === filter}
+            onClick={() => onSeverityFilterChange(filter)}
+          >
+            {filter === "all" ? "All" : filter} ({count})
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -273,7 +244,6 @@ export function ProjectDiagnosticsSection({
   onSelectDiagnostic,
 }: ProjectDiagnosticsSectionProps) {
   const diagnostics = snapshot.diagnostics;
-  const [domainFilter, setDomainFilter] = useState<ProjectDomainFilter>("all");
   const [severityFilter, setSeverityFilter] =
     useState<DiagnosticSeverityFilter>("all");
   const [showObservations, setShowObservations] = useState(false);
@@ -290,41 +260,20 @@ export function ProjectDiagnosticsSection({
           ),
     [diagnostics, showObservations],
   );
-  const availableDomains = new Set(
-    availableDiagnostics.map((diagnostic) => diagnostic.domain),
-  );
-  const effectiveDomainFilter =
-    domainFilter === "all" || availableDomains.has(domainFilter)
-      ? domainFilter
-      : "all";
   const visibleDiagnostics = useMemo(
     () =>
       availableDiagnostics.filter(
         (diagnostic) =>
-          (effectiveDomainFilter === "all" ||
-            diagnostic.domain === effectiveDomainFilter) &&
-          (severityFilter === "all" || diagnostic.severity === severityFilter),
+          severityFilter === "all" || diagnostic.severity === severityFilter,
       ),
-    [availableDiagnostics, effectiveDomainFilter, severityFilter],
+    [availableDiagnostics, severityFilter],
   );
   return (
     <section
       aria-label="Project diagnostics"
       className="diagnostics erc-diagnostics"
     >
-      <h2>
-        Current schematic diagnostics ({visibleDiagnostics.length}/
-        {availableDiagnostics.length})
-      </h2>
-      <p data-testid="current-diagnostic-revisions">
-        Live evidence for {snapshot.projectId}:{" "}
-        {snapshot.documentRevisions
-          .map(
-            ({ documentId, revision }) =>
-              `${documentLabel(documentId)} r${revision}`,
-          )
-          .join(", ")}
-      </p>
+      <h2>Issues ({availableDiagnostics.length})</h2>
       {observationCount > 0 ? (
         <button
           type="button"
@@ -338,9 +287,7 @@ export function ProjectDiagnosticsSection({
       ) : null}
       <DiagnosticFilters
         diagnostics={availableDiagnostics}
-        domainFilter={effectiveDomainFilter}
         severityFilter={severityFilter}
-        onDomainFilterChange={setDomainFilter}
         onSeverityFilterChange={setSeverityFilter}
       />
       {availableDiagnostics.length === 0 ? (
