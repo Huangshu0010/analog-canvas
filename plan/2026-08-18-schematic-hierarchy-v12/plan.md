@@ -145,3 +145,7 @@ schema-12 `project.structureRevision` fact to the packaged MCP relay fixture.
 The same remote run supplied a new Linux MCP tarball digest after the hierarchy
 bundle changed; this delivery follow-up also refreshes that integrity pin and
 requires a new green remote release-contract result.
+The first remote browser shard also identified a retired empty-canvas assertion
+that expected no Cell navigation. The current hierarchy UX intentionally shows
+that navigation from the initial canvas, so the focused browser test must
+assert its visibility instead of preserving the obsolete absence contract.
