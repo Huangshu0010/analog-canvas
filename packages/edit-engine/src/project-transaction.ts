@@ -4,11 +4,16 @@ import {
   type CircuitProject,
   type SchematicDocument,
 } from "@icm/model";
-import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
+import {
+  builtInSymbols,
+  createProjectSymbolResolver,
+  hierarchicalSymbolId,
+} from "@icm/symbols";
 import { z } from "zod";
 
 import { SchematicEditSchema, type EditActor } from "./edit-schema.js";
 import { executeTransaction } from "./transaction.js";
+import { planInstanceSymbolGeometryRouteFollow } from "./transaction-route-follow.js";
 import type {
   EditDiagnostic,
   EditTransactionResult,
@@ -22,6 +27,11 @@ export const ProjectStructureEditSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("remove_document"),
     documentId: z.string().min(1),
+  }),
+  z.strictObject({
+    kind: z.literal("rename_document"),
+    documentId: z.string().min(1),
+    name: z.string().min(1).max(128),
   }),
   z.strictObject({
     kind: z.literal("transact_document"),
@@ -164,6 +174,8 @@ export function executeProjectTransaction(
   const candidate = structuredClone(project);
   const changedDocumentIds = new Set<string>();
   const documentResults: EditTransactionResult[] = [];
+  const explicitlyTouchedDocumentIds = new Set<string>();
+  const cellSymbolChangedDocumentIds = new Set<string>();
   let structuralChange = false;
 
   for (const [editIndex, edit] of transaction.edits.entries()) {
@@ -223,6 +235,57 @@ export function executeProjectTransaction(
       continue;
     }
 
+    if (edit.kind === "rename_document") {
+      const document = candidate.documents.find(
+        (item) => item.id === edit.documentId,
+      );
+      if (!document) {
+        return rejectProjectTransaction(
+          project,
+          "OBJECT_NOT_FOUND",
+          `Document does not exist: ${edit.documentId}`,
+        );
+      }
+      if (
+        candidate.documents.some(
+          (item) =>
+            item.id !== document.id &&
+            item.name.toLowerCase() === edit.name.toLowerCase(),
+        )
+      ) {
+        return rejectProjectTransaction(
+          project,
+          "EDIT_PRECONDITION",
+          `Cell name already exists: ${edit.name}`,
+        );
+      }
+      if (document.name === edit.name) continue;
+      document.name = edit.name;
+      if (document.netlist) document.netlist.name = edit.name;
+      document.revision += 1;
+      changedDocumentIds.add(document.id);
+      for (const parent of candidate.documents) {
+        let changed = false;
+        for (const instance of parent.instances) {
+          const binding = instance.netlist?.binding;
+          if (
+            binding?.kind !== "subcircuit" ||
+            binding.childDocumentId !== document.id
+          )
+            continue;
+          instance.symbolId = hierarchicalSymbolId(edit.name);
+          binding.name = edit.name;
+          changed = true;
+        }
+        if (changed) {
+          parent.revision += 1;
+          changedDocumentIds.add(parent.id);
+        }
+      }
+      structuralChange = true;
+      continue;
+    }
+
     if (
       edit.edits.some(
         (documentEdit) =>
@@ -234,6 +297,14 @@ export function executeProjectTransaction(
         "EDIT_PRECONDITION",
         "Project transactions cannot contain Document history edits",
       );
+    }
+    explicitlyTouchedDocumentIds.add(edit.documentId);
+    if (
+      edit.edits.some(
+        (documentEdit) => documentEdit.kind === "set_cell_symbol_presentation",
+      )
+    ) {
+      cellSymbolChangedDocumentIds.add(edit.documentId);
     }
     const document = candidate.documents.find(
       (item) => item.id === edit.documentId,
@@ -269,6 +340,65 @@ export function executeProjectTransaction(
     if (result.applied) {
       replaceDocument(candidate, result.document);
       changedDocumentIds.add(edit.documentId);
+    }
+  }
+
+  if (cellSymbolChangedDocumentIds.size > 0) {
+    const originalResolver = createProjectSymbolResolver(
+      project,
+      builtInSymbols,
+    );
+    const resolver = createProjectSymbolResolver(candidate, builtInSymbols);
+    for (const parent of candidate.documents) {
+      // A caller edited explicitly by the request is its own geometry
+      // authority. Definition-only updates use the shared follow planner.
+      if (explicitlyTouchedDocumentIds.has(parent.id)) continue;
+      const originalParent = project.documents.find(
+        (document) => document.id === parent.id,
+      );
+      if (!originalParent) continue;
+      const callerIds = new Set(
+        parent.instances.flatMap((instance) => {
+          const binding = instance.netlist?.binding;
+          return binding?.kind === "subcircuit" &&
+            cellSymbolChangedDocumentIds.has(binding.childDocumentId)
+            ? [instance.id]
+            : [];
+        }),
+      );
+      if (callerIds.size === 0) continue;
+      const routeEdits = planInstanceSymbolGeometryRouteFollow(
+        parent,
+        originalParent,
+        originalResolver,
+        resolver,
+        callerIds,
+      );
+      if (routeEdits.length === 0) continue;
+      const routeResult = executeTransaction(
+        parent,
+        {
+          transactionId: `${transaction.transactionId}-symbol-route-follow-${parent.id}`,
+          documentId: parent.id,
+          expectedRevision: parent.revision,
+          actor: transaction.actor as EditActor,
+          edits: routeEdits,
+        },
+        { symbolResolver: resolver },
+      );
+      documentResults.push(routeResult);
+      if (!routeResult.ok) {
+        return rejectProjectTransaction(
+          project,
+          "DOCUMENT_TRANSACTION_REJECTED",
+          routeResult.error.message,
+          routeResult.diagnostics,
+        );
+      }
+      if (routeResult.applied) {
+        replaceDocument(candidate, routeResult.document);
+        changedDocumentIds.add(parent.id);
+      }
     }
   }
 

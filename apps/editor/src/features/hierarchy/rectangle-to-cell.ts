@@ -1,4 +1,8 @@
-import { executeProjectTransaction } from "@icm/edit-engine";
+import {
+  createHierarchyInstance,
+  executeProjectTransaction,
+  planCreateCellFromDraftingObject,
+} from "@icm/edit-engine";
 import {
   CircuitProjectSchema,
   createEmptyDocument,
@@ -6,7 +10,6 @@ import {
   type Rotation,
   type SchematicDocument,
 } from "@icm/model";
-import { hierarchicalSymbolId } from "@icm/symbols";
 
 export interface RectangleToCellConversion {
   project: CircuitProject;
@@ -41,38 +44,6 @@ function nextCellIdentity(project: CircuitProject): {
   };
 }
 
-function allDocumentObjectIds(document: SchematicDocument): Set<string> {
-  return new Set(
-    [
-      ...document.instances,
-      ...document.nets,
-      ...document.routes,
-      ...document.junctions,
-      ...document.noConnects,
-      ...document.annotations,
-      ...document.layoutGroups,
-      ...document.constraints,
-      ...(document.drafting?.objects ?? []),
-    ].map((object) => object.id.toLowerCase()),
-  );
-}
-
-function nextHierarchyInstanceId(document: SchematicDocument): string {
-  const usedIds = allDocumentObjectIds(document);
-  const usedReferences = new Set(
-    document.instances.flatMap((instance) =>
-      instance.netlist?.reference
-        ? [instance.netlist.reference.toLowerCase()]
-        : [],
-    ),
-  );
-  let index = 1;
-  while (usedIds.has(`x${index}`) || usedReferences.has(`x${index}`)) {
-    index += 1;
-  }
-  return `X${index}`;
-}
-
 function nearestOrthogonalRotation(rotation: number): Rotation {
   const normalized = ((rotation % 360) + 360) % 360;
   const choices = [0, 90, 180, 270] as const;
@@ -87,6 +58,22 @@ function nearestOrthogonalRotation(rotation: number): Rotation {
     );
     return candidateDistance < bestDistance ? candidate : best;
   }, choices[0]);
+}
+
+function allDocumentObjectIds(document: SchematicDocument): Set<string> {
+  return new Set(
+    [
+      ...document.instances,
+      ...document.nets,
+      ...document.routes,
+      ...document.junctions,
+      ...document.noConnects,
+      ...document.annotations,
+      ...document.layoutGroups,
+      ...document.constraints,
+      ...(document.drafting?.objects ?? []),
+    ].map((object) => object.id.toLowerCase()),
+  );
 }
 
 /**
@@ -119,50 +106,32 @@ export function convertRectangleToHierarchy(
   const { cellName, documentId: childDocumentId } = nextCellIdentity(project);
   const child = createEmptyDocument(childDocumentId, cellName);
   child.presentation = structuredClone(parent.presentation);
-  const instanceId = nextHierarchyInstanceId(parent);
-  const instance: SchematicDocument["instances"][number] = {
-    id: instanceId,
-    symbolId: hierarchicalSymbolId(cellName),
-    placement: {
-      position: object.center,
-      rotation: nearestOrthogonalRotation(object.rotation),
-      mirror: "none",
-    },
-    properties: {},
-    netlist: {
-      reference: instanceId,
-      parameters: {},
-      terminals: [],
-      binding: {
-        kind: "subcircuit",
-        name: cellName,
-        childDocumentId,
-      },
-    },
-  };
+  let sequence = 1;
+  const used = allDocumentObjectIds(parent);
+  for (const instance of parent.instances) {
+    if (instance.netlist?.reference) {
+      used.add(instance.netlist.reference.toLowerCase());
+    }
+  }
+  while (used.has(`x${sequence}`)) sequence += 1;
+  const instanceId = `X${sequence}`;
+  const instance = createHierarchyInstance(instanceId, child, {
+    position: object.center,
+    rotation: nearestOrthogonalRotation(object.rotation),
+    mirror: "none",
+  });
   const transaction = executeProjectTransaction(project, {
     transactionId: `rectangle-to-cell-${parent.id}-${rectangleId}`,
     projectId: project.id,
     expectedStructureRevision: project.structureRevision,
     actor: { kind: "human", id: "human-local" },
-    edits: [
-      {
-        kind: "add_document",
-        document: child,
-      },
-      {
-        kind: "transact_document",
-        documentId: parent.id,
-        expectedRevision: parent.revision,
-        edits: [
-          { kind: "remove_drafting_object", objectId: rectangleId },
-          {
-            kind: "add_instance",
-            instance,
-          },
-        ],
-      },
-    ],
+    edits: planCreateCellFromDraftingObject(
+      project,
+      parent.id,
+      child,
+      instance,
+      rectangleId,
+    ),
   });
   if (!transaction.ok || !transaction.applied) {
     const detail = transaction.diagnostics[0]?.message;

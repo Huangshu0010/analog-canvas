@@ -2,6 +2,7 @@ export * from "./anchor.js";
 export * from "./annotation-presentation.js";
 export * from "./connectivity.js";
 export * from "./contact.js";
+export * from "./cell-summary.js";
 export * from "./contact-target.js";
 export * from "./connectivity-index.js";
 export * from "./diagnostics/diagnostic.js";

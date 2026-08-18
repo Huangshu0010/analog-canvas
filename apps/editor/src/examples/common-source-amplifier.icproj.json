@@ -1270,7 +1270,7 @@
   ],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "source": {
     "dialect": "none",
     "entry": null,

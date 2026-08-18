@@ -21,9 +21,15 @@ import {
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
   planEnsureNamedNet,
+  planCreateCell,
+  planDeleteCell,
   planExposePortInstance,
+  planRenameCell,
+  planReorderCellTerminal,
   planRemoveCellTerminal,
   planRenameCellTerminal,
+  planSetCellTerminalPlacement,
+  planUpdateCellTerminalDirection,
   type ProjectStructureEdit,
   type EditTransactionResult,
   type SchematicEdit,
@@ -56,6 +62,7 @@ import {
   resolveSchematicStyleProfile,
   resolveRouteAttachment,
   resolveRouteTap,
+  summarizeProjectCells,
   traceHierarchyNet,
 } from "@icm/derived";
 import type {
@@ -169,6 +176,8 @@ import {
 } from "../features/editor-shell/shapes-panel";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
+import { CellPortDialog } from "../features/hierarchy/cell-port-dialog";
+import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
 import {
   createLibraryExampleProject,
   type LibraryProjectExample,
@@ -527,6 +536,8 @@ export function App({
     null,
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
+  const [cellPortDialogOpen, setCellPortDialogOpen] = useState(false);
+  const [cellManagerOpen, setCellManagerOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
     useState<AgentFileCandidateSummary | null>(null);
   const browserAgentFileHost = useMemo(
@@ -1136,11 +1147,34 @@ export function App({
     contactComponents,
     createRouteAnchor: routeAnchor,
   });
+  const cellInsertCandidates = useMemo(
+    () =>
+      project.documents.flatMap((candidate) => {
+        if (candidate.id === document.id || !candidate.netlist) return [];
+        const definition = resolver.resolve(
+          hierarchicalSymbolId(candidate.netlist.name),
+        )?.definition;
+        return definition
+          ? [
+              {
+                childDocumentId: candidate.id,
+                cellName: candidate.netlist.name,
+                symbol: definition,
+              },
+            ]
+          : [];
+      }),
+    [document.id, project.documents, resolver],
+  );
+  const pendingPlacementSymbol = pendingSymbolId
+    ? resolver.resolve(pendingSymbolId)?.definition
+    : undefined;
   const {
     beginInsertedComponentPlacement: beginInsertedComponentPlacementFromHook,
     cancelComponentInsert: cancelComponentInsertFromHook,
     commitPendingPlacementAt: commitPendingPlacementAtFromHook,
     closeInsertDialog: closeInsertDialogFromHook,
+    cellInsertOnly,
     insertDialogOpen,
     openInsertComponentDialog: openInsertComponentDialogFromHook,
     recentSymbolIds,
@@ -1149,19 +1183,20 @@ export function App({
   } = useComponentPlacement({
     recentStorageKey: RECENT_COMPONENTS_STORAGE_KEY,
     document,
+    project,
     resolver,
     styleProfile,
     visibleEndpoints,
     transact,
+    transactProject: (transactionId, edits) =>
+      commitStructure(transactionId, edits),
     selectOnly,
     cancelAllTransientInteraction,
     cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
     clearTransientCanvasState,
     paintSnapGuides,
     beginVddRailInteraction,
-    beginComponentPlacement: (request) => {
-      if (request.kind !== "vdd-rail") beginComponentPlacement(request);
-    },
+    beginComponentPlacement,
     rotateComponentPlacement,
     mirrorComponentPlacement,
     componentPlacementRotation,
@@ -1466,13 +1501,7 @@ export function App({
     const child = createEmptyDocument(createId("document"), name);
     child.netlist!.name = name;
     child.presentation = structuredClone(document.presentation);
-    if (
-      commitStructure(
-        "create-cell",
-        [{ kind: "add_document", document: child }],
-        child.id,
-      )
-    ) {
+    if (commitStructure("create-cell", planCreateCell(child), child.id)) {
       setDocumentStack([]);
       setStatus(`Created Cell ${name}`);
     }
@@ -1487,7 +1516,7 @@ export function App({
     if (
       commitStructure(
         "delete-cell",
-        [{ kind: "remove_document", documentId: document.id }],
+        planDeleteCell(project, document.id),
         project.topDocumentId,
       )
     ) {
@@ -1496,75 +1525,115 @@ export function App({
     }
   }
 
-  function placeCellInstance(): void {
-    const candidates = project.documents.filter(
-      (candidate) => candidate.id !== document.id && candidate.netlist,
+  function renameCell(documentId: string): void {
+    const target = project.documents.find(
+      (candidate) => candidate.id === documentId,
     );
-    if (candidates.length === 0) {
+    if (!target) return;
+    const name = window.prompt("Rename Cell", target.name)?.trim();
+    if (!name || name === target.name) return;
+    if (
+      commitStructure("rename-cell", planRenameCell(project, documentId, name))
+    ) {
+      setStatus(`Renamed Cell to ${name}`);
+    }
+  }
+
+  function jumpToCaller(parentDocumentId: string, instanceId: string): void {
+    const path = findHierarchyPath(
+      projectConnectivityIndex,
+      project.topDocumentId,
+      parentDocumentId,
+    );
+    if (!path) {
+      setStatus("Caller path could not be resolved");
+      return;
+    }
+    setDocumentStack([...path]);
+    switchDocument(parentDocumentId);
+    selectOnly("instance", [instanceId]);
+    setCellManagerOpen(false);
+    setStatus(`Opened caller ${parentDocumentId}.${instanceId}`);
+  }
+
+  const cellManagerEntries = useMemo(
+    () => summarizeProjectCells(project),
+    [project],
+  );
+
+  function placeCellInstance(): void {
+    if (cellInsertCandidates.length === 0) {
       setStatus("Create another Cell before placing a hierarchical Instance");
       return;
     }
-    const requested = window
-      .prompt(
-        `Cell to place: ${candidates.map((candidate) => candidate.netlist!.name).join(", ")}`,
-        candidates[0]!.netlist!.name,
-      )
-      ?.trim()
-      .toLowerCase();
-    if (!requested) return;
-    const child = candidates.find(
-      (candidate) =>
-        candidate.id.toLowerCase() === requested ||
-        candidate.netlist!.name.toLowerCase() === requested,
-    );
-    if (!child?.netlist) {
-      setStatus(`Cell not found: ${requested}`);
+    openInsertComponentDialogFromHook(true);
+    setStatus("Choose a Cell, then place it on the canvas");
+  }
+
+  function openCellPortDialog(): void {
+    if (!document.netlist) {
+      setStatus("The active Document cannot define a Cell interface");
       return;
     }
-    const symbolId = hierarchicalSymbolId(child.netlist.name);
-    const instanceId = nextInstanceDesignator(document, symbolId);
-    const position = snapGridPoint(
-      {
-        x: viewBox.x + viewBox.width / 2,
-        y: viewBox.y + viewBox.height / 2,
-      },
-      document.presentation.grid,
+    setCellPortDialogOpen(true);
+  }
+
+  function updateCellPortDirection(
+    terminalId: string,
+    direction: "input" | "output" | "inout" | "passive",
+  ): void {
+    if (!document.netlist) return;
+    if (
+      commitStructure(
+        "update-cell-port-direction",
+        planUpdateCellTerminalDirection(
+          project,
+          document.id,
+          terminalId,
+          direction,
+        ),
+      )
+    ) {
+      setStatus("Updated Cell port direction");
+    }
+  }
+
+  function reorderCellPort(terminalId: string, delta: -1 | 1): void {
+    const edits = planReorderCellTerminal(
+      project,
+      document.id,
+      terminalId,
+      delta,
     );
-    const edits: ProjectStructureEdit[] = [
-      {
-        kind: "transact_document",
-        documentId: document.id,
-        expectedRevision: document.revision,
-        edits: [
-          {
-            kind: "add_instance",
-            instance: {
-              id: instanceId,
-              symbolId,
-              placement: { position, rotation: 0, mirror: "none" },
-              properties: {},
-              netlist: {
-                reference: instanceId,
-                parameters: {},
-                terminals: child.netlist.terminals.map(
-                  (terminal, sourcePosition) => ({
-                    sourcePosition,
-                    pinName: terminal.name,
-                  }),
-                ),
-                binding: {
-                  kind: "subcircuit",
-                  childDocumentId: child.id,
-                  name: child.netlist.name,
-                },
-              },
-            },
-          },
-        ],
-      },
-    ];
-    if (commitStructure("place-cell-instance", edits)) {
-      setStatus(`Placed ${child.netlist.name} as ${instanceId}`);
+    if (edits.length > 0 && commitStructure("reorder-cell-ports", edits)) {
+      setStatus("Reordered Cell ports");
+    }
+  }
+
+  function setCellPortPlacement(
+    terminalId: string,
+    side: "auto" | "north" | "east" | "south" | "west",
+    offset: number,
+  ): void {
+    try {
+      if (
+        commitStructure(
+          "set-cell-port-placement",
+          planSetCellTerminalPlacement(
+            project,
+            document.id,
+            terminalId,
+            side,
+            offset,
+          ),
+        )
+      ) {
+        setStatus("Updated Cell port presentation");
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not update Cell port",
+      );
     }
   }
 
@@ -5893,7 +5962,7 @@ export function App({
                 <div className="command-popover">
                   <button
                     type="button"
-                    onClick={openInsertComponentDialogFromHook}
+                    onClick={() => openInsertComponentDialogFromHook()}
                   >
                     <ToolIcon name="insert" />
                     Insert component (I)
@@ -6052,6 +6121,9 @@ export function App({
             <button type="button" onClick={createCell}>
               New Cell
             </button>
+            <button type="button" onClick={() => setCellManagerOpen(true)}>
+              Cells…
+            </button>
             <button
               type="button"
               onClick={placeCellInstance}
@@ -6065,6 +6137,9 @@ export function App({
               disabled={document.id === project.topDocumentId}
             >
               Delete Cell
+            </button>
+            <button type="button" onClick={openCellPortDialog}>
+              Add Cell Port
             </button>
             <button
               type="button"
@@ -6089,6 +6164,115 @@ export function App({
               Delete Port
             </button>
           </div>
+          {document.netlist ? (
+            <details
+              className="cell-interface-panel"
+              aria-label="Cell Interface"
+            >
+              <summary>
+                Cell Interface ({document.netlist.terminals.length})
+              </summary>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Port</th>
+                    <th>Direction</th>
+                    <th>Side</th>
+                    <th>Offset</th>
+                    <th>Order</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {document.netlist.terminals.map((terminal, index) => {
+                    const placement =
+                      document.presentation.cellSymbol?.pinPlacements?.find(
+                        (candidate) => candidate.terminalId === terminal.id,
+                      );
+                    const side = placement?.side ?? "auto";
+                    return (
+                      <tr key={terminal.id}>
+                        <td>{terminal.name}</td>
+                        <td>
+                          <select
+                            aria-label={`${terminal.name} direction`}
+                            value={terminal.direction}
+                            onChange={(event) =>
+                              updateCellPortDirection(
+                                terminal.id,
+                                event.currentTarget
+                                  .value as typeof terminal.direction,
+                              )
+                            }
+                          >
+                            <option value="input">Input</option>
+                            <option value="output">Output</option>
+                            <option value="inout">Inout</option>
+                            <option value="passive">Passive</option>
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            aria-label={`${terminal.name} side`}
+                            value={side}
+                            onChange={(event) =>
+                              setCellPortPlacement(
+                                terminal.id,
+                                event.currentTarget.value as
+                                  "auto" | "north" | "east" | "south" | "west",
+                                placement?.offset ?? 0,
+                              )
+                            }
+                          >
+                            <option value="auto">Auto</option>
+                            <option value="west">West</option>
+                            <option value="east">East</option>
+                            <option value="north">North</option>
+                            <option value="south">South</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            aria-label={`${terminal.name} offset`}
+                            type="number"
+                            step="10"
+                            defaultValue={placement?.offset ?? 0}
+                            disabled={side === "auto"}
+                            onBlur={(event) =>
+                              setCellPortPlacement(
+                                terminal.id,
+                                side,
+                                Number(event.currentTarget.value),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            aria-label={`Move ${terminal.name} earlier`}
+                            disabled={index === 0}
+                            onClick={() => reorderCellPort(terminal.id, -1)}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Move ${terminal.name} later`}
+                            disabled={
+                              index === document.netlist!.terminals.length - 1
+                            }
+                            onClick={() => reorderCellPort(terminal.id, 1)}
+                          >
+                            ↓
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </details>
+          ) : null}
         </div>
         <div data-testid="editor-test-telemetry" hidden>
           <output data-testid="selected-internal-route-count">
@@ -6186,8 +6370,54 @@ export function App({
         open={insertDialogOpen}
         styleProfileId={document.presentation.styleProfileId}
         recentSymbolIds={recentSymbolIds}
+        cells={cellInsertCandidates}
+        cellOnly={cellInsertOnly}
         onApply={beginInsertedComponentPlacementFromHook}
         onCancel={cancelComponentInsertFromHook}
+      />
+      <CellPortDialog
+        open={cellPortDialogOpen}
+        suggestedName={`P${(document.netlist?.terminals.length ?? 0) + 1}`}
+        onApply={(request) => {
+          setCellPortDialogOpen(false);
+          beginInsertedComponentPlacementFromHook(request);
+        }}
+        onCancel={() => setCellPortDialogOpen(false)}
+      />
+      <CellManagerDialog
+        open={cellManagerOpen}
+        cells={cellManagerEntries}
+        onClose={() => setCellManagerOpen(false)}
+        onCreate={() => {
+          setCellManagerOpen(false);
+          createCell();
+        }}
+        onOpen={(documentId) => {
+          setCellManagerOpen(false);
+          switchDocument(documentId);
+        }}
+        onRename={renameCell}
+        onDelete={(documentId) => {
+          const target = project.documents.find(
+            (candidate) => candidate.id === documentId,
+          );
+          if (
+            !target ||
+            !window.confirm(`Delete unreferenced Cell "${target.name}"?`)
+          )
+            return;
+          if (
+            commitStructure(
+              "delete-cell",
+              planDeleteCell(project, documentId),
+              project.topDocumentId,
+            )
+          ) {
+            setCellManagerOpen(false);
+            setStatus(`Deleted Cell ${target.name}`);
+          }
+        }}
+        onJumpToCaller={jumpToCaller}
       />
       {publicAgentUiEnabled ? (
         <ConnectAgentPanel
@@ -7570,6 +7800,9 @@ export function App({
                 <ComponentPlacementPreview
                   styleProfileId={document.presentation.styleProfileId}
                   symbolId={pendingSymbolId}
+                  {...(pendingPlacementSymbol
+                    ? { symbol: pendingPlacementSymbol }
+                    : {})}
                   position={componentPreviewPoint}
                   rotation={componentPlacementRotation}
                   mirror={componentPlacementMirror}

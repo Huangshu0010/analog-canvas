@@ -3122,3 +3122,97 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   tests, workspace build, production smoke).
 - Commit status: included in the `codex/schematic-hierarchy-v12` review branch
   delivery.
+
+## 2026-08-18 - Hierarchy authoring and adaptive symbol plan
+
+- Changed areas: proposed hierarchy interaction/visual roadmap, roadmap index,
+  and target planning record only.
+- Validation: `pnpm docs:check`, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
+- Commit status: included in the `codex/hierarchy-authoring-visual-plan`
+  branch delivery.
+
+## 2026-08-18 - Hierarchy authoring and adaptive Symbol H1
+
+- Changed areas: schema-13 direct compatibility adapter and canonical fixtures;
+  definition-level Cell symbol intent and strict closure; adaptive derived
+  hierarchy Symbol geometry; Project route-follow planner; Agent/MCP artifacts;
+  current protocol/user documentation and ADR 0026.
+- Validation: focused model/project-protocol/symbols/edit-engine/Agent/editor
+  tests, Project-file Playwright (8 scenarios), generated-artifact checks,
+  `pnpm test:impact -- --base origin/main`, `git diff --check`, and
+  `pnpm verify:branch` passed (144 test files / 879 tests, workspace build and
+  production smoke).
+- Commit status: included in the `codex/hierarchy-authoring-visual-plan`
+  branch delivery.
+
+## 2026-08-18 - Hierarchy authoring and visual H2
+
+- Changed areas: shared editor insert dialog/pending placement, typed
+  hierarchy-instance factory, rectangle conversion reuse, interaction/browser
+  regressions, and current user/spec/roadmap documentation.
+- Validation: focused 3-file Vitest (16 tests), hierarchy Playwright (2
+  scenarios), typecheck, docs check, test-impact, diff check, and
+  `pnpm verify:branch` passed (144 unit files / 880 tests, workspace build,
+  production smoke).
+- Commit status: included in `c38b807` on
+  `codex/hierarchy-authoring-visual-plan`.
+
+## 2026-08-18 - Hierarchy authoring and visual H3
+
+- Changed areas: declared Cell Port dialog, shared pending-placement commit
+  factory, exact-contact Net identity, Cell Interface direction/order/visual
+  controls, hierarchy browser coverage, and current documentation.
+- Validation: focused App/placement/interaction Vitest (31 tests), hierarchy
+  Playwright (3 scenarios), typecheck, docs check, test-impact, diff check,
+  and `pnpm verify:branch` passed (144 unit files / 880 tests, workspace
+  build, production smoke).
+- Commit status: included in `fd9469e` on
+  `codex/hierarchy-authoring-visual-plan`.
+
+## 2026-08-18 - Hierarchy authoring and visual H4
+
+- Changed areas: Project-level Cell rename/reconciliation, caller-aware Cell
+  Manager dialog, caller-jump browser workflow, hierarchy lifecycle tests, and
+  current user/roadmap documentation.
+- Validation: focused Project-transaction Vitest (10 tests), hierarchy
+  Playwright (4 scenarios), typecheck, docs check, test-impact, diff check,
+  and `pnpm verify:branch` passed (144 unit files / 881 tests, workspace
+  build, production smoke).
+- Commit status: included in `b5ae3db` on
+  `codex/hierarchy-authoring-visual-plan`.
+
+## 2026-08-18 - Hierarchy authoring and visual H5
+
+- Changed areas: dense adaptive Symbol acceptance, Cell placement mirror
+  browser coverage, hierarchy/drafting save-reopen coverage, and compatibility
+  guidance.
+- Validation: hierarchical Symbol Vitest (4 tests), hierarchy/drafting
+  Playwright (30 scenarios), typecheck, docs check, test-impact, diff check,
+  and `pnpm verify:branch` passed (144 unit files / 882 tests, workspace
+  build, production smoke).
+- Commit status: included in `3760374` on
+  `codex/hierarchy-authoring-visual-plan`.
+
+## 2026-08-18 - Hierarchy domain orchestration refactor
+
+- Changed areas: shared Edit Engine hierarchy Instance/planner APIs, Derived
+  Cell/caller summaries, thin Editor hierarchy call sites, planner/query tests,
+  and accepted architecture guidance.
+- Validation: focused Vitest (5 files / 28 tests), hierarchy Playwright (4
+  scenarios), typecheck, docs check, test-impact, diff check, and
+  `pnpm verify:branch` passed (146 unit files / 887 tests, workspace build and
+  production smoke).
+- Commit status: included in the hierarchy refactor commit on
+  `codex/hierarchy-authoring-visual-plan`.
+
+## 2026-08-18 - Merge hierarchy branch to main
+
+- Changed areas: mainline integration metadata and Git refs only; the promoted
+  product changes are the verified hierarchy authoring and domain-orchestration
+  commits.
+- Validation: `pnpm install --frozen-lockfile` and `pnpm ci:check` passed:
+  146 unit files / 887 tests, workspace build, release verification, and 152
+  E2E scenarios.
+- Commit status: fast-forward promotion to `origin/main` pending this target
+  record commit.

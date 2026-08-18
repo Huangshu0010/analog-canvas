@@ -1,9 +1,26 @@
 import { useState } from "react";
 
-import type { SchematicEdit, WireSource } from "@icm/edit-engine";
-import type { SchematicStyleProfile } from "@icm/derived";
-import { semanticTextDocument } from "@icm/model";
-import type { Point, RouteEndpoint, SchematicDocument } from "@icm/model";
+import type {
+  ProjectStructureEdit,
+  SchematicEdit,
+  WireSource,
+} from "@icm/edit-engine";
+import {
+  createHierarchyInstance,
+  planCreateCellPort,
+  planPlaceCellInstance,
+} from "@icm/edit-engine";
+import {
+  defaultInstanceLabelPlacement,
+  type SchematicStyleProfile,
+} from "@icm/derived";
+import { defaultDraftTextDocument, semanticTextDocument } from "@icm/model";
+import type {
+  CircuitProject,
+  Point,
+  RouteEndpoint,
+  SchematicDocument,
+} from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { ComponentInsertRequest } from "./insert-component-dialog";
@@ -36,6 +53,7 @@ type TransactionResult = { ok: boolean; revision: number };
 export interface UseComponentPlacementOptions {
   recentStorageKey: string;
   document: SchematicDocument;
+  project: CircuitProject;
   resolver: SymbolResolver;
   styleProfile: SchematicStyleProfile;
   visibleEndpoints: readonly WireSource[];
@@ -43,13 +61,17 @@ export interface UseComponentPlacementOptions {
     edits: SchematicEdit[],
     options?: { preserveInteraction?: boolean },
   ) => TransactionResult;
+  transactProject: (
+    transactionId: string,
+    edits: ProjectStructureEdit[],
+  ) => boolean;
   selectOnly: (kind: "instance" | "route", ids: readonly string[]) => void;
   cancelAllTransientInteraction: () => void;
   cancelCanvasDrag: () => void;
   clearTransientCanvasState: () => void;
   paintSnapGuides: (guides: []) => void;
   beginVddRailInteraction: () => void;
-  beginComponentPlacement: (request: ComponentInsertRequest) => void;
+  beginComponentPlacement: (request: PendingComponentPlacement) => void;
   rotateComponentPlacement: (delta: 90 | -90) => void;
   mirrorComponentPlacement: (direction: ScreenFlip) => void;
   componentPlacementRotation: 0 | 90 | 180 | 270;
@@ -70,6 +92,7 @@ export interface UseComponentPlacementOptions {
 /** Flat owner of component/VDD placement, dialog recents, and its transactions. */
 export function useComponentPlacement(options: UseComponentPlacementOptions) {
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
+  const [cellInsertOnly, setCellInsertOnly] = useState(false);
   const [recentSymbolIds, setRecentSymbolIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -89,6 +112,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     position: Point,
     placementRequest: PendingComponentPlacement,
   ): void => {
+    if (placementRequest.kind !== "symbol") return;
     const id = nextInstanceDesignator(options.document, symbolId);
     const symbolVariantId = defaultRazaviSymbolVariantId(symbolId);
     const instance = {
@@ -230,6 +254,191 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     );
   };
 
+  const placeNewCell = (
+    symbolId: string,
+    position: Point,
+    placementRequest: PendingComponentPlacement,
+  ): void => {
+    if (
+      placementRequest.kind !== "cell" ||
+      !placementRequest.childDocumentId ||
+      !placementRequest.cellName
+    ) {
+      return;
+    }
+    const child = options.project.documents.find(
+      (candidate) => candidate.id === placementRequest.childDocumentId,
+    );
+    if (!child?.netlist) {
+      options.setStatus("The selected Cell no longer exists");
+      return;
+    }
+    const id = nextInstanceDesignator(options.document, symbolId);
+    const instance = createHierarchyInstance(id, child, {
+      position,
+      rotation: options.componentPlacementRotation,
+      mirror: options.componentPlacementMirror,
+    });
+    const defaultLabel = defaultInstanceLabel(
+      options.document,
+      instance,
+      options.resolver,
+      options.styleProfile,
+    );
+    const instanceLabel =
+      placementRequest.showReference && defaultLabel
+        ? {
+            ...defaultLabel,
+            content: semanticTextDocument(
+              placementRequest.referenceText ?? instance.id,
+              "instance-label",
+            ),
+          }
+        : null;
+    const resolved = options.resolver.resolve(instance.symbolId);
+    const valuePlacement =
+      resolved &&
+      defaultInstanceLabelPlacement(
+        instance,
+        resolved,
+        options.styleProfile,
+        options.document.presentation.grid,
+        "value",
+      );
+    const instanceValue = valuePlacement
+      ? {
+          id: `instance-value-${instance.id}`,
+          kind: "instance-value" as const,
+          content: defaultDraftTextDocument(placementRequest.cellName),
+          anchor: {
+            kind: "object" as const,
+            objectId: instance.id,
+            localOffset: {
+              x: valuePlacement.position.x - instance.placement!.position.x,
+              y: valuePlacement.position.y - instance.placement!.position.y,
+            },
+            fallbackPosition: valuePlacement.position,
+          },
+          alignment: valuePlacement.alignment,
+          rotation: 0 as const,
+          locked: false,
+        }
+      : null;
+    const committed = options.transactProject(
+      "place-cell-instance",
+      planPlaceCellInstance(
+        options.project,
+        options.document.id,
+        instance,
+        [instanceLabel, instanceValue].filter(
+          (annotation): annotation is NonNullable<typeof annotation> =>
+            annotation !== null,
+        ),
+      ),
+    );
+    if (!committed) return;
+    options.selectOnly("instance", [id]);
+    options.setComponentPreviewPoint(position);
+    options.setStatus(
+      `Placed ${placementRequest.cellName} as ${id} · click to place another · Esc exits`,
+    );
+  };
+
+  const placeNewCellPort = (
+    symbolId: "port" | "port-filled",
+    position: Point,
+    placementRequest: PendingComponentPlacement,
+  ): void => {
+    if (
+      placementRequest.kind !== "cell-port" ||
+      !placementRequest.formalName ||
+      !placementRequest.direction ||
+      options.document.netlist?.terminals.some(
+        (terminal) => terminal.name === placementRequest.formalName,
+      )
+    ) {
+      options.setStatus(
+        `Cell port ${placementRequest.formalName ?? ""} already exists`,
+      );
+      return;
+    }
+    const id = nextInstanceDesignator(options.document, symbolId);
+    const instance = {
+      id,
+      symbolId,
+      placement: {
+        position,
+        rotation: options.componentPlacementRotation,
+        mirror: options.componentPlacementMirror,
+      },
+      properties: {},
+      netlist: initialInstanceNetlist(options.document, symbolId, {}),
+    };
+    const contact = proposePlacementContact(
+      options.document,
+      options.resolver,
+      instance,
+      options.visibleEndpoints,
+    );
+    if (contact.rejected || contact.ambiguous) {
+      options.setStatus(
+        contact.rejected ?? "Port overlaps multiple Nets; choose one contact",
+      );
+      return;
+    }
+    const baseNetId = `net-cell-port-${id.toLowerCase()}`;
+    let netId = contact.netId ?? baseNetId;
+    let netSuffix = 2;
+    while (
+      !contact.netId &&
+      options.document.nets.some((net) => net.id.toLowerCase() === netId)
+    ) {
+      netId = `${baseNetId}-${netSuffix}`;
+      netSuffix += 1;
+    }
+    const connectionEdits: SchematicEdit[] = [
+      ...contact.edits,
+      ...(contact.matched
+        ? []
+        : [
+            {
+              kind: "connect_endpoints" as const,
+              from: {
+                kind: "terminal" as const,
+                instanceId: id,
+                pinName: "P",
+              },
+              to: {
+                kind: "terminal" as const,
+                instanceId: id,
+                pinName: "P",
+              },
+              newNetId: netId,
+            },
+          ]),
+    ];
+    const committed = options.transactProject(
+      "place-cell-port",
+      planCreateCellPort(options.project, options.document.id, {
+        instance,
+        connectionEdits,
+        terminal: {
+          id: `terminal-${id.toLowerCase()}`,
+          name: placementRequest.formalName,
+          netId,
+          direction: placementRequest.direction,
+          interfaceInstanceId: id,
+        },
+      }),
+    );
+    if (!committed) return;
+    options.selectOnly("instance", [id]);
+    options.setComponentPreviewPoint(position);
+    options.setStatus(
+      `Added Cell port ${placementRequest.formalName} · click to place another · Esc exits`,
+    );
+  };
+
   const placeVddRail = (start: Point, end: Point): void => {
     const idsExist = (candidate: string): boolean => {
       const key = candidate.toLowerCase();
@@ -270,10 +479,13 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     options.setStatus(`Added VDD rail ${instanceId}`);
   };
 
-  const openInsertComponentDialog = (): void => {
+  const openInsertComponentDialog = (cellOnly = false): void => {
     options.cancelAllTransientInteraction();
+    setCellInsertOnly(cellOnly);
     setInsertDialogOpen(true);
-    options.setStatus("Choose a component to place");
+    options.setStatus(
+      cellOnly ? "Choose a Cell to place" : "Choose a component to place",
+    );
   };
 
   const beginInsertedComponentPlacement = (
@@ -296,12 +508,27 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     options.clearTransientCanvasState();
     options.paintSnapGuides([]);
     setInsertDialogOpen(false);
+    setCellInsertOnly(false);
     if (request.kind === "vdd-rail") {
       options.beginVddRailInteraction();
       options.setStatus("Place VDD Rail: click the first end · Esc cancels");
       return;
     }
-    options.beginComponentPlacement(request);
+    options.beginComponentPlacement(
+      request.kind === "cell-port"
+        ? {
+            kind: "cell-port",
+            symbolId: request.symbolId,
+            properties: {},
+            initialRotation: request.initialRotation,
+            showReference: false,
+            referenceText: null,
+            showValue: false,
+            formalName: request.formalName,
+            direction: request.direction,
+          }
+        : request,
+    );
     options.setStatus(
       `Place ${request.symbolName} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
     );
@@ -309,11 +536,15 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
 
   const cancelComponentInsert = (): void => {
     setInsertDialogOpen(false);
+    setCellInsertOnly(false);
     options.cancelAllTransientInteraction();
     options.setStatus("Component insertion cancelled");
   };
 
-  const closeInsertDialog = (): void => setInsertDialogOpen(false);
+  const closeInsertDialog = (): void => {
+    setInsertDialogOpen(false);
+    setCellInsertOnly(false);
+  };
 
   const rotatePendingComponent = (delta: 90 | -90): void => {
     options.rotateComponentPlacement(delta);
@@ -344,16 +575,31 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return;
     }
     if (!options.pendingSymbolId || !options.pendingComponentPlacement) return;
-    placeNewComponent(
-      options.pendingSymbolId,
-      point,
-      options.pendingComponentPlacement,
-    );
+    if (options.pendingComponentPlacement.kind === "cell-port") {
+      placeNewCellPort(
+        options.pendingSymbolId as "port" | "port-filled",
+        point,
+        options.pendingComponentPlacement,
+      );
+    } else if (options.pendingComponentPlacement.kind === "cell") {
+      placeNewCell(
+        options.pendingSymbolId,
+        point,
+        options.pendingComponentPlacement,
+      );
+    } else {
+      placeNewComponent(
+        options.pendingSymbolId,
+        point,
+        options.pendingComponentPlacement,
+      );
+    }
   };
 
   return {
     beginInsertedComponentPlacement,
     cancelComponentInsert,
+    cellInsertOnly,
     closeInsertDialog,
     commitPendingPlacementAt,
     insertDialogOpen,

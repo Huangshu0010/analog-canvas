@@ -143,11 +143,13 @@ export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
       edit.kind === "add_cell_terminal" ||
       edit.kind === "update_cell_terminal" ||
       edit.kind === "remove_cell_terminal" ||
-      edit.kind === "reorder_cell_terminals"
+      edit.kind === "reorder_cell_terminals" ||
+      edit.kind === "set_cell_symbol_presentation"
     ) {
       context.addIssue({
         code: "custom",
-        message: "Cell interface edits must be wrapped in structureEdits",
+        message:
+          "Cell interface and Cell-symbol edits must be wrapped in structureEdits",
       });
     }
     if (edit.kind === "add_instance") {

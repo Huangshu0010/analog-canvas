@@ -40,6 +40,7 @@ export interface PlacementContactProposal {
   rejected?: string;
   powerNetId?: string;
   powerEndpoint?: RouteEndpoint;
+  netId?: string;
 }
 
 function newInstanceEndpoints(
@@ -156,6 +157,7 @@ export function proposePlacementContact(
   let powerNetId: string | undefined;
   let powerCandidateState: "existing" | "pending-connection" | undefined;
   let powerEndpoint: RouteEndpoint | undefined;
+  let netId: string | undefined;
   for (const contact of contacts) {
     const { source, target } = contact;
     if (target.endpoint) {
@@ -184,6 +186,7 @@ export function proposePlacementContact(
       if (power) {
         powerCandidateState = createsNet ? "pending-connection" : "existing";
       }
+      netId = target.endpoint.netId ?? newNetId;
     } else if (target.route) {
       edits.push(
         ...proposeEndpointRouteAttachment(
@@ -198,6 +201,7 @@ export function proposePlacementContact(
       );
       if (power) powerNetId = target.route.netId;
       if (power) powerCandidateState = "existing";
+      netId = target.route.netId;
     }
     if (power) powerEndpoint = source.endpoint;
   }
@@ -224,6 +228,7 @@ export function proposePlacementContact(
     ambiguous: false,
     ...(powerNetId ? { powerNetId } : {}),
     ...(powerEndpoint ? { powerEndpoint } : {}),
+    ...(netId ? { netId } : {}),
   };
 }
 

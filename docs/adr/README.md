@@ -49,6 +49,8 @@ decision is
 The schematic-only hierarchy, formal Cell Port, structural transaction, and
 schema-12 decision is
 [`0025-schematic-hierarchy-and-formal-ports.md`](0025-schematic-hierarchy-and-formal-ports.md).
+The schema-13 definition-level Cell symbol presentation decision is
+[`0026-definition-level-cell-symbol-presentation.md`](0026-definition-level-cell-symbol-presentation.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

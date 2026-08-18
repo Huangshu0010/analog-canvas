@@ -108,6 +108,14 @@ successful structural transaction advances `structureRevision` once and each
 changed Document revision once. The editor records the complete Project
 transition as one undo item.
 
+Reusable hierarchy orchestration follows the same package boundary. Pure
+helpers in `@icm/edit-engine` construct canonical hierarchy Instances and plan
+Cell creation, placement, rename/delete, formal-Port lifecycle, and terminal
+presentation edits. Read-only Cell/caller summaries belong to `@icm/derived`.
+The Editor collects user intent and canvas-dependent geometry, submits the
+planned edits, and presents results; it does not assemble Project structure
+edits or maintain a parallel hierarchy model.
+
 ### Formal blocks use the Instance/Symbol path
 
 The Rectangle drawing tool remains drafting-only. A hierarchy creation gesture

@@ -10,17 +10,31 @@ revision, validation, undo, rendering, and recovery boundaries.
 
 ## Components and interface markers
 
-The insertion UI lists only exact reviewed Symbol IDs. Both `port` and
-`port-filled` remain ordinary manually reachable components. Choosing either
-starts the same placement state as any component; terminal `P` participates in
-ordinary snap, wire, move/stretch, selection, clipboard, and delete behavior.
-Placement creates an ordinary Instance and uses no Port-specific edit path.
+The insertion UI lists exact reviewed Symbol IDs plus the current Project's
+eligible Cell definitions in a dynamic **Cells** section. A Cell selection
+uses the same cursor preview, grid snap, rotation, mirror, and cancellation
+state as a Symbol; its commit factory alone differs, creating one typed
+subcircuit Instance through a Project structural transaction and ordinary
+object-anchored `Xn`/Cell-name annotations. Both `port` and `port-filled`
+remain ordinary manually reachable components. Choosing either starts the same
+placement state as any component; terminal `P` participates in ordinary snap,
+wire, move/stretch, selection, clipboard, and delete behavior. Placement
+creates an ordinary Instance and uses no Port-specific edit path.
 An author may then expose a connected Port Instance as a formal Cell terminal.
 That interface change uses the Project structural transaction, so the marker's
 ordinary Instance/Net behavior is preserved while every parent block observes
 one atomic interface revision. Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.
+
+**Add Cell Port** is the primary formal-interface authoring action. Its small
+declaration dialog produces one pending `port` or `port-filled` placement. At
+commit, an exact unambiguous pin/route contact reuses that Net; otherwise one
+local Net is created for pin `P`. The Port Instance, connection, and appended
+formal terminal are then committed together through the Project transaction.
+The Cell Interface table uses existing terminal-direction/order edits and the
+definition-level Cell-symbol presentation edit; it never rewrites caller Net
+endpoints merely to move a visual pin.
 
 Canonical `nmos`/`pmos` use the asset's `textbook-3terminal` visual variant by
 default while retaining D/G/S/B electrically. A manual MOS uses explicit B
@@ -204,9 +218,9 @@ no electrical meaning.
 Open, demo load, restore, and human-approved staged import replace the entire
 Project through one replacement boundary; they are not Edit Engine
 transactions. Replacement cancels pending recovery for the outgoing Project
-and terminates its Agent session. A complete schema-11 Project may be upgraded
-at the read boundary and then enters the editor only as schema-12; migrated
-formal files are marked as needing save.
+and terminates its Agent session. A complete schema-12 Project may be upgraded
+at the read boundary and then enters the editor only as schema-13; migrated
+files are marked as needing save.
 
 Selection, viewport, active tool, previews, Agent tokens, and approval UI are
 transient and never enter Project JSON. Recovery is scheduled only after a

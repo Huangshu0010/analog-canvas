@@ -858,6 +858,23 @@ export function executeTransaction(
           );
         }
         draft.netlist.terminals.splice(index, 1);
+        if (draft.presentation.cellSymbol?.pinPlacements) {
+          const retained = draft.presentation.cellSymbol.pinPlacements.filter(
+            (placement) => placement.terminalId !== edit.terminalId,
+          );
+          if (
+            retained.length !==
+            draft.presentation.cellSymbol.pinPlacements.length
+          ) {
+            draft.presentation.cellSymbol = {
+              ...draft.presentation.cellSymbol,
+              ...(retained.length > 0 ? { pinPlacements: retained } : {}),
+            };
+            if (retained.length === 0) {
+              delete draft.presentation.cellSymbol.pinPlacements;
+            }
+          }
+        }
         changedObjectIds.add(edit.terminalId);
         connectivityChanged = true;
         break;
@@ -1998,6 +2015,15 @@ export function executeTransaction(
       }
       case "set_presentation_style": {
         draft.presentation.styleProfileId = edit.styleProfileId;
+        changedObjectIds.add(draft.id);
+        break;
+      }
+      case "set_cell_symbol_presentation": {
+        if (edit.presentation === null) {
+          delete draft.presentation.cellSymbol;
+        } else {
+          draft.presentation.cellSymbol = structuredClone(edit.presentation);
+        }
         changedObjectIds.add(draft.id);
         break;
       }

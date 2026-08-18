@@ -4,21 +4,38 @@ Analog Canvas treats every Project Document as one reusable schematic Cell.
 The top Cell is the export root; other Cells may be instantiated any number of
 times or kept unreferenced while they are being authored.
 
+Use **Cells…** to manage the Project's definitions in one place. It shows each
+Cell's formal port and caller counts, opens or renames a definition, and lists
+each caller with **Jump to caller**. A referenced Cell's delete control is
+disabled; delete its caller Instances normally before deleting the now
+unreferenced definition.
+
 Use **New Cell** in the Cell navigation bar to create a module without first
-drawing a rectangle. Use **Place Cell** to select an existing definition and
-place an ordinary hierarchical Instance at the current view center. **Enter
-Cell** opens the child of a selected hierarchical Instance. **Up** follows the
-actual parent Instance path; **Top** returns to the root. Opening a shared Cell
-from the selector has no caller context when more than one path reaches it,
-which is reported in the status bar.
+drawing a rectangle. **Place Cell** opens the normal Insert dialog with a
+searchable **Cells** section. Select a definition, then place its ordinary
+hierarchical Instance on the canvas using the same grid preview, `R` rotation,
+mirror shortcuts, and `Esc` cancellation as a library component. The commit
+creates the subcircuit Instance, its `Xn` reference label, and a Cell-name
+value label together. **Enter Cell** opens the child of a selected hierarchical
+Instance. **Up** follows the actual parent Instance path; **Top** returns to
+the root. Opening a shared Cell from the selector has no caller context when
+more than one path reaches it, which is reported in the status bar.
 
 To define a real Cell port:
 
-1. Place a `port` or `port-filled` component inside the child Cell and connect
-   pin `P` to the intended Net using the normal wiring tools.
-2. Select that Port Instance and choose **Expose Port**.
-3. Enter the formal pin name and direction (`input`, `output`, `inout`, or
-   `passive`).
+1. Choose **Add Cell Port**, give it a name, direction (`input`, `output`,
+   `inout`, or `passive`), and optional filled marker.
+2. Click an exact existing electrical contact to attach to its Net, or click
+   empty grid space to create a new local Net.
+
+The command commits an ordinary `port`/`port-filled` Instance, its pin-`P`
+connection, and the formal Cell terminal as one revision. **Expose Port**
+remains the advanced adoption path for an already drawn and connected marker.
+
+Open **Cell Interface** in the navigation bar to edit each formal port's
+direction, order, and definition-level visual side/offset. Direction is an
+electrical fact; side and offset only change the generated external symbol and
+therefore affect every caller without changing Net membership.
 
 The visible marker remains an ordinary Instance, so selection, move, wiring,
 clipboard, and normal Instance deletion use the same editor protocol as other
@@ -36,3 +53,10 @@ Rectangles remain drafting geometry. Selecting an unlocked rectangle and using
 **Enter Cell** is only a convenience gesture: the commit removes the rectangle,
 creates a child Cell, and places an ordinary hierarchical Instance. Saved
 hierarchy never depends on rectangle drawing data.
+
+Hierarchy presentation is saved as definition-level size and pin-placement
+intent in Project schema 13. Older schema-12 projects open with deterministic
+automatic pin layout; schema-11 files are outside the supported rolling
+compatibility window. The block uses the shared Razavi-style symbol/text
+renderer and is compatible with that visual grammar; it is not a claim of a
+pixel-for-pixel textbook symbol asset.

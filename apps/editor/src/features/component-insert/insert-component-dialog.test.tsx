@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { builtInSymbols } from "@icm/symbols";
 
 import { InsertComponentDialog } from "./insert-component-dialog";
 
@@ -10,6 +11,7 @@ describe("InsertComponentDialog", () => {
         open
         styleProfileId="razavi-textbook-v1"
         recentSymbolIds={["nmos"]}
+        cells={[]}
         onApply={() => undefined}
         onCancel={() => undefined}
       />,
@@ -45,10 +47,37 @@ describe("InsertComponentDialog", () => {
           open={false}
           styleProfileId="razavi-textbook-v1"
           recentSymbolIds={[]}
+          cells={[]}
           onApply={() => undefined}
           onCancel={() => undefined}
         />,
       ),
     ).toBe("");
+  });
+
+  it("lists hierarchy Cells beside library symbols", () => {
+    const symbol = builtInSymbols.find(
+      (candidate) => candidate.id === "resistor",
+    )!;
+    const markup = renderToStaticMarkup(
+      <InsertComponentDialog
+        open
+        styleProfileId="razavi-textbook-v1"
+        recentSymbolIds={[]}
+        cells={[
+          {
+            childDocumentId: "document-amplifier",
+            cellName: "Amplifier",
+            symbol,
+          },
+        ]}
+        onApply={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain(">Cells</h3>");
+    expect(markup).toContain('data-testid="insert-cell-document-amplifier"');
+    expect(markup).toContain(">Amplifier</span>");
   });
 });

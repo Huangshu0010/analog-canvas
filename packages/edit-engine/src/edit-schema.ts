@@ -1,5 +1,6 @@
 import {
   AnnotationSchema,
+  CellSymbolPresentationSchema,
   CellNetlistTerminalSchema,
   DraftingObjectSchema,
   InstanceNetlistDataSchema,
@@ -243,6 +244,11 @@ export const SetPresentationStyleEditSchema = z.strictObject({
   kind: z.literal("set_presentation_style"),
   styleProfileId: StableIdSchema,
 });
+export const SetCellSymbolPresentationEditSchema = z.strictObject({
+  kind: z.literal("set_cell_symbol_presentation"),
+  /** `null` clears all explicit definition-level symbol intent. */
+  presentation: CellSymbolPresentationSchema.nullable(),
+});
 export const UpsertSchematicAnnotationEditSchema = z.strictObject({
   kind: z.literal("upsert_schematic_annotation"),
   annotation: AnnotationSchema,
@@ -320,6 +326,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   AddNoConnectEditSchema,
   RemoveNoConnectEditSchema,
   SetPresentationStyleEditSchema,
+  SetCellSymbolPresentationEditSchema,
   UpsertSchematicAnnotationEditSchema,
   RemoveSchematicAnnotationEditSchema,
   UpsertDraftingObjectEditSchema,

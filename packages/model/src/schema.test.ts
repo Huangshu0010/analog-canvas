@@ -260,4 +260,46 @@ describe("CircuitProject schema", () => {
     document.annotations[0] = { ...label, visible: true };
     expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
   });
+
+  it("validates definition-level Cell symbol placement against stable formal terminals", () => {
+    const project = createEmptyProject("project-cell-symbol", "Cell symbol");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      placement: null,
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-input",
+      name: "VIN",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    document.netlist!.terminals.push({
+      id: "terminal-input",
+      name: "VIN",
+      netId: "net-input",
+      direction: "input",
+      interfaceInstanceId: "P1",
+    });
+    document.presentation.cellSymbol = {
+      minimumBodySize: { width: 100, height: 60 },
+      pinPlacements: [
+        { terminalId: "terminal-input", side: "north", offset: 20 },
+      ],
+    };
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+
+    document.presentation.cellSymbol.pinPlacements = [
+      { terminalId: "missing-terminal", side: "north", offset: 20 },
+    ];
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
+
+    document.presentation.cellSymbol.pinPlacements = [
+      { terminalId: "terminal-input", side: "north", offset: 20 },
+      { terminalId: "terminal-input", side: "north", offset: 20 },
+    ];
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
+  });
 });

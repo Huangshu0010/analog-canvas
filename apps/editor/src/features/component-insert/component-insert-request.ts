@@ -15,4 +15,30 @@ export interface VddRailInsertRequest {
   symbolName: "VDD Rail";
 }
 
-export type ComponentInsertRequest = SymbolInsertRequest | VddRailInsertRequest;
+export interface CellInsertRequest {
+  kind: "cell";
+  symbolId: string;
+  symbolName: string;
+  childDocumentId: string;
+  cellName: string;
+  properties: Record<string, string>;
+  initialRotation: 0 | 90 | 180 | 270;
+  showReference: boolean;
+  referenceText: string | null;
+  showValue: true;
+}
+
+export interface CellPortInsertRequest {
+  kind: "cell-port";
+  symbolId: "port" | "port-filled";
+  symbolName: string;
+  formalName: string;
+  direction: "input" | "output" | "inout" | "passive";
+  initialRotation: 0 | 90 | 180 | 270;
+}
+
+export type ComponentInsertRequest =
+  | SymbolInsertRequest
+  | CellInsertRequest
+  | CellPortInsertRequest
+  | VddRailInsertRequest;

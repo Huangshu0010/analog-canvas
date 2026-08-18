@@ -135,6 +135,7 @@ describe("editor interaction state", () => {
       {
         type: "place-component",
         placement: {
+          kind: "symbol",
           symbolId: "nmos",
           properties: { w: "2u", l: "150n", m: "2" },
           initialRotation: 90,
@@ -147,6 +148,7 @@ describe("editor interaction state", () => {
     expect(state).toEqual({
       kind: "placing-component",
       placement: {
+        kind: "symbol",
         symbolId: "nmos",
         properties: { w: "2u", l: "150n", m: "2" },
         initialRotation: 90,
