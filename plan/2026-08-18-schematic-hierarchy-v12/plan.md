@@ -1,5 +1,5 @@
 ---
-status: completed
+status: active
 experience: none
 ---
 
@@ -130,3 +130,15 @@ workflows; generated Agent/MCP checks; `pnpm test:impact -- --base origin/main`;
 and `pnpm verify:branch` (144 test files / 874 tests, workspace build, production
 smoke). `git diff --check` passed. The unrelated untracked `.worktrees/`
 directory remains untouched.
+
+## Delivery follow-up
+
+Remote PR #119 exposed a release-boundary regression after the original
+focused and branch validation: the packaged MCP release smoke's circuit
+response is rejected by the Agent HTTP client schema. This plan is active again
+until the produced response and its canonical client schema agree, the focused
+release smoke passes, and the required remote checks are green. The untracked
+`.worktrees/` directory remains unrelated and untouched.
+
+Local repair validation: `pnpm ci:release` passes after adding the required
+schema-12 `project.structureRevision` fact to the packaged MCP relay fixture.
