@@ -15,3 +15,10 @@ ADRs for active rules.
 | 6     | [Agent API](phase-6-agent-api.md)                                                               |
 | 7     | [Export and hardening](phase-7-export-and-hardening.md)                                         |
 | 8     | [Direct manipulation and manual authoring](phase-8-direct-manipulation-and-manual-authoring.md) |
+
+## Post-phase delivery records
+
+| Record | Historical evidence |
+| ------ | ------------------- |
+| Connectivity recovery | [Completed recovery status](connectivity-recovery-status.md) |
+| Net identity and export convergence | [Completed Net-contract unification](net-contract-unification.md) |

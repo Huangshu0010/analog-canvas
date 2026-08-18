@@ -64,7 +64,9 @@ do not treat an old directory's date as evidence that it is complete.
 
 ## Routine Record Retention
 
-An archived plan may be deleted only when all of the following are true:
+Archive is the default disposition for a completed plan. A routine record may
+be deleted directly from the root queue, or later from the archive, only when
+all of the following are true:
 
 1. `status: completed` and `experience: none` are explicit;
 2. its Outcome and Git history establish the completed work;
@@ -75,9 +77,13 @@ An archived plan may be deleted only when all of the following are true:
    cross-branch integration, active coordination, or unresolved-decision
    record.
 
-Length and age are not retention criteria. Delete redundant prose, not
-evidence: Git and the factual log remain the retention surface. Never delete a
-plan with an unresolved experience signal or state.
+Length and age are not retention criteria. Direct deletion is for bounded
+presentation polish, routine delivery notes, and independently reconstructible
+maintenance events; it is not for architecture/ADR, schema or migration,
+release or CI, deployment, cross-branch integration, active coordination, or
+unresolved-decision records. Delete redundant prose, not evidence: Git and the
+factual log remain the retention surface. Never delete a plan with an
+unresolved experience signal or state.
 
 ## Experience Extraction
 

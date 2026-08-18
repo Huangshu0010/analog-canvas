@@ -109,4 +109,4 @@ remain accepted.
 - [`0022-current-protocol-baseline.md`](0022-current-protocol-baseline.md)
 - [`../specs/project-file-format.md`](../specs/project-file-format.md)
 - [`../specs/persistence-and-recovery.md`](../specs/persistence-and-recovery.md)
-- [`../../plan/2026-08-17-v10-v11-project-compatibility/plan.md`](../../plan/2026-08-17-v10-v11-project-compatibility/plan.md)
+- [`2026-08-17-v10-v11-project-compatibility`](../../plan/archived/2026-08/2026-08-17-v10-v11-project-compatibility/plan.md)
