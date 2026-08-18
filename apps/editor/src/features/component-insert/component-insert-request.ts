@@ -15,4 +15,18 @@ export interface VddRailInsertRequest {
   symbolName: "VDD Rail";
 }
 
-export type ComponentInsertRequest = SymbolInsertRequest | VddRailInsertRequest;
+export interface CellInsertRequest {
+  kind: "cell";
+  symbolId: string;
+  symbolName: string;
+  childDocumentId: string;
+  cellName: string;
+  properties: Record<string, string>;
+  initialRotation: 0 | 90 | 180 | 270;
+  showReference: boolean;
+  referenceText: string | null;
+  showValue: true;
+}
+
+export type ComponentInsertRequest =
+  SymbolInsertRequest | CellInsertRequest | VddRailInsertRequest;

@@ -1136,11 +1136,34 @@ export function App({
     contactComponents,
     createRouteAnchor: routeAnchor,
   });
+  const cellInsertCandidates = useMemo(
+    () =>
+      project.documents.flatMap((candidate) => {
+        if (candidate.id === document.id || !candidate.netlist) return [];
+        const definition = resolver.resolve(
+          hierarchicalSymbolId(candidate.netlist.name),
+        )?.definition;
+        return definition
+          ? [
+              {
+                childDocumentId: candidate.id,
+                cellName: candidate.netlist.name,
+                symbol: definition,
+              },
+            ]
+          : [];
+      }),
+    [document.id, project.documents, resolver],
+  );
+  const pendingPlacementSymbol = pendingSymbolId
+    ? resolver.resolve(pendingSymbolId)?.definition
+    : undefined;
   const {
     beginInsertedComponentPlacement: beginInsertedComponentPlacementFromHook,
     cancelComponentInsert: cancelComponentInsertFromHook,
     commitPendingPlacementAt: commitPendingPlacementAtFromHook,
     closeInsertDialog: closeInsertDialogFromHook,
+    cellInsertOnly,
     insertDialogOpen,
     openInsertComponentDialog: openInsertComponentDialogFromHook,
     recentSymbolIds,
@@ -1149,10 +1172,13 @@ export function App({
   } = useComponentPlacement({
     recentStorageKey: RECENT_COMPONENTS_STORAGE_KEY,
     document,
+    project,
     resolver,
     styleProfile,
     visibleEndpoints,
     transact,
+    transactProject: (transactionId, edits) =>
+      commitStructure(transactionId, edits),
     selectOnly,
     cancelAllTransientInteraction,
     cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
@@ -1497,75 +1523,12 @@ export function App({
   }
 
   function placeCellInstance(): void {
-    const candidates = project.documents.filter(
-      (candidate) => candidate.id !== document.id && candidate.netlist,
-    );
-    if (candidates.length === 0) {
+    if (cellInsertCandidates.length === 0) {
       setStatus("Create another Cell before placing a hierarchical Instance");
       return;
     }
-    const requested = window
-      .prompt(
-        `Cell to place: ${candidates.map((candidate) => candidate.netlist!.name).join(", ")}`,
-        candidates[0]!.netlist!.name,
-      )
-      ?.trim()
-      .toLowerCase();
-    if (!requested) return;
-    const child = candidates.find(
-      (candidate) =>
-        candidate.id.toLowerCase() === requested ||
-        candidate.netlist!.name.toLowerCase() === requested,
-    );
-    if (!child?.netlist) {
-      setStatus(`Cell not found: ${requested}`);
-      return;
-    }
-    const symbolId = hierarchicalSymbolId(child.netlist.name);
-    const instanceId = nextInstanceDesignator(document, symbolId);
-    const position = snapGridPoint(
-      {
-        x: viewBox.x + viewBox.width / 2,
-        y: viewBox.y + viewBox.height / 2,
-      },
-      document.presentation.grid,
-    );
-    const edits: ProjectStructureEdit[] = [
-      {
-        kind: "transact_document",
-        documentId: document.id,
-        expectedRevision: document.revision,
-        edits: [
-          {
-            kind: "add_instance",
-            instance: {
-              id: instanceId,
-              symbolId,
-              placement: { position, rotation: 0, mirror: "none" },
-              properties: {},
-              netlist: {
-                reference: instanceId,
-                parameters: {},
-                terminals: child.netlist.terminals.map(
-                  (terminal, sourcePosition) => ({
-                    sourcePosition,
-                    pinName: terminal.name,
-                  }),
-                ),
-                binding: {
-                  kind: "subcircuit",
-                  childDocumentId: child.id,
-                  name: child.netlist.name,
-                },
-              },
-            },
-          },
-        ],
-      },
-    ];
-    if (commitStructure("place-cell-instance", edits)) {
-      setStatus(`Placed ${child.netlist.name} as ${instanceId}`);
-    }
+    openInsertComponentDialogFromHook(true);
+    setStatus("Choose a Cell, then place it on the canvas");
   }
 
   const selectedFormalTerminal = selectedInstance
@@ -5893,7 +5856,7 @@ export function App({
                 <div className="command-popover">
                   <button
                     type="button"
-                    onClick={openInsertComponentDialogFromHook}
+                    onClick={() => openInsertComponentDialogFromHook()}
                   >
                     <ToolIcon name="insert" />
                     Insert component (I)
@@ -6186,6 +6149,8 @@ export function App({
         open={insertDialogOpen}
         styleProfileId={document.presentation.styleProfileId}
         recentSymbolIds={recentSymbolIds}
+        cells={cellInsertCandidates}
+        cellOnly={cellInsertOnly}
         onApply={beginInsertedComponentPlacementFromHook}
         onCancel={cancelComponentInsertFromHook}
       />
@@ -7570,6 +7535,9 @@ export function App({
                 <ComponentPlacementPreview
                   styleProfileId={document.presentation.styleProfileId}
                   symbolId={pendingSymbolId}
+                  {...(pendingPlacementSymbol
+                    ? { symbol: pendingPlacementSymbol }
+                    : {})}
                   position={componentPreviewPoint}
                   rotation={componentPlacementRotation}
                   mirror={componentPlacementMirror}

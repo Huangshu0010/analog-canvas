@@ -3145,3 +3145,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   production smoke).
 - Commit status: included in the `codex/hierarchy-authoring-visual-plan`
   branch delivery.
+
+## 2026-08-18 - Hierarchy authoring and visual H2
+
+- Changed areas: shared editor insert dialog/pending placement, typed
+  hierarchy-instance factory, rectangle conversion reuse, interaction/browser
+  regressions, and current user/spec/roadmap documentation.
+- Validation: focused 3-file Vitest (16 tests), hierarchy Playwright (2
+  scenarios), typecheck, docs check, test-impact, diff check, and
+  `pnpm verify:branch` passed (144 unit files / 880 tests, workspace build,
+  production smoke).
+- Commit status: pending `feat(editor): place Cells through shared component placement`
+  on `codex/hierarchy-authoring-visual-plan`.

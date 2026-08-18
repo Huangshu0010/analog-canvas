@@ -5,12 +5,15 @@ The top Cell is the export root; other Cells may be instantiated any number of
 times or kept unreferenced while they are being authored.
 
 Use **New Cell** in the Cell navigation bar to create a module without first
-drawing a rectangle. Use **Place Cell** to select an existing definition and
-place an ordinary hierarchical Instance at the current view center. **Enter
-Cell** opens the child of a selected hierarchical Instance. **Up** follows the
-actual parent Instance path; **Top** returns to the root. Opening a shared Cell
-from the selector has no caller context when more than one path reaches it,
-which is reported in the status bar.
+drawing a rectangle. **Place Cell** opens the normal Insert dialog with a
+searchable **Cells** section. Select a definition, then place its ordinary
+hierarchical Instance on the canvas using the same grid preview, `R` rotation,
+mirror shortcuts, and `Esc` cancellation as a library component. The commit
+creates the subcircuit Instance, its `Xn` reference label, and a Cell-name
+value label together. **Enter Cell** opens the child of a selected hierarchical
+Instance. **Up** follows the actual parent Instance path; **Top** returns to
+the root. Opening a shared Cell from the selector has no caller context when
+more than one path reaches it, which is reported in the status bar.
 
 To define a real Cell port:
 

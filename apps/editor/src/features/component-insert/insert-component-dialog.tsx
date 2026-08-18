@@ -2,17 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { displayableInstanceValue } from "@icm/derived";
 import { renderSymbolDefinitionBody } from "@icm/render-svg";
+import type { SymbolDefinition } from "@icm/symbols";
 
 import { defaultRazaviSymbolVariantId } from "../../presentation/razavi-presentation";
 import {
   componentParameters,
   initialComponentParameterValues,
 } from "./component-parameters";
-import {
-  componentCatalog,
-  findPaletteSymbol,
-  flattenComponentCatalog,
-} from "./symbol-catalog";
+import { componentCatalog, findPaletteSymbol } from "./symbol-catalog";
 import type { ComponentInsertRequest } from "./component-insert-request";
 import { DisplayToggle } from "./display-toggle";
 import { SymbolArtwork } from "./symbol-artwork";
@@ -23,27 +20,45 @@ export interface InsertComponentDialogProps {
   open: boolean;
   styleProfileId: string;
   recentSymbolIds: readonly string[];
+  cells: readonly CellInsertCandidate[];
+  cellOnly?: boolean;
   onApply(request: ComponentInsertRequest): void;
   onCancel(): void;
+}
+
+export interface CellInsertCandidate {
+  readonly childDocumentId: string;
+  readonly cellName: string;
+  readonly symbol: SymbolDefinition;
+}
+
+interface InsertChoice {
+  readonly key: string;
+  readonly kind: "symbol" | "cell";
+  readonly symbol: SymbolDefinition;
+  readonly childDocumentId?: string;
+  readonly cellName?: string;
 }
 
 export function ComponentPlacementPreview({
   styleProfileId,
   symbolId,
+  symbol,
   position,
   rotation,
   mirror = "none",
 }: {
   styleProfileId: string;
   symbolId: string;
+  symbol?: SymbolDefinition;
   position: { x: number; y: number };
   rotation: 0 | 90 | 180 | 270;
   mirror?: "none" | "x";
 }) {
-  const symbol = findPaletteSymbol(styleProfileId, symbolId);
-  if (!symbol) return null;
-  const variantId = defaultRazaviSymbolVariantId(symbol.id);
-  const variant = symbol.variants.find(
+  const definition = symbol ?? findPaletteSymbol(styleProfileId, symbolId);
+  if (!definition) return null;
+  const variantId = defaultRazaviSymbolVariantId(definition.id);
+  const variant = definition.variants.find(
     (candidate) => candidate.id === variantId,
   );
 
@@ -61,7 +76,7 @@ export function ComponentPlacementPreview({
       strokeLinejoin="miter"
       dangerouslySetInnerHTML={{
         __html: renderSymbolDefinitionBody(
-          symbol,
+          definition,
           variant?.hiddenPrimitiveParts,
           variant?.additionalPrimitives,
         ),
@@ -74,20 +89,37 @@ export function InsertComponentDialog({
   open,
   styleProfileId,
   recentSymbolIds,
+  cells,
+  cellOnly = false,
   onApply,
   onCancel,
 }: InsertComponentDialogProps) {
-  const initialSymbols = useMemo(
-    () =>
-      flattenComponentCatalog(
-        componentCatalog(styleProfileId, "", recentSymbolIds),
-      ),
-    [recentSymbolIds, styleProfileId],
+  const initialChoices = useMemo<InsertChoice[]>(
+    () => [
+      ...(cellOnly
+        ? []
+        : componentCatalog(styleProfileId, "", recentSymbolIds).flatMap(
+            (group) =>
+              group.symbols.map((symbol) => ({
+                key: symbol.id,
+                kind: "symbol" as const,
+                symbol,
+              })),
+          )),
+      ...cells.map((cell) => ({
+        key: `cell:${cell.childDocumentId}`,
+        kind: "cell" as const,
+        symbol: cell.symbol,
+        childDocumentId: cell.childDocumentId,
+        cellName: cell.cellName,
+      })),
+    ],
+    [cellOnly, cells, recentSymbolIds, styleProfileId],
   );
   const [query, setQuery] = useState("");
   const [pickerOpen, setPickerOpen] = useState(true);
   const [selectedId, setSelectedId] = useState(
-    () => initialSymbols[0]?.id ?? null,
+    () => initialChoices[0]?.key ?? null,
   );
   const [parameterValues, setParameterValues] = useState<
     Record<string, string>
@@ -97,65 +129,114 @@ export function InsertComponentDialog({
   const [referenceText, setReferenceText] = useState("");
   const [showValue, setShowValue] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const groups = useMemo(
-    () => componentCatalog(styleProfileId, query, recentSymbolIds),
-    [query, recentSymbolIds, styleProfileId],
+  const groups = useMemo<
+    { category: string; choices: InsertChoice[] }[]
+  >(() => {
+    const cellChoices = cells
+      .filter((cell) => {
+        const normalized = query.trim().toLowerCase();
+        return (
+          normalized.length === 0 ||
+          `${cell.cellName} ${cell.symbol.id}`
+            .toLowerCase()
+            .includes(normalized)
+        );
+      })
+      .map<InsertChoice>((cell) => ({
+        key: `cell:${cell.childDocumentId}`,
+        kind: "cell",
+        symbol: cell.symbol,
+        childDocumentId: cell.childDocumentId,
+        cellName: cell.cellName,
+      }));
+    return [
+      ...(cellOnly
+        ? []
+        : componentCatalog(styleProfileId, query, recentSymbolIds).map(
+            (group) => ({
+              category: group.category,
+              choices: group.symbols.map<InsertChoice>((symbol) => ({
+                key: symbol.id,
+                kind: "symbol",
+                symbol,
+              })),
+            }),
+          )),
+      ...(cellChoices.length > 0
+        ? [{ category: "Cells", choices: cellChoices }]
+        : []),
+    ];
+  }, [cellOnly, cells, query, recentSymbolIds, styleProfileId]);
+  const choices = useMemo(
+    () => groups.flatMap((group) => group.choices),
+    [groups],
   );
-  const symbols = useMemo(() => flattenComponentCatalog(groups), [groups]);
   const selected =
-    symbols.find((symbol) => symbol.id === selectedId) ?? symbols[0] ?? null;
-  const selectedIsVddRail = selected?.id === "vdd";
-  const parameters = componentParameters(selected?.id ?? "");
+    choices.find((choice) => choice.key === selectedId) ?? choices[0] ?? null;
+  const selectedIsVddRail =
+    selected?.kind === "symbol" && selected.symbol.id === "vdd";
+  const parameters = componentParameters(
+    selected?.kind === "symbol" ? selected.symbol.id : "",
+  );
   const valueDisplay = displayableInstanceValue({
-    symbolId: selected?.id ?? "",
+    symbolId: selected?.kind === "symbol" ? selected.symbol.id : "",
     properties: Object.fromEntries(
       Object.entries(parameterValues)
         .map(([key, value]) => [key, value.trim()] as const)
         .filter(([, value]) => value !== ""),
     ),
   });
-  const valueAvailable = valueDisplay.kind === "displayable";
+  const valueAvailable =
+    selected?.kind === "cell" || valueDisplay.kind === "displayable";
 
   useEffect(() => {
     if (!open) return;
     setQuery("");
     setPickerOpen(true);
-    setSelectedId(initialSymbols[0]?.id ?? null);
+    setSelectedId(initialChoices[0]?.key ?? null);
     setInitialRotation(0);
     setShowReference(true);
     setReferenceText("");
     setShowValue(false);
     const frame = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(frame);
-  }, [initialSymbols, open]);
+  }, [initialChoices, open]);
 
   useEffect(() => {
-    setParameterValues(initialComponentParameterValues(selected?.id ?? ""));
-  }, [selected?.id]);
+    setParameterValues(
+      initialComponentParameterValues(
+        selected?.kind === "symbol" ? selected.symbol.id : "",
+      ),
+    );
+  }, [selected]);
 
   useEffect(() => {
-    if (symbols.length === 0) {
+    if (selected?.kind === "cell") setShowValue(true);
+  }, [selected?.kind]);
+
+  useEffect(() => {
+    if (choices.length === 0) {
       setSelectedId(null);
-    } else if (!symbols.some((symbol) => symbol.id === selectedId)) {
-      setSelectedId(symbols[0]!.id);
+    } else if (!choices.some((choice) => choice.key === selectedId)) {
+      setSelectedId(choices[0]!.key);
     }
-  }, [selectedId, symbols]);
+  }, [choices, selectedId]);
 
   if (!open) return null;
 
   const selectOffset = (offset: number): void => {
-    if (symbols.length === 0) return;
+    if (choices.length === 0) return;
     const index = Math.max(
       0,
-      symbols.findIndex((symbol) => symbol.id === selected?.id),
+      choices.findIndex((choice) => choice.key === selected?.key),
     );
-    const next = (index + offset + symbols.length) % symbols.length;
-    setSelectedId(symbols[next]!.id);
+    const next = (index + offset + choices.length) % choices.length;
+    setSelectedId(choices[next]!.key);
     setPickerOpen(true);
   };
 
-  const selectSymbol = (symbolId: string): void => {
-    setSelectedId(symbolId);
+  const selectChoice = (key: string): void => {
+    setSelectedId(key);
     setQuery("");
     setPickerOpen(false);
   };
@@ -177,6 +258,21 @@ export function InsertComponentDialog({
       });
       return;
     }
+    if (selected.kind === "cell") {
+      onApply({
+        kind: "cell",
+        symbolId: selected.symbol.id,
+        symbolName: selected.cellName ?? selected.symbol.name,
+        childDocumentId: selected.childDocumentId!,
+        cellName: selected.cellName ?? selected.symbol.name,
+        properties: {},
+        initialRotation,
+        showReference,
+        referenceText: referenceText.trim() || null,
+        showValue: true,
+      });
+      return;
+    }
     const properties = Object.fromEntries(
       Object.entries(parameterValues)
         .map(([key, value]) => [key, value.trim()] as const)
@@ -185,8 +281,8 @@ export function InsertComponentDialog({
     const trimmedReference = referenceText.trim();
     onApply({
       kind: "symbol",
-      symbolId: selected.id,
-      symbolName: selected.name,
+      symbolId: selected.symbol.id,
+      symbolName: selected.symbol.name,
       properties,
       initialRotation,
       showReference,
@@ -238,11 +334,11 @@ export function InsertComponentDialog({
           } else if (event.key === "Home") {
             event.preventDefault();
             setPickerOpen(true);
-            setSelectedId(symbols[0]?.id ?? null);
+            setSelectedId(choices[0]?.key ?? null);
           } else if (event.key === "End") {
             event.preventDefault();
             setPickerOpen(true);
-            setSelectedId(symbols.at(-1)?.id ?? null);
+            setSelectedId(choices.at(-1)?.key ?? null);
           }
         }}
       >
@@ -269,13 +365,13 @@ export function InsertComponentDialog({
                     aria-controls="insert-component-options"
                     aria-activedescendant={
                       selected
-                        ? `insert-component-option-${selected.id}`
+                        ? `insert-component-option-${selected.key}`
                         : undefined
                     }
                     value={query}
                     placeholder={
                       selected
-                        ? `${selected.name} · ${selected.id}`
+                        ? `${selected.cellName ?? selected.symbol.name} · ${selected.symbol.id}`
                         : "Search component"
                     }
                     onChange={(event) => {
@@ -311,23 +407,29 @@ export function InsertComponentDialog({
                       className="insert-option-group"
                     >
                       <h3>{group.category}</h3>
-                      {group.symbols.map((symbol) => (
+                      {group.choices.map((choice) => (
                         <button
                           type="button"
-                          id={`insert-component-option-${symbol.id}`}
-                          key={symbol.id}
+                          id={`insert-component-option-${choice.key}`}
+                          key={choice.key}
                           role="option"
-                          aria-selected={symbol.id === selected?.id}
-                          data-testid={`insert-component-${symbol.id}`}
-                          onClick={() => selectSymbol(symbol.id)}
+                          aria-selected={choice.key === selected?.key}
+                          data-testid={
+                            choice.kind === "cell"
+                              ? `insert-cell-${choice.childDocumentId}`
+                              : `insert-component-${choice.symbol.id}`
+                          }
+                          onClick={() => selectChoice(choice.key)}
                         >
-                          <span>{symbol.name}</span>
-                          <small>{symbol.id}</small>
+                          <span>{choice.cellName ?? choice.symbol.name}</span>
+                          <small>
+                            {choice.kind === "cell" ? "Cell" : choice.symbol.id}
+                          </small>
                         </button>
                       ))}
                     </section>
                   ))}
-                  {symbols.length === 0 ? (
+                  {choices.length === 0 ? (
                     <p className="insert-no-results">No matching components</p>
                   ) : null}
                 </div>
@@ -427,13 +529,15 @@ export function InsertComponentDialog({
             {selected ? (
               <>
                 <SymbolArtwork
-                  symbol={selected}
+                  symbol={selected.symbol}
                   className="insert-symbol-artwork"
                   rotation={initialRotation}
                 />
                 <div>
-                  <h3>{selected.name}</h3>
-                  <p>{selected.id}</p>
+                  <h3>{selected.cellName ?? selected.symbol.name}</h3>
+                  <p>
+                    {selected.kind === "cell" ? "Cell" : selected.symbol.id}
+                  </p>
                 </div>
               </>
             ) : (

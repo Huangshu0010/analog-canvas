@@ -2,7 +2,7 @@
 
 Status: `proposed`
 
-Baseline: Project schema 12 and [ADR 0025](../adr/0025-schematic-hierarchy-and-formal-ports.md)
+Baseline: Project schema 13 and [ADR 0025](../adr/0025-schematic-hierarchy-and-formal-ports.md)
 
 ## Objective
 
@@ -17,26 +17,16 @@ This plan deliberately does not add generic Cell/View/Layout containers, an
 arbitrary symbol drawing editor, instance-local pin geometry, or a second edit
 or rendering protocol.
 
-## Current gaps on main
+## Remaining gaps
 
 The schema-12 electrical and lifecycle foundation is sound, but the first UI
 and generated block are still scaffolding:
 
-- **Place Cell** prompts for a name and immediately inserts at view center. It
-  bypasses the existing cursor preview, snap, rotate, mirror, cancel, default
-  reference annotation, and value annotation workflow.
 - Creating a formal port requires three separate concepts: place an ordinary
   Port, connect it, then expose it. That is useful as an advanced conversion
   path, but too indirect as the primary workflow.
 - Cell lifecycle actions are distributed across a toolbar. A referenced delete
   reports rejection but does not first show callers or provide a jump path.
-- A hierarchy body has a fixed width, height reacts only to pin count, and
-  terminals are split mechanically between west and east. Direction, label
-  length, and user intent do not affect layout.
-- Pin names use the shared text renderer and the body uses the active style
-  profile, but the generated spacing and label organization are not calibrated
-  to that visual grammar. A placed Cell also lacks the ordinary `Xn` and value
-  annotations created by the component placement path.
 - Rectangle conversion correctly commits an Instance rather than a drafting
   object, but its existence can make the rectangle tool appear to be the Cell
   creation mechanism. It must remain only an optional drafting shortcut.
@@ -173,18 +163,18 @@ hierarchy planners.
 
 High-level planners compose user intent from existing edits:
 
-| User intent | Shared planner result |
-|---|---|
-| Create Cell | `add_document` |
-| Rename Cell | child metadata edits plus caller binding/symbol reconciliation in one Project transaction |
-| Place Cell | `transact_document` containing `add_instance` and annotation upserts |
-| Add Cell Port on an existing Net | ordinary Port `add_instance`, connect pin `P`, then `add_cell_terminal` |
-| Add Cell Port in empty space | ordinary Port `add_instance`, create/connect one local Net, then `add_cell_terminal` |
-| Adopt selected Port | existing expose planner |
-| Rename/change direction/reorder port | existing terminal edits and caller reconciliation where required |
-| Move a block pin | `set_cell_symbol_presentation` through a Project planner |
-| Delete Cell port | existing reference-aware remove planner |
-| Delete Cell | `remove_document` after caller check |
+| User intent                          | Shared planner result                                                                     |
+| ------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Create Cell                          | `add_document`                                                                            |
+| Rename Cell                          | child metadata edits plus caller binding/symbol reconciliation in one Project transaction |
+| Place Cell                           | `transact_document` containing `add_instance` and annotation upserts                      |
+| Add Cell Port on an existing Net     | ordinary Port `add_instance`, connect pin `P`, then `add_cell_terminal`                   |
+| Add Cell Port in empty space         | ordinary Port `add_instance`, create/connect one local Net, then `add_cell_terminal`      |
+| Adopt selected Port                  | existing expose planner                                                                   |
+| Rename/change direction/reorder port | existing terminal edits and caller reconciliation where required                          |
+| Move a block pin                     | `set_cell_symbol_presentation` through a Project planner                                  |
+| Delete Cell port                     | existing reference-aware remove planner                                                   |
+| Delete Cell                          | `remove_document` after caller check                                                      |
 
 Geometry changes move resolved terminal points but do not add a Route endpoint
 kind. Generalize the existing instance route-follow calculation so the Project
@@ -271,7 +261,7 @@ keyboard-accessible exact control. There are no per-instance pin overrides.
 
 ## Work packages
 
-### H1 — Schema 13 and adaptive derived symbol
+### H1 — Schema 13 and adaptive derived symbol (completed)
 
 - **Goal:** persist the minimum presentation intent and derive stable geometry.
 - **Main modules:** `packages/model`, `packages/project-protocol`,
@@ -285,7 +275,7 @@ keyboard-accessible exact control. There are no per-instance pin overrides.
   resolver terminal coordinates; connected caller route-follow; save/reopen;
   Agent edit parity and generated-artifact checks.
 
-### H2 — Unified Cell placement and annotations
+### H2 — Unified Cell placement and annotations (completed)
 
 - **Goal:** make Cell placement behave like ordinary component placement.
 - **Main modules:** editor insert dialog, pending placement controller,
