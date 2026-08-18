@@ -3155,8 +3155,8 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   scenarios), typecheck, docs check, test-impact, diff check, and
   `pnpm verify:branch` passed (144 unit files / 880 tests, workspace build,
   production smoke).
-- Commit status: pending `feat(editor): place Cells through shared component placement`
-  on `codex/hierarchy-authoring-visual-plan`.
+- Commit status: included in `c38b807` on
+  `codex/hierarchy-authoring-visual-plan`.
 
 ## 2026-08-18 - Hierarchy authoring and visual H3
 
@@ -3167,7 +3167,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   Playwright (3 scenarios), typecheck, docs check, test-impact, diff check,
   and `pnpm verify:branch` passed (144 unit files / 880 tests, workspace
   build, production smoke).
-- Commit status: pending `feat(hierarchy): add direct Cell Port authoring` on
+- Commit status: included in `fd9469e` on
   `codex/hierarchy-authoring-visual-plan`.
 
 ## 2026-08-18 - Hierarchy authoring and visual H4
@@ -3179,7 +3179,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   Playwright (4 scenarios), typecheck, docs check, test-impact, diff check,
   and `pnpm verify:branch` passed (144 unit files / 881 tests, workspace
   build, production smoke).
-- Commit status: pending `feat(hierarchy): add caller-aware Cell Manager` on
+- Commit status: included in `b5ae3db` on
   `codex/hierarchy-authoring-visual-plan`.
 
 ## 2026-08-18 - Hierarchy authoring and visual H5
@@ -3191,5 +3191,5 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   Playwright (30 scenarios), typecheck, docs check, test-impact, diff check,
   and `pnpm verify:branch` passed (144 unit files / 882 tests, workspace
   build, production smoke).
-- Commit status: pending `test(hierarchy): close authoring and visual acceptance`
-  on `codex/hierarchy-authoring-visual-plan`.
+- Commit status: included in `3760374` on
+  `codex/hierarchy-authoring-visual-plan`.

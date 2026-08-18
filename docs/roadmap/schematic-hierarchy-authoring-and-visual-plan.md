@@ -1,6 +1,6 @@
 # Schematic hierarchy authoring and adaptive symbol plan
 
-Status: `proposed`
+Status: `accepted`
 
 Baseline: Project schema 13 and [ADR 0025](../adr/0025-schematic-hierarchy-and-formal-ports.md)
 
@@ -381,3 +381,11 @@ the normal GUI and Project save/reopen path; GUI and Agent mutations share the
 same typed edits; connected caller routes remain valid after definition-level
 pin movement; formal exports use the same resolved symbols; and no hierarchy
 code introduces a second placement, annotation, endpoint, or drawing model.
+
+## Delivery record
+
+H1–H5 are complete on `codex/hierarchy-authoring-visual-plan`: schema-13
+adaptive definition intent, shared Cell placement and annotations, direct Cell
+Port authoring/interface controls, caller-aware Cell lifecycle, and acceptance
+coverage all use the existing Project, Instance, Edit Engine, Symbol resolver,
+and shared SVG/RichText systems.
