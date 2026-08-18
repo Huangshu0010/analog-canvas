@@ -56,6 +56,7 @@ export function createEmptyProject(
       version: "1",
       hash: "razavi-reference-v1",
     },
+    structureRevision: 0,
     topDocumentId: documentId,
     documents: [createEmptyDocument(documentId, "Main")],
   });

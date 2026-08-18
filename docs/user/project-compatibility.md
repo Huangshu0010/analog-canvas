@@ -1,13 +1,15 @@
 # Project File Compatibility
 
-The released Project schema version is `11` (v10 added the `instance-value`
-annotation kind; v11 restores the RichText `fraction` run). A canonical v11
-file can be opened, saved, reopened, and saved again without byte drift.
-Schema v10 is accepted through one direct, lossless upgrade to v11. It does not
-remain a v10 Project in the editor: all subsequent edits can use v11 features,
-including RichText fractions, and the next save writes v11. The original file
-is never overwritten silently. Schema v9 and older, and versions newer than
-v11, are rejected; there is no accumulating migration registry.
+The released Project schema version is `12`. It adds schematic-only hierarchy
+integrity, a Project structural revision, and stable formal Cell ports bound to
+ordinary Port Instances. A canonical v12 file can be opened, saved, reopened,
+and saved again without byte drift.
+Schema v11 is accepted through one direct upgrade to v12. It does not remain a
+v11 Project in the editor: legacy formal terminal records are materialized as
+unplaced Port Instances connected to their existing Nets, and the next save
+writes v12. The original file is never overwritten silently. Schema v10 and
+older, and versions newer than
+v12, are rejected; there is no accumulating migration registry.
 
 The canonical-current corpus at
 [`fixtures/projects/compatibility-corpus.json`](../../fixtures/projects/compatibility-corpus.json)
@@ -19,7 +21,7 @@ Retired fields such as first-class
 
 An incompatible Project is rejected before it can replace the current browser
 Project. Conversion, when needed, is an explicit external operation that must
-produce and validate a complete v11 candidate before a human chooses to load it.
+produce and validate a complete v12 candidate before a human chooses to load it.
 
 The editor never silently merges duplicate canonical Ground (`0`) or VDD Nets.
 Duplicate folded Net names are invalid and remain diagnostics until the author

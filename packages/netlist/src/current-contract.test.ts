@@ -35,19 +35,45 @@ function resistorProject(parameters: Record<string, string>) {
 }
 
 describe("current formal cell interface", () => {
-  it("maps private cell terminals to Nets without canvas Port objects", () => {
+  it("maps formal Cell Port Instances to the ordered exported interface", () => {
     const project = createEmptyProject("project", "Project");
     const document = project.documents[0]!;
     document.netlist = {
       name: "inverter",
       terminals: [
-        { name: "VIN", netId: "net-in" },
-        { name: "VOUT", netId: "net-out" },
+        {
+          id: "cell-terminal-in",
+          name: "VIN",
+          netId: "net-in",
+          direction: "input",
+          interfaceInstanceId: "P1",
+        },
+        {
+          id: "cell-terminal-out",
+          name: "VOUT",
+          netId: "net-out",
+          direction: "output",
+          interfaceInstanceId: "P2",
+        },
       ],
     };
+    document.instances.push(
+      { id: "P1", symbolId: "port", placement: null, properties: {} },
+      { id: "P2", symbolId: "port", placement: null, properties: {} },
+    );
     document.nets.push(
-      { id: "net-in", name: "VIN", scope: "local", terminals: [] },
-      { id: "net-out", name: "VOUT", scope: "local", terminals: [] },
+      {
+        id: "net-in",
+        name: "VIN",
+        scope: "local",
+        terminals: [{ instanceId: "P1", pinName: "P" }],
+      },
+      {
+        id: "net-out",
+        name: "VOUT",
+        scope: "local",
+        terminals: [{ instanceId: "P2", pinName: "P" }],
+      },
     );
 
     const result = extractDesignNetlist(project);

@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 11 and has
+geometric, and presentation facts. The current model is strict schema 12 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -35,8 +35,9 @@ migration. Invalid coordinates are rejected with their data path.
   endpoints only.
 - `Junction` owns explicit branch/anchor geometry.
 - `NoConnect` targets one terminal only and cannot overlap Net membership.
-- `Document.netlist.terminals` is a private ordered mapping from formal
-  cell-terminal names to Net IDs for structural export.
+- `Document.netlist.terminals` is the ordered formal Cell interface. Each
+  terminal has a stable ID, name, direction, Net ID, and an
+  `interfaceInstanceId` that points to its ordinary canvas Port Instance.
 
 Canvas interface markers `port` and `port-filled` are ordinary single-pin
 Instances with pin `P`; their electrical membership and Route endpoints are
@@ -98,7 +99,10 @@ objects are visual-only and cannot create connectivity.
   its waypoints.
 - Net membership and NoConnect are mutually exclusive.
 - Layout groups and constraints reference existing objects.
-- Netlist interfaces reference existing Nets with unique ordered names.
+- Netlist interfaces reference existing Nets and connected Port Instances with
+  unique stable IDs, ordered names, and marker bindings.
+- Subcircuit bindings reference existing child Documents, use that child's
+  Cell name and formal pin set, and cannot form hierarchy cycles.
 - Imported netlist facts and provenance are typed; retired `spice.*`
   properties are invalid.
 - `electricalTopologyHash` includes Instances, Nets, terminal membership,
@@ -107,6 +111,11 @@ objects are visual-only and cannot create connectivity.
 
 Mutation occurs only through atomic Edit Engine transactions against an exact
 Document revision. GUI and Agent writes use the same schema and invariants.
-Persistence writes only schema 11. `packages/project-protocol` accepts schema
-10 through the bounded direct upgrade defined by ADR 0023, then supplies the
+Formal-interface edits and add/remove Document operations are composed with
+ordinary Schematic edits inside one Project structural transaction. The
+Project's `structureRevision` protects this cross-Document boundary and the
+editor records it as one undoable structural commit.
+
+Persistence writes only schema 12. `packages/project-protocol` accepts schema
+11 through the bounded direct upgrade defined by ADR 0025, then supplies the
 current model only; no compatibility shape enters `packages/model`.

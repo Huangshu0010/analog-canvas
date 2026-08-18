@@ -270,6 +270,7 @@ function importDocument(
   modelTypeByName: ReadonlyMap<string, string>,
   symbolMappings: readonly PdkSymbolMappingOverride[],
 ): SchematicDocument {
+  const documentId = deriveStableId("document", cell.name.toLowerCase());
   const visibleInstances = cell.instances.filter((instance) => {
     if (instance.terminals.length > 0) return true;
     diagnostics.push(
@@ -312,8 +313,31 @@ function importDocument(
           })),
       ),
   }));
+  const formalTerminals = cell.ports.map((port, index) => {
+    const interfaceInstanceId = deriveStableId(
+      "cell-port",
+      documentId,
+      String(index),
+      port.name,
+    );
+    instances.push({
+      id: interfaceInstanceId,
+      symbolId: "port",
+      placement: null,
+      properties: {},
+    });
+    const net = nets.find((candidate) => candidate.id === port.netId);
+    net?.terminals.push({ instanceId: interfaceInstanceId, pinName: "P" });
+    return {
+      id: deriveStableId("cell-terminal", documentId, String(index), port.name),
+      name: port.name,
+      netId: port.netId,
+      direction: "passive" as const,
+      interfaceInstanceId,
+    };
+  });
   return {
-    id: deriveStableId("document", cell.name.toLowerCase()),
+    id: documentId,
     name: cell.name,
     revision: 0,
     sourceBinding: { cellName: cell.name, sourceRef: cell.sourceRef },
@@ -321,10 +345,7 @@ function importDocument(
     flightlineGuidance: "active",
     netlist: {
       name: cell.name,
-      terminals: cell.ports.map((port) => ({
-        name: port.name,
-        netId: port.netId,
-      })),
+      terminals: formalTerminals,
     },
     instances,
     nets,
@@ -448,6 +469,7 @@ export function importCircuitIR(
       version: "1",
       hash: "razavi-reference-v1",
     },
+    structureRevision: 0,
     topDocumentId: topDocument.id,
     documents,
   });

@@ -518,7 +518,7 @@ test("authors components and connectivity manually from an empty canvas", async 
   page,
 }) => {
   await page.goto("/");
-  await expect(page.getByTestId("cell-navigation")).toHaveCount(0);
+  await expect(page.getByTestId("cell-navigation")).toBeVisible();
   await expect(page.getByTestId("revision")).toHaveText("0");
 
   await placeComponent(page, "resistor", { x: 340, y: 220 });

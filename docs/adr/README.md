@@ -46,6 +46,9 @@ current-only compatibility clause, is
 The independent current-device registry and Project compatibility-boundary
 decision is
 [`0024-device-protocol-and-compatibility-boundaries.md`](0024-device-protocol-and-compatibility-boundaries.md).
+The schematic-only hierarchy, formal Cell Port, structural transaction, and
+schema-12 decision is
+[`0025-schematic-hierarchy-and-formal-ports.md`](0025-schematic-hierarchy-and-formal-ports.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

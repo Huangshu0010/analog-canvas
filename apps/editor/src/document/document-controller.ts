@@ -1,9 +1,16 @@
 import { useRef, useState } from "react";
 
-import { DocumentHistory, rejectTransaction } from "@icm/edit-engine";
+import {
+  DEFAULT_DOCUMENT_HISTORY_LIMIT,
+  DocumentHistory,
+  executeProjectTransaction,
+  rejectTransaction,
+} from "@icm/edit-engine";
 import type {
   EditActor,
   EditTransactionResult,
+  ProjectTransaction,
+  ProjectTransactionResult,
   SchematicEdit,
 } from "@icm/edit-engine";
 import { CircuitProjectSchema } from "@icm/model";
@@ -53,6 +60,14 @@ export class EditorDocumentController {
   private resolverValue: ProjectSymbolResolver;
   private historyValue: DocumentHistory;
   private histories: Map<string, DocumentHistory>;
+  private readonly projectUndoStack: Array<{
+    project: CircuitProject;
+    activeDocumentId: string;
+  }> = [];
+  private readonly projectRedoStack: Array<{
+    project: CircuitProject;
+    activeDocumentId: string;
+  }> = [];
   private transactionCounter = 0;
   private projectSessionCounter = 1;
 
@@ -92,11 +107,11 @@ export class EditorDocumentController {
   }
 
   get canUndo(): boolean {
-    return this.historyValue.canUndo;
+    return this.historyValue.canUndo || this.projectUndoStack.length > 0;
   }
 
   get canRedo(): boolean {
-    return this.historyValue.canRedo;
+    return this.historyValue.canRedo || this.projectRedoStack.length > 0;
   }
 
   get transactionsIssued(): number {
@@ -153,6 +168,8 @@ export class EditorDocumentController {
       symbolResolver: this.resolverValue,
     });
     this.histories = new Map([[document.id, this.historyValue]]);
+    this.projectUndoStack.length = 0;
+    this.projectRedoStack.length = 0;
     return document;
   }
 
@@ -179,6 +196,19 @@ export class EditorDocumentController {
         `Document ${activeDocumentId} is not present in the Project`,
       );
     }
+    if (parsed.structureRevision !== this.projectValue.structureRevision + 1) {
+      throw new Error(
+        `Structural commit must advance Project revision ${this.projectValue.structureRevision} to ${this.projectValue.structureRevision + 1}`,
+      );
+    }
+    this.projectUndoStack.push({
+      project: this.projectValue,
+      activeDocumentId: this.activeDocumentIdValue,
+    });
+    if (this.projectUndoStack.length > DEFAULT_DOCUMENT_HISTORY_LIMIT) {
+      this.projectUndoStack.shift();
+    }
+    this.projectRedoStack.length = 0;
     this.projectValue = parsed;
     this.activeDocumentIdValue = activeDocumentId;
     this.resolverValue = createProjectSymbolResolver(
@@ -189,8 +219,30 @@ export class EditorDocumentController {
     return this.document;
   }
 
+  dispatchProjectTransaction(
+    request: ProjectTransaction,
+    activeDocumentId = this.activeDocumentIdValue,
+  ): ProjectTransactionResult {
+    const result = executeProjectTransaction(this.projectValue, request);
+    if (result.ok && result.applied) {
+      this.commitProjectStructure(result.project, activeDocumentId);
+    }
+    return result;
+  }
+
   transact(edits: readonly SchematicEdit[]): EditTransactionResult {
     this.transactionCounter += 1;
+    if (
+      edits.length === 1 &&
+      (edits[0]?.kind === "undo" || edits[0]?.kind === "redo")
+    ) {
+      const kind = edits[0].kind;
+      const documentHistoryAvailable =
+        kind === "undo" ? this.historyValue.canUndo : this.historyValue.canRedo;
+      if (!documentHistoryAvailable) {
+        return this.restoreProjectHistory(kind);
+      }
+    }
     return this.dispatchTransaction({
       transactionId: `transaction-ui-${this.transactionCounter}`,
       documentId: this.activeDocumentIdValue,
@@ -218,6 +270,21 @@ export class EditorDocumentController {
   dispatchTransaction(
     request: EditorTransactionRequest,
   ): EditTransactionResult {
+    if (
+      request.edits.some(
+        (edit) =>
+          edit.kind === "add_cell_terminal" ||
+          edit.kind === "update_cell_terminal" ||
+          edit.kind === "remove_cell_terminal" ||
+          edit.kind === "reorder_cell_terminals",
+      )
+    ) {
+      return rejectTransaction(
+        this.document,
+        "EDIT_PRECONDITION",
+        "Cell interface edits require a Project structural transaction",
+      );
+    }
     const history = this.historyForDocument(request.documentId);
     if (!history) {
       return rejectTransaction(
@@ -250,6 +317,13 @@ export class EditorDocumentController {
           this.projectValue,
           builtInSymbols,
         );
+        if (
+          !request.edits.some(
+            (edit) => edit.kind === "undo" || edit.kind === "redo",
+          )
+        ) {
+          this.projectRedoStack.length = 0;
+        }
       } catch (error) {
         this.projectValue = previousProject;
         this.resetHistoriesFromProject();
@@ -263,6 +337,70 @@ export class EditorDocumentController {
       }
     }
     return result;
+  }
+
+  private restoreProjectHistory(kind: "undo" | "redo"): EditTransactionResult {
+    const sourceStack =
+      kind === "undo" ? this.projectUndoStack : this.projectRedoStack;
+    const destinationStack =
+      kind === "undo" ? this.projectRedoStack : this.projectUndoStack;
+    const target = sourceStack.at(-1);
+    if (!target) {
+      return rejectTransaction(
+        this.document,
+        "HISTORY_EMPTY",
+        `No ${kind} state is available`,
+      );
+    }
+
+    const before = this.projectValue;
+    const currentById = new Map(
+      before.documents.map((document) => [document.id, document]),
+    );
+    const restored = CircuitProjectSchema.parse({
+      ...structuredClone(target.project),
+      structureRevision: before.structureRevision + 1,
+      documents: target.project.documents.map((document) => {
+        const current = currentById.get(document.id);
+        return current
+          ? { ...structuredClone(document), revision: current.revision + 1 }
+          : structuredClone(document);
+      }),
+    });
+    sourceStack.pop();
+    destinationStack.push({
+      project: before,
+      activeDocumentId: this.activeDocumentIdValue,
+    });
+    if (destinationStack.length > DEFAULT_DOCUMENT_HISTORY_LIMIT) {
+      destinationStack.shift();
+    }
+    this.projectValue = restored;
+    this.activeDocumentIdValue = restored.documents.some(
+      (document) => document.id === target.activeDocumentId,
+    )
+      ? target.activeDocumentId
+      : restored.topDocumentId;
+    this.resolverValue = createProjectSymbolResolver(restored, builtInSymbols);
+    this.resetHistoriesFromProject();
+    const document = this.document;
+    return {
+      ok: true,
+      applied: true,
+      revision: document.revision,
+      proposedRevision: document.revision,
+      document,
+      diff: {
+        documentId: document.id,
+        fromRevision:
+          before.documents.find((candidate) => candidate.id === document.id)
+            ?.revision ?? document.revision,
+        toRevision: document.revision,
+        editKinds: [kind],
+        changedObjectIds: [],
+      },
+      diagnostics: [],
+    };
   }
 
   /**
@@ -349,6 +487,20 @@ export function useDocumentController(
     },
     dispatchTransaction: (request: EditorTransactionRequest) => {
       const result = controller.dispatchTransaction(request);
+      if (result.ok && result.applied) {
+        synchronize();
+        onCommittedRef.current(controller.project);
+      }
+      return result;
+    },
+    dispatchProjectTransaction: (
+      request: ProjectTransaction,
+      activeDocumentId?: string,
+    ) => {
+      const result = controller.dispatchProjectTransaction(
+        request,
+        activeDocumentId,
+      );
       if (result.ok && result.applied) {
         synchronize();
         onCommittedRef.current(controller.project);

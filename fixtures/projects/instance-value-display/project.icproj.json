@@ -1045,13 +1045,14 @@
   ],
   "id": "instance-value-display",
   "name": "Instance Value Display",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "source": {
     "dialect": "none",
     "entry": null,
     "files": [],
     "sourcePolicy": "copy"
   },
+  "structureRevision": 0,
   "symbolLibrary": {
     "hash": "razavi-reference-v1",
     "id": "razavi-symbols",

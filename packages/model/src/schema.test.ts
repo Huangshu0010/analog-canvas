@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createEmptyProject } from "./factories.js";
+import { createEmptyDocument, createEmptyProject } from "./factories.js";
 import {
   AnnotationSchema,
   CircuitProjectJsonSchema,
@@ -54,6 +54,97 @@ describe("CircuitProject schema", () => {
         topDocumentId: "document-missing",
       }),
     ).toThrow(/Unknown top document/);
+  });
+
+  it("requires every hierarchy target to exist and rejects cycles", () => {
+    const project = createEmptyProject("project-hierarchy", "Hierarchy");
+    const parent = project.documents[0]!;
+    const child = createEmptyDocument("document-child", "Child");
+    project.documents.push(child);
+    parent.instances.push({
+      id: "X1",
+      symbolId: "hierarchical-child",
+      placement: null,
+      properties: {},
+      netlist: {
+        reference: "X1",
+        parameters: {},
+        binding: {
+          kind: "subcircuit",
+          name: "Child",
+          childDocumentId: child.id,
+        },
+      },
+    });
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+
+    parent.nets.push({
+      id: "net-parent",
+      scope: "local",
+      terminals: [{ instanceId: "X1", pinName: "MISSING" }],
+    });
+    expect(() => CircuitProjectSchema.parse(project)).toThrow(
+      /unknown child terminal MISSING/,
+    );
+    parent.nets = [];
+
+    child.instances.push({
+      id: "XBACK",
+      symbolId: "hierarchical-main",
+      placement: null,
+      properties: {},
+      netlist: {
+        reference: "XBACK",
+        parameters: {},
+        binding: {
+          kind: "subcircuit",
+          name: "Main",
+          childDocumentId: parent.id,
+        },
+      },
+    });
+    expect(() => CircuitProjectSchema.parse(project)).toThrow(
+      /Hierarchy cycle/,
+    );
+
+    child.instances[0]!.netlist!.binding = {
+      kind: "subcircuit",
+      name: "Missing",
+      childDocumentId: "document-missing",
+    };
+    expect(() => CircuitProjectSchema.parse(project)).toThrow(
+      /unknown Document/,
+    );
+  });
+
+  it("binds a formal Cell terminal to an ordinary Port Instance and Net", () => {
+    const project = createEmptyProject("project-port", "Formal port");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      placement: { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-input",
+      name: "VIN",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    document.netlist!.terminals.push({
+      id: "cell-terminal-vin",
+      name: "VIN",
+      netId: "net-input",
+      direction: "input",
+      interfaceInstanceId: "P1",
+    });
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+
+    document.nets[0]!.terminals = [];
+    expect(() => CircuitProjectSchema.parse(project)).toThrow(
+      /is not connected to Net/,
+    );
   });
 
   it("rejects every removed first-class Port shape", () => {

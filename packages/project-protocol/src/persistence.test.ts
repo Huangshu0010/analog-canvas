@@ -70,14 +70,15 @@ describe("Project persistence", () => {
     }
   });
 
-  it("directly upgrades schema 10 and reports its source version", () => {
+  it("directly upgrades schema 11 and reports its source version", () => {
     const project = createEmptyProject("project-test", "Test Project");
     const source = {
       ...JSON.parse(serializeProject(project)),
-      schemaVersion: 10,
+      schemaVersion: 11,
+      structureRevision: undefined,
     };
     source.documents[0].annotations.push({
-      id: "plain-v10-value",
+      id: "plain-v11-value",
       kind: "instance-value",
       content: { runs: [{ kind: "text", value: "20u/1u" }] },
       anchor: { kind: "free", position: { x: 0, y: 0 } },
@@ -88,19 +89,24 @@ describe("Project persistence", () => {
     const parsed = parseProjectWithMetadata(JSON.stringify(source));
 
     expect(parsed).toMatchObject({
-      sourceSchemaVersion: 10,
+      sourceSchemaVersion: 11,
       migrated: true,
-      project: { schemaVersion: 11 },
+      project: { schemaVersion: 12, structureRevision: 0 },
     });
-    expect({ ...parsed.project, schemaVersion: 10 }).toEqual(source);
+    expect({
+      ...parsed.project,
+      schemaVersion: 11,
+      structureRevision: undefined,
+    }).toEqual(source);
   });
 
-  it("lets an upgraded schema-10 Project author and persist a schema-11 fraction", () => {
+  it("lets an upgraded schema-11 Project author and persist schema-12 content", () => {
     const source = {
       ...JSON.parse(
         serializeProject(createEmptyProject("project-test", "Test Project")),
       ),
-      schemaVersion: 10,
+      schemaVersion: 11,
+      structureRevision: undefined,
     };
     const project = parseProject(JSON.stringify(source));
     project.documents[0]!.annotations.push({
@@ -122,7 +128,7 @@ describe("Project persistence", () => {
     });
 
     const reopened = parseProject(serializeProject(project));
-    expect(reopened.schemaVersion).toBe(11);
+    expect(reopened.schemaVersion).toBe(12);
     expect(
       reopened.documents[0]!.annotations[0]?.content.runs[0],
     ).toMatchObject({
@@ -136,9 +142,50 @@ describe("Project persistence", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/must be 10 or 11/);
+    ).toThrow(/must be 11 or 12/);
     expect(() =>
-      parseProject(JSON.stringify({ ...project, schemaVersion: 9 })),
-    ).toThrow(/must be 10 or 11/);
+      parseProject(JSON.stringify({ ...project, schemaVersion: 10 })),
+    ).toThrow(/must be 11 or 12/);
+  });
+
+  it("materializes each schema-11 formal terminal as a stable Port Instance", () => {
+    const source = JSON.parse(
+      serializeProject(createEmptyProject("project-port", "Port migration")),
+    );
+    source.schemaVersion = 11;
+    delete source.structureRevision;
+    source.documents[0].nets.push({
+      id: "net-input",
+      name: "VIN",
+      scope: "local",
+      terminals: [],
+    });
+    source.documents[0].netlist.terminals.push({
+      name: "VIN",
+      netId: "net-input",
+    });
+
+    const migrated = parseProjectWithMetadata(JSON.stringify(source));
+    const document = migrated.project.documents[0]!;
+    const terminal = document.netlist!.terminals[0]!;
+    const marker = document.instances.find(
+      (instance) => instance.id === terminal.interfaceInstanceId,
+    );
+
+    expect(migrated).toMatchObject({
+      sourceSchemaVersion: 11,
+      migrated: true,
+    });
+    expect(terminal).toMatchObject({
+      name: "VIN",
+      netId: "net-input",
+      direction: "passive",
+    });
+    expect(terminal.id).toMatch(/^cell-terminal-/);
+    expect(marker).toMatchObject({ symbolId: "port", placement: null });
+    expect(document.nets[0]!.terminals).toContainEqual({
+      instanceId: terminal.interfaceInstanceId,
+      pinName: "P",
+    });
   });
 });

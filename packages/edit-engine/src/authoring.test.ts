@@ -309,13 +309,37 @@ describe("semantic authoring", () => {
 
   it("retargets formal cell-interface Nets when merging", () => {
     const document = createEmptyDocument("document-main", "Main");
+    document.instances.push(
+      { id: "P1", symbolId: "port", placement: null, properties: {} },
+      { id: "P2", symbolId: "port", placement: null, properties: {} },
+    );
     document.nets.push(
-      { id: "net-a", scope: "local", terminals: [] },
-      { id: "net-b", scope: "local", terminals: [] },
+      {
+        id: "net-a",
+        scope: "local",
+        terminals: [{ instanceId: "P1", pinName: "P" }],
+      },
+      {
+        id: "net-b",
+        scope: "local",
+        terminals: [{ instanceId: "P2", pinName: "P" }],
+      },
     );
     document.netlist!.terminals = [
-      { name: "IN", netId: "net-a" },
-      { name: "OUT", netId: "net-b" },
+      {
+        id: "cell-terminal-in",
+        name: "IN",
+        netId: "net-a",
+        direction: "input",
+        interfaceInstanceId: "P1",
+      },
+      {
+        id: "cell-terminal-out",
+        name: "OUT",
+        netId: "net-b",
+        direction: "output",
+        interfaceInstanceId: "P2",
+      },
     ];
 
     const result = executeTransaction(

@@ -602,11 +602,15 @@ function extractCell(
 
   const references = new Map<string, string>();
   const instances: DesignNetlistInstance[] = [];
+  const interfaceInstanceIds = new Set(
+    document.netlist.terminals.map((terminal) => terminal.interfaceInstanceId),
+  );
   for (const instance of [...document.instances].sort((a, b) => {
     const left = a.netlist?.reference ?? a.id;
     const right = b.netlist?.reference ?? b.id;
     return compareText(left, right) || a.id.localeCompare(b.id);
   })) {
+    if (interfaceInstanceIds.has(instance.id)) continue;
     const reference = instance.netlist?.reference;
     if (reference) {
       const folded = reference.toLowerCase();

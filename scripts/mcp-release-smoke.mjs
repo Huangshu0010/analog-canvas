@@ -53,6 +53,7 @@ function snapshot() {
     project: {
       id: "release-project",
       name: "Release Smoke",
+      structureRevision: 0,
       topDocumentId: "main",
       documents: [
         {

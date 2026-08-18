@@ -15,6 +15,12 @@ The insertion UI lists only exact reviewed Symbol IDs. Both `port` and
 starts the same placement state as any component; terminal `P` participates in
 ordinary snap, wire, move/stretch, selection, clipboard, and delete behavior.
 Placement creates an ordinary Instance and uses no Port-specific edit path.
+An author may then expose a connected Port Instance as a formal Cell terminal.
+That interface change uses the Project structural transaction, so the marker's
+ordinary Instance/Net behavior is preserved while every parent block observes
+one atomic interface revision. Rectangle-to-Cell is likewise a convenience
+gesture that commits an ordinary hierarchical Instance; rectangles remain
+visual-only drafting objects.
 
 Canonical `nmos`/`pmos` use the asset's `textbook-3terminal` visual variant by
 default while retaining D/G/S/B electrically. A manual MOS uses explicit B
@@ -198,8 +204,8 @@ no electrical meaning.
 Open, demo load, restore, and human-approved staged import replace the entire
 Project through one replacement boundary; they are not Edit Engine
 transactions. Replacement cancels pending recovery for the outgoing Project
-and terminates its Agent session. A complete schema-10 Project may be upgraded
-at the read boundary and then enters the editor only as schema-11; migrated
+and terminates its Agent session. A complete schema-11 Project may be upgraded
+at the read boundary and then enters the editor only as schema-12; migrated
 formal files are marked as needing save.
 
 Selection, viewport, active tool, previews, Agent tokens, and approval UI are

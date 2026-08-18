@@ -57,6 +57,8 @@ for readability; these groups do not create separate mutation endpoints:
 - Instance: `add_instance`, `remove_instance`, `set_instance_symbol`,
   `place_instance`, `move_instance`, `rotate_instance`, `mirror_instance`,
   `patch_instance_properties`, `set_instance_netlist`;
+- Cell interface: `add_cell_terminal`, `update_cell_terminal`,
+  `remove_cell_terminal`, `reorder_cell_terminals`;
 - Route/Junction/connectivity: `set_route_points`, `route_orthogonal`,
   `add_junction`, `attach_endpoint_to_route`, `remove_junction`,
   `move_junction`, `make_flightline`, `cut_connection`, `connect_endpoints`,
@@ -73,8 +75,11 @@ for readability; these groups do not create separate mutation endpoints:
 
 <!-- schematic-edit-kinds:end -->
 
-The Agent transaction schema is derived from this union, applies its scope
-restrictions, and excludes unsupported history kinds. Agent capability `wire`
+The Agent Document transaction schema is derived from this union, applies its
+scope restrictions, and excludes unsupported history kinds. Formal-interface
+edits are submitted inside `structureEdits`, which composes the same union with
+add/remove Document operations under one Project `structureRevision`. Agent
+capability `wire`
 advertises the mutually exclusive high-level `wireIntent` transaction form; it
 is not another `SchematicEdit` member.
 
@@ -108,7 +113,9 @@ Undo.
 
 ## Invariants
 
-- A transaction targets exactly one Document.
+- A Schematic transaction targets exactly one Document. A Project structural
+  transaction atomically composes ordered Schematic transactions with
+  add/remove Document operations and validates the complete final Project.
 - `expectedRevision` must equal the current revision.
 - The complete payload is schema-validated before application.
 - All edits apply or none apply.

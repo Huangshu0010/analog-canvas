@@ -12,12 +12,12 @@ validation win if this page drifts.
 
 The normal surface has four operations:
 
-| Operation      | Behavior                                                                      |
-| -------------- | ----------------------------------------------------------------------------- |
-| `capabilities` | Reports versions, permissions, edit kinds, and server-owned limits.           |
-| `snapshot`     | Returns one complete read-only Document plus a compact Project index.         |
-| `transact`     | Dry-runs or atomically commits generic typed edits against an exact revision. |
-| `render`       | Returns bounded base64 SVG in `formal` or `diagnostics` mode.                 |
+| Operation      | Behavior                                                                  |
+| -------------- | ------------------------------------------------------------------------- |
+| `capabilities` | Reports versions, permissions, edit kinds, and server-owned limits.       |
+| `snapshot`     | Returns one complete read-only Document plus a compact Project index.     |
+| `transact`     | Dry-runs or atomically commits typed Document or Project-structure edits. |
+| `render`       | Returns bounded base64 SVG in `formal` or `diagnostics` mode.             |
 
 The API intentionally has no dynamic catalog query, region,
 topology-classifier, layout-intent, compatibility, or circuit-specific edit
@@ -32,7 +32,9 @@ spatial diagnostics for a known revision.
 
 ## Typed transaction behavior
 
-- One transaction targets one Document and one `expectedRevision`.
+- Ordinary edits target one Document and one `expectedRevision`.
+- Cell/interface edits use `structureEdits`, `expectedStructureRevision`, and
+  exact revisions on nested `transact_document` entries.
 - All edits apply or none apply.
 - A dry run performs the same validation but does not advance revision.
 - A successful commit advances revision once.
@@ -85,13 +87,13 @@ placement, or reroutes around a conflict.
 
 ### Node roles
 
-| Role           | Persisted result      | Meaning                                                                 |
-| -------------- | --------------------- | ----------------------------------------------------------------------- |
-| `endpoint`     | none                  | Bind an Instance terminal or Junction at its resolved coordinate.           |
-| `bend`         | Route waypoint        | Degree-two, dot-free change of direction.                               |
-| `tap`          | branch Junction       | Real electrical branch point.                                           |
-| `junction`     | branch Junction       | Real electrical branch point.                                           |
-| `label-anchor` | label-anchor Junction | Electrical anchor for an attached local Net label.                      |
+| Role           | Persisted result      | Meaning                                                           |
+| -------------- | --------------------- | ----------------------------------------------------------------- |
+| `endpoint`     | none                  | Bind an Instance terminal or Junction at its resolved coordinate. |
+| `bend`         | Route waypoint        | Degree-two, dot-free change of direction.                         |
+| `tap`          | branch Junction       | Real electrical branch point.                                     |
+| `junction`     | branch Junction       | Real electrical branch point.                                     |
+| `label-anchor` | label-anchor Junction | Electrical anchor for an attached local Net label.                |
 
 Non-endpoint nodes use either explicit `at` or relative
 `alignWith + axis + offset` positioning. The helper snaps positioned nodes to

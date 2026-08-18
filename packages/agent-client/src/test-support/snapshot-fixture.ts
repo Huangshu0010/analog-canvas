@@ -13,6 +13,7 @@ export function testSnapshot(): AgentSessionSnapshot {
     project: {
       id: "project-1",
       name: "Test Project",
+      structureRevision: 0,
       topDocumentId: "main",
       documents: [
         {
