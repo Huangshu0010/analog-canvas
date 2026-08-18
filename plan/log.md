@@ -3205,3 +3205,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   production smoke).
 - Commit status: included in the hierarchy refactor commit on
   `codex/hierarchy-authoring-visual-plan`.
+
+## 2026-08-18 - Merge hierarchy branch to main
+
+- Changed areas: mainline integration metadata and Git refs only; the promoted
+  product changes are the verified hierarchy authoring and domain-orchestration
+  commits.
+- Validation: `pnpm install --frozen-lockfile` and `pnpm ci:check` passed:
+  146 unit files / 887 tests, workspace build, release verification, and 152
+  E2E scenarios.
+- Commit status: fast-forward promotion to `origin/main` pending this target
+  record commit.

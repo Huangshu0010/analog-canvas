@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -53,4 +53,8 @@ chore(plan): record hierarchy mainline merge
 
 ## Outcome
 
-Pending.
+`origin/main` was a fast-forward ancestor of the verified hierarchy branch.
+The mainline gate passed from a clean dependency state: frozen-lockfile install,
+static validation, 146 unit test files / 887 tests, workspace build, release
+verification, and 152 browser scenarios. The branch is ready to promote to
+`main` without a conflict-resolution change.
