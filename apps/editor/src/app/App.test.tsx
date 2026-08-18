@@ -100,7 +100,9 @@ describe("editor shell", () => {
     expect(markup).not.toContain("Component reference");
     expect(markup).not.toContain("Component model");
     expect(markup).toContain('data-testid="cell-navigation"');
-    expect(markup).toContain("New Cell");
+    expect(markup).toContain('data-testid="cell-command-menu"');
+    expect(markup).toContain("Manage Cells…");
+    expect(markup).not.toContain("Edit Interface…");
   });
 
   it("shows a resolvable imported subcircuit in Cell navigation", () => {

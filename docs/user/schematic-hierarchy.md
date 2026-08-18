@@ -4,48 +4,49 @@ Analog Canvas treats every Project Document as one reusable schematic Cell.
 The top Cell is the export root; other Cells may be instantiated any number of
 times or kept unreferenced while they are being authored.
 
-Use **Cells…** to manage the Project's definitions in one place. It shows each
+Use **Cell → Manage Cells…** to manage the Project's definitions in one place. It shows each
 Cell's formal port and caller counts, opens or renames a definition, and lists
 each caller with **Jump to caller**. A referenced Cell's delete control is
 disabled; delete its caller Instances normally before deleting the now
 unreferenced definition.
 
-Use **New Cell** in the Cell navigation bar to create a module without first
-drawing a rectangle. **Place Cell** opens the normal Insert dialog with a
+Use **New Cell** in the Cell Manager to create a module without first drawing
+a rectangle. **Cell → Place Cell** opens the normal Insert dialog with a
 searchable **Cells** section. Select a definition, then place its ordinary
 hierarchical Instance on the canvas using the same grid preview, `R` rotation,
 mirror shortcuts, and `Esc` cancellation as a library component. The commit
-creates the subcircuit Instance, its `Xn` reference label, and a Cell-name
-value label together. **Enter Cell** opens the child of a selected hierarchical
+keeps the `Xn` reference as internal netlist identity and shows only the Cell
+name at the normal instance-label position. **Enter Cell** opens the child of a selected hierarchical
 Instance. **Up** follows the actual parent Instance path; **Top** returns to
 the root. Opening a shared Cell from the selector has no caller context when
 more than one path reaches it, which is reported in the status bar.
 
-To define a real Cell port:
+The top Cell is the Project export root and is not instantiated as a symbol.
+Its **Port** and **Filled Port** markers remain ordinary electrical components,
+so they can be wired and deleted just like other top-level devices. Inside a
+reusable child Cell, place a Port to define a real Cell port:
 
-1. Choose **Add Cell Port**, give it a name, direction (`input`, `output`,
-   `inout`, or `passive`), and optional filled marker.
+1. Place the ordinary **Port** or **Filled Port** from the Library.
 2. Click an exact existing electrical contact to attach to its Net, or click
    empty grid space to create a new local Net.
+3. Select the placed Port to edit its interface name and direction in normal
+   **Properties**.
 
-The command commits an ordinary `port`/`port-filled` Instance, its pin-`P`
-connection, and the formal Cell terminal as one revision. **Expose Port**
-remains the advanced adoption path for an already drawn and connected marker.
+Child-Cell placement commits the ordinary `port`/`port-filled` Instance, its
+pin-`P` connection, and the stable formal Cell terminal as one revision. Inputs
+are placed on the left of generated parent symbols, outputs on the right, and
+other directions are balanced automatically. The symbol body and pin placement
+adapt without a separate interface editor.
 
-Open **Cell Interface** in the navigation bar to edit each formal port's
-direction, order, and definition-level visual side/offset. Direction is an
-electrical fact; side and offset only change the generated external symbol and
-therefore affect every caller without changing Net membership.
+The visible marker remains an ordinary Instance for selection, move, and
+wiring. Its Properties own the interface name and direction. The formal
+terminal adds stable identity, ordering, and the Net binding used by parent
+blocks and netlist export.
 
-The visible marker remains an ordinary Instance, so selection, move, wiring,
-clipboard, and normal Instance deletion use the same editor protocol as other
-components. The formal interface adds stable identity, ordering, direction,
-and the Net binding used by parent blocks and netlist export.
-
-Select an exposed marker to **Rename Port** or **Delete Port**. Rename updates
-all connected parent Instances atomically. Deletion is rejected while a parent
-still references that pin, or while wire geometry is attached; remove those
-uses first. **Delete Cell** removes only a non-top, unreferenced Cell definition.
+Renaming a selected Port updates all connected parent Instances atomically.
+Ordinary Delete removes its formal terminal and marker together, but is
+rejected while a parent still references that pin or wire geometry is attached;
+remove those uses first. **Delete Cell** removes only a non-top, unreferenced Cell definition.
 Deleting a hierarchical Instance with the normal Delete command never deletes
 its reusable child Cell.
 
@@ -57,6 +58,6 @@ hierarchy never depends on rectangle drawing data.
 Hierarchy presentation is saved as definition-level size and pin-placement
 intent in Project schema 13. Older schema-12 projects open with deterministic
 automatic pin layout; schema-11 files are outside the supported rolling
-compatibility window. The block uses the shared Razavi-style symbol/text
-renderer and is compatible with that visual grammar; it is not a claim of a
-pixel-for-pixel textbook symbol asset.
+compatibility window. The block uses a closed polygon body and the shared
+Razavi rich-text renderer for pin and Cell names; it is compatible with that
+visual grammar rather than a pixel-for-pixel textbook symbol asset.

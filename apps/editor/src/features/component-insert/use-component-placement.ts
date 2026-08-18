@@ -10,10 +10,7 @@ import {
   planCreateCellPort,
   planPlaceCellInstance,
 } from "@icm/edit-engine";
-import {
-  defaultInstanceLabelPlacement,
-  type SchematicStyleProfile,
-} from "@icm/derived";
+import type { SchematicStyleProfile } from "@icm/derived";
 import { defaultDraftTextDocument, semanticTextDocument } from "@icm/model";
 import type {
   CircuitProject,
@@ -285,43 +282,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.resolver,
       options.styleProfile,
     );
-    const instanceLabel =
-      placementRequest.showReference && defaultLabel
-        ? {
-            ...defaultLabel,
-            content: semanticTextDocument(
-              placementRequest.referenceText ?? instance.id,
-              "instance-label",
-            ),
-          }
-        : null;
-    const resolved = options.resolver.resolve(instance.symbolId);
-    const valuePlacement =
-      resolved &&
-      defaultInstanceLabelPlacement(
-        instance,
-        resolved,
-        options.styleProfile,
-        options.document.presentation.grid,
-        "value",
-      );
-    const instanceValue = valuePlacement
+    const instanceValue = defaultLabel
       ? {
+          ...defaultLabel,
           id: `instance-value-${instance.id}`,
           kind: "instance-value" as const,
           content: defaultDraftTextDocument(placementRequest.cellName),
-          anchor: {
-            kind: "object" as const,
-            objectId: instance.id,
-            localOffset: {
-              x: valuePlacement.position.x - instance.placement!.position.x,
-              y: valuePlacement.position.y - instance.placement!.position.y,
-            },
-            fallbackPosition: valuePlacement.position,
-          },
-          alignment: valuePlacement.alignment,
-          rotation: 0 as const,
-          locked: false,
         }
       : null;
     const committed = options.transactProject(
@@ -330,7 +296,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         options.project,
         options.document.id,
         instance,
-        [instanceLabel, instanceValue].filter(
+        [instanceValue].filter(
           (annotation): annotation is NonNullable<typeof annotation> =>
             annotation !== null,
         ),
@@ -349,20 +315,18 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     position: Point,
     placementRequest: PendingComponentPlacement,
   ): void => {
+    const id = nextInstanceDesignator(options.document, symbolId);
+    const formalName = placementRequest.formalName ?? id;
     if (
       placementRequest.kind !== "cell-port" ||
-      !placementRequest.formalName ||
       !placementRequest.direction ||
       options.document.netlist?.terminals.some(
-        (terminal) => terminal.name === placementRequest.formalName,
+        (terminal) => terminal.name === formalName,
       )
     ) {
-      options.setStatus(
-        `Cell port ${placementRequest.formalName ?? ""} already exists`,
-      );
+      options.setStatus(`Cell port ${formalName} already exists`);
       return;
     }
-    const id = nextInstanceDesignator(options.document, symbolId);
     const instance = {
       id,
       symbolId,
@@ -424,7 +388,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         connectionEdits,
         terminal: {
           id: `terminal-${id.toLowerCase()}`,
-          name: placementRequest.formalName,
+          name: formalName,
           netId,
           direction: placementRequest.direction,
           interfaceInstanceId: id,
@@ -435,7 +399,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     options.selectOnly("instance", [id]);
     options.setComponentPreviewPoint(position);
     options.setStatus(
-      `Added Cell port ${placementRequest.formalName} · click to place another · Esc exits`,
+      `Added Cell port ${formalName} · click to place another · Esc exits`,
     );
   };
 
@@ -514,8 +478,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.setStatus("Place VDD Rail: click the first end · Esc cancels");
       return;
     }
-    options.beginComponentPlacement(
-      request.kind === "cell-port"
+    const pendingRequest: PendingComponentPlacement =
+      request.kind === "symbol" &&
+      options.document.id !== options.project.topDocumentId &&
+      (request.symbolId === "port" || request.symbolId === "port-filled")
         ? {
             kind: "cell-port",
             symbolId: request.symbolId,
@@ -524,11 +490,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
             showReference: false,
             referenceText: null,
             showValue: false,
-            formalName: request.formalName,
-            direction: request.direction,
+            direction: "passive",
           }
-        : request,
-    );
+        : request;
+    options.beginComponentPlacement(pendingRequest);
     options.setStatus(
       `Place ${request.symbolName} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
     );

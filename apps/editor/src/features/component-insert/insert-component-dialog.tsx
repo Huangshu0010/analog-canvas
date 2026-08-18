@@ -175,6 +175,9 @@ export function InsertComponentDialog({
     choices.find((choice) => choice.key === selectedId) ?? choices[0] ?? null;
   const selectedIsVddRail =
     selected?.kind === "symbol" && selected.symbol.id === "vdd";
+  const selectedIsPort =
+    selected?.kind === "symbol" &&
+    (selected.symbol.id === "port" || selected.symbol.id === "port-filled");
   const parameters = componentParameters(
     selected?.kind === "symbol" ? selected.symbol.id : "",
   );
@@ -267,8 +270,8 @@ export function InsertComponentDialog({
         cellName: selected.cellName ?? selected.symbol.name,
         properties: {},
         initialRotation,
-        showReference,
-        referenceText: referenceText.trim() || null,
+        showReference: false,
+        referenceText: null,
         showValue: true,
       });
       return;
@@ -458,33 +461,43 @@ export function InsertComponentDialog({
                     <option value="270">270°</option>
                   </select>
                 </label>
-                <div className="insert-label-control">
-                  <DisplayToggle
-                    label="Reference"
-                    checked={showReference}
-                    onChange={setShowReference}
-                  />
-                  <input
-                    aria-label="Reference name"
-                    value={referenceText}
-                    disabled={!showReference}
-                    placeholder="Name (auto)"
-                    onChange={(event) =>
-                      setReferenceText(event.currentTarget.value)
-                    }
-                  />
-                  <DisplayToggle
-                    label="Value"
-                    checked={showValue}
-                    disabled={!valueAvailable}
-                    help={
-                      valueAvailable
-                        ? undefined
-                        : "Fill the device parameters first"
-                    }
-                    onChange={setShowValue}
-                  />
-                </div>
+                {selected?.kind === "cell" ? (
+                  <p className="insert-cell-label-note">
+                    Cell label: {selected.cellName ?? selected.symbol.name}
+                  </p>
+                ) : selectedIsPort ? (
+                  <p className="insert-cell-label-note">
+                    Port name and direction can be edited after placement.
+                  </p>
+                ) : (
+                  <div className="insert-label-control">
+                    <DisplayToggle
+                      label="Reference"
+                      checked={showReference}
+                      onChange={setShowReference}
+                    />
+                    <input
+                      aria-label="Reference name"
+                      value={referenceText}
+                      disabled={!showReference}
+                      placeholder="Name (auto)"
+                      onChange={(event) =>
+                        setReferenceText(event.currentTarget.value)
+                      }
+                    />
+                    <DisplayToggle
+                      label="Value"
+                      checked={showValue}
+                      disabled={!valueAvailable}
+                      help={
+                        valueAvailable
+                          ? undefined
+                          : "Fill the device parameters first"
+                      }
+                      onChange={setShowValue}
+                    />
+                  </div>
+                )}
               </section>
             ) : null}
 

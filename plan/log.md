@@ -3219,3 +3219,56 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   the replacement PR run passed all six required checks.
 - Commit status: merged through [PR #121](https://github.com/chenzc24/Analog-Canvas/pull/121)
   at `0319a73` on `origin/main`.
+
+## 2026-08-18 - Hierarchy UI and visual polish
+
+- Changed areas: root/child Cell command semantics, grouped hierarchy menu,
+  bounded Cell Interface dialog, Cell instance annotation placement, Razavi pin
+  RichText, closed hierarchical body geometry, focused tests, and current
+  hierarchy documentation.
+- Validation: focused Vitest (4 files / 24 tests), hierarchy Playwright (4
+  scenarios), docs check, typecheck, test-impact, diff check, and
+  `pnpm verify:branch` passed (146 unit files / 888 tests, workspace build and
+  production smoke).
+- Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.
+
+## 2026-08-18 - Hierarchy UI behavior-preservation correction
+
+- Changed areas: top-Cell interface command reachability, hierarchy-only pin
+  RichText selection, ordinary visible-pin regression coverage, hierarchy
+  browser coverage, and current hierarchy documentation.
+- Validation: focused Vitest (2 files / 18 tests), hierarchy Playwright (4
+  scenarios), test-impact, diff check, and `pnpm verify:branch` passed (146
+  unit files / 889 tests, workspace build and production smoke).
+- Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.
+
+## 2026-08-18 - Adaptive Cell menu overlay
+
+- Changed areas: hierarchy toolbar overflow behavior, adaptive Cell selector
+  and command-popover sizing, narrow-viewport browser layout coverage, and
+  target records.
+- Validation: hierarchy Playwright (5 scenarios), direct 420px browser layout
+  inspection, test-impact, diff check, and `pnpm verify:branch` passed (146
+  unit files / 889 tests, workspace build and production smoke).
+- Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.
+
+## 2026-08-18 - Direct Cell Port authoring
+
+- Changed areas: ordinary Port placement orchestration, selected-Port
+  Properties and safe deletion, hierarchy command/dialog cleanup, focused
+  browser coverage, and current hierarchy documentation.
+- Validation: focused Vitest (4 files / 24 tests), hierarchy Playwright (5
+  scenarios), docs check, test-impact, diff check, and `pnpm verify:branch`
+  passed (146 unit files / 889 tests, workspace build and production smoke).
+- Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.
+
+## 2026-08-18 - Preserve top-level Port behavior
+
+- Changed areas: Port placement boundary and current hierarchy interaction
+  documentation. Automatic formal-terminal authoring now applies only to child
+  Cells; top-level Ports retain their ordinary electrical behavior.
+- Validation: child-Cell and top-level Port Playwright scenarios (2/2),
+  typecheck, docs check, and diff check passed. The regression was found by
+  canonical CI; that complete gate will be rerun from the correction commit
+  before mainline delivery.
+- Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.

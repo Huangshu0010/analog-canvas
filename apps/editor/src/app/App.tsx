@@ -23,12 +23,9 @@ import {
   planEnsureNamedNet,
   planCreateCell,
   planDeleteCell,
-  planExposePortInstance,
   planRenameCell,
-  planReorderCellTerminal,
   planRemoveCellTerminal,
   planRenameCellTerminal,
-  planSetCellTerminalPlacement,
   planUpdateCellTerminalDirection,
   type ProjectStructureEdit,
   type EditTransactionResult,
@@ -176,7 +173,6 @@ import {
 } from "../features/editor-shell/shapes-panel";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
-import { CellPortDialog } from "../features/hierarchy/cell-port-dialog";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
 import {
   createLibraryExampleProject,
@@ -536,7 +532,6 @@ export function App({
     null,
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
-  const [cellPortDialogOpen, setCellPortDialogOpen] = useState(false);
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
     useState<AgentFileCandidateSummary | null>(null);
@@ -1507,24 +1502,6 @@ export function App({
     }
   }
 
-  function deleteCurrentCell(): void {
-    if (document.id === project.topDocumentId) {
-      setStatus("The top Cell cannot be deleted");
-      return;
-    }
-    if (!window.confirm(`Delete unreferenced Cell "${document.name}"?`)) return;
-    if (
-      commitStructure(
-        "delete-cell",
-        planDeleteCell(project, document.id),
-        project.topDocumentId,
-      )
-    ) {
-      setDocumentStack([]);
-      setStatus(`Deleted Cell ${document.name}`);
-    }
-  }
-
   function renameCell(documentId: string): void {
     const target = project.documents.find(
       (candidate) => candidate.id === documentId,
@@ -1570,14 +1547,6 @@ export function App({
     setStatus("Choose a Cell, then place it on the canvas");
   }
 
-  function openCellPortDialog(): void {
-    if (!document.netlist) {
-      setStatus("The active Document cannot define a Cell interface");
-      return;
-    }
-    setCellPortDialogOpen(true);
-  }
-
   function updateCellPortDirection(
     terminalId: string,
     direction: "input" | "output" | "inout" | "passive",
@@ -1598,102 +1567,14 @@ export function App({
     }
   }
 
-  function reorderCellPort(terminalId: string, delta: -1 | 1): void {
-    const edits = planReorderCellTerminal(
-      project,
-      document.id,
-      terminalId,
-      delta,
-    );
-    if (edits.length > 0 && commitStructure("reorder-cell-ports", edits)) {
-      setStatus("Reordered Cell ports");
-    }
-  }
-
-  function setCellPortPlacement(
-    terminalId: string,
-    side: "auto" | "north" | "east" | "south" | "west",
-    offset: number,
-  ): void {
-    try {
-      if (
-        commitStructure(
-          "set-cell-port-placement",
-          planSetCellTerminalPlacement(
-            project,
-            document.id,
-            terminalId,
-            side,
-            offset,
-          ),
-        )
-      ) {
-        setStatus("Updated Cell port presentation");
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not update Cell port",
-      );
-    }
-  }
-
   const selectedFormalTerminal = selectedInstance
     ? document.netlist?.terminals.find(
         (terminal) => terminal.interfaceInstanceId === selectedInstance.id,
       )
     : undefined;
-  const selectedPortNet = selectedInstance
-    ? document.nets.find((net) =>
-        net.terminals.some(
-          (terminal) =>
-            terminal.instanceId === selectedInstance.id &&
-            terminal.pinName === "P",
-        ),
-      )
-    : undefined;
-  const canExposeSelectedPort = Boolean(
-    selectedInstance &&
-    (selectedInstance.symbolId === "port" ||
-      selectedInstance.symbolId === "port-filled") &&
-    selectedPortNet &&
-    !selectedFormalTerminal,
-  );
-
-  function exposeSelectedPort(): void {
-    if (!selectedInstance || !selectedPortNet || !canExposeSelectedPort) return;
-    const name = window
-      .prompt(
-        "Formal port name",
-        `P${(document.netlist?.terminals.length ?? 0) + 1}`,
-      )
-      ?.trim();
-    if (!name) return;
-    const requestedDirection = window
-      .prompt("Port direction: input, output, inout, or passive", "passive")
-      ?.trim()
-      .toLowerCase();
-    if (!requestedDirection) return;
-    if (!["input", "output", "inout", "passive"].includes(requestedDirection)) {
-      setStatus(`Unsupported port direction: ${requestedDirection}`);
-      return;
-    }
-    const edits = planExposePortInstance(project, document.id, {
-      id: createId("terminal"),
-      name,
-      netId: selectedPortNet.id,
-      direction: requestedDirection as "input" | "output" | "inout" | "passive",
-      interfaceInstanceId: selectedInstance.id,
-    });
-    if (commitStructure("expose-cell-port", edits)) {
-      setStatus(`Exposed formal port ${name}`);
-    }
-  }
-
-  function renameSelectedFormalPort(): void {
+  function renameSelectedFormalPort(name: string): void {
     if (!selectedFormalTerminal) return;
-    const name = window
-      .prompt("Rename formal port", selectedFormalTerminal.name)
-      ?.trim();
+    name = name.trim();
     if (!name || name === selectedFormalTerminal.name) return;
     try {
       const edits = planRenameCellTerminal(
@@ -1714,8 +1595,6 @@ export function App({
 
   function deleteSelectedFormalPort(): void {
     if (!selectedFormalTerminal) return;
-    if (!window.confirm(`Delete formal port "${selectedFormalTerminal.name}"?`))
-      return;
     try {
       const edits = planRemoveCellTerminal(
         project,
@@ -1731,6 +1610,31 @@ export function App({
         error instanceof Error ? error.message : "Could not delete port",
       );
     }
+  }
+
+  function deleteCurrentSelection(): void {
+    const formalTerminals = (document.netlist?.terminals ?? []).filter(
+      (terminal) =>
+        visualSelection.instanceIds.includes(terminal.interfaceInstanceId),
+    );
+    const onlyOneFormalPort =
+      formalTerminals.length === 1 &&
+      visualSelection.instanceIds.length === 1 &&
+      visualSelection.routeIds.length === 0 &&
+      visualSelection.junctionIds.length === 0 &&
+      visualSelection.annotationIds.length === 0 &&
+      visualSelection.draftingIds.length === 0;
+    if (onlyOneFormalPort) {
+      deleteSelectedFormalPort();
+      return;
+    }
+    if (formalTerminals.length > 0) {
+      setStatus(
+        "Delete Cell Ports one at a time so interface safety can be checked",
+      );
+      return;
+    }
+    deleteSelectionFromSelection();
   }
 
   function navigateToLocator(
@@ -5719,7 +5623,7 @@ export function App({
           );
           return;
         case "delete-selection":
-          deleteSelectionFromSelection();
+          deleteCurrentSelection();
           return;
       }
     }
@@ -5892,7 +5796,7 @@ export function App({
                   </button>
                   <button
                     type="button"
-                    onClick={deleteSelectionFromSelection}
+                    onClick={deleteCurrentSelection}
                     disabled={
                       !hasVisualSelection(visualSelection) && !selectedEndpoint
                     }
@@ -6118,161 +6022,26 @@ export function App({
             >
               Enter Cell
             </button>
-            <button type="button" onClick={createCell}>
-              New Cell
-            </button>
-            <button type="button" onClick={() => setCellManagerOpen(true)}>
-              Cells…
-            </button>
-            <button
-              type="button"
-              onClick={placeCellInstance}
-              disabled={project.documents.length < 2}
-            >
-              Place Cell
-            </button>
-            <button
-              type="button"
-              onClick={deleteCurrentCell}
-              disabled={document.id === project.topDocumentId}
-            >
-              Delete Cell
-            </button>
-            <button type="button" onClick={openCellPortDialog}>
-              Add Cell Port
-            </button>
-            <button
-              type="button"
-              onClick={exposeSelectedPort}
-              disabled={!canExposeSelectedPort}
-              title="Expose a selected, connected Port instance as a formal Cell port"
-            >
-              Expose Port
-            </button>
-            <button
-              type="button"
-              onClick={renameSelectedFormalPort}
-              disabled={!selectedFormalTerminal}
-            >
-              Rename Port
-            </button>
-            <button
-              type="button"
-              onClick={deleteSelectedFormalPort}
-              disabled={!selectedFormalTerminal}
-            >
-              Delete Port
-            </button>
-          </div>
-          {document.netlist ? (
             <details
-              className="cell-interface-panel"
-              aria-label="Cell Interface"
+              className="command-menu"
+              name="editor-command-menu"
+              data-testid="cell-command-menu"
             >
-              <summary>
-                Cell Interface ({document.netlist.terminals.length})
-              </summary>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Port</th>
-                    <th>Direction</th>
-                    <th>Side</th>
-                    <th>Offset</th>
-                    <th>Order</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {document.netlist.terminals.map((terminal, index) => {
-                    const placement =
-                      document.presentation.cellSymbol?.pinPlacements?.find(
-                        (candidate) => candidate.terminalId === terminal.id,
-                      );
-                    const side = placement?.side ?? "auto";
-                    return (
-                      <tr key={terminal.id}>
-                        <td>{terminal.name}</td>
-                        <td>
-                          <select
-                            aria-label={`${terminal.name} direction`}
-                            value={terminal.direction}
-                            onChange={(event) =>
-                              updateCellPortDirection(
-                                terminal.id,
-                                event.currentTarget
-                                  .value as typeof terminal.direction,
-                              )
-                            }
-                          >
-                            <option value="input">Input</option>
-                            <option value="output">Output</option>
-                            <option value="inout">Inout</option>
-                            <option value="passive">Passive</option>
-                          </select>
-                        </td>
-                        <td>
-                          <select
-                            aria-label={`${terminal.name} side`}
-                            value={side}
-                            onChange={(event) =>
-                              setCellPortPlacement(
-                                terminal.id,
-                                event.currentTarget.value as
-                                  "auto" | "north" | "east" | "south" | "west",
-                                placement?.offset ?? 0,
-                              )
-                            }
-                          >
-                            <option value="auto">Auto</option>
-                            <option value="west">West</option>
-                            <option value="east">East</option>
-                            <option value="north">North</option>
-                            <option value="south">South</option>
-                          </select>
-                        </td>
-                        <td>
-                          <input
-                            aria-label={`${terminal.name} offset`}
-                            type="number"
-                            step="10"
-                            defaultValue={placement?.offset ?? 0}
-                            disabled={side === "auto"}
-                            onBlur={(event) =>
-                              setCellPortPlacement(
-                                terminal.id,
-                                side,
-                                Number(event.currentTarget.value),
-                              )
-                            }
-                          />
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            aria-label={`Move ${terminal.name} earlier`}
-                            disabled={index === 0}
-                            onClick={() => reorderCellPort(terminal.id, -1)}
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Move ${terminal.name} later`}
-                            disabled={
-                              index === document.netlist!.terminals.length - 1
-                            }
-                            onClick={() => reorderCellPort(terminal.id, 1)}
-                          >
-                            ↓
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <summary>Cell</summary>
+              <div className="command-popover">
+                <button type="button" onClick={() => setCellManagerOpen(true)}>
+                  Manage Cells…
+                </button>
+                <button
+                  type="button"
+                  onClick={placeCellInstance}
+                  disabled={project.documents.length < 2}
+                >
+                  Place Cell
+                </button>
+              </div>
             </details>
-          ) : null}
+          </div>
         </div>
         <div data-testid="editor-test-telemetry" hidden>
           <output data-testid="selected-internal-route-count">
@@ -6374,15 +6143,6 @@ export function App({
         cellOnly={cellInsertOnly}
         onApply={beginInsertedComponentPlacementFromHook}
         onCancel={cancelComponentInsertFromHook}
-      />
-      <CellPortDialog
-        open={cellPortDialogOpen}
-        suggestedName={`P${(document.netlist?.terminals.length ?? 0) + 1}`}
-        onApply={(request) => {
-          setCellPortDialogOpen(false);
-          beginInsertedComponentPlacementFromHook(request);
-        }}
-        onCancel={() => setCellPortDialogOpen(false)}
       />
       <CellManagerDialog
         open={cellManagerOpen}
@@ -6707,6 +6467,53 @@ export function App({
                   aria-label="Component properties"
                 >
                   <h2>Component properties</h2>
+                  {selectedFormalTerminal ? (
+                    <div
+                      className="formal-port-properties"
+                      aria-label="Cell Port properties"
+                    >
+                      <label>
+                        <span>Port name</span>
+                        <input
+                          key={`${selectedFormalTerminal.id}:${selectedFormalTerminal.name}`}
+                          aria-label="Port name"
+                          defaultValue={selectedFormalTerminal.name}
+                          onBlur={(event) =>
+                            renameSelectedFormalPort(event.currentTarget.value)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              event.currentTarget.blur();
+                            }
+                          }}
+                        />
+                      </label>
+                      <label>
+                        <span>Direction</span>
+                        <select
+                          aria-label="Cell Port direction"
+                          value={selectedFormalTerminal.direction}
+                          onChange={(event) =>
+                            updateCellPortDirection(
+                              selectedFormalTerminal.id,
+                              event.currentTarget
+                                .value as typeof selectedFormalTerminal.direction,
+                            )
+                          }
+                        >
+                          <option value="input">Input</option>
+                          <option value="output">Output</option>
+                          <option value="inout">Inout</option>
+                          <option value="passive">Passive</option>
+                        </select>
+                      </label>
+                      <small>
+                        This Port defines the Cell interface and every parent
+                        symbol automatically.
+                      </small>
+                    </div>
+                  ) : null}
                   <div
                     className="display-toggle-row"
                     aria-label="Component display toggles"

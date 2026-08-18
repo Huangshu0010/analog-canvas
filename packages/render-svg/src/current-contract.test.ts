@@ -1,12 +1,107 @@
 import { describe, expect, it } from "vitest";
-import { createEmptyDocument } from "@icm/model";
-import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
+import { createEmptyDocument, createEmptyProject } from "@icm/model";
+import {
+  builtInSymbols,
+  createProjectSymbolResolver,
+  hierarchicalSymbolId,
+  InMemorySymbolResolver,
+  type SymbolDefinition,
+} from "@icm/symbols";
 
 import { renderDocumentSvg } from "./render.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("current rendering contract", () => {
+  it("renders hierarchical pin names with Razavi math typography", () => {
+    const top = createEmptyDocument("top", "Top");
+    const child = createEmptyDocument("child", "GainStage");
+    child.netlist!.terminals.push({
+      id: "terminal-v-in",
+      name: "V_in",
+      netId: "net-in",
+      direction: "input",
+      interfaceInstanceId: "P1",
+    });
+    top.instances.push({
+      id: "X1",
+      symbolId: hierarchicalSymbolId(child.netlist!.name),
+      properties: {},
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+      netlist: {
+        reference: "X1",
+        parameters: {},
+        terminals: [{ sourcePosition: 0, pinName: "V_in" }],
+        binding: {
+          kind: "subcircuit",
+          childDocumentId: child.id,
+          name: child.netlist!.name,
+        },
+      },
+    });
+    const project = createEmptyProject("project", "Hierarchy", top.id);
+    project.documents[0] = top;
+    project.documents.push(child);
+
+    const svg = renderDocumentSvg(
+      top,
+      createProjectSymbolResolver(project, builtInSymbols),
+    );
+
+    expect(svg).toContain('data-pin-name="V_in"');
+    expect(svg).toContain("font-style:italic;font-weight:700");
+    expect(svg).toContain('data-text-run="subscript"');
+    expect(svg).toContain("font-style:normal;font-weight:700");
+  });
+
+  it("keeps non-hierarchical visible pin names on the plain-text path", () => {
+    const namedPinSymbol = {
+      schemaVersion: 1,
+      id: "named-pin-test",
+      name: "Named Pin Test",
+      viewBox: { x: -20, y: -20, width: 40, height: 40 },
+      pins: [
+        {
+          name: "V_in",
+          role: "signal",
+          at: { x: -20, y: 0 },
+          direction: "west",
+          presentation: {
+            visibility: "visible",
+            showName: true,
+            leadLength: 10,
+          },
+        },
+      ],
+      primitives: [],
+      variants: [],
+    } satisfies SymbolDefinition;
+    const document = createEmptyDocument("doc", "Named pin");
+    document.instances.push({
+      id: "U1",
+      symbolId: namedPinSymbol.id,
+      properties: {},
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+    });
+
+    const svg = renderDocumentSvg(
+      document,
+      new InMemorySymbolResolver([...builtInSymbols, namedPinSymbol]),
+    );
+
+    expect(svg).toContain('data-pin-name="V_in"');
+    expect(svg).toContain(">V_in</text>");
+    expect(svg).not.toContain("font-style:italic");
+  });
+
   it("renders both Port assets as symbols and labels only from annotations", () => {
     const document = createEmptyDocument("doc", "Ports");
     document.instances.push(

@@ -223,14 +223,15 @@ export function createHierarchicalBlockGeometry(
     pins,
     primitives: [
       {
-        kind: "polyline",
+        kind: "polygon",
         points: [
           { x: left, y: top },
           { x: -left, y: top },
           { x: -left, y: -top },
           { x: left, y: -top },
-          { x: left, y: top },
         ],
+        fill: "none",
+        stroke: "foreground",
       },
       ...pins.map((pin) => ({
         kind: "line" as const,

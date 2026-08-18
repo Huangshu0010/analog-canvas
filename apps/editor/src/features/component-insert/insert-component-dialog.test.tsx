@@ -64,6 +64,7 @@ describe("InsertComponentDialog", () => {
         open
         styleProfileId="razavi-textbook-v1"
         recentSymbolIds={[]}
+        cellOnly
         cells={[
           {
             childDocumentId: "document-amplifier",
@@ -79,5 +80,7 @@ describe("InsertComponentDialog", () => {
     expect(markup).toContain(">Cells</h3>");
     expect(markup).toContain('data-testid="insert-cell-document-amplifier"');
     expect(markup).toContain(">Amplifier</span>");
+    expect(markup).toContain("Cell label: Amplifier");
+    expect(markup).not.toContain('aria-label="Reference name"');
   });
 });
