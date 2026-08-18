@@ -1,5 +1,14 @@
 # Maintenance Log
 
+## 2026-08-18 - Deliver schematic hierarchy protocol v12
+
+- Changed areas: schema-12 Cell hierarchy authoring, editor navigation,
+  Agent/export parity, MCP packaged-smoke schema fixture, Linux MCP integrity
+  pin, and the outdated empty-canvas navigation assertion.
+- Validation: focused empty-canvas Playwright test; `pnpm ci:release`;
+  `pnpm mcp:distribution:check`; and all six required PR #119 CI checks.
+- Commit status: ready to merge PR #119 into `main`.
+
 ## 2026-08-17 - Move Examples to the left tool rail
 
 - Target: promote bundled circuit examples from a Library fold to an

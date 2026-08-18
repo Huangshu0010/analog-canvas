@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -149,3 +149,9 @@ The first remote browser shard also identified a retired empty-canvas assertion
 that expected no Cell navigation. The current hierarchy UX intentionally shows
 that navigation from the initial canvas, so the focused browser test must
 assert its visibility instead of preserving the obsolete absence contract.
+
+Final delivery validation: `pnpm ci:release`, `pnpm mcp:distribution:check`,
+and the focused empty-canvas Playwright scenario passed locally. PR #119 then
+passed all required GitHub Actions checks: Change scope, static contracts, unit
+and integration tests, release contracts, and both browser shards. The target
+is ready for merge to `main`.
