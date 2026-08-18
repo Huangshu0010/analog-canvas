@@ -115,6 +115,8 @@ test("places an existing Cell and blocks deleting its shared definition", async 
   await expect(preview).toBeVisible();
   await page.keyboard.press("r");
   await expect(preview).toHaveAttribute("transform", /rotate\(90\)/u);
+  await page.keyboard.press("Shift+R");
+  await expect(preview).toHaveAttribute("transform", /scale\(-1 1\)/u);
   await canvas.click({ position: { x: 360, y: 230 } });
   await expect(page.getByTestId("active-instance-count")).toHaveText("1");
   await expect(page.getByTestId("status")).toContainText(

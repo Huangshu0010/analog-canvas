@@ -112,4 +112,43 @@ describe("hierarchical block formal terminals", () => {
       symbol?.pins.every((pin) => pin.at.x % 10 === 0 && pin.at.y % 10 === 0),
     ).toBe(true);
   });
+
+  it("keeps dense long-name interfaces grid-aligned on every body edge", () => {
+    const terminals = Array.from({ length: 12 }, (_, index) => ({
+      id: `terminal-${index}`,
+      name: `VERY_LONG_SIGNAL_${index + 1}`,
+      netId: `net-${index}`,
+      direction: index % 2 === 0 ? ("input" as const) : ("output" as const),
+      interfaceInstanceId: `P${index + 1}`,
+    }));
+    const symbol = createHierarchicalBlockSymbol({
+      name: "DenseStage",
+      netlist: { name: "DenseStage", terminals },
+      presentation: {
+        styleProfileId: "razavi-textbook-v1",
+        grid: 10,
+        compactness: "normal",
+        cellSymbol: {
+          pinPlacements: [
+            { terminalId: "terminal-0", side: "north", offset: -40 },
+            { terminalId: "terminal-1", side: "south", offset: 40 },
+          ],
+        },
+      },
+    });
+
+    expect(symbol?.pins).toHaveLength(12);
+    expect(symbol?.viewBox.width).toBeGreaterThanOrEqual(220);
+    expect(symbol?.viewBox.height).toBeGreaterThanOrEqual(100);
+    expect(
+      symbol?.pins.map((pin) => `${pin.direction}:${pin.at.x}:${pin.at.y}`),
+    ).toHaveLength(
+      new Set(
+        symbol?.pins.map((pin) => `${pin.direction}:${pin.at.x}:${pin.at.y}`),
+      ).size,
+    );
+    expect(
+      symbol?.pins.every((pin) => pin.at.x % 10 === 0 && pin.at.y % 10 === 0),
+    ).toBe(true);
+  });
 });

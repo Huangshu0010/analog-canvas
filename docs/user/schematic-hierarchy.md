@@ -53,3 +53,10 @@ Rectangles remain drafting geometry. Selecting an unlocked rectangle and using
 **Enter Cell** is only a convenience gesture: the commit removes the rectangle,
 creates a child Cell, and places an ordinary hierarchical Instance. Saved
 hierarchy never depends on rectangle drawing data.
+
+Hierarchy presentation is saved as definition-level size and pin-placement
+intent in Project schema 13. Older schema-12 projects open with deterministic
+automatic pin layout; schema-11 files are outside the supported rolling
+compatibility window. The block uses the shared Razavi-style symbol/text
+renderer and is compatible with that visual grammar; it is not a claim of a
+pixel-for-pixel textbook symbol asset.

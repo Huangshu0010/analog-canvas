@@ -3181,3 +3181,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   build, production smoke).
 - Commit status: pending `feat(hierarchy): add caller-aware Cell Manager` on
   `codex/hierarchy-authoring-visual-plan`.
+
+## 2026-08-18 - Hierarchy authoring and visual H5
+
+- Changed areas: dense adaptive Symbol acceptance, Cell placement mirror
+  browser coverage, hierarchy/drafting save-reopen coverage, and compatibility
+  guidance.
+- Validation: hierarchical Symbol Vitest (4 tests), hierarchy/drafting
+  Playwright (30 scenarios), typecheck, docs check, test-impact, diff check,
+  and `pnpm verify:branch` passed (144 unit files / 882 tests, workspace
+  build, production smoke).
+- Commit status: pending `test(hierarchy): close authoring and visual acceptance`
+  on `codex/hierarchy-authoring-visual-plan`.

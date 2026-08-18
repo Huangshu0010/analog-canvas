@@ -10,7 +10,7 @@ routine records may be deleted under the retention rule in
 
 | State | Count | Required disposition |
 | --- | ---: | --- |
-| `completed` + `none` | 6 | `2026-08-18-schematic-hierarchy-v12`, `2026-08-18-plan-docs-retention`, `2026-08-18-hierarchy-authoring-visual-h1`, `2026-08-18-hierarchy-authoring-visual-h2`, `2026-08-18-hierarchy-authoring-visual-h3`, and `2026-08-18-hierarchy-authoring-visual-h4` await their normal archive passes. |
+| `completed` + `none` | 7 | `2026-08-18-schematic-hierarchy-v12`, `2026-08-18-plan-docs-retention`, and `2026-08-18-hierarchy-authoring-visual-h1` through `2026-08-18-hierarchy-authoring-visual-h5` await their normal archive passes. |
 | `completed` + `candidate` | 17 | Human decides whether to extract, reject, or defer the experience signal. |
 | `active` | 0 | No active target plan is awaiting completion. |
 | legacy metadata missing | 71 | Audit each record against its Outcome, factual log, and Git evidence; do not infer completion from age. |
