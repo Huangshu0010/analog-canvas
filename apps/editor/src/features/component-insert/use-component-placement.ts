@@ -480,6 +480,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     }
     const pendingRequest: PendingComponentPlacement =
       request.kind === "symbol" &&
+      options.document.id !== options.project.topDocumentId &&
       (request.symbolId === "port" || request.symbolId === "port-filled")
         ? {
             kind: "cell-port",

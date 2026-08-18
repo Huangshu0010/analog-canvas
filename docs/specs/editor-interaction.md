@@ -19,10 +19,12 @@ internal netlist reference; the canvas has one object-anchored Cell-name
 annotation in the ordinary reference-label position. Both `port` and `port-filled`
 remain ordinary manually reachable components. Choosing either starts the same
 placement state as any component; terminal `P` participates in ordinary snap,
-wire, move/stretch, and selection behavior. Its commit factory atomically adds
-the ordinary Instance, contacted or new local Net membership, and one stable
-formal terminal through the Project structural transaction. Every parent block
-therefore observes the interface revision without a later expose step.
+wire, move/stretch, and selection behavior. In a reusable child Cell, its
+commit factory atomically adds the ordinary Instance, contacted or new local
+Net membership, and one stable formal terminal through the Project structural
+transaction. A top-level Port remains an ordinary electrical component. Every
+parent block therefore observes a child Cell interface revision without a later
+expose step.
 Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.

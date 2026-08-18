@@ -3261,3 +3261,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   scenarios), docs check, test-impact, diff check, and `pnpm verify:branch`
   passed (146 unit files / 889 tests, workspace build and production smoke).
 - Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.
+
+## 2026-08-18 - Preserve top-level Port behavior
+
+- Changed areas: Port placement boundary and current hierarchy interaction
+  documentation. Automatic formal-terminal authoring now applies only to child
+  Cells; top-level Ports retain their ordinary electrical behavior.
+- Validation: child-Cell and top-level Port Playwright scenarios (2/2),
+  typecheck, docs check, and diff check passed. The regression was found by
+  canonical CI; that complete gate will be rerun from the correction commit
+  before mainline delivery.
+- Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.

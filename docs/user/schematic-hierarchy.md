@@ -21,9 +21,10 @@ Instance. **Up** follows the actual parent Instance path; **Top** returns to
 the root. Opening a shared Cell from the selector has no caller context when
 more than one path reaches it, which is reported in the status bar.
 
-The top Cell is the Project export root and is not normally instantiated as a
-symbol, but Port authoring is identical in every Cell. To define a real Cell
-port:
+The top Cell is the Project export root and is not instantiated as a symbol.
+Its **Port** and **Filled Port** markers remain ordinary electrical components,
+so they can be wired and deleted just like other top-level devices. Inside a
+reusable child Cell, place a Port to define a real Cell port:
 
 1. Place the ordinary **Port** or **Filled Port** from the Library.
 2. Click an exact existing electrical contact to attach to its Net, or click
@@ -31,11 +32,11 @@ port:
 3. Select the placed Port to edit its interface name and direction in normal
    **Properties**.
 
-Placement commits the ordinary `port`/`port-filled` Instance, its pin-`P`
-connection, and the stable formal Cell terminal as one revision. Inputs are
-placed on the left of generated parent symbols, outputs on the right, and other
-directions are balanced automatically. The symbol body and pin placement adapt
-without a separate interface editor.
+Child-Cell placement commits the ordinary `port`/`port-filled` Instance, its
+pin-`P` connection, and the stable formal Cell terminal as one revision. Inputs
+are placed on the left of generated parent symbols, outputs on the right, and
+other directions are balanced automatically. The symbol body and pin placement
+adapt without a separate interface editor.
 
 The visible marker remains an ordinary Instance for selection, move, and
 wiring. Its Properties own the interface name and direction. The formal
