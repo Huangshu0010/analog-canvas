@@ -1,7 +1,31 @@
-import type { CircuitProject } from "@icm/model";
+import type { CellSymbolPresentation, CircuitProject } from "@icm/model";
 import { hierarchicalSymbolId } from "@icm/symbols";
 
 import type { ProjectStructureEdit } from "./project-transaction.js";
+
+/**
+ * Plans one definition-level hierarchy block presentation change. The Project
+ * wrapper is deliberate: the changed child Symbol is visible to every caller
+ * at the same structural revision, while terminal identities stay unchanged.
+ */
+export function planSetCellSymbolPresentation(
+  project: CircuitProject,
+  documentId: string,
+  presentation: CellSymbolPresentation | null,
+): ProjectStructureEdit[] {
+  const document = project.documents.find((item) => item.id === documentId);
+  if (!document?.netlist) {
+    throw new Error(`Cell does not exist: ${documentId}`);
+  }
+  return [
+    {
+      kind: "transact_document",
+      documentId,
+      expectedRevision: document.revision,
+      edits: [{ kind: "set_cell_symbol_presentation", presentation }],
+    },
+  ];
+}
 
 /**
  * Plans one atomic formal-port rename and updates every connected caller

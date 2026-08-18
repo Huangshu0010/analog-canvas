@@ -2,19 +2,18 @@
 
 Status: `accepted`
 
-Current Project schema: `12`
+Current Project schema: `13`
 
 Primary owners: `packages/model` (current shape) and
 `packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`@icm/project-protocol` exposes `parseProject` and accepts Project schema 12
-and schema 11. Schema 11 advances directly to 12 by adding the structural
-revision and materializing every legacy formal terminal as an ordinary Port
-Instance connected to its declared Net. Every reader returns the sole
-schema-12 in-memory Project shape; schema 10 and older and all future versions
-are rejected. There is no sequential
-migration registry or second in-memory Project shape.
+`@icm/project-protocol` exposes `parseProject` and accepts Project schema 13
+and schema 12. Schema 12 advances directly to 13 by selecting absent,
+deterministic Cell-symbol presentation intent. Every reader returns the sole
+schema-13 in-memory Project shape; schema 11 and older and all future versions
+are rejected. There is no sequential migration registry or second in-memory
+Project shape.
 
 ## Current authorities
 
@@ -34,14 +33,17 @@ migration registry or second in-memory Project shape.
   annotation. There is no VDD symbol Instance.
 - Every visible editable label is a RichText annotation. Renderers do not
   synthesize instance labels from IDs.
+- `Document.presentation.cellSymbol` is optional definition-level block intent:
+  a minimum body size and stable formal-terminal side/offset placements.
+  Symbol geometry remains derived and caller Instances never persist a copy.
 - MOS assets are canonical `nmos`/`pmos`; visual variant selection does not
   change persisted terminal connectivity.
 
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 11 or 12
--> direct v11-to-v12 upgrade when needed -> strict schema-12 validation -> open
+read text -> parse JSON -> require Project schema 12 or 13
+-> direct v12-to-v13 upgrade when needed -> strict schema-13 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```
 
@@ -60,7 +62,7 @@ until the author explicitly renames or merges the Nets.
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in
 `fixtures/projects/compatibility-corpus.json`; its accepted entries must all be
-already canonical Project schema 12. The rejected corpus names expected
+already canonical Project schema 13. The rejected corpus names expected
 validation failures.
 
 Viewport, selection, undo history, canvas overlays, Agent credentials,

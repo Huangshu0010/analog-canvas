@@ -10,6 +10,7 @@ import {
 } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
 
+import type { SchematicEdit } from "./edit-schema.js";
 import { isOrthogonal, normalizeRouteGeometry } from "./route-geometry-edit.js";
 import { resolveRouteEditPath } from "./route-operations.js";
 import { pointOnSegment } from "./transaction-routing.js";
@@ -191,11 +192,39 @@ export function applyInstanceRouteFollow(
   instanceId: string,
   explicitlyAuthoredRouteIds: ReadonlySet<string>,
 ): string[] {
+  return applyInstancesRouteFollow(
+    draft,
+    originalDocument,
+    resolver,
+    resolver,
+    new Set([instanceId]),
+    explicitlyAuthoredRouteIds,
+  );
+}
+
+/**
+ * Generalized route following for a definition-level Symbol change. Original
+ * and current resolvers may differ because a child Cell changed its derived
+ * pin geometry while each parent Instance and its electrical endpoint stayed
+ * the same.
+ */
+export function applyInstancesRouteFollow(
+  draft: SchematicDocument,
+  originalDocument: SchematicDocument,
+  originalResolver: SymbolResolver,
+  resolver: SymbolResolver,
+  instanceIds: ReadonlySet<string>,
+  explicitlyAuthoredRouteIds: ReadonlySet<string>,
+): string[] {
   const changed: string[] = [];
   for (const originalRoute of originalDocument.routes) {
     if (explicitlyAuthoredRouteIds.has(originalRoute.id)) continue;
-    const movesFrom = endpointBelongsToInstance(originalRoute.from, instanceId);
-    const movesTo = endpointBelongsToInstance(originalRoute.to, instanceId);
+    const movesFrom =
+      originalRoute.from.kind === "terminal" &&
+      instanceIds.has(originalRoute.from.instanceId);
+    const movesTo =
+      originalRoute.to.kind === "terminal" &&
+      instanceIds.has(originalRoute.to.instanceId);
     if (!movesFrom && !movesTo) continue;
 
     const route = draft.routes.find(
@@ -203,7 +232,7 @@ export function applyInstanceRouteFollow(
     );
     const original = resolveRouteEditPath(
       originalDocument,
-      resolver,
+      originalResolver,
       originalRoute,
     );
     const newFrom = route
@@ -268,4 +297,40 @@ export function applyInstanceRouteFollow(
     changed.push(route.id);
   }
   return changed.sort((left, right) => left.localeCompare(right, "en"));
+}
+
+/**
+ * Converts shared route-follow output into the normal typed edit union. This
+ * is intentionally a planner; Project transactions still validate and commit
+ * every resulting `set_route_points` edit in the usual way.
+ */
+export function planInstanceSymbolGeometryRouteFollow(
+  document: SchematicDocument,
+  originalDocument: SchematicDocument,
+  originalResolver: SymbolResolver,
+  resolver: SymbolResolver,
+  instanceIds: ReadonlySet<string>,
+): Extract<SchematicEdit, { kind: "set_route_points" }>[] {
+  const draft = structuredClone(document);
+  const changedRouteIds = applyInstancesRouteFollow(
+    draft,
+    originalDocument,
+    originalResolver,
+    resolver,
+    instanceIds,
+    new Set(),
+  );
+  return changedRouteIds.map((routeId) => {
+    const route = draft.routes.find((candidate) => candidate.id === routeId)!;
+    return {
+      kind: "set_route_points",
+      routeId: route.id,
+      netId: route.netId,
+      from: structuredClone(route.from),
+      to: structuredClone(route.to),
+      waypoints: structuredClone(route.waypoints),
+      segmentModes: [...route.segmentModes],
+      ...(route.presentation ? { presentation: route.presentation } : {}),
+    };
+  });
 }

@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 12 and has
+geometric, and presentation facts. The current model is strict schema 13 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -92,6 +92,13 @@ and visual diagnostics; `fallbackPosition` is used only for a dangling target.
 Renderers never derive visible instance text from IDs or properties. Drafting
 objects are visual-only and cannot create connectivity.
 
+A Cell definition may additionally persist optional `presentation.cellSymbol`
+intent: a symbol-local minimum body size and unique `terminalId`-keyed visual
+side/offset placement. It is not electrical terminal data, parent-instance
+geometry, or persisted artwork. The Symbol resolver derives the block and all
+pin anchors. Each placement must reference one existing formal terminal and no
+two explicit placements may occupy the same side/offset slot.
+
 ## Core invariants
 
 - IDs are unique within their object class and every reference resolves.
@@ -116,6 +123,6 @@ ordinary Schematic edits inside one Project structural transaction. The
 Project's `structureRevision` protects this cross-Document boundary and the
 editor records it as one undoable structural commit.
 
-Persistence writes only schema 12. `packages/project-protocol` accepts schema
-11 through the bounded direct upgrade defined by ADR 0025, then supplies the
+Persistence writes only schema 13. `packages/project-protocol` accepts schema
+12 through the bounded direct upgrade defined by ADR 0026, then supplies the
 current model only; no compatibility shape enters `packages/model`.

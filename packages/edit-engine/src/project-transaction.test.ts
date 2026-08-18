@@ -6,6 +6,7 @@ import { hierarchicalSymbolId } from "@icm/symbols";
 import {
   planRemoveCellTerminal,
   planRenameCellTerminal,
+  planSetCellSymbolPresentation,
 } from "./hierarchy-planner.js";
 import { executeProjectTransaction } from "./project-transaction.js";
 
@@ -304,6 +305,117 @@ describe("Project structural transaction", () => {
         documents: [
           { instances: [{ netlist: { terminals: [] } }] },
           { instances: [], netlist: { terminals: [] } },
+        ],
+      },
+    });
+  });
+
+  it("updates Cell symbol intent only through a structural transaction", () => {
+    const project = createEmptyProject("project", "Project");
+    const result = executeProjectTransaction(project, {
+      transactionId: "set-cell-symbol-presentation",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "human-local" },
+      edits: planSetCellSymbolPresentation(project, project.topDocumentId, {
+        minimumBodySize: { width: 120, height: 80 },
+      }),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      applied: true,
+      project: {
+        structureRevision: 1,
+        documents: [
+          {
+            revision: 1,
+            presentation: {
+              cellSymbol: { minimumBodySize: { width: 120, height: 80 } },
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  it("follows caller Route geometry when a definition pin moves", () => {
+    const project = createEmptyProject("project", "Project");
+    const child = createEmptyDocument("document-child", "Child");
+    child.instances.push({
+      id: "P1",
+      symbolId: "port",
+      placement: null,
+      properties: {},
+    });
+    child.nets.push({
+      id: "net-in",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    child.netlist!.terminals.push({
+      id: "terminal-in",
+      name: "IN",
+      netId: "net-in",
+      direction: "input",
+      interfaceInstanceId: "P1",
+    });
+    project.documents.push(child);
+    const parent = project.documents[0]!;
+    parent.instances.push({
+      ...hierarchyInstance("X1", "Child", child.id),
+      netlist: {
+        ...hierarchyInstance("X1", "Child", child.id).netlist,
+        terminals: [{ sourcePosition: 0, pinName: "IN" }],
+      },
+    });
+    parent.nets.push({
+      id: "net-parent",
+      scope: "local",
+      terminals: [{ instanceId: "X1", pinName: "IN" }],
+    });
+    parent.junctions.push({
+      id: "J1",
+      netId: "net-parent",
+      position: { x: -150, y: 0 },
+    });
+    parent.routes.push({
+      id: "route-input",
+      netId: "net-parent",
+      from: { kind: "terminal", instanceId: "X1", pinName: "IN" },
+      to: { kind: "junction", junctionId: "J1" },
+      waypoints: [],
+      segmentModes: ["auto"],
+    });
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "move-child-input-pin",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "human-local" },
+      edits: planSetCellSymbolPresentation(project, child.id, {
+        pinPlacements: [
+          { terminalId: "terminal-in", side: "north", offset: 0 },
+        ],
+      }),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      applied: true,
+      changedDocumentIds: ["document-child", "document-main"],
+      project: {
+        documents: [
+          {
+            routes: [
+              {
+                id: "route-input",
+                waypoints: [{ x: -150, y: -30 }],
+                segmentModes: ["auto", "auto"],
+              },
+            ],
+          },
+          {},
         ],
       },
     });

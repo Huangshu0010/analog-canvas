@@ -459,6 +459,42 @@ describe("current Agent Circuit API service", () => {
     );
   });
 
+  it("updates Cell symbol intent only through structureEdits", () => {
+    const fixture = serviceFixture();
+    const document = fixture.getDocument();
+    const response = fixture.service.handle({
+      apiVersion: "2.0",
+      requestId: "set-cell-symbol-presentation",
+      operation: "transact",
+      documentId: document.id,
+      transactionId: "set-cell-symbol-presentation",
+      expectedRevision: document.revision,
+      expectedStructureRevision: fixture.getProject().structureRevision,
+      structureEdits: [
+        {
+          kind: "transact_document",
+          documentId: document.id,
+          expectedRevision: document.revision,
+          edits: [
+            {
+              kind: "set_cell_symbol_presentation",
+              presentation: { minimumBodySize: { width: 120, height: 80 } },
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(response).toMatchObject({
+      ok: true,
+      applied: true,
+      projectStructure: { fromRevision: 0, toRevision: 1 },
+    });
+    expect(fixture.getDocument().presentation.cellSymbol).toEqual({
+      minimumBodySize: { width: 120, height: 80 },
+    });
+  });
+
   it("applies an instance property patch through the same presentation boundary", () => {
     const fixture = serviceFixture();
     const response = fixture.service.handle({

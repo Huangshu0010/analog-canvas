@@ -67,7 +67,7 @@ for readability; these groups do not create separate mutation endpoints:
   `set_net_power_domain`, `set_mos_bulk_defaults`,
   `reconcile_mos_bulk`, `clear_mos_bulk_default`;
 - explicit open terminal: `add_no_connect`, `remove_no_connect`;
-- presentation/layout: `set_presentation_style`,
+- presentation/layout: `set_presentation_style`, `set_cell_symbol_presentation`,
   `upsert_schematic_annotation`, `remove_schematic_annotation`,
   `upsert_drafting_object`, `remove_drafting_object`, `set_layout_group`,
   `remove_layout_group`, `set_layout_constraint`,
@@ -146,6 +146,10 @@ Phase 8 topology operations have these preconditions:
 - `port` and `port-filled` use the ordinary `add_instance`, `place_instance`,
   `move_instance`, and terminal-connectivity edit paths; there is no
   Port-specific edit kind.
+- `set_cell_symbol_presentation` changes only a Cell definition's optional
+  stable-terminal visual intent. It is wrapped in a Project structural
+  transaction so caller Symbol geometry and route following reconcile together;
+  it creates no endpoint or drawing-object kind.
 - `remove_instance` requires no Net, annotation, group, or constraint
   reference.
 - `connect_endpoints` creates a caller-named local Net when both endpoints are

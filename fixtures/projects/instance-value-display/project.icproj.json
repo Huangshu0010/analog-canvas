@@ -1045,7 +1045,7 @@
   ],
   "id": "instance-value-display",
   "name": "Instance Value Display",
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "source": {
     "dialect": "none",
     "entry": null,

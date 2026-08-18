@@ -3131,3 +3131,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `git diff --check` passed.
 - Commit status: included in the `codex/hierarchy-authoring-visual-plan`
   branch delivery.
+
+## 2026-08-18 - Hierarchy authoring and adaptive Symbol H1
+
+- Changed areas: schema-13 direct compatibility adapter and canonical fixtures;
+  definition-level Cell symbol intent and strict closure; adaptive derived
+  hierarchy Symbol geometry; Project route-follow planner; Agent/MCP artifacts;
+  current protocol/user documentation and ADR 0026.
+- Validation: focused model/project-protocol/symbols/edit-engine/Agent/editor
+  tests, Project-file Playwright (8 scenarios), generated-artifact checks,
+  `pnpm test:impact -- --base origin/main`, `git diff --check`, and
+  `pnpm verify:branch` passed (144 test files / 879 tests, workspace build and
+  production smoke).
+- Commit status: included in the `codex/hierarchy-authoring-visual-plan`
+  branch delivery.

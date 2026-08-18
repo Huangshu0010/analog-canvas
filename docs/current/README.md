@@ -9,7 +9,8 @@ repository search, completed roadmaps, target plans, or `docs/archive/`.
    boundary, system shape, and source-of-truth map.
 2. [`../adr/0022-current-protocol-baseline.md`](../adr/0022-current-protocol-baseline.md),
    [`../adr/0023-rolling-previous-project-compatibility.md`](../adr/0023-rolling-previous-project-compatibility.md),
-   and [`../adr/0024-device-protocol-and-compatibility-boundaries.md`](../adr/0024-device-protocol-and-compatibility-boundaries.md)
+   [`../adr/0024-device-protocol-and-compatibility-boundaries.md`](../adr/0024-device-protocol-and-compatibility-boundaries.md),
+   and [`../adr/0026-definition-level-cell-symbol-presentation.md`](../adr/0026-definition-level-cell-symbol-presentation.md)
    — current Project shape, rolling previous-version read policy, independent
    device and compatibility boundaries, Port-symbol, edit-union, and Agent
    credential contract; identify superseded clauses in older ADRs.

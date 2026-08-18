@@ -55,7 +55,7 @@ changed by this target.
 ## Test Impact
 
 - Decision: no-test-change
-- Evidence: this target changes proposed roadmap and factual planning records
+- Reason: this target changes proposed roadmap and factual planning records
   only; it does not change executable behavior or an accepted normative
   contract. The roadmap names the tests required by each later implementation
   slice.

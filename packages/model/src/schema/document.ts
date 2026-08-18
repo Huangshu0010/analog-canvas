@@ -298,6 +298,63 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
         }
       }
     }
+    const cellSymbol = document.presentation.cellSymbol;
+    if (cellSymbol) {
+      if (!document.netlist) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "Cell symbol presentation requires a Document Cell interface",
+          path: ["presentation", "cellSymbol"],
+        });
+      } else {
+        const terminalIds = new Set(
+          document.netlist.terminals.map((terminal) => terminal.id),
+        );
+        const placedTerminals = new Set<string>();
+        const occupiedSlots = new Set<string>();
+        for (const [index, placement] of (
+          cellSymbol.pinPlacements ?? []
+        ).entries()) {
+          if (!terminalIds.has(placement.terminalId)) {
+            context.addIssue({
+              code: "custom",
+              message: `Cell symbol placement references unknown terminal: ${placement.terminalId}`,
+              path: [
+                "presentation",
+                "cellSymbol",
+                "pinPlacements",
+                index,
+                "terminalId",
+              ],
+            });
+          }
+          if (placedTerminals.has(placement.terminalId)) {
+            context.addIssue({
+              code: "custom",
+              message: `Cell symbol terminal is placed more than once: ${placement.terminalId}`,
+              path: [
+                "presentation",
+                "cellSymbol",
+                "pinPlacements",
+                index,
+                "terminalId",
+              ],
+            });
+          }
+          placedTerminals.add(placement.terminalId);
+          const slot = `${placement.side}:${placement.offset}`;
+          if (occupiedSlots.has(slot)) {
+            context.addIssue({
+              code: "custom",
+              message: `Cell symbol pin slot is occupied: ${slot}`,
+              path: ["presentation", "cellSymbol", "pinPlacements", index],
+            });
+          }
+          occupiedSlots.add(slot);
+        }
+      }
+    }
     const netlistReferences = new Set<string>();
     for (const [instanceIndex, instance] of document.instances.entries()) {
       const reference = instance.netlist?.reference.toLowerCase();
