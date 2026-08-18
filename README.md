@@ -7,6 +7,7 @@ Project file, and export formal drawings.
 ## Start here
 
 - **Use the editor:** [Getting started](docs/user/getting-started.md),
+  [schematic hierarchy](docs/user/schematic-hierarchy.md),
   [compatibility](docs/user/project-compatibility.md), and
   [troubleshooting](docs/user/troubleshooting.md).
 - **Understand the product:** [current architecture](docs/overall-product-plan.md)

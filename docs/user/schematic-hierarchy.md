@@ -1,0 +1,38 @@
+# Schematic hierarchy
+
+Analog Canvas treats every Project Document as one reusable schematic Cell.
+The top Cell is the export root; other Cells may be instantiated any number of
+times or kept unreferenced while they are being authored.
+
+Use **New Cell** in the Cell navigation bar to create a module without first
+drawing a rectangle. Use **Place Cell** to select an existing definition and
+place an ordinary hierarchical Instance at the current view center. **Enter
+Cell** opens the child of a selected hierarchical Instance. **Up** follows the
+actual parent Instance path; **Top** returns to the root. Opening a shared Cell
+from the selector has no caller context when more than one path reaches it,
+which is reported in the status bar.
+
+To define a real Cell port:
+
+1. Place a `port` or `port-filled` component inside the child Cell and connect
+   pin `P` to the intended Net using the normal wiring tools.
+2. Select that Port Instance and choose **Expose Port**.
+3. Enter the formal pin name and direction (`input`, `output`, `inout`, or
+   `passive`).
+
+The visible marker remains an ordinary Instance, so selection, move, wiring,
+clipboard, and normal Instance deletion use the same editor protocol as other
+components. The formal interface adds stable identity, ordering, direction,
+and the Net binding used by parent blocks and netlist export.
+
+Select an exposed marker to **Rename Port** or **Delete Port**. Rename updates
+all connected parent Instances atomically. Deletion is rejected while a parent
+still references that pin, or while wire geometry is attached; remove those
+uses first. **Delete Cell** removes only a non-top, unreferenced Cell definition.
+Deleting a hierarchical Instance with the normal Delete command never deletes
+its reusable child Cell.
+
+Rectangles remain drafting geometry. Selecting an unlocked rectangle and using
+**Enter Cell** is only a convenience gesture: the commit removes the rectangle,
+creates a child Cell, and places an ordinary hierarchical Instance. Saved
+hierarchy never depends on rectangle drawing data.

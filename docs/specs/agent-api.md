@@ -17,7 +17,8 @@ POST /api/agent/sessions/{sessionId}/circuit
 Every request uses `apiVersion: "2.0"`, a stable `requestId`, and the
 `sessionId` returned by claim redemption. The bearer token is sent only in the
 Authorization header. There are no versioned URL aliases, query operations,
-dynamic catalog snapshots, whole-Project mutations, or compatibility readers.
+dynamic catalog snapshots or compatibility readers. Project-structural writes
+remain a form of `transact`; they are not a fifth operation.
 The separate public Agent Kit may carry a static projection of reviewed built-in
 product assets; it is not Document state or a Circuit operation.
 
@@ -32,14 +33,15 @@ process-local bearers.
 | -------------- | ----------------------------------------------------------------------------------------------------- |
 | `capabilities` | Report the exact operations, permissions, edit kinds, resource capabilities, and server-owned limits. |
 | `snapshot`     | Return one complete, read-only selected Document plus the bounded Project index.                      |
-| `transact`     | Dry-run or atomically commit typed edits against one exact Document revision.                         |
+| `transact`     | Dry-run or atomically commit typed Document edits, or a bounded Project structural transaction.       |
 | `render`       | Return a bounded formal or diagnostics SVG artifact.                                                  |
 
 Snapshot connectivity is bidirectional: every resolved Instance pin reports
 its `netId`, and every Net reports its complete terminal membership. Canvas
 `port` and `port-filled` are ordinary single-pin Instances. Formal cell
-terminal mappings, when present for netlist export, are reported separately and
-never materialize a separate canvas object class.
+terminal mappings report stable ID, direction, Net, and their ordinary Port
+Instance; they never materialize a separate canvas object class. The Project
+index reports `structureRevision` for structural optimistic concurrency.
 
 VDD is an explicit global Net with Route/Junction rail geometry and an
 annotation. It is never a symbol. MOS Instances use canonical `nmos`/`pmos`
@@ -48,14 +50,18 @@ assets, whose deterministic default visual variant is
 
 ## Mutation safety
 
-- One transaction targets one Document and one `expectedRevision`.
+- Ordinary edits target one Document and one `expectedRevision`. Add/remove
+  Cell and formal-interface work uses `structureEdits` plus one
+  `expectedStructureRevision`; nested Document changes still carry their exact
+  revisions and reuse the same typed edit union.
 - A non-trivial edit is dry-run first; commit uses the same edits only while
   the revision is unchanged.
 - All edits commit or none commit, and a successful commit advances revision
   once.
 - Reuse a `requestId` only for an exact-payload retry. A different payload with
   the same ID is rejected.
-- A Snapshot or whole Project is never accepted as a mutation payload.
+- A Snapshot or whole Project is never accepted as a mutation payload;
+  structural transactions contain only typed add/remove/transact operations.
 - GUI and Agent writes cross the same Edit Engine and permission checks.
 
 After commit, render and then request a fresh Snapshot for final verification.

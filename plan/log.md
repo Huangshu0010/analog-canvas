@@ -8353,3 +8353,20 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   contracts check remains required for delivery.
 - Commit status: pending `fix(release): refresh MCP checksum` on
   `codex/diagnostic-lifecycle`.
+
+## 2026-08-18 - Schematic hierarchy and formal Cell ports v12
+
+- Target: complete schematic-only hierarchy authoring while preserving the
+  existing Document, Instance, Port symbol, Edit Engine, resolver, index,
+  netlist, and four-operation Agent contracts.
+- Changed areas: schema-12 Project/formal-port model and direct v11 migration;
+  Project structural transactions/history; Cell create/place/delete and
+  path-aware navigation; formal Port expose/rename/delete; Agent Snapshot and
+  structural transact parity; SPICE/netlist handling; fixtures, ADR, current
+  specs, user guide, and generated MCP resources.
+- Validation: focused cross-package Vitest and Playwright workflows,
+  `pnpm test:impact -- --base origin/main`, generated-resource checks,
+  `git diff --check`, and `pnpm verify:branch` passed (144 test files / 874
+  tests, workspace build, production smoke).
+- Commit status: included in the `codex/schematic-hierarchy-v12` review branch
+  delivery.

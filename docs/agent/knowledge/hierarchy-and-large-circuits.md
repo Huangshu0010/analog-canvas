@@ -3,6 +3,11 @@
 Owner: Agent reasoning. Strength: guidance. Trigger: a Project Index has child
 references, or the selected Document contains roughly 100 or more instances.
 
+The Project index exposes `structureRevision`. Formal Cell terminals expose a
+stable ID, direction, Net ID, and their ordinary Port Instance. Use the same
+`transact` operation with `structureEdits` for Cell/interface changes; do not
+invent a separate hierarchy command language.
+
 ## Read the boundary before the interior
 
 Use the Project Index to identify the top Document and reference edges. For each
