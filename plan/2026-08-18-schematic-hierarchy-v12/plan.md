@@ -142,3 +142,6 @@ release smoke passes, and the required remote checks are green. The untracked
 
 Local repair validation: `pnpm ci:release` passes after adding the required
 schema-12 `project.structureRevision` fact to the packaged MCP relay fixture.
+The same remote run supplied a new Linux MCP tarball digest after the hierarchy
+bundle changed; this delivery follow-up also refreshes that integrity pin and
+requires a new green remote release-contract result.
