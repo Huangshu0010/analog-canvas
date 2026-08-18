@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -56,5 +56,7 @@ chore(plan): record hierarchy mainline merge
 ## Outcome
 
 The first protected-branch CI run found an MCP tarball checksum mismatch in the
-Linux release-contract job. The branch remains a fast-forward candidate, but
-promotion is pending a corrected checksum and green remote required checks.
+Linux release-contract job. `config/agent-mcp-distribution.json` was updated
+with that Linux build's canonical SHA-256, and the replacement run passed all
+six required checks. PR #121 merged at `0319a73` on 2026-08-18; `origin/main`
+now contains the hierarchy branch and the release-contract correction.
