@@ -3241,3 +3241,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   scenarios), test-impact, diff check, and `pnpm verify:branch` passed (146
   unit files / 889 tests, workspace build and production smoke).
 - Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.
+
+## 2026-08-18 - Adaptive Cell menu overlay
+
+- Changed areas: hierarchy toolbar overflow behavior, adaptive Cell selector
+  and command-popover sizing, narrow-viewport browser layout coverage, and
+  target records.
+- Validation: hierarchy Playwright (5 scenarios), direct 420px browser layout
+  inspection, test-impact, diff check, and `pnpm verify:branch` passed (146
+  unit files / 889 tests, workspace build and production smoke).
+- Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.

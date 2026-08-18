@@ -326,6 +326,10 @@ body {
   overflow-x: auto;
 }
 
+.toolbar-row:has(.command-menu[open]) {
+  overflow: visible;
+}
+
 .toolbar-group {
   display: inline-flex;
   flex-wrap: wrap;
@@ -388,6 +392,7 @@ body {
 
 .document-nav {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   gap: var(--icm-space-1);
   min-width: 0;
@@ -400,6 +405,8 @@ body {
 }
 
 .document-nav select {
+  flex: 1 1 12rem;
+  min-width: 5rem;
   max-width: 12rem;
   height: var(--icm-control-h);
   padding: 0 var(--icm-space-2);
@@ -481,6 +488,18 @@ body {
 
 .document-nav .command-popover button {
   height: auto;
+}
+
+.document-nav .command-menu {
+  flex: 0 0 auto;
+}
+
+.document-nav .command-popover {
+  right: 0;
+  left: auto;
+  width: max-content;
+  min-width: min(15rem, calc(100vw - var(--icm-space-6)));
+  max-width: calc(100vw - var(--icm-space-6));
 }
 
 .help-backdrop {

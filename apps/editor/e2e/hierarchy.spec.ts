@@ -25,6 +25,37 @@ async function createCell(
   await manager.getByRole("button", { name: "New Cell" }).click();
 }
 
+test("overlays an adaptive Cell menu without growing the hierarchy row", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 420, height: 700 });
+  await page.goto("/");
+  const toolbar = page.locator('.toolbar-row[aria-label="Document hierarchy"]');
+  const menu = page.getByTestId("cell-command-menu");
+  const heightBefore = await toolbar.evaluate(
+    (element) => element.getBoundingClientRect().height,
+  );
+
+  await menu.locator("summary").click();
+
+  const heightAfter = await toolbar.evaluate(
+    (element) => element.getBoundingClientRect().height,
+  );
+  const overlay = await menu.locator(".command-popover").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      position: getComputedStyle(element).position,
+      left: rect.left,
+      right: rect.right,
+      viewportWidth: window.innerWidth,
+    };
+  });
+  expect(heightAfter).toBe(heightBefore);
+  expect(overlay.position).toBe("absolute");
+  expect(overlay.left).toBeGreaterThanOrEqual(0);
+  expect(overlay.right).toBeLessThanOrEqual(overlay.viewportWidth);
+});
+
 test("creates and deletes an unreferenced reusable Cell", async ({ page }) => {
   await page.goto("/");
   await createCell(page, "ReusableStage");
