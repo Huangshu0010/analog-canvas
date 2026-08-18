@@ -315,20 +315,18 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     position: Point,
     placementRequest: PendingComponentPlacement,
   ): void => {
+    const id = nextInstanceDesignator(options.document, symbolId);
+    const formalName = placementRequest.formalName ?? id;
     if (
       placementRequest.kind !== "cell-port" ||
-      !placementRequest.formalName ||
       !placementRequest.direction ||
       options.document.netlist?.terminals.some(
-        (terminal) => terminal.name === placementRequest.formalName,
+        (terminal) => terminal.name === formalName,
       )
     ) {
-      options.setStatus(
-        `Cell port ${placementRequest.formalName ?? ""} already exists`,
-      );
+      options.setStatus(`Cell port ${formalName} already exists`);
       return;
     }
-    const id = nextInstanceDesignator(options.document, symbolId);
     const instance = {
       id,
       symbolId,
@@ -390,7 +388,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         connectionEdits,
         terminal: {
           id: `terminal-${id.toLowerCase()}`,
-          name: placementRequest.formalName,
+          name: formalName,
           netId,
           direction: placementRequest.direction,
           interfaceInstanceId: id,
@@ -401,7 +399,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     options.selectOnly("instance", [id]);
     options.setComponentPreviewPoint(position);
     options.setStatus(
-      `Added Cell port ${placementRequest.formalName} · click to place another · Esc exits`,
+      `Added Cell port ${formalName} · click to place another · Esc exits`,
     );
   };
 
@@ -480,8 +478,9 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.setStatus("Place VDD Rail: click the first end · Esc cancels");
       return;
     }
-    options.beginComponentPlacement(
-      request.kind === "cell-port"
+    const pendingRequest: PendingComponentPlacement =
+      request.kind === "symbol" &&
+      (request.symbolId === "port" || request.symbolId === "port-filled")
         ? {
             kind: "cell-port",
             symbolId: request.symbolId,
@@ -490,11 +489,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
             showReference: false,
             referenceText: null,
             showValue: false,
-            formalName: request.formalName,
-            direction: request.direction,
+            direction: "passive",
           }
-        : request,
-    );
+        : request;
+    options.beginComponentPlacement(pendingRequest);
     options.setStatus(
       `Place ${request.symbolName} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
     );

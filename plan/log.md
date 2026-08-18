@@ -3251,3 +3251,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   inspection, test-impact, diff check, and `pnpm verify:branch` passed (146
   unit files / 889 tests, workspace build and production smoke).
 - Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.
+
+## 2026-08-18 - Direct Cell Port authoring
+
+- Changed areas: ordinary Port placement orchestration, selected-Port
+  Properties and safe deletion, hierarchy command/dialog cleanup, focused
+  browser coverage, and current hierarchy documentation.
+- Validation: focused Vitest (4 files / 24 tests), hierarchy Playwright (5
+  scenarios), docs check, test-impact, diff check, and `pnpm verify:branch`
+  passed (146 unit files / 889 tests, workspace build and production smoke).
+- Commit status: included in the `codex/hierarchy-ui-polish` branch delivery.

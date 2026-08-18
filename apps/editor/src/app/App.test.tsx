@@ -102,7 +102,7 @@ describe("editor shell", () => {
     expect(markup).toContain('data-testid="cell-navigation"');
     expect(markup).toContain('data-testid="cell-command-menu"');
     expect(markup).toContain("Manage Cells…");
-    expect(markup).toContain("Edit Interface…");
+    expect(markup).not.toContain("Edit Interface…");
   });
 
   it("shows a resolvable imported subcircuit in Cell navigation", () => {

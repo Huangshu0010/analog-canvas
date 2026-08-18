@@ -19,26 +19,20 @@ internal netlist reference; the canvas has one object-anchored Cell-name
 annotation in the ordinary reference-label position. Both `port` and `port-filled`
 remain ordinary manually reachable components. Choosing either starts the same
 placement state as any component; terminal `P` participates in ordinary snap,
-wire, move/stretch, selection, clipboard, and delete behavior. Placement
-creates an ordinary Instance and uses no Port-specific edit path.
-An author may then expose a connected Port Instance as a formal Cell terminal.
-That interface change uses the Project structural transaction, so the marker's
-ordinary Instance/Net behavior is preserved while every parent block observes
-one atomic interface revision. Rectangle-to-Cell is likewise a convenience
+wire, move/stretch, and selection behavior. Its commit factory atomically adds
+the ordinary Instance, contacted or new local Net membership, and one stable
+formal terminal through the Project structural transaction. Every parent block
+therefore observes the interface revision without a later expose step.
+Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.
 
-Every Cell retains the **Cell → Edit Interface…** command so grouping the
-toolbar does not change action reachability. The top Cell remains the export
-root rather than a normally instantiated symbol. **Add Port** in that dialog
-is the primary formal-interface authoring action. Its small
-declaration dialog produces one pending `port` or `port-filled` placement. At
-commit, an exact unambiguous pin/route contact reuses that Net; otherwise one
-local Net is created for pin `P`. The Port Instance, connection, and appended
-formal terminal are then committed together through the Project transaction.
-The bounded Cell Interface dialog uses existing terminal-direction/order edits
-and the definition-level Cell-symbol presentation edit; it never rewrites caller Net
-endpoints merely to move a visual pin.
+There is no separate Cell Interface authoring surface. The selected Port's
+normal Properties own terminal name and direction; rename reconciles callers
+by stable terminal identity. Ordinary Delete dispatches through formal-terminal
+removal so connected callers and attached route geometry retain their existing
+safety checks. Definition-level pin placement data remains compatible, while
+new interfaces use deterministic direction-aware automatic layout.
 
 Canonical `nmos`/`pmos` use the asset's `textbook-3terminal` visual variant by
 default while retaining D/G/S/B electrically. A manual MOS uses explicit B

@@ -175,6 +175,9 @@ export function InsertComponentDialog({
     choices.find((choice) => choice.key === selectedId) ?? choices[0] ?? null;
   const selectedIsVddRail =
     selected?.kind === "symbol" && selected.symbol.id === "vdd";
+  const selectedIsPort =
+    selected?.kind === "symbol" &&
+    (selected.symbol.id === "port" || selected.symbol.id === "port-filled");
   const parameters = componentParameters(
     selected?.kind === "symbol" ? selected.symbol.id : "",
   );
@@ -461,6 +464,10 @@ export function InsertComponentDialog({
                 {selected?.kind === "cell" ? (
                   <p className="insert-cell-label-note">
                     Cell label: {selected.cellName ?? selected.symbol.name}
+                  </p>
+                ) : selectedIsPort ? (
+                  <p className="insert-cell-label-note">
+                    Port name and direction can be edited after placement.
                   </p>
                 ) : (
                   <div className="insert-label-control">

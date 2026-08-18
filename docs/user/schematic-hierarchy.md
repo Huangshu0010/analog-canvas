@@ -22,33 +22,30 @@ the root. Opening a shared Cell from the selector has no caller context when
 more than one path reaches it, which is reported in the status bar.
 
 The top Cell is the Project export root and is not normally instantiated as a
-symbol, but the same interface actions remain available for compatibility and
-uniform editing. To define a real Cell port:
+symbol, but Port authoring is identical in every Cell. To define a real Cell
+port:
 
-1. Choose **Cell → Edit Interface… → Add Port**, give it a name, direction (`input`, `output`,
-   `inout`, or `passive`), and optional filled marker.
+1. Place the ordinary **Port** or **Filled Port** from the Library.
 2. Click an exact existing electrical contact to attach to its Net, or click
    empty grid space to create a new local Net.
+3. Select the placed Port to edit its interface name and direction in normal
+   **Properties**.
 
-The command commits an ordinary `port`/`port-filled` Instance, its pin-`P`
-connection, and the formal Cell terminal as one revision. **Expose Selected**
-remains the advanced adoption path for an already drawn and connected marker.
+Placement commits the ordinary `port`/`port-filled` Instance, its pin-`P`
+connection, and the stable formal Cell terminal as one revision. Inputs are
+placed on the left of generated parent symbols, outputs on the right, and other
+directions are balanced automatically. The symbol body and pin placement adapt
+without a separate interface editor.
 
-Open **Cell → Edit Interface…** to edit each formal port's
-direction, order, and definition-level visual side/offset. Direction is an
-electrical fact; side and offset only change the generated external symbol and
-therefore affect every caller without changing Net membership.
+The visible marker remains an ordinary Instance for selection, move, and
+wiring. Its Properties own the interface name and direction. The formal
+terminal adds stable identity, ordering, and the Net binding used by parent
+blocks and netlist export.
 
-The visible marker remains an ordinary Instance, so selection, move, wiring,
-clipboard, and normal Instance deletion use the same editor protocol as other
-components. The formal interface adds stable identity, ordering, direction,
-and the Net binding used by parent blocks and netlist export.
-
-Select an exposed marker, then use **Rename Selected** or **Delete Selected**
-in the interface dialog. Rename updates
-all connected parent Instances atomically. Deletion is rejected while a parent
-still references that pin, or while wire geometry is attached; remove those
-uses first. **Delete Cell** removes only a non-top, unreferenced Cell definition.
+Renaming a selected Port updates all connected parent Instances atomically.
+Ordinary Delete removes its formal terminal and marker together, but is
+rejected while a parent still references that pin or wire geometry is attached;
+remove those uses first. **Delete Cell** removes only a non-top, unreferenced Cell definition.
 Deleting a hierarchical Instance with the normal Delete command never deletes
 its reusable child Cell.
 
