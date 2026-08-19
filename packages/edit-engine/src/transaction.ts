@@ -14,6 +14,7 @@ import {
   netContractIssueKey,
   validateNetContract,
 } from "@icm/model";
+import { createReferenceIndex, referenceIssuesForInstance } from "@icm/devices";
 import type {
   Annotation,
   Point,
@@ -54,6 +55,7 @@ import {
 } from "./transaction-route-follow.js";
 import {
   followAttachedAnnotations,
+  refreshInstanceReferenceAnnotation,
   refreshInstanceValueAnnotation,
   translateObjectAnchoredAnnotation,
 } from "./transaction-instance-annotations.js";
@@ -90,6 +92,27 @@ import {
 
 export * from "./edit-schema.js";
 export * from "./transaction-result.js";
+
+function referencePolicyFailure(
+  draft: SchematicDocument,
+  instanceId: string,
+): string | null {
+  const issue = referenceIssuesForInstance(
+    createReferenceIndex(draft),
+    instanceId,
+  )[0];
+  if (!issue) return null;
+  switch (issue.code) {
+    case "MISSING_REFERENCE":
+      return "This component requires a netlist reference";
+    case "UNEXPECTED_REFERENCE":
+      return "This symbol does not emit a netlist reference";
+    case "WRONG_REFERENCE_PREFIX":
+      return `Reference ${issue.reference} does not match this component prefix`;
+    case "DUPLICATE_REFERENCE":
+      return `Reference ${issue.reference} is already used by ${issue.otherInstanceId}`;
+  }
+}
 
 /**
  * Ensure the ADR 0010 drafting layer exists on a draft Document. It is
@@ -810,7 +833,19 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
+        const before: SchematicDocument["instances"][number] =
+          structuredClone(instance);
         instance.netlist.reference = edit.reference;
+        const failure = referencePolicyFailure(draft, instance.id);
+        if (failure) {
+          return rejectAt("EDIT_PRECONDITION", failure, [], [instance.id]);
+        }
+        refreshInstanceReferenceAnnotation(
+          draft,
+          before,
+          edit.instanceId,
+          changedObjectIds,
+        );
         changedObjectIds.add(edit.instanceId);
         break;
       }
@@ -838,6 +873,10 @@ export function executeTransaction(
         if (edit.binding)
           instance.netlist.binding = structuredClone(edit.binding);
         else delete instance.netlist.binding;
+        const failure = referencePolicyFailure(draft, instance.id);
+        if (failure) {
+          return rejectAt("EDIT_PRECONDITION", failure, [], [instance.id]);
+        }
         changedObjectIds.add(edit.instanceId);
         connectivityChanged = true;
         break;
@@ -868,6 +907,10 @@ export function executeTransaction(
         const before: SchematicDocument["instances"][number] =
           structuredClone(instance);
         instance.netlist = structuredClone(edit.netlist);
+        const failure = referencePolicyFailure(draft, instance.id);
+        if (failure) {
+          return rejectAt("EDIT_PRECONDITION", failure, [], [instance.id]);
+        }
         refreshInstanceValueAnnotation(
           draft,
           before,

@@ -63,6 +63,18 @@ describe("hierarchy domain planners", () => {
     ).toEqual([expect.objectContaining({ id: "X1" })]);
   });
 
+  it("permits a hierarchy reference independent from the stable instance id", () => {
+    const child = createEmptyDocument("child", "Stage");
+    expect(
+      createHierarchyInstance(
+        "X2-copy-1",
+        child,
+        { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
+        "X2",
+      ),
+    ).toMatchObject({ id: "X2-copy-1", netlist: { reference: "X2" } });
+  });
+
   it("atomically adds a Port Instance, local Net, and formal terminal", () => {
     const project = createEmptyProject("project", "Project");
     const instance = {

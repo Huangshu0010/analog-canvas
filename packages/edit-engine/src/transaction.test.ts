@@ -1,4 +1,9 @@
-import { createEmptyDocument, transformPoint } from "@icm/model";
+import {
+  createEmptyDocument,
+  flattenRichText,
+  semanticTextDocument,
+  transformPoint,
+} from "@icm/model";
 import type { RichTextDocument } from "@icm/model";
 import {
   defaultInstanceLabelPlacement,
@@ -716,6 +721,64 @@ describe("Edit Transaction envelope", () => {
         ],
       },
     });
+  });
+
+  it("enforces Cell reference policy and refreshes only a canonical label", () => {
+    const document = documentWithInstance();
+    document.instances.push({
+      id: "M2",
+      symbolId: "nmos",
+      placement: null,
+      netlist: { reference: "M2", parameters: {} },
+    });
+    document.annotations.push({
+      id: "instance-label-M1",
+      kind: "instance-label",
+      content: semanticTextDocument("M1", "instance-label"),
+      anchor: {
+        kind: "object",
+        objectId: "M1",
+        localOffset: { x: 0, y: -20 },
+        fallbackPosition: { x: 0, y: -20 },
+      },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+
+    const duplicate = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        { kind: "set_instance_reference", instanceId: "M1", reference: "m2" },
+      ],
+    });
+    expect(duplicate).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+    const wrongPrefix = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        { kind: "set_instance_reference", instanceId: "M1", reference: "R1" },
+      ],
+    });
+    expect(wrongPrefix).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+
+    const renamed = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        { kind: "set_instance_reference", instanceId: "M1", reference: "M3" },
+      ],
+    });
+    expect(renamed).toMatchObject({ ok: true });
+    if (!renamed.ok) return;
+    expect(renamed.document.instances[0]?.netlist?.reference).toBe("M3");
+    expect(flattenRichText(renamed.document.annotations[0]!.content)).toBe(
+      "M3",
+    );
   });
 
   it("rejects an invalid parameter patch without partially changing the instance", () => {

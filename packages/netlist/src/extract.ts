@@ -6,7 +6,11 @@ import type {
   SchematicDocument,
   StableId,
 } from "@icm/model";
-import { deviceDescriptor, requiredParameterNames } from "@icm/devices";
+import {
+  createReferenceIndex,
+  deviceDescriptor,
+  requiredParameterNames,
+} from "@icm/devices";
 
 import type {
   DesignNetlistCell,
@@ -290,15 +294,6 @@ function extractHierarchyInstance(
       [instance.id],
     );
   }
-  if (!netlist.reference.toUpperCase().startsWith("X")) {
-    diagnostic(
-      diagnostics,
-      document.id,
-      "WRONG_REFERENCE_PREFIX",
-      `Hierarchy reference ${netlist.reference} must start with X`,
-      [instance.id],
-    );
-  }
   for (const parameter of Object.keys(netlist.parameters)) {
     if (!isIdentifier(parameter)) {
       diagnostic(
@@ -360,6 +355,29 @@ function extractDeviceInstance(
     );
     return null;
   }
+  if (definition.deviceClass === "net-marker") {
+    const markerNet = context.netByTerminal.get(
+      `${instance.id}\u0000${definition.pinOrder[0]}`,
+    );
+    if (!markerNet || markerNet.scope !== "global" || !markerNet.name) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "INVALID_NET_MARKER",
+        `Net marker ${instance.id} must connect to an explicitly named global Net`,
+        [instance.id],
+      );
+    } else if (instance.symbolId === "ground" && markerNet.name !== "0") {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "GROUND_NAME_MISMATCH",
+        `Ground marker must connect to global Net 0, not ${markerNet.name}`,
+        [instance.id, markerNet.id],
+      );
+    }
+    return null;
+  }
   const netlist = instance.netlist;
   if (!netlist) {
     diagnostic(
@@ -377,18 +395,6 @@ function extractDeviceInstance(
       document.id,
       "INVALID_INSTANCE_REFERENCE",
       `Instance reference is outside the portable identifier subset: ${netlist.reference}`,
-      [instance.id],
-    );
-  }
-  if (
-    definition.referencePrefix &&
-    !netlist.reference.toUpperCase().startsWith(definition.referencePrefix)
-  ) {
-    diagnostic(
-      diagnostics,
-      document.id,
-      "WRONG_REFERENCE_PREFIX",
-      `Reference ${netlist.reference} must start with ${definition.referencePrefix}`,
       [instance.id],
     );
   }
@@ -474,29 +480,6 @@ function extractDeviceInstance(
     );
     return netName ? [{ pinName, netName }] : [];
   });
-  if (definition.deviceClass === "net-marker") {
-    const markerNet = context.netByTerminal.get(
-      `${instance.id}\u0000${definition.pinOrder[0]}`,
-    );
-    if (!markerNet || markerNet.scope !== "global" || !markerNet.name) {
-      diagnostic(
-        diagnostics,
-        document.id,
-        "INVALID_NET_MARKER",
-        `Net marker ${instance.id} must connect to an explicitly named global Net`,
-        [instance.id],
-      );
-    } else if (instance.symbolId === "ground" && markerNet.name !== "0") {
-      diagnostic(
-        diagnostics,
-        document.id,
-        "GROUND_NAME_MISMATCH",
-        `Ground marker must connect to global Net 0, not ${markerNet.name}`,
-        [instance.id, markerNet.id],
-      );
-    }
-    return null;
-  }
   const target =
     netlist.binding?.kind === "model" ? netlist.binding.name : null;
   if (target && !isIdentifier(target)) {
@@ -591,7 +574,50 @@ function extractCell(
     return [{ id: terminal.netId, name: terminal.name, netName }];
   });
 
-  const references = new Map<string, string>();
+  const referenceIndex = createReferenceIndex(document);
+  const reportedDuplicateReferences = new Set<string>();
+  for (const issue of referenceIndex.issues) {
+    if (issue.code === "MISSING_REFERENCE") continue;
+    const otherInstanceIds = issue.otherInstanceId
+      ? [issue.otherInstanceId, issue.instanceId]
+      : [issue.instanceId];
+    switch (issue.code) {
+      case "UNEXPECTED_REFERENCE":
+        diagnostic(
+          diagnostics,
+          document.id,
+          "UNEXPECTED_INSTANCE_REFERENCE",
+          `Symbol ${issue.instanceId} does not emit reference ${issue.reference}`,
+          otherInstanceIds,
+        );
+        break;
+      case "WRONG_REFERENCE_PREFIX":
+        diagnostic(
+          diagnostics,
+          document.id,
+          "WRONG_REFERENCE_PREFIX",
+          `Reference ${issue.reference} does not match ${issue.instanceId}'s component prefix`,
+          otherInstanceIds,
+        );
+        break;
+      case "DUPLICATE_REFERENCE":
+        if (
+          !issue.reference ||
+          reportedDuplicateReferences.has(issue.reference.toLowerCase())
+        ) {
+          break;
+        }
+        reportedDuplicateReferences.add(issue.reference.toLowerCase());
+        diagnostic(
+          diagnostics,
+          document.id,
+          "DUPLICATE_INSTANCE_REFERENCE",
+          `Reference ${issue.reference} is duplicated under case folding`,
+          otherInstanceIds,
+        );
+        break;
+    }
+  }
   const instances: DesignNetlistInstance[] = [];
   const interfaceInstanceIds = new Set(
     document.netlist.terminals.map((terminal) => terminal.interfaceInstanceId),
@@ -602,22 +628,6 @@ function extractCell(
     return compareText(left, right) || a.id.localeCompare(b.id);
   })) {
     if (interfaceInstanceIds.has(instance.id)) continue;
-    const reference = instance.netlist?.reference;
-    if (reference) {
-      const folded = reference.toLowerCase();
-      const prior = references.get(folded);
-      if (prior) {
-        diagnostic(
-          diagnostics,
-          document.id,
-          "DUPLICATE_INSTANCE_REFERENCE",
-          `Reference ${reference} duplicates instance ${prior} under case folding`,
-          [prior, instance.id],
-        );
-      } else {
-        references.set(folded, instance.id);
-      }
-    }
     const binding = instance.netlist?.binding;
     if (binding?.kind === "external-subcircuit") {
       diagnostic(

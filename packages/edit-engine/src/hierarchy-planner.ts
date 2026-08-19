@@ -40,6 +40,7 @@ export function createHierarchyInstance(
   id: string,
   child: Pick<SchematicDocument, "id" | "netlist">,
   placement: NonNullable<SchematicDocument["instances"][number]["placement"]>,
+  reference = id,
 ): SchematicDocument["instances"][number] {
   if (!child.netlist) {
     throw new Error(`Cell has no formal interface: ${child.id}`);
@@ -49,7 +50,7 @@ export function createHierarchyInstance(
     symbolId: hierarchicalSymbolId(child.netlist.name),
     placement,
     netlist: {
-      reference: id,
+      reference,
       parameters: {},
       binding: {
         kind: "subcircuit",

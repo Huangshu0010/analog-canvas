@@ -3505,3 +3505,8 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `origin/main`, diff check, and schema-13 property audit passed.
 - Commit status: committed locally on
   `codex/phase1-schematic-foundation-plan`; push/PR not requested.
+## 2026-08-20 - S3 shared Reference Policy and Index
+
+- Changed areas: centralized per-Cell reference allocation, validation, hierarchy X policy, clipboard/insertion authoring, typed rename planning, Properties Reference editing, canonical label refresh, and netlist extraction diagnostics/marker behavior.
+- Validation: typecheck; focused unit contracts (58 tests); focused Properties/hierarchy browser contracts (8 tests); test-impact against `origin/main`; docs links; and diff check passed.
+- Commit status: committed locally on `codex/phase1-schematic-foundation-plan`.

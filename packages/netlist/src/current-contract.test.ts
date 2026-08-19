@@ -134,4 +134,26 @@ describe("current formal cell interface", () => {
       }),
     );
   });
+
+  it("exports a ground net marker without inventing a netlist record", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "GND",
+      symbolId: "ground",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-ground",
+      name: "0",
+      scope: "global",
+      terminals: [{ instanceId: "GND", pinName: "0" }],
+    });
+
+    const result = extractDesignNetlist(project);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.cells[0]?.instances).toEqual([]);
+    expect(result.ir?.globals).toEqual(["0"]);
+  });
 });

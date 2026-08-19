@@ -3,10 +3,16 @@ import type {
   InstanceNetlistData,
   SchematicDocument,
 } from "@icm/model";
-import { deviceDescriptor } from "@icm/devices";
+import {
+  createReferenceIndex,
+  deviceDescriptor,
+  nextReference,
+  referencePolicyForSymbol,
+} from "@icm/devices";
 
 function referencePrefix(symbolId: string): string {
-  return deviceDescriptor(symbolId)?.referencePrefix ?? "X";
+  const policy = referencePolicyForSymbol(symbolId);
+  return policy.kind === "required" ? policy.prefix : "X";
 }
 
 /**
@@ -65,17 +71,12 @@ export function nextInstanceReference(
   document: SchematicDocument,
   symbolId: string,
 ): string {
-  const prefix = referencePrefix(symbolId) || "PWR";
-  const used = new Set(
-    document.instances.flatMap((instance) =>
-      instance.netlist?.reference
-        ? [instance.netlist.reference.toLowerCase()]
-        : [],
-    ),
+  return (
+    nextReference(
+      createReferenceIndex(document),
+      referencePolicyForSymbol(symbolId),
+    ) ?? ""
   );
-  let index = 1;
-  while (used.has(`${prefix}${index}`.toLowerCase())) index += 1;
-  return `${prefix}${index}`;
 }
 
 function rawParameters(
@@ -97,10 +98,7 @@ function defaultBinding(symbolId: string): InstanceNetlistBinding | undefined {
   if (!definition || definition.targetPolicy === "required-model") {
     return undefined;
   }
-  if (
-    definition.targetPolicy === "builtin" ||
-    definition.targetPolicy === "none"
-  ) {
+  if (definition.targetPolicy === "builtin") {
     return {
       kind: "primitive",
       deviceClass: definition.deviceClass,
@@ -114,10 +112,13 @@ export function initialInstanceNetlist(
   symbolId: string,
   parameterValues: Readonly<Record<string, string>>,
   reference?: string,
-): InstanceNetlistData {
+): InstanceNetlistData | undefined {
+  const policy = referencePolicyForSymbol(symbolId);
+  if (policy.kind === "none") return undefined;
   const binding = defaultBinding(symbolId);
   return {
-    reference: reference ?? nextInstanceReference(document, symbolId),
+    reference:
+      reference ?? nextReference(createReferenceIndex(document), policy)!,
     ...(binding ? { binding } : {}),
     parameters: rawParameters(parameterValues),
   };

@@ -94,6 +94,7 @@ describe("netlist authoring", () => {
       reference: "M1",
       parameters: { w: "2u", l: "60n" },
     });
+    expect(initialInstanceNetlist(document, "ground", {})).toBeUndefined();
   });
 
   it("creates a model binding only from explicit edited text", () => {

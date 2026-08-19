@@ -11,6 +11,11 @@ import {
   planPlaceCellInstance,
 } from "@icm/edit-engine";
 import type { SchematicStyleProfile } from "@icm/derived";
+import {
+  createReferenceIndex,
+  hierarchyReferencePolicy,
+  nextReference,
+} from "@icm/devices";
 import { defaultDraftTextDocument, semanticTextDocument } from "@icm/model";
 import type {
   CircuitProject,
@@ -35,7 +40,6 @@ import {
 } from "../wiring/route-interaction-geometry";
 import {
   initialInstanceNetlist,
-  netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
 } from "../netlist-export/netlist-authoring";
 import {
@@ -112,6 +116,11 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     if (placementRequest.kind !== "symbol") return;
     const id = nextInstanceDesignator(options.document, symbolId);
     const symbolVariantId = defaultRazaviSymbolVariantId(symbolId);
+    const netlist = initialInstanceNetlist(
+      options.document,
+      symbolId,
+      placementRequest.parameters,
+    );
     const instance = {
       id,
       symbolId,
@@ -121,12 +130,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         rotation: options.componentPlacementRotation,
         mirror: options.componentPlacementMirror,
       },
-      netlist: initialInstanceNetlist(
-        options.document,
-        symbolId,
-        placementRequest.parameters,
-        netlistReferenceMatchesPlacement(symbolId) ? id : undefined,
-      ),
+      ...(netlist ? { netlist } : {}),
     };
     const defaultLabel = defaultInstanceLabel(
       options.document,
@@ -139,7 +143,9 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         ? {
             ...defaultLabel,
             content: semanticTextDocument(
-              placementRequest.referenceText ?? instance.id,
+              placementRequest.referenceText ??
+                netlist?.reference ??
+                instance.id,
               "instance-label",
             ),
           }
@@ -270,11 +276,24 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return;
     }
     const id = nextInstanceDesignator(options.document, symbolId);
-    const instance = createHierarchyInstance(id, child, {
-      position,
-      rotation: options.componentPlacementRotation,
-      mirror: options.componentPlacementMirror,
-    });
+    const reference = nextReference(
+      createReferenceIndex(options.document),
+      hierarchyReferencePolicy,
+    );
+    if (!reference) {
+      options.setStatus("Cannot allocate a hierarchy reference");
+      return;
+    }
+    const instance = createHierarchyInstance(
+      id,
+      child,
+      {
+        position,
+        rotation: options.componentPlacementRotation,
+        mirror: options.componentPlacementMirror,
+      },
+      reference,
+    );
     const defaultLabel = defaultInstanceLabel(
       options.document,
       instance,
@@ -334,8 +353,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         rotation: options.componentPlacementRotation,
         mirror: options.componentPlacementMirror,
       },
-      parameters: {},
-      netlist: initialInstanceNetlist(options.document, symbolId, {}),
     };
     const annotation = defaultInstanceLabel(
       options.document,

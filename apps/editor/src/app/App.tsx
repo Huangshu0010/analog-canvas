@@ -8,7 +8,7 @@ import type {
   AgentHostSemanticIntentRequest,
   AgentHostSemanticIntentResult,
 } from "@icm/agent-adapter";
-import { deviceDescriptor } from "@icm/devices";
+import { deviceDescriptor, referencePolicyForInstance } from "@icm/devices";
 
 import {
   buildManualWirePath,
@@ -28,6 +28,7 @@ import {
   planRemoveCellTerminal,
   planRemoveCellTerminals,
   planRenameCellTerminal,
+  planSetInstanceReference,
   planSetCellSymbolPresentation,
   planSetCellTerminalPlacement,
   planUpdateCellTerminalDirection,
@@ -799,6 +800,9 @@ export function App({
   const selectedDevice = selectedInstance
     ? deviceDescriptor(selectedInstance.symbolId)
     : undefined;
+  const selectedReferencePolicy = selectedInstance
+    ? referencePolicyForInstance(selectedInstance)
+    : { kind: "none" as const };
   const selectedBinding = selectedInstance?.netlist?.binding;
   const selectedExternalSubcircuit =
     selectedBinding?.kind === "external-subcircuit"
@@ -4867,38 +4871,40 @@ export function App({
     const baseNetlist =
       instance.netlist ??
       initialInstanceNetlist(document, instance.symbolId, {});
-    const netlistParameters = { ...baseNetlist.parameters };
-    const set: Record<string, string> = {};
-    const unset: string[] = [];
-    for (const parameter of componentParameters(instance.symbolId)) {
-      const value = (draft.parameters[parameter.key] ?? "").trim();
-      const current = netlistParameters[parameter.key];
-      if (value === "") {
-        delete netlistParameters[parameter.key];
-        if (current !== undefined) unset.push(parameter.key);
-      } else {
-        netlistParameters[parameter.key] = value;
-        if (current !== value) set[parameter.key] = value;
+    if (baseNetlist) {
+      const netlistParameters = { ...baseNetlist.parameters };
+      const set: Record<string, string> = {};
+      const unset: string[] = [];
+      for (const parameter of componentParameters(instance.symbolId)) {
+        const value = (draft.parameters[parameter.key] ?? "").trim();
+        const current = netlistParameters[parameter.key];
+        if (value === "") {
+          delete netlistParameters[parameter.key];
+          if (current !== undefined) unset.push(parameter.key);
+        } else {
+          netlistParameters[parameter.key] = value;
+          if (current !== value) set[parameter.key] = value;
+        }
       }
-    }
 
-    const nextNetlist = {
-      ...baseNetlist,
-      parameters: netlistParameters,
-    };
-    if (!instance.netlist) {
-      edits.push({
-        kind: "set_instance_netlist",
-        instanceId: instance.id,
-        netlist: nextNetlist,
-      });
-    } else if (Object.keys(set).length > 0 || unset.length > 0) {
-      edits.push({
-        kind: "patch_instance_netlist_parameters",
-        instanceId: instance.id,
-        ...(Object.keys(set).length > 0 ? { set } : {}),
-        ...(unset.length > 0 ? { unset } : {}),
-      });
+      const nextNetlist = {
+        ...baseNetlist,
+        parameters: netlistParameters,
+      };
+      if (!instance.netlist) {
+        edits.push({
+          kind: "set_instance_netlist",
+          instanceId: instance.id,
+          netlist: nextNetlist,
+        });
+      } else if (Object.keys(set).length > 0 || unset.length > 0) {
+        edits.push({
+          kind: "patch_instance_netlist_parameters",
+          instanceId: instance.id,
+          ...(Object.keys(set).length > 0 ? { set } : {}),
+          ...(unset.length > 0 ? { unset } : {}),
+        });
+      }
     }
 
     let invalidPosition = false;
@@ -4955,6 +4961,22 @@ export function App({
           ? `Set model target ${nextBinding.name}`
           : `Cleared model target for ${selectedInstance.id}`,
       );
+    }
+  }
+
+  function updateSelectedReference(value: string): void {
+    if (!selectedInstance) return;
+    const plan = planSetInstanceReference(document, {
+      instanceId: selectedInstance.id,
+      reference: value,
+    });
+    if (!plan.ok) {
+      setStatus(plan.message);
+      return;
+    }
+    if (plan.edits.length === 0) return;
+    if (transact([...plan.edits]).ok) {
+      setStatus(`Renamed reference to ${plan.reference}`);
     }
   }
 
@@ -7062,8 +7084,21 @@ export function App({
                       <div>
                         <dt>Reference</dt>
                         <dd>
-                          {selectedInstance.netlist?.reference ??
-                            "Not exportable"}
+                          {selectedInstance.netlist &&
+                          selectedReferencePolicy.kind === "required" ? (
+                            <input
+                              key={`${selectedInstance.id}-${document.revision}-reference`}
+                              aria-label="Component reference"
+                              defaultValue={selectedInstance.netlist.reference}
+                              onBlur={(event) =>
+                                updateSelectedReference(
+                                  event.currentTarget.value,
+                                )
+                              }
+                            />
+                          ) : (
+                            "Not exportable"
+                          )}
                         </dd>
                       </div>
                       <div>
@@ -7080,8 +7115,8 @@ export function App({
                       </div>
                     </dl>
                     <small>
-                      Stable internal IDs stay hidden. Reference editing joins
-                      this panel when S3's shared uniqueness policy is active.
+                      Stable internal IDs stay hidden. References are unique per
+                      Cell and follow their component prefix.
                     </small>
                   </div>
                   {selectedInstance.netlist ? (
