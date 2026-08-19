@@ -43,18 +43,33 @@ source preservation 和文本 round-trip 属于阶段二；阶段一只对其交
 
 | Concern | 唯一权威 | 非权威投影或派生 |
 | --- | --- | --- |
-| Instance 网表身份 | `Instance.netlist.reference` | 可见 Reference annotation |
+| emitting Instance 网表身份 | `Instance.netlist.reference` | managed Reference annotation；detached attached note 仅属 presentation |
 | 器件/模型/子电路目标 | `Instance.netlist.binding` | Properties 文本、导入 provenance |
-| Instance 参数 | `Instance.netlist.parameters` | 可见 Value annotation、表格单元格 |
+| Instance 参数 | `Instance.netlist.parameters` | managed Value annotation、detached attached note、表格单元格 |
 | Device/interface pin order | built-in Device Descriptor、internal child formal interface，或 S6 external black-box interface | Symbol 绘制顺序、import source-position mapping |
+| Cell engineering/netlist name | Cell Document 的 `Document.netlist.name` | Cell 的 `Document.name` 严格同步投影 |
 | Cell interface | `Document.netlist.terminals` | child Port marker 与 parent Cell Symbol |
 | Net identity 与 membership | `Net.id` 及 terminal/port membership | Net label、Wire、Flightline |
 | 可见 Wire | persisted Route + canonical resolved geometry | hit target、selection overlay、highlight |
-| 网表可导出性 | Preflight + `DesignNetlistIR` extraction | UI 状态或成功下载提示 |
+| 网表可导出性 | `analyzeDesignNetlist(Project)` 返回的 IR + diagnostics | Preflight UI、阶段二 exporter 与成功下载提示 |
 
 所有人工作用必须通过现有 typed Edit Engine。Properties、Instance Table、编号器、
 Wire planner 和 Preflight 不得直接修改 Project JSON，也不得从 SVG、annotation 文本
 或几何相交反推电气事实。
+
+### 3.1 GUI 默认冻结原则
+
+阶段一首先是协议收口，不是交互重设计。当前 gesture、可见结果、快捷键、selection、focus、
+status/diagnostic、preview、Undo/Redo 和 save/reopen 行为共同构成兼容合同。底层权威迁移必须
+通过 adapter 保持这些结果；“协议更统一”或“实现更干净”本身不是改变 GUI 的收益理由。
+
+允许新增 Properties 区域、Instance Table、terminal-order editor 或 Preflight 面板，但旧入口
+默认仍按原来的动作和可见语义工作。只有同时满足以下条件，才可改变既有 GUI 行为：
+
+1. 有具体、显著且可验证的用户收益，足以抵消学习、迁移和回归成本；
+2. 在独立 target/accepted decision 中记录 before/after、受影响用户、兼容或迁移方案及回退路径；
+3. 先冻结旧行为测试，再为新行为定义独立验收，不把协议迁移顺带包装成产品变化；
+4. 不能满足以上门槛时，保留现状，即使底层需要 presentation adapter 或兼容转换。
 
 ## 4. 范围
 
@@ -102,12 +117,14 @@ Wire planner 和 Preflight 不得直接修改 Project JSON，也不得从 SVG、
    是需要验证的 target assertion，不是第二个器件类型权威。
 4. `Instance.netlist.parameters` 唯一保存全部显式电气参数，value 均为未求值 raw string。
 5. Device Descriptor 唯一拥有 built-in device class、Reference prefix、canonical pin
-   order、target policy、已知参数定义、dialect capability 与 Value display policy。
+   order、target policy、已知参数定义与 Value display policy。方言 capability 属于阶段二
+   printer，不进入阶段一 Project/property 协议。
 6. built-in primitive/model 器件的 pin order 只读并来自 Descriptor；internal Cell order
    只读并来自 child formal interface。external-subcircuit interface authoring 由 S6
    明确定义，不把普通 Instance 的 source terminal mapping 当作任意 pin-order override。
-7. `Instance.importProvenance` 只解释导入来源，永远只读，也不参与 target、parameters、
-   connectivity 或 hierarchy resolution。
+7. 当前 `Instance.netlist.terminals` 的 imported source-position mapping 迁名/迁移到
+   `Instance.importProvenance.terminalMapping`；它只解释导入来源，永远只读，也不参与
+   target、parameters、connectivity、pin order 或 hierarchy resolution。
 
 #### S1.2 终止双重参数协议
 
@@ -143,7 +160,8 @@ Properties 表单、Preflight 和 Value projection 从同一参数定义派生�
 
 - resistor/capacitor/inductor：required `value`；
 - NMOS/PMOS：required `w`、`l`，optional `m`；
-- voltage/current source：required `dc`；
+- voltage/current source：阶段一只承诺 DC source，required `dc`；pulse/sin 等波形留给后续
+  明确 source capability，不塞入模糊的通用 source 参数；
 - diode/BJT：required model target，模型相关参数通过 arbitrary parameters author；
 - internal/external subcircuit formal parameters 与 defaults 留给 S6。
 
@@ -164,10 +182,18 @@ patch_instance_netlist_parameters
 统一 Property Sheet adapter 把 typed facts、Descriptor metadata 和 diagnostics 投影为字段，
 再生成这些 edits。不得通过 JSON path、自由 property key 或 UI-local object 直接写 Project。
 
-Reference annotation 的文字严格投影 `netlist.reference`；直接编辑画布 Reference 等价于
-编辑该 typed fact。Value annotation 的文字严格由 Descriptor + parameters 生成。用户可
-移动、隐藏和调整展示，但不能维护一份与工程事实分叉的 Reference/Value 文本；事实变化
-刷新文字时必须保留用户移动的 anchor。
+新增的 machine-managed Reference/Value annotation 严格投影 typed facts；但当前 GUI 已允许
+用户把 instance label/value 改成任意可见文本，且 Value 刷新会保留 hand-edited 内容。阶段一
+不得为协议统一而静默覆盖、拒绝或改变这些已有结果。画布文本提交按以下一条规则处理：
+
+- 能合法解释为 Reference/Value fact 时，写 typed fact，并保留现有 style、anchor 和可见性；
+- 任意或无效文本按当前可见结果转为 detached、presentation-only 的 attached note，不再冒充
+  netlist authority，也不被后续参数刷新覆盖；
+- managed 与 detached 状态必须显式、可迁移、可测试，Properties/Preflight/IR 只读 typed fact。
+
+因此工程事实仍然只有一个协议，同时保留既有自由标注行为。若未来要禁止或改造自由文本，
+必须通过 3.1 的显著收益门槛，而不能夹带在 schema migration 中。事实投影变化仍须保留用户
+移动的 anchor；detached note 的文字与 presentation 完全保持。
 
 初始编号系统不新增持久化 Reference lock。planner preview 明确列出 preserved 与
 reassigned 对象；只有实际工作流证明长期 lock 必不可少时，才通过独立 schema/ADR 目标
@@ -200,9 +226,12 @@ Properties 分为：
 
 - known 与 arbitrary 参数只使用同一个 `netlist.parameters` record，并按 case folding
   检查重复 name；
+- 沿用当前 schema 边界：每个 Instance 至多 128 个参数，name 至多 128 字符，非空 raw value
+  至多 1024 字符；Additional Parameters 的空 value 表示删除，不持久化空字符串；
 - 单字段输入使用本地 editing session：Enter 或 blur 提交一次，Esc 放弃；
 - binding 和 Additional Parameters 表格使用明确 Apply/Cancel；一次 Apply 是一个
-  Project transaction、一个 revision 和一个 Undo step；
+  Document transaction、一个 Document revision、一个 history entry 和一次 Undo；跨 Cell
+  的 S4 操作才使用 Project transaction；
 - 不再每次键入字符就提交 Project，也不以“再写回旧值”的 transaction 冒充 Cancel；
 - empty required parameter、非法 Reference、prefix/重复冲突、非法 target 或重复参数名
   不产生部分提交，并在字段旁显示与 Preflight 同源的诊断；
@@ -236,7 +265,9 @@ none(non-emitting marker/interface object)
 - R/C/L/M/Q/D/V/I 等输出器件需要其 reviewed prefix；
 - internal/external subcircuit instance 使用 `X`；
 - Port、ground、VDD/net-marker 不为满足内部实现而制造假的输出 Reference；其现有画布
-  Port/ground/VDD 名称和符号外观保持不变；
+  Port/ground/VDD 名称和符号外观保持不变。当前 `InstanceNetlistData.reference` 是必填，
+  因此实施前必须明确非输出对象不携带 `Instance.netlist`，或把 netlist schema 改为 emitting /
+  non-emitting discriminated shape；不得用假 Reference 绕过 schema；
 - `Instance.id` 只由内部 stable-ID allocator 产生。已有 ID 不必迁移为新字符串，但所有
   新 producer 不得依赖 `id === netlist.reference`，也不得把 ID collision 当 Reference policy。
 
@@ -263,14 +294,22 @@ counter。稳定顺序为：
 
 ```text
 stable Cell order
-→ within each Cell: placement y
+→ within each Cell: 有 placement 的 Instance 按 placement y
 → placement x
 → stable instance id
+→ placement 为 null 的 Instance 放入其后的 stable-instance-id bucket
 ```
 
 每个 Cell/prefix 独立重置 counter；同一个 reusable child Cell 不因多个 caller path 被重复
 编号。Planner 输出 assignments、preserved、reassigned、skipped、invalid、conflicts 和
-typed edits。应用是一个 Project transaction、一个 revision 和一个 Undo step。
+typed edits。一次用户 Apply 是一个原子 Project transaction、一个 Project history entry 和
+一次 Undo；Project 的 structure revision 与每个受影响 Document revision 按现有引擎语义分别
+前进，不能笼统承诺“整个操作只有一个 revision”。
+
+当前 `SchematicTransaction.edits`、每个 `transact_document.edits` 和 Project structural edits
+均有 256 上限。S3 大范围编号实施前必须先交付有界 bulk assignment edit（或经实测接受的
+上限调整），由引擎原子校验/应用并保持一个 history entry。禁止把一次用户操作拆成多个可见
+部分提交；在 bulk 能力到位前，GUI 必须阻止超限 proposal 并给出确定诊断。
 
 #### S3.3 GUI 行为兼容边界
 
@@ -302,11 +341,13 @@ documentId + instanceId
 ```
 
 每个 definition-level Instance 只出现一次。reusable child Cell 的 caller paths 是导航上下文，
-不是重复可编辑行；表格必须说明修改 child definition 会影响所有 occurrences。Index 从 S1
-ReferenceIndex、S1/S2 Property Field definitions、Device Descriptor、binding、typed parameters
+不是重复可编辑行；表格必须说明修改 child definition 会影响所有 occurrences。Index 从
+S3 ReferenceIndex、S1/S2 Property Field definitions、Device Descriptor、binding、typed parameters
 和 ObjectLocator 派生，不持久化，也不从 annotation 或旧 property bag 建行。
 
-Project Search 与 Instance Table 使用同一 Index，统一索引：
+现有 `ProjectSearchIndex` 同时索引 Instance 与 Net，因此不能由 `ProjectInstanceIndex` 接管全部
+Search。Search 组合 Instance row candidates 与既有 Net candidates；Instance Table 只复用前者
+及同一 locator/field 派生规则。Instance rows 索引：
 
 - Cell/document identity 与可用 caller paths；
 - Reference；
@@ -334,7 +375,12 @@ applicable, unchanged, incompatible, blocked, preview, typed edits
 
 它逐行调用 S1/S2 同一个 field writer；表格不能直接拼 `set_instance_netlist` 或按字符串
 JSON path patch。批量 target/model 修改必须明确显示不兼容器件和 skipped reason。默认提交
-为一个原子 Project transaction、一个 revision 和一个 Undo step，而不是每个 Cell 一次。
+为一个原子 Project transaction、一个 Project history entry 和一次 Undo，而不是每个 Cell
+一次；每个受影响 Document revision 仍按现有语义前进。
+
+S4 与 S3 共用 bulk-edit 前置能力。大批量不能展开为超过当前 256 上限的普通 edit arrays，
+也不能分批产生多个 history entry；planner 必须输出有界 bulk payload，或在能力尚未落地时
+以明确容量诊断拒绝 Apply。参数数量与字符串长度继续遵守 S2/schema 边界。
 
 #### S4.3 产品面
 
@@ -352,10 +398,10 @@ JSON path patch。批量 target/model 修改必须明确显示不兼容器件和
 Project、Properties、可见 Value、Search、S7 Preflight 和 IR 使用同一事实；Undo 作为一个
 步骤恢复，当前非 Table GUI workflows 的可见行为不变。
 
-### S5. Connectivity Intent 与 Wire/Net 编辑闭环
+### S5. Connectivity Proposal 与 Wire/Net 编辑闭环
 
 目标：保留当前 `Net/NoConnect = logical facts`、`Route/Junction = visible geometry` 的必要
-分层，在其上统一所有 GUI producer 的 Connectivity Intent/Proposal 协议。协议迁移不得
+分层，在其上统一所有 GUI producer 的 Connectivity Proposal envelope。协议迁移不得
 改变现有 Wire、移动吸附、Net Label、普通 Wire 删除、explicit bulk 删除、Disconnect、
 NoConnect、Crossing、preview 或 Undo 的用户可见行为；新增 corner/Net inspector 能力才是
 显式产品扩展。
@@ -380,7 +426,7 @@ Net Label 文字严格投影 `Net.name`。现有直接编辑 Net Label 的用户
 同一个 named-Net intent，按当前规则 rename 或 merge typed Nets；virtual-edge evidence 从
 typed Net/label binding 派生，不让自由 annotation 文本成为持续 connectivity authority。
 
-#### S5.2 单一 Connectivity Intent Planner
+#### S5.2 共享 Proposal、专用 Planner
 
 GUI、keyboard、context menu、Properties 和内部 adapter 只提交高层 intent：
 
@@ -398,10 +444,13 @@ move_connected_selection
 add_or_remove_no_connect
 ```
 
-Planner 将 intent 解析为一个 `ConnectivityProposal`：
+不建立一个掌握所有行为的巨大 `ConnectivityIntentPlanner`。wire drawing、contact/move、
+named Net、route geometry、delete/disconnect/no-connect 使用各自边界清楚的专用 planner；它们
+共享 canonical connectivity/geometry reads、typed low-level edits 和同一个
+`ConnectivityProposal` envelope：
 
 ```text
-source revision
+source Document/Project revisions
 logical delta
 geometry delta
 affected Net/object IDs
@@ -412,7 +461,7 @@ typed low-level edits
 
 `merge_nets`、`connect_endpoints`、`set_route_points`、`cut_connection`、`make_flightline` 和
 `disconnect_endpoint` 等继续作为 Edit Engine building blocks，但产品 UI 不再直接拼装它们。
-Preview 与 pointer-up/command commit 消费同一 proposal；revision 改变使 proposal 失效，不能
+Preview 与 pointer-up/command commit 消费同一 proposal；相关 revision 改变使 proposal 失效，不能
 在 commit 时走另一条算法重算。
 
 #### S5.3 当前 GUI 行为的兼容映射
@@ -433,26 +482,29 @@ explicit bulk 的既有删除结果因此保留，但 electrical side effect 由
 改变语义。普通 Delete Wire、Disconnect Endpoint 和 Delete Connection Intent 仍是三个
 清楚、可测试的命令。
 
-#### S5.4 新增编辑能力
+#### S5.4 Stage 1 必需闭环与可选增强
 
-在统一 intent 上增加：
+Stage 1 exit 必需：
 
-- select、highlight、fit、rename、inspect entire Net；
-- 查看 logical endpoints、visible routed components、typed label evidence 与 Flightlines；
-- 选择、增加、删除和拖动 corner；
-- 拖动连续可见 segment，不暴露内部 Route 分区差异；
+- 把兼容矩阵中的当前 Wire/Net producer 收敛到共享 proposal envelope 与专用 planners；
+- 支持完成常见局部整形所需的 corner/vertex 选择、增加、删除和拖动；
 - 删除零长度或冗余共线点；
-- 显式 Normalize orthogonal geometry preview；
-- 创建、复用、移动和安全删除 Junction；
-- 保持二度 route-anchor、route marker 与 Net-label attachment 的物理连续性；
-- 删除或断开后只在拓扑结果确定时 partition Net，否则拒绝或按当前命令保留 membership。
+- 保证 logical/geometry delta、diagnostics、selection/status、save/reopen 与 Undo 一致；
+- 冻结现有 partition 语义：explicit cut 才分割 local Net，global Net 和本来就逻辑断开的 Net
+  保持现状；普通可见 Wire 删除继续保留 logical membership，不从几何自动推断 partition。
+
+以下是有价值但不阻塞 Stage 1 的后续增强，需各自证明收益并遵守 3.1：entire-Net inspector、
+跨内部 Route 分区的连续 segment dragging、Normalize orthogonal preview、advanced Junction
+management，以及二阶 route-anchor/marker 连续性 polish。它们不应迫使核心协议预先容纳尚未
+实施的参数或状态。
 
 locked/trunk 或 constraint 冲突继续原子拒绝。每次 producer 迁移前先冻结当前 browser/unit
 characterization；迁移后同一 gesture 的 Project delta、connectivity hash、resolved geometry、
 selection/status、diagnostics 和 Undo 必须等价。
 
-验收：所有既有 connectivity GUI producers 通过一个 intent planner，且既有行为兼容矩阵
-逐项通过；用户还能在此基础上创建、扩展、分支、局部整形、移动、拆分和删除 Net。所有
+验收：所有既有 connectivity GUI producers 通过共享 proposal envelope 和对应专用 planner，
+且既有行为兼容矩阵逐项通过；用户还能在此基础上创建、扩展、分支、局部整形、移动、拆分
+和删除 Net。所有
 操作的 logical/geometry delta、source status、diagnostics、save/reopen 和 Undo 与其显式
 command semantics 一致。
 
@@ -486,8 +538,14 @@ internal Cell 继续以 `Document.netlist` 为权威：
 external black box 使用 Project-level、stable-ID 的 `ExternalSubcircuitDefinition` 作为共享
 权威，至少保存 target name、ordered formal terminals 和同一套 formal parameter definitions。
 每个 external Instance 的 binding 引用该 definition；不得把某个 Instance 的 imported
-`netlist.terminals` source-position mapping 提升为共享接口，也不得为每个 caller 复制一份
-可独立漂移的 terminal definition。
+terminal mapping 提升为共享接口，也不得为每个 caller 复制一份可独立漂移的 terminal
+definition。该 mapping 按 S1 迁入只读 `importProvenance.terminalMapping`。
+
+当前每个 `Instance` 必须有 `symbolId`，因此 external black box 不能“没有 Symbol”存在；它
+由 `ExternalSubcircuitDefinition` 的 ordered interface 派生 generic black-box Symbol。用户
+无需创作、保存或进入一个独立 Symbol asset/editor，派生 Symbol 也不能反向成为接口权威。
+external terminal direction 没有可靠 SPICE evidence 时允许缺省或按 passive 展示，不作为
+Stage 1 导出阻塞项。
 
 target 必须是互斥的三态，而不是依靠字符串或 provenance 猜测：
 
@@ -501,9 +559,9 @@ unresolved target   -> source/用户 target name + unresolved status，无可用
 resolution。internal/external definition 的 shared derived adapter 向 Symbol、Properties、ERC、
 Preflight 和 IR 提供同一种 ordered interface view。
 
-Cell engineering/netlist name 只有一个可编辑权威。当前 Rename Cell gesture 继续同步现有
-画布、Cell Manager 和 caller 可见名称；如果 schema 过渡期仍保留 `Document.name` 与
-`Document.netlist.name` 两个字段，其中一个必须是严格投影并由 validation/canonical save
+Cell engineering/netlist name 的唯一可编辑权威固定为 Cell Document 的
+`Document.netlist.name`；`Document.name` 是严格同步投影。当前 Rename Cell gesture、画布、
+Cell Manager 和 caller 可见名称不改变，只由 adapter 原子维护投影；validation/canonical save
 阻止分叉，不能形成 display name 与 netlist name 两个独立编辑入口。
 
 #### S6.2 Formal parameter 与 Instance override
@@ -511,12 +569,14 @@ Cell engineering/netlist name 只有一个可编辑权威。当前 Rename Cell g
 formal parameter definition 使用 ordered、case-folded-unique 的统一结构：
 
 ```text
-stable ID, name, optional raw default
+name, optional raw default
 ```
 
 internal Cell 与 external black box 使用同一结构。阶段一只保存和传递 raw strings，不建立
-expression evaluator、设计变量依赖图、单位换算或 PDK 合法性判断。requiredness 由是否存在
-default 唯一派生，不再保存一个可能与 default 冲突的独立 required flag。
+expression evaluator、设计变量依赖图、单位换算或 PDK 合法性判断。Instance override 已按
+name keyed record 保存，因此不再为 formal parameter 引入第二个 stable-ID identity。Stage 1
+明确采用“没有 default 的 formal 必须由 caller 提供”作为 Analog Canvas 的方言中立
+authoring 规则，并在 UI/diagnostic 中说明；不宣称它是所有 SPICE 方言的固有语义。
 
 parent Instance 的显式 override 继续只写 `Instance.netlist.parameters`：
 
@@ -529,8 +589,9 @@ parent Instance 的显式 override 继续只写 `Instance.netlist.parameters`：
 
 #### S6.3 Interface Change Proposal 与产品面
 
-新增统一 `SubcircuitInterfaceChangePlanner`。Cell rename、terminal add/remove/rename/reorder、
-direction/Net binding、formal parameter add/remove/rename/reorder/default change 都先产生 proposal：
+不新增一个包办所有变化的巨大 `SubcircuitInterfaceChangePlanner`。Cell rename、terminal
+add/remove/rename/reorder、formal parameter change、target resolve 分别使用 focused planner，
+但共享一个 impact/proposal envelope：
 
 ```text
 source structure/document revisions
@@ -543,16 +604,23 @@ blocked/skipped reasons and diagnostics
 typed Project edits
 ```
 
-preview 与 commit 使用同一 proposal；stale revision 必须重新规划。提交是一个 Project
-transaction、一个结构 revision 和一个 Undo step。现有 rename 自动 reconciliation、referenced
+preview 与 commit 使用同一 proposal；stale revision 必须重新规划。一次用户命令提交为一个
+原子 Project transaction、一个 Project history entry 和一次 Undo；structure revision 与所有
+受影响 Document revisions 按现有引擎语义分别前进。现有 rename 自动 reconciliation、referenced
 Port 删除保护、caller navigation 和 save/reopen 行为先成为 characterization，随后作为同一
-planner 的 gesture adapter 保持用户可见等价，不保留另一套直接修改 caller 的产品路径。
+proposal 协议的 gesture adapter 保持用户可见等价，不保留另一套直接修改 caller 的产品路径。
 
 产品面补充一个统一的 Cell/Subcircuit Interface editor：internal Cell 可编辑 formal terminal
-order、name、direction、Net binding 与 formal parameters；external definition 可编辑 target、
+order、name、direction 与 formal parameters；external definition 可编辑 target、
 ordered terminals 与 formal parameters；unresolved target 只能 resolve 为 internal/external 或
 保持阻塞。Cell Symbol Layout 继续放在 presentation 区域，不与网表 order 表格合并为一个
 隐含规则。
+
+`CellNetlistTerminal.netId` 必须与对应 Port Instance 的真实 Net membership 一致，不能作为
+普通 property 字段字符串 patch。Interface editor 默认只读显示 Net binding；若确有重绑需求，
+只能通过显式 `rebind_cell_terminal` 高层命令组合 S5 connectivity proposal，同时更新两边并
+展示 caller impact。terminal order 的底层数组与 `planReorderCellTerminal` 已存在；正常 GUI
+editor 应集成新开发分支已经完成的上下移动/拖动/预览能力，不在 S6 另写第二套 order planner。
 
 #### S6.4 校验与 IR 闭环
 
@@ -560,10 +628,11 @@ ordered terminals 与 formal parameters；unresolved target 只能 resolve 为 i
 stale caller interface 和 unresolved Symbol 检查。S6 负责提供同一 semantic validator 与
 ObjectLocator evidence；S7 把这些 findings 汇总为完整 Preflight，不在 exporter 另建规则。
 
-`DesignNetlistIR` 扩展为明确携带 internal/external definition 的 ordered terminals、formal
-parameter/defaults，以及每个 caller 的 raw overrides。external black box 有完整 definition 时
-可以进入 IR；unresolved target 必须阻塞。optional flatten preview 只用于检查 elaboration，
-不写回为第二种 Project hierarchy，也不成为导出权威。
+`DesignNetlistIR` 明确区分需要 emit body 的 internal `cells` 与仅引用、不生成空 subckt body
+的 `externalMasters/interfaces`；两者都携带 ordered terminals、formal parameter/defaults，
+每个 caller 携带 raw overrides。external black box 有完整 definition 时可以进入 IR；
+unresolved target 必须阻塞。Stage 1 不加入 flatten preview；需要时另立 elaboration 目标，
+不能制造第二种 Project hierarchy 或导出权威。
 
 验收：同一个 child Cell 被多次实例化时，每个 caller 保持独立 Reference/parameter override，
 共享同一 ordered interface；external black box 同样由一个 shared definition 驱动所有 caller；
@@ -572,16 +641,28 @@ parameter/defaults，以及每个 caller 的 raw overrides。external black box 
 
 ### S7. Netlist Preflight 与阶段出口
 
-目标：把所有人工 authoring 结果汇合为可导航的可导出性检查和确定性 IR，而不是把
-缺失事实留给阶段二 printer 猜测。
+目标：把所有人工 authoring 结果汇合为一个可导航 analyzer 和确定性 IR，而不是让
+Preflight UI、IR extraction 与阶段二 printer 各自实现一套可导出性规则。
+
+唯一入口定义为：
+
+```text
+analyzeDesignNetlist(Project) -> { ir, diagnostics }
+```
+
+Preflight UI 展示同一次分析的 diagnostics，阶段出口与后续 exporter 消费同一次分析的 IR；
+存在 blocking diagnostics 时不交付可导出 IR。printer 仍做边界防御校验，但不得维护第二份
+业务规则或给缺失事实猜默认值。
 
 Preflight 至少检查：
 
 - missing、duplicate 或 illegal reference；
-- missing/incompatible binding 或 target；
+- missing、illegal 或 Descriptor-incompatible binding/target；在没有 PDK/model registry 的
+  Stage 1，“missing model”只表示 model binding/name 缺失或非法，不声称验证模型定义存在；
 - missing required、duplicate-folded 或 illegal parameter name；
 - required pin 未连接和 NoConnect conflict；
-- unsupported electrical Symbol/device/dialect capability；
+- unsupported electrical Symbol/device/DesignNetlistIR capability；方言 capability 在阶段二选择
+  printer 后检查，不阻塞方言中立的 Stage 1；
 - external subcircuit 缺失 ordered terminals；
 - internal Cell target、formal interface、caller mapping 或 hierarchy cycle 错误；
 - duplicate/illegal Cell 与 Net names；
@@ -590,9 +671,10 @@ Preflight 至少检查：
 所有 finding 使用统一 Diagnostic 和 ObjectLocator；点击后切 Cell、恢复 caller path、fit、
 select，并在适用时 highlight Net。
 
-Preflight 通过后，唯一阶段出口是现有 `Project → DesignNetlistIR` extraction。IR 必须
-完整、稳定地包含 dependency-ordered Cells、formal terminals、Instances、references、
-bindings/targets、ordered pins、raw parameters、Nets、globals 与 hierarchy。
+analysis 通过后，唯一阶段出口是 analyzer 返回的 `DesignNetlistIR`。IR 必须完整、稳定地
+包含 dependency-ordered internal Cells、non-emitted external masters/interfaces、formal
+terminals、Instances、references、bindings/targets、ordered pins、raw parameters、Nets、
+globals 与 hierarchy。
 
 验收：相同 canonical Project 重复 extraction 结构相同；save/reopen 后相同；任何阻塞
 事实缺失都在 extraction 前成为可导航 finding，printer 无需推断。
@@ -604,7 +686,7 @@ S1 authority and unified property protocol
  ├─→ S2 descriptor-driven Component Properties
  │    └─→ S3 Reference Policy / Index / Planner
  │         └─→ S4 Project Instance Index / batch planner
- ├─→ S5 Connectivity Intent / Wire-Net closure ─┐
+ ├─→ S5 Connectivity Proposals / Wire-Net closure ─┐
  └─→ S6 Cell / subcircuit netlist authoring ←───┘
 
 S2 + S4 + S5 + S6
@@ -616,7 +698,7 @@ S7 preflight and DesignNetlistIR exit gate
 ownership 和 validation boundary 拆成小 target；共享 Schema、Edit union 或 Device
 Descriptor 变更必须先更新 accepted spec/ADR，再让 UI 依赖它。
 
-S6 的 interface planner 在改变 terminal Net binding 或 caller connectivity 时必须组合 S5 的
+S6 的 focused interface planner 在改变 terminal Net binding 或 caller connectivity 时必须组合 S5 的
 canonical connectivity intent/edit service；在呈现 target、formal parameter 和 Instance
 override 时必须组合 S1/S2 的 Property Field protocol。层次结构 transaction 可以继续作为
 原子外壳，但不能在其内部另建一套 Net 或 parameter 修改语义。
@@ -646,7 +728,8 @@ several MOS Instances across two Cells
 → set common model and L
 → preview deterministic renumber
 → apply once
-→ one revision and one Undo restore the full prior state
+→ one atomic Project history entry and one Undo restore the full prior state
+→ affected Project/Document revisions advance according to current engine semantics
 ```
 
 ### Wire/Net 编辑
@@ -674,13 +757,14 @@ author child Cell ports and defaults
 place external subcircuit block
 → define target, ordered terminals and parameters
 → connect all required pins
-→ Preflight and IR succeed without inventing a Symbol, model or source file
+→ a generic black-box Symbol is derived from the shared external definition
+→ Preflight and IR succeed without a user-authored Symbol asset, model definition or source file
 ```
 
 ### 可导航失败
 
 ```text
-Project with duplicate Reference, missing model and stale Cell interface
+Project with duplicate Reference, missing model binding/name and stale Cell interface
 → run Preflight
 → each finding identifies its domain and primary/related locators
 → selecting it navigates to the correct Cell instance path and object
@@ -690,11 +774,12 @@ Project with duplicate Reference, missing model and stale Cell interface
 ## 8. 性能与规模
 
 阶段一不沿用 500-instance release ceiling 作为大型 schematic 声明。实施期间新增一个
-层次化 5,000-instance representative workload，测量而不是先猜预算：
+层次化 5,000-instance representative benchmark，测量而不是预先承诺所有交互都能把 5,000
+个对象展开成普通 edits，也不在得到基线前把某个数值预算设为阻塞 Exit Gate：
 
 - Instance Table open/filter；
 - reference planning；
-- bulk transaction validation；
+- bulk transaction validation（在 bounded bulk edit 能力落地后）；
 - Project search 与 Net highlight；
 - live ERC/Preflight；
 - `DesignNetlistIR` extraction；
@@ -710,14 +795,14 @@ Project with duplicate Reference, missing model and stale Cell interface
 | --- | --- |
 | Properties、annotation 和 netlist facts 各自成权威 | S1 先冻结 authority/projection，再实施 UI |
 | arbitrary parameters 绕过 descriptor required rules | 保存全部显式参数；descriptor 仅拥有 known/required/display policy |
-| 大批量编辑产生数百 revisions | planner 输出一组 edits，一次 Project transaction 和 Undo |
+| 大批量超过 edit-array 上限或产生部分提交 | 先交付 bounded bulk edit；一次用户命令对应原子 Project history entry 和 Undo，保留真实 revision 语义 |
 | 编号依赖 DOM、ID/Reference 偶合或当前数组顺序 | 单一 ReferencePolicy/Index、per-Cell placement/stable-ID 排序与 preview |
 | 协议统一意外改变当前 GUI 行为 | producer-by-producer characterization；gesture adapter 保持相同 Project delta、状态与 Undo |
 | Wire 改造破坏已经稳定的 connectivity | 复用 canonical index/geometry，由显式 intent adapter 对照迁移每个 producer |
 | visual pin layout 被误当作 netlist terminal order | presentation 只保存 side/offset/body；formal array order 单独 author，双方不互相反推 |
 | imported Instance terminal mapping 被提升为 external interface | external definition 是共享权威；Instance mapping 继续只是只读 source evidence |
 | external subcircuit 被错误解释为 PDK/model | 只保存 target、ordered pins 和 raw parameters，不判断物理模型 |
-| Preflight 与 exporter 各自检查一遍 | Stage 1 Preflight 是 printer 前的唯一可导出性入口；printer 仍做防御校验 |
+| Preflight、extraction 与 exporter 各自检查一遍 | 单一 `analyzeDesignNetlist(Project)` 产出 IR + diagnostics；printer 只做边界防御校验 |
 | Stage 2 方言需求反向污染 Project | 所有 text/source/dialect evidence 留在 parser/printer/provenance 边界 |
 | Stage 1 范围膨胀到仿真或 Bus | 以本文件 Non-goals 和 IR exit gate 拒绝扩张，另立 roadmap |
 
@@ -727,14 +812,16 @@ Project with duplicate Reference, missing model and stale Cell interface
   interface 事实全部可通过 GUI 创建和编辑；
 - Properties、Instance Table、编号、annotation、search、ERC 和 extraction 对同一事实
   解释一致；
-- Wire/Net 的创建、局部整形、移动、分支、拆分、断开和删除具有明确 preview、typed
-  transaction 和 Undo；
+- Wire/Net 的当前创建、移动、分支、断开和删除语义统一到共享 proposal envelope；完成
+  Stage 1 所需的基本局部 corner/vertex 整形，optional S5 增强不阻塞出口；
 - internal Cell 与 external subcircuit 均能无猜测地进入 IR；
-- Preflight 的所有阻塞 finding 可导航、可修复，并在修复后实时消失；
+- analyzer 的所有阻塞 finding 可由 Preflight 导航、修复，并在修复后实时消失；
 - 受支持 Project 在 save/reopen 前后产生相同 `DesignNetlistIR`；
 - migration、clipboard、history、recovery 和 representative workload 通过其接受检查；
 - 既有 Reference、paste、hierarchy、Wire、move-contact、Net Label、bulk、Disconnect、
   NoConnect 与 Crossing GUI characterization 在协议迁移前后保持用户可见等价；
+- 任何既有 GUI 行为变化均通过 3.1 显著收益门槛及独立验收；未获接受的协议迁移使用
+  adapter 保持 gesture、可见结果、快捷键、selection/status、Undo 与 save 行为；
 - specs、user docs、test contract matrix、focused tests、branch verification 与 mainline gate
   随实际实现按仓库规则完成；
 - 未加入 simulation、PDK、Layout、Bus 或 dialect-text round-trip 的隐式合同。
@@ -745,8 +832,8 @@ Project with duplicate Reference, missing model and stale Cell interface
 
 1. schema-valid、网表事实完整的 Project；
 2. Device Descriptor registry；
-3. 可导航 Preflight 结果；
-4. 确定性、方言中立的 `DesignNetlistIR`；
+3. 单一 analyzer 产生的可导航 diagnostics；
+4. 同一 analyzer 产生的确定性、方言中立 `DesignNetlistIR`；
 5. parser/import provenance 的现有只读证据。
 
 阶段二负责：

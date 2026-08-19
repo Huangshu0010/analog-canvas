@@ -3435,5 +3435,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   composition, and the IR/Preflight closure.
 - Validation: documentation links, test-impact against `main`, diff check, and
   final branch-status review passed.
+- Commit status: committed and pushed on
+  `codex/phase1-schematic-foundation-plan` as `911577f`.
+
+## 2026-08-19 - Stage 1 architecture review corrections
+
+- Changed areas: added the GUI default-freeze gate; reconciled managed and
+  hand-edited instance annotations; corrected atomic transaction, revision,
+  bulk-limit, parameter-limit, analyzer, model, provenance, search, external
+  Symbol, hierarchy interface, IR, performance, and acceptance assumptions;
+  and reduced S5/S6 to focused planners and Stage 1-essential behavior.
+- Validation: documentation links, test-impact against `main`, and diff check
+  passed.
 - Commit status: prepared for commit on
   `codex/phase1-schematic-foundation-plan`.
