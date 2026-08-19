@@ -1,5 +1,5 @@
 ---
-status: completed
+status: active
 experience: none
 ---
 
@@ -76,3 +76,7 @@ Properties collapse and a blank-canvas click.
 Validation passed: `pnpm test:e2e:local apps/editor/e2e/hierarchy.spec.ts`
 (6 scenarios), `pnpm typecheck`, `pnpm test:impact -- --base origin/main`, and
 `git diff --check`.
+
+Mainline delivery is in progress at the user's request: run the canonical CI
+gate, open a GitHub pull request, wait for its required checks, then merge to
+`main`.
