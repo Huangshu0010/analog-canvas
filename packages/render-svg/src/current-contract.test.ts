@@ -18,7 +18,7 @@ describe("current rendering contract", () => {
     const child = createEmptyDocument("child", "GainStage");
     child.netlist!.terminals.push({
       id: "terminal-v-in",
-      name: "V_in",
+      name: "VGS1",
       netId: "net-in",
       direction: "input",
       interfaceInstanceId: "P1",
@@ -35,7 +35,7 @@ describe("current rendering contract", () => {
       netlist: {
         reference: "X1",
         parameters: {},
-        terminals: [{ sourcePosition: 0, pinName: "V_in" }],
+        terminals: [{ sourcePosition: 0, pinName: "VGS1" }],
         binding: {
           kind: "subcircuit",
           childDocumentId: child.id,
@@ -52,10 +52,71 @@ describe("current rendering contract", () => {
       createProjectSymbolResolver(project, builtInSymbols),
     );
 
-    expect(svg).toContain('data-pin-name="V_in"');
+    expect(svg).toContain('data-pin-name="VGS1"');
     expect(svg).toContain("font-style:italic;font-weight:700");
     expect(svg).toContain('data-text-run="subscript"');
     expect(svg).toContain("font-style:normal;font-weight:700");
+  });
+
+  it("keeps north and south hierarchy pin names clear of the Cell body edge", () => {
+    const top = createEmptyDocument("top", "Top");
+    const child = createEmptyDocument("child", "VerticalStage");
+    child.netlist!.terminals.push(
+      {
+        id: "terminal-top",
+        name: "TOP",
+        netId: "net-top",
+        direction: "input",
+        interfaceInstanceId: "P1",
+      },
+      {
+        id: "terminal-bottom",
+        name: "BOTTOM",
+        netId: "net-bottom",
+        direction: "output",
+        interfaceInstanceId: "P2",
+      },
+    );
+    child.presentation.cellSymbol = {
+      pinPlacements: [
+        { terminalId: "terminal-top", side: "north", offset: 0 },
+        { terminalId: "terminal-bottom", side: "south", offset: 0 },
+      ],
+    };
+    top.instances.push({
+      id: "X1",
+      symbolId: hierarchicalSymbolId(child.netlist!.name),
+      properties: {},
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+      netlist: {
+        reference: "X1",
+        parameters: {},
+        terminals: [
+          { sourcePosition: 0, pinName: "TOP" },
+          { sourcePosition: 1, pinName: "BOTTOM" },
+        ],
+        binding: {
+          kind: "subcircuit",
+          childDocumentId: child.id,
+          name: child.netlist!.name,
+        },
+      },
+    });
+    const project = createEmptyProject("project", "Hierarchy", top.id);
+    project.documents[0] = top;
+    project.documents.push(child);
+
+    const svg = renderDocumentSvg(
+      top,
+      createProjectSymbolResolver(project, builtInSymbols),
+    );
+
+    expect(svg).toContain('data-pin-name="TOP" x="100" y="98"');
+    expect(svg).toContain('data-pin-name="BOTTOM" x="100" y="110"');
   });
 
   it("keeps non-hierarchical visible pin names on the plain-text path", () => {

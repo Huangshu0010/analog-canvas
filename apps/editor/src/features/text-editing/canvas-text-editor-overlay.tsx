@@ -25,7 +25,7 @@ export function resolveCanvasTextEditorFrame(
 ): DerivedRect {
   const width = Math.min(Math.max(420, bounds.width + 12), viewBox.width - 16);
   const height = Math.min(
-    Math.max(110, bounds.height + 68, 78 + 15.116 * sizeScale * 1.3),
+    Math.max(76, bounds.height + 36, 54 + 15.116 * sizeScale * 1.2),
     viewBox.height - 16,
   );
   const viewportInset = 8;

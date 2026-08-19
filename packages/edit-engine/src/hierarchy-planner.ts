@@ -293,7 +293,6 @@ export function planRenameCellTerminal(
       `Cell terminal does not exist: ${childDocumentId}.${terminalId}`,
     );
   }
-  if (terminal.name === newName) return [];
   if (
     child.netlist.terminals.some(
       (candidate) => candidate.id !== terminalId && candidate.name === newName,
@@ -302,30 +301,49 @@ export function planRenameCellTerminal(
     throw new Error(`Cell terminal name already exists: ${newName}`);
   }
 
+  const canonicalAnnotation = semanticTextDocument(newName, "formal-port");
+  const annotationEdits = child.annotations
+    .filter(
+      (annotation) =>
+        annotation.kind === "instance-label" &&
+        annotation.anchor.kind === "object" &&
+        annotation.anchor.objectId === terminal.interfaceInstanceId,
+    )
+    .filter(
+      (annotation) =>
+        JSON.stringify(annotation.content) !==
+        JSON.stringify(canonicalAnnotation),
+    )
+    .map((annotation) => ({
+      kind: "upsert_schematic_annotation" as const,
+      annotation: {
+        ...annotation,
+        content: canonicalAnnotation,
+      },
+    }));
+  const terminalRename = terminal.name !== newName;
+  if (!terminalRename && annotationEdits.length === 0) return [];
+
   const edits: ProjectStructureEdit[] = [
     {
       kind: "transact_document",
       documentId: child.id,
       expectedRevision: child.revision,
       edits: [
-        { kind: "update_cell_terminal", terminalId, name: newName },
-        ...child.annotations
-          .filter(
-            (annotation) =>
-              annotation.kind === "instance-label" &&
-              annotation.anchor.kind === "object" &&
-              annotation.anchor.objectId === terminal.interfaceInstanceId,
-          )
-          .map((annotation) => ({
-            kind: "upsert_schematic_annotation" as const,
-            annotation: {
-              ...annotation,
-              content: semanticTextDocument(newName, "instance-label"),
-            },
-          })),
+        ...(terminalRename
+          ? [
+              {
+                kind: "update_cell_terminal" as const,
+                terminalId,
+                name: newName,
+              },
+            ]
+          : []),
+        ...annotationEdits,
       ],
     },
   ];
+  if (!terminalRename) return edits;
   for (const parent of project.documents) {
     const callerEdits: Extract<
       ProjectStructureEdit,
@@ -411,37 +429,50 @@ export function planRemoveCellTerminal(
   terminalId: string,
   instanceDeletionEdits?: DocumentEdits,
 ): ProjectStructureEdit[] {
-  const document = project.documents.find((item) => item.id === documentId);
-  const terminal = document?.netlist?.terminals.find(
-    (item) => item.id === terminalId,
+  return planRemoveCellTerminals(
+    project,
+    documentId,
+    [terminalId],
+    instanceDeletionEdits,
   );
-  if (!document || !terminal) {
-    throw new Error(
-      `Cell terminal does not exist: ${documentId}.${terminalId}`,
+}
+
+/**
+ * Removes independent Cell Ports in one Project transaction. Callers that are
+ * electrically connected to a port remain protected; unprotected selected
+ * Ports and ordinary schematic objects can still be removed atomically.
+ */
+export function planRemoveCellTerminals(
+  project: CircuitProject,
+  documentId: string,
+  terminalIds: readonly string[],
+  instanceDeletionEdits?: DocumentEdits,
+): ProjectStructureEdit[] {
+  const document = project.documents.find((item) => item.id === documentId);
+  if (!document?.netlist) throw new Error(`Cell does not exist: ${documentId}`);
+  const requestedIds = new Set(terminalIds);
+  if (requestedIds.size === 0) return [];
+  const terminals = [...requestedIds].map((terminalId) => {
+    const terminal = document.netlist!.terminals.find(
+      (item) => item.id === terminalId,
     );
-  }
-  const caller = project.documents
-    .flatMap((parent) =>
-      parent.instances.map((instance) => ({ parent, instance })),
-    )
-    .find(({ parent, instance }) => {
-      const binding = instance.netlist?.binding;
-      if (
-        binding?.kind !== "subcircuit" ||
-        binding.childDocumentId !== documentId
-      )
-        return false;
-      return documentElectricallyReferencesPin(
-        parent,
-        instance.id,
-        terminal.name,
+    if (!terminal) {
+      throw new Error(
+        `Cell terminal does not exist: ${documentId}.${terminalId}`,
       );
-    });
-  if (caller) {
-    throw new Error(
-      `Cell terminal ${terminal.name} is still referenced by ${caller.parent.id}.${caller.instance.id}`,
-    );
-  }
+    }
+    const caller = findCellTerminalCaller(project, documentId, terminal.name);
+    if (caller) {
+      throw new Error(
+        `Cell terminal ${terminal.name} is still referenced by ${caller.parent.id}.${caller.instance.id}`,
+      );
+    }
+    return terminal;
+  });
+  const terminalInstanceIds = new Set(
+    terminals.map((terminal) => terminal.interfaceInstanceId),
+  );
+  const terminalNames = new Set(terminals.map((terminal) => terminal.name));
   const edits: Extract<
     ProjectStructureEdit,
     { kind: "transact_document" }
@@ -452,16 +483,16 @@ export function planRemoveCellTerminal(
       [route.from, route.to].some(
         (endpoint) =>
           endpoint.kind === "terminal" &&
-          endpoint.instanceId === terminal.interfaceInstanceId,
+          terminalInstanceIds.has(endpoint.instanceId),
       ),
     )
   ) {
     throw new Error(
-      `Remove wire geometry from Cell terminal ${terminal.name} before deleting it`,
+      "Remove wire geometry from Cell Ports before deleting them",
     );
   }
   for (const noConnect of document.noConnects) {
-    if (noConnect.endpoint.instanceId === terminal.interfaceInstanceId) {
+    if (terminalInstanceIds.has(noConnect.endpoint.instanceId)) {
       edits.push({ kind: "remove_no_connect", noConnectId: noConnect.id });
     }
   }
@@ -470,19 +501,21 @@ export function planRemoveCellTerminal(
     document.nets.some((net) =>
       net.terminals.some(
         (reference) =>
-          reference.instanceId === terminal.interfaceInstanceId &&
+          terminalInstanceIds.has(reference.instanceId) &&
           reference.pinName === "P",
       ),
     )
   ) {
-    edits.push({
-      kind: "disconnect_endpoint",
-      endpoint: {
-        kind: "terminal",
-        instanceId: terminal.interfaceInstanceId,
-        pinName: "P",
-      },
-    });
+    for (const terminal of terminals) {
+      edits.push({
+        kind: "disconnect_endpoint",
+        endpoint: {
+          kind: "terminal",
+          instanceId: terminal.interfaceInstanceId,
+          pinName: "P",
+        },
+      });
+    }
   }
   edits.push(
     ...(instanceDeletionEdits ?? []),
@@ -492,21 +525,22 @@ export function planRemoveCellTerminal(
           .filter(
             (annotation) =>
               annotation.anchor.kind === "object" &&
-              annotation.anchor.objectId === terminal.interfaceInstanceId,
+              terminalInstanceIds.has(annotation.anchor.objectId),
           )
           .map((annotation) => ({
             kind: "remove_schematic_annotation" as const,
             annotationId: annotation.id,
           }))),
-    { kind: "remove_cell_terminal", terminalId },
+    ...terminals.map((terminal) => ({
+      kind: "remove_cell_terminal" as const,
+      terminalId: terminal.id,
+    })),
     ...(instanceDeletionEdits
       ? []
-      : [
-          {
-            kind: "remove_instance" as const,
-            instanceId: terminal.interfaceInstanceId,
-          },
-        ]),
+      : terminals.map((terminal) => ({
+          kind: "remove_instance" as const,
+          instanceId: terminal.interfaceInstanceId,
+        }))),
   );
   const structureEdits: ProjectStructureEdit[] = [
     {
@@ -526,8 +560,8 @@ export function planRemoveCellTerminal(
       if (
         binding?.kind !== "subcircuit" ||
         binding.childDocumentId !== documentId ||
-        !instance.netlist?.terminals?.some(
-          (reference) => reference.pinName === terminal.name,
+        !instance.netlist?.terminals?.some((reference) =>
+          terminalNames.has(reference.pinName),
         )
       ) {
         continue;
@@ -538,7 +572,7 @@ export function planRemoveCellTerminal(
         netlist: {
           ...structuredClone(instance.netlist),
           terminals: instance.netlist.terminals
-            .filter((reference) => reference.pinName !== terminal.name)
+            .filter((reference) => !terminalNames.has(reference.pinName))
             .map((reference, sourcePosition) => ({
               ...reference,
               sourcePosition,
@@ -556,6 +590,30 @@ export function planRemoveCellTerminal(
     }
   }
   return structureEdits;
+}
+
+export function findCellTerminalCaller(
+  project: CircuitProject,
+  childDocumentId: string,
+  terminalName: string,
+):
+  | {
+      parent: SchematicDocument;
+      instance: SchematicDocument["instances"][number];
+    }
+  | undefined {
+  return project.documents
+    .flatMap((parent) =>
+      parent.instances.map((instance) => ({ parent, instance })),
+    )
+    .find(({ parent, instance }) => {
+      const binding = instance.netlist?.binding;
+      return (
+        binding?.kind === "subcircuit" &&
+        binding.childDocumentId === childDocumentId &&
+        documentElectricallyReferencesPin(parent, instance.id, terminalName)
+      );
+    });
 }
 
 function documentElectricallyReferencesPin(

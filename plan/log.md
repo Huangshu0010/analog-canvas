@@ -264,6 +264,7 @@
 - Changed areas: files, directories, or subsystems changed.
 - Validation: commands or review performed.
 - Commit status: committed, ready to commit, not committed, or blocked.
+
 ```
 
 Keep reusable lessons in `docs/experience/`, not in this log.
@@ -278,7 +279,8 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 
 - Changed areas: unified transient canvas cleanup, bounded Document undo/redo history, build-versioned Service Worker static cache, and focused unit/E2E coverage; documented the resulting interaction and history contracts.
 - Validation: focused canvas/history Vitest 11/11, Smart Snap Escape Playwright scenario, editor production build, workspace typecheck, targeted Prettier, and `git diff --check` passed. Repository-wide format chec…
-- Commit status: ready to commit.
+- Commit status: committed on `codex/cell-symbol-layout` as
+  `refine(hierarchy): prioritize Cell pin editing`.
 
 ## 2026-08-10 - Measured Razavi capacitor refinement
 
@@ -3294,6 +3296,65 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   files / 889 tests, workspace build and production smoke).
 - Commit status: committed on `codex/properties-panel-simplify` as `30eab90`.
 
+## 2026-08-19 - Cell symbol layout and hierarchy deletion
+
+- Changed areas: formal-Port mixed-selection deletion, schema-14 Cell symbol
+  pin-label presentation, parent pin RichText rendering, selected hierarchy
+  instance Properties controls, fixtures, documentation, and focused browser
+  coverage.
+- Validation: typecheck; focused model/protocol/edit-engine/symbol/render
+  tests (40); hierarchy Playwright (6); hierarchy/project-file Playwright (14);
+  workspace build; static checks; production smoke; test-impact; and diff
+  check.
+- Commit status: included in the local `codex/cell-symbol-layout` target commit.
+
+## 2026-08-19 - Cell symbol layout interaction refinement
+
+- Changed areas: pin-label baseline geometry, schema-14 pin-label intent
+  simplification, compact per-pin Properties row, and opt-in canvas body/pin/
+  label grips.
+- Validation: typecheck; focused model/symbol/render/edit-engine Vitest (39);
+  hierarchy Playwright (6); and diff check.
+- Commit status: included in the follow-up local target commit on
+  `codex/cell-symbol-layout`.
+
+## 2026-08-19 - Cell symbol layout pin-priority refinement
+
+- Changed areas: canvas layout-grip hit priority, compact Cell pin Side/Offset
+  controls, automatic pin-name layout, and the unmerged schema-14 rollback.
+- Validation: typecheck; focused model/protocol/symbol/render/document Vitest
+  (94); hierarchy/project-file Playwright (14); hierarchy Playwright with
+  direct body/pin grip coverage (6); workspace build; test-impact; and diff
+  check.
+- Commit status: committed with `refine(hierarchy): prioritize Cell pin editing`.
+
+## 2026-08-19 - Hierarchy vertical pin-name clearance
+
+- Changed areas: automatic north/south hierarchy pin-name baseline geometry
+  and its render contract coverage.
+- Validation: typecheck; render/symbol Vitest (10); hierarchy Playwright (6);
+  workspace build; test-impact; and diff check.
+- Commit status: committed with `refine(hierarchy): clear vertical pin names`.
+
+## 2026-08-19 - Formal Port formatting and RichText editor shielding
+
+- Changed areas: formal Port display-name derivation and formatting-only
+  transaction planning, hierarchy pin rendering, canvas RichText hit handling,
+  compact editor frame styling, and focused browser coverage.
+- Validation: typecheck; focused model/edit-engine/render/editor Vitest (23);
+  direct hierarchy/editor-shield Playwright (2); hierarchy Playwright (6);
+  workspace build; test-impact; and diff check.
+- Commit status: committed with `refine(hierarchy): shield RichText editing`.
+
+## 2026-08-19 - Cell hierarchy mainline delivery gate
+
+- Changed areas: Prettier-only normalization of hierarchy block geometry and
+  target delivery records.
+- Validation: `pnpm install --frozen-lockfile`; isolated `pnpm ci:check`
+  passed (891 unit tests, 154 browser tests, workspace build, release
+  packaging, and production smoke); diff check.
+- Commit status: committed with `style(symbols): format hierarchy geometry`.
+
 ## 2026-08-19 - Properties panel mainline regression
 
 - Changed areas: formal-Cell-Port annotation routing, compact Properties
@@ -3305,3 +3366,4 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   at its configured 15-minute timeout while running the unchanged full gate.
   The target remains active while a 25-minute timeout-budget correction reruns
   the same gate.
+```

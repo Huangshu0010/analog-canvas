@@ -6,6 +6,14 @@ import {
 import type { RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
+export interface VisualDeletionSelection {
+  readonly instanceIds: readonly string[];
+  readonly routeIds: readonly string[];
+  readonly junctionIds: readonly string[];
+  readonly annotationIds: readonly string[];
+  readonly draftingIds: readonly string[];
+}
+
 /**
  * Normalizes visual route deletion before edits are assembled. A selected
  * junction owns every route ending at it; a junction that becomes unused after
@@ -140,6 +148,53 @@ export function proposeConnectedInstanceDeletion(
     ...disconnectEdits,
     ...annotationEdits,
     ...instanceEdits,
+  ];
+}
+
+/**
+ * One shared delete proposal for an arbitrary visual selection. Structural
+ * workflows (such as formal Cell Port removal) use this instead of falling
+ * back to a separate Document transaction and changing deletion semantics.
+ */
+export function proposeVisualSelectionDeletion(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  selection: VisualDeletionSelection,
+  sequence: number,
+): SchematicEdit[] {
+  const visualRouteDeletion = proposeVisualRouteDeletion(
+    document,
+    selection.routeIds,
+    selection.routeIds.length > 0 ? [] : selection.junctionIds,
+  );
+  const instanceEdits =
+    selection.instanceIds.length > 0
+      ? proposeConnectedInstanceDeletion(
+          document,
+          resolver,
+          selection.instanceIds,
+          sequence,
+        )
+      : [];
+  const annotationIds = explicitAnnotationRemovals(
+    document,
+    selection.instanceIds,
+    selection.annotationIds.filter(
+      (annotationId) =>
+        !visualRouteDeletion.annotationIds.includes(annotationId),
+    ),
+  );
+  return [
+    ...instanceEdits,
+    ...visualRouteDeletion.edits,
+    ...annotationIds.map((annotationId): SchematicEdit => ({
+      kind: "remove_schematic_annotation",
+      annotationId,
+    })),
+    ...selection.draftingIds.map((objectId): SchematicEdit => ({
+      kind: "remove_drafting_object",
+      objectId,
+    })),
   ];
 }
 

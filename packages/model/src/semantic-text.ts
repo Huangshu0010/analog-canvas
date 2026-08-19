@@ -12,6 +12,7 @@ import type { RichTextDocument, RichTextRun, RichTextStyle } from "./schema.js";
 export type SemanticTextKind =
   | "default-instance"
   | "instance-label"
+  | "formal-port"
   | "net-label"
   | "power-label"
   | "route-marker";
@@ -53,6 +54,20 @@ export function semanticTextDocument(
 ): RichTextDocument {
   if (value.length === 0) return { runs: [{ kind: "line-break" }] };
   if (/[\\{}^]/u.test(value)) return { runs: [{ kind: "text", value }] };
+
+  if (kind === "formal-port") {
+    const conventional = /^([VI])(.+?)([+-])?$/u.exec(value);
+    if (!conventional) return { runs: [mathBase(value)] };
+    return {
+      runs: [
+        mathBase(conventional[1]!),
+        mathSubscript(conventional[2]!),
+        ...(conventional[3]
+          ? [{ kind: "text" as const, value: conventional[3] }]
+          : []),
+      ],
+    };
+  }
 
   const underscore = value.indexOf("_");
   if (underscore > 0 && underscore < value.length - 1) {

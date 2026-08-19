@@ -10,7 +10,7 @@ describe("canvas text editor frame", () => {
         { x: 0, y: 0, width: 960, height: 640 },
         1,
       ),
-    ).toEqual({ x: 94, y: 82, width: 420, height: 110 });
+    ).toEqual({ x: 94, y: 116, width: 420, height: 76 });
   });
 
   it("grows with text scale before reaching the viewport boundary", () => {
@@ -21,9 +21,9 @@ describe("canvas text editor frame", () => {
     );
 
     expect(frame.x).toBe(94);
-    expect(frame.y).toBeCloseTo(55.0476);
+    expect(frame.y).toBeCloseTo(83.5824);
     expect(frame.width).toBe(420);
-    expect(frame.height).toBeCloseTo(136.9524);
+    expect(frame.height).toBeCloseTo(108.4176);
   });
 
   it("clamps the frame to all four viewport edges", () => {
@@ -33,7 +33,7 @@ describe("canvas text editor frame", () => {
         { x: 0, y: 0, width: 960, height: 640 },
         1,
       ),
-    ).toEqual({ x: 8, y: 18, width: 420, height: 110 });
+    ).toEqual({ x: 8, y: 18, width: 420, height: 76 });
 
     expect(
       resolveCanvasTextEditorFrame(
@@ -41,7 +41,7 @@ describe("canvas text editor frame", () => {
         { x: 0, y: 0, width: 960, height: 640 },
         1,
       ),
-    ).toEqual({ x: 532, y: 504, width: 420, height: 118 });
+    ).toEqual({ x: 532, y: 536, width: 420, height: 86 });
   });
 
   it("fits oversized content inside a translated viewport", () => {

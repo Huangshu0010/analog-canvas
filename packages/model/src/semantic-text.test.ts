@@ -1,52 +1,24 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultDraftTextDocument } from "./semantic-text.js";
+import { flattenRichText } from "./rich-text.js";
+import { semanticTextDocument } from "./semantic-text.js";
 
-describe("defaultDraftTextDocument", () => {
-  it("uses Razavi bold italic text and a bold upright subscript", () => {
-    expect(defaultDraftTextDocument("V_out")).toEqual({
+describe("semantic formal-Port text", () => {
+  it("derives a Razavi voltage base and subscript from the electrical name", () => {
+    const content = semanticTextDocument("Vout", "formal-port");
+
+    expect(flattenRichText(content)).toBe("Vout");
+    expect(content).toMatchObject({
       runs: [
-        {
-          kind: "span",
-          style: "italic",
-          children: [
-            {
-              kind: "span",
-              style: "bold",
-              children: [{ kind: "text", value: "V" }],
-            },
-          ],
-        },
-        {
-          kind: "span",
-          style: "subscript",
-          children: [
-            {
-              kind: "span",
-              style: "bold",
-              children: [{ kind: "text", value: "out" }],
-            },
-          ],
-        },
+        { kind: "span", style: "italic", children: [{ kind: "span" }] },
+        { kind: "span", style: "subscript", children: [{ kind: "span" }] },
       ],
     });
-  });
-
-  it("styles ordinary free text as a Razavi math base", () => {
-    expect(defaultDraftTextDocument("Design note")).toEqual({
-      runs: [
-        {
-          kind: "span",
-          style: "italic",
-          children: [
-            {
-              kind: "span",
-              style: "bold",
-              children: [{ kind: "text", value: "Design note" }],
-            },
-          ],
-        },
-      ],
+    expect(content.runs[0]).toMatchObject({
+      children: [{ children: [{ value: "V" }] }],
+    });
+    expect(content.runs[1]).toMatchObject({
+      children: [{ children: [{ value: "out" }] }],
     });
   });
 });

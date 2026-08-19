@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { createEmptyDocument, createEmptyProject } from "@icm/model";
+import {
+  createEmptyDocument,
+  createEmptyProject,
+  flattenRichText,
+} from "@icm/model";
 import { hierarchicalSymbolId } from "@icm/symbols";
 
 import {
   planRenameCell,
   planRemoveCellTerminal,
+  planRemoveCellTerminals,
   planRenameCellTerminal,
   planSetCellSymbolPresentation,
 } from "./hierarchy-planner.js";
@@ -296,6 +301,67 @@ describe("Project structural transaction", () => {
     });
   });
 
+  it("normalizes a formatting-only formal Port edit without renaming its terminal", () => {
+    const project = createEmptyProject("project", "Project");
+    const child = createEmptyDocument("document-child", "Child");
+    child.instances.push({
+      id: "port-vout",
+      symbolId: "port",
+      placement: null,
+      properties: {},
+    });
+    child.nets.push({
+      id: "net-vout",
+      scope: "local",
+      terminals: [{ instanceId: "port-vout", pinName: "P" }],
+    });
+    child.netlist!.terminals.push({
+      id: "terminal-vout",
+      name: "Vout",
+      netId: "net-vout",
+      direction: "output",
+      interfaceInstanceId: "port-vout",
+    });
+    child.annotations.push({
+      id: "instance-label-port-vout",
+      kind: "instance-label",
+      content: { runs: [{ kind: "text", value: "Vout" }] },
+      anchor: {
+        kind: "object",
+        objectId: "port-vout",
+        localOffset: { x: 0, y: 0 },
+        fallbackPosition: { x: 0, y: 0 },
+      },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+    project.documents.push(child);
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "normalize-port-label",
+      projectId: project.id,
+      expectedStructureRevision: 0,
+      actor: { kind: "human", id: "human-local" },
+      edits: planRenameCellTerminal(project, child.id, "terminal-vout", "Vout"),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      applied: true,
+      project: {
+        documents: [{}, { netlist: { terminals: [{ name: "Vout" }] } }],
+      },
+    });
+    if (!result.ok) throw new Error("Expected formatting-only Port update");
+    expect(
+      flattenRichText(result.project.documents[1]!.annotations[0]!.content),
+    ).toBe("Vout");
+    expect(
+      JSON.stringify(result.project.documents[1]!.annotations[0]!.content),
+    ).toContain('"subscript"');
+  });
+
   it("removes an unused formal port and reconciles caller source order", () => {
     const project = createEmptyProject("project", "Project");
     const child = createEmptyDocument("document-child", "Child");
@@ -337,6 +403,85 @@ describe("Project structural transaction", () => {
     expect(result).toMatchObject({
       ok: true,
       applied: true,
+      project: {
+        documents: [
+          { instances: [{ netlist: { terminals: [] } }] },
+          { instances: [], netlist: { terminals: [] } },
+        ],
+      },
+    });
+  });
+
+  it("removes multiple unreferenced formal ports in one atomic transaction", () => {
+    const project = createEmptyProject("project", "Project");
+    const child = createEmptyDocument("document-child", "Child");
+    child.instances.push(
+      {
+        id: "port-a",
+        symbolId: "port",
+        placement: null,
+        properties: {},
+      },
+      {
+        id: "port-b",
+        symbolId: "port",
+        placement: null,
+        properties: {},
+      },
+    );
+    child.nets.push(
+      {
+        id: "net-a",
+        scope: "local",
+        terminals: [{ instanceId: "port-a", pinName: "P" }],
+      },
+      {
+        id: "net-b",
+        scope: "local",
+        terminals: [{ instanceId: "port-b", pinName: "P" }],
+      },
+    );
+    child.netlist!.terminals.push(
+      {
+        id: "terminal-a",
+        name: "A",
+        netId: "net-a",
+        direction: "input",
+        interfaceInstanceId: "port-a",
+      },
+      {
+        id: "terminal-b",
+        name: "B",
+        netId: "net-b",
+        direction: "output",
+        interfaceInstanceId: "port-b",
+      },
+    );
+    project.documents.push(child);
+    project.documents[0]!.instances.push({
+      ...hierarchyInstance("X1", "Child", child.id),
+      netlist: {
+        ...hierarchyInstance("X1", "Child", child.id).netlist,
+        terminals: [
+          { sourcePosition: 0, pinName: "A" },
+          { sourcePosition: 1, pinName: "B" },
+        ],
+      },
+    });
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "remove-unused-ports",
+      projectId: project.id,
+      expectedStructureRevision: 0,
+      actor: { kind: "human", id: "human-local" },
+      edits: planRemoveCellTerminals(project, child.id, [
+        "terminal-a",
+        "terminal-b",
+      ]),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
       project: {
         documents: [
           { instances: [{ netlist: { terminals: [] } }] },

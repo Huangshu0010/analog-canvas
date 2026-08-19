@@ -25,8 +25,12 @@ import {
   planDeleteCell,
   planRenameCell,
   planRemoveCellTerminal,
+  planRemoveCellTerminals,
   planRenameCellTerminal,
+  planSetCellSymbolPresentation,
+  planSetCellTerminalPlacement,
   planUpdateCellTerminalDirection,
+  findCellTerminalCaller,
   type ProjectStructureEdit,
   type EditTransactionResult,
   type SchematicEdit,
@@ -77,6 +81,7 @@ import {
   createId,
   defaultDraftTextDocument,
   flattenRichText,
+  inverseTransformPoint,
   snapGridPoint,
   semanticTextDocument,
   transformPoint,
@@ -174,7 +179,10 @@ import {
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
-import { proposeConnectedInstanceDeletion } from "../features/selection/delete-selection";
+import {
+  proposeConnectedInstanceDeletion,
+  proposeVisualSelectionDeletion,
+} from "../features/selection/delete-selection";
 import {
   createLibraryExampleProject,
   type LibraryProjectExample,
@@ -562,6 +570,12 @@ export function App({
     setAgentStatusDismissed(false);
   }, [agentSession.status, publicAgentUiEnabled]);
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
+  const [cellSymbolLayoutEnabled, setCellSymbolLayoutEnabled] = useState(false);
+  const [cellSymbolLayoutDrag, setCellSymbolLayoutDrag] = useState<{
+    kind: "body" | "pin";
+    pointerId: number;
+    terminalId?: string;
+  } | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [routeStretchPreview, setRouteStretchPreview] =
     useState<RouteStretchPreview | null>(null);
@@ -770,6 +784,49 @@ export function App({
     selectedIds.length === 1
       ? document.instances.find((instance) => instance.id === selectedId)
       : undefined;
+  const selectedHierarchyCell = selectedInstance
+    ? project.documents.find(
+        (candidate) =>
+          candidate.id === referencedDocumentId(project, selectedInstance),
+      )
+    : undefined;
+  const selectedCellSymbolLayout = useMemo(() => {
+    if (
+      !cellSymbolLayoutEnabled ||
+      !selectedInstance?.placement ||
+      !selectedHierarchyCell?.netlist
+    ) {
+      return null;
+    }
+    const definition = resolver.resolve(selectedInstance.symbolId)?.definition;
+    const body = definition?.primitives.find(
+      (primitive) => primitive.kind === "polygon",
+    );
+    if (!definition || !body || body.kind !== "polygon") return null;
+    const xs = body.points.map((point) => point.x);
+    const ys = body.points.map((point) => point.y);
+    return {
+      child: selectedHierarchyCell,
+      instance: selectedInstance,
+      body: {
+        left: Math.min(...xs),
+        right: Math.max(...xs),
+        top: Math.min(...ys),
+        bottom: Math.max(...ys),
+      },
+      pins: selectedHierarchyCell.netlist.terminals.flatMap((terminal) => {
+        const pin = definition.pins.find(
+          (candidate) => candidate.name === terminal.name,
+        );
+        return pin ? [{ terminal, pin }] : [];
+      }),
+    };
+  }, [
+    cellSymbolLayoutEnabled,
+    resolver,
+    selectedHierarchyCell,
+    selectedInstance,
+  ]);
   const selectedRoute = selectedRouteId
     ? document.routes.find((route) => route.id === selectedRouteId)
     : undefined;
@@ -872,9 +929,19 @@ export function App({
       );
       if (!terminal) return false;
       try {
+        const edits = planRenameCellTerminal(
+          project,
+          document.id,
+          terminal.id,
+          name,
+        );
+        if (edits.length === 0) {
+          setStatus(`Cell Port ${name} is already current`);
+          return true;
+        }
         const committed = commitStructure(
           "rename-cell-port-from-annotation",
-          planRenameCellTerminal(project, document.id, terminal.id, name),
+          edits,
         );
         if (committed) setStatus(`Renamed formal port to ${name}`);
         return committed;
@@ -1616,6 +1683,130 @@ export function App({
     }
   }
 
+  function setCellSymbolBodySize(
+    child: SchematicDocument,
+    width: number,
+    height: number,
+  ): void {
+    if (
+      !Number.isInteger(width) ||
+      !Number.isInteger(height) ||
+      width <= 0 ||
+      height <= 0 ||
+      width % 10 !== 0 ||
+      height % 10 !== 0
+    ) {
+      setStatus("Cell symbol size must use positive 10-unit grid values");
+      return;
+    }
+    const current = child.presentation.cellSymbol;
+    if (
+      commitStructure(
+        "resize-cell-symbol",
+        planSetCellSymbolPresentation(project, child.id, {
+          ...(current?.pinPlacements
+            ? { pinPlacements: current.pinPlacements }
+            : {}),
+          minimumBodySize: { width, height },
+        }),
+      )
+    ) {
+      setStatus(`Resized ${child.name} symbol for every parent instance`);
+    }
+  }
+
+  function setCellSymbolPortPlacement(
+    child: SchematicDocument,
+    terminalId: string,
+    side: "north" | "east" | "south" | "west" | "auto",
+    offset: number,
+  ): void {
+    try {
+      if (
+        commitStructure(
+          "move-cell-symbol-pin",
+          planSetCellTerminalPlacement(
+            project,
+            child.id,
+            terminalId,
+            side,
+            offset,
+          ),
+        )
+      ) {
+        setStatus(`Moved Cell symbol pin in every parent instance`);
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not move Cell symbol pin",
+      );
+    }
+  }
+
+  function beginCellSymbolLayoutDrag(
+    event: ReactPointerEvent<SVGCircleElement>,
+    kind: "body" | "pin",
+    terminalId?: string,
+  ): void {
+    if (!selectedCellSymbolLayout) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setCellSymbolLayoutDrag({
+      kind,
+      pointerId: event.pointerId,
+      ...(terminalId ? { terminalId } : {}),
+    });
+  }
+
+  function completeCellSymbolLayoutDrag(
+    event: ReactPointerEvent<SVGSVGElement>,
+  ): boolean {
+    const drag = cellSymbolLayoutDrag;
+    const layout = selectedCellSymbolLayout;
+    if (!drag || drag.pointerId !== event.pointerId || !layout) return false;
+    const point = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget,
+    );
+    const local = inverseTransformPoint(
+      point,
+      layout.instance.placement!.position,
+      layout.instance.placement!,
+    );
+    setCellSymbolLayoutDrag(null);
+    if (drag.kind === "body") {
+      setCellSymbolBodySize(
+        layout.child,
+        Math.max(10, snapCoordinate(Math.abs(local.x) * 2, 10)),
+        Math.max(10, snapCoordinate(Math.abs(local.y) * 2, 10)),
+      );
+      return true;
+    }
+    if (!drag.terminalId) return true;
+    if (drag.kind === "pin") {
+      const distances = [
+        ["west", Math.abs(local.x - layout.body.left)],
+        ["east", Math.abs(local.x - layout.body.right)],
+        ["north", Math.abs(local.y - layout.body.top)],
+        ["south", Math.abs(local.y - layout.body.bottom)],
+      ] as const;
+      const side = distances.reduce((closest, candidate) =>
+        candidate[1] < closest[1] ? candidate : closest,
+      )[0];
+      const offset = snapCoordinate(
+        side === "west" || side === "east" ? local.y : local.x,
+        10,
+      );
+      setCellSymbolPortPlacement(layout.child, drag.terminalId, side, offset);
+      return true;
+    }
+    return true;
+  }
+
   const selectedFormalTerminal = selectedInstance
     ? document.netlist?.terminals.find(
         (terminal) => terminal.interfaceInstanceId === selectedInstance.id,
@@ -1672,32 +1863,106 @@ export function App({
       (terminal) =>
         visualSelection.instanceIds.includes(terminal.interfaceInstanceId),
     );
-    const onlyOneFormalPort =
-      formalTerminals.length === 1 &&
-      visualSelection.instanceIds.length === 1 &&
-      visualSelection.routeIds.length === 0 &&
-      visualSelection.junctionIds.length === 0 &&
-      visualSelection.annotationIds.every((annotationId) =>
-        document.annotations.some(
-          (annotation) =>
-            annotation.id === annotationId &&
-            annotation.anchor.kind === "object" &&
-            annotation.anchor.objectId ===
-              formalTerminals[0]?.interfaceInstanceId,
-        ),
-      ) &&
-      visualSelection.draftingIds.length === 0;
-    if (onlyOneFormalPort) {
-      deleteSelectedFormalPort();
+    if (formalTerminals.length === 0) {
+      deleteSelectionFromSelection();
       return;
     }
-    if (formalTerminals.length > 0) {
-      setStatus(
-        "Delete Cell Ports one at a time so interface safety can be checked",
+    const protectedTerminalIds = new Set(
+      formalTerminals
+        .filter((terminal) =>
+          Boolean(findCellTerminalCaller(project, document.id, terminal.name)),
+        )
+        .map((terminal) => terminal.id),
+    );
+    const removableTerminals = formalTerminals.filter(
+      (terminal) => !protectedTerminalIds.has(terminal.id),
+    );
+    const protectedInstanceIds = new Set(
+      formalTerminals
+        .filter((terminal) => protectedTerminalIds.has(terminal.id))
+        .map((terminal) => terminal.interfaceInstanceId),
+    );
+    const deletionSelection = {
+      ...visualSelection,
+      instanceIds: visualSelection.instanceIds.filter(
+        (instanceId) => !protectedInstanceIds.has(instanceId),
+      ),
+      annotationIds: visualSelection.annotationIds.filter((annotationId) => {
+        const annotation = document.annotations.find(
+          (candidate) => candidate.id === annotationId,
+        );
+        return !(
+          annotation?.anchor.kind === "object" &&
+          protectedInstanceIds.has(annotation.anchor.objectId)
+        );
+      }),
+    };
+    try {
+      const deletionEdits = proposeVisualSelectionDeletion(
+        document,
+        resolver,
+        deletionSelection,
+        ++uniqueSuffixCounter.current,
       );
-      return;
+      if (removableTerminals.length > 0) {
+        if (
+          commitStructure(
+            "delete-cell-port-selection",
+            planRemoveCellTerminals(
+              project,
+              document.id,
+              removableTerminals.map((terminal) => terminal.id),
+              deletionEdits,
+            ),
+          )
+        ) {
+          if (protectedInstanceIds.size > 0) {
+            replaceSelection({
+              ...visualSelection,
+              instanceIds: [...protectedInstanceIds],
+              annotationIds: visualSelection.annotationIds.filter(
+                (annotationId) =>
+                  document.annotations.some(
+                    (annotation) =>
+                      annotation.id === annotationId &&
+                      annotation.anchor.kind === "object" &&
+                      protectedInstanceIds.has(annotation.anchor.objectId),
+                  ),
+              ),
+            });
+          } else {
+            resetSelection();
+          }
+          setStatus(
+            protectedInstanceIds.size > 0
+              ? `Deleted selection; kept ${protectedInstanceIds.size} Cell Port${protectedInstanceIds.size === 1 ? "" : "s"} with parent wiring`
+              : "Deleted selected schematic objects",
+          );
+        }
+        return;
+      }
+      if (deletionEdits.length > 0 && transact(deletionEdits).ok) {
+        replaceSelection({
+          ...visualSelection,
+          instanceIds: [...protectedInstanceIds],
+          annotationIds: visualSelection.annotationIds.filter((annotationId) =>
+            document.annotations.some(
+              (annotation) =>
+                annotation.id === annotationId &&
+                annotation.anchor.kind === "object" &&
+                protectedInstanceIds.has(annotation.anchor.objectId),
+            ),
+          ),
+        });
+        setStatus(
+          "Deleted selected objects; kept Cell Ports with parent wiring",
+        );
+        return;
+      }
+      setStatus("Cell Port is kept because it is still wired in a parent Cell");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Delete failed");
     }
-    deleteSelectionFromSelection();
   }
 
   function navigateToLocator(
@@ -3002,6 +3267,17 @@ export function App({
       return;
     }
     if (tool !== "pointer" || event.button !== 0) return;
+    if (
+      cellSymbolLayoutEnabled &&
+      (event.target as Element).closest(
+        '[data-testid="cell-symbol-layout-overlay"]',
+      )
+    ) {
+      // The canvas capture layer ranks the underlying scene through
+      // elementsFromPoint(). Layout grips intentionally outrank that scene so
+      // a selected hierarchy instance cannot start an ordinary move first.
+      return;
+    }
     if ((event.target as Element).closest(".draft-handle, .route-handle")) {
       return;
     }
@@ -4946,6 +5222,14 @@ export function App({
   }
 
   function finishCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
+    if (
+      event.type === "pointercancel" &&
+      cellSymbolLayoutDrag?.pointerId === event.pointerId
+    ) {
+      setCellSymbolLayoutDrag(null);
+      return;
+    }
+    if (completeCellSymbolLayoutDrag(event)) return;
     if (panPreview?.pointerId === event.pointerId) {
       event.currentTarget.releasePointerCapture(event.pointerId);
       setPanPreview(null);
@@ -6531,6 +6815,144 @@ export function App({
                       </small>
                     </div>
                   ) : null}
+                  {selectedHierarchyCell ? (
+                    <div
+                      className="cell-symbol-layout-properties"
+                      aria-label="Cell symbol layout"
+                    >
+                      <div className="property-section-heading">
+                        Cell symbol layout
+                      </div>
+                      <small>
+                        Editing <strong>{selectedHierarchyCell.name}</strong>.
+                        These definition-level changes apply to every parent
+                        instance; connected routes follow the moved pin.
+                      </small>
+                      <button
+                        type="button"
+                        className="cell-symbol-layout-toggle"
+                        aria-pressed={cellSymbolLayoutEnabled}
+                        onClick={() =>
+                          setCellSymbolLayoutEnabled((enabled) => !enabled)
+                        }
+                      >
+                        {cellSymbolLayoutEnabled
+                          ? "Done editing canvas layout"
+                          : "Edit symbol layout on canvas"}
+                      </button>
+                      {cellSymbolLayoutEnabled ? (
+                        <small>
+                          Drag the corner to resize, or a pin dot to change its
+                          side and offset.
+                        </small>
+                      ) : null}
+                      <div className="component-geometry-row">
+                        <label>
+                          Width
+                          <input
+                            key={`${selectedHierarchyCell.id}-${selectedHierarchyCell.revision}-symbol-width`}
+                            aria-label="Cell symbol width"
+                            defaultValue={String(
+                              selectedHierarchyCell.presentation.cellSymbol
+                                ?.minimumBodySize?.width ?? 100,
+                            )}
+                            inputMode="numeric"
+                            onBlur={(event) =>
+                              setCellSymbolBodySize(
+                                selectedHierarchyCell,
+                                Number(event.currentTarget.value),
+                                selectedHierarchyCell.presentation.cellSymbol
+                                  ?.minimumBodySize?.height ?? 60,
+                              )
+                            }
+                          />
+                        </label>
+                        <label>
+                          Height
+                          <input
+                            key={`${selectedHierarchyCell.id}-${selectedHierarchyCell.revision}-symbol-height`}
+                            aria-label="Cell symbol height"
+                            defaultValue={String(
+                              selectedHierarchyCell.presentation.cellSymbol
+                                ?.minimumBodySize?.height ?? 60,
+                            )}
+                            inputMode="numeric"
+                            onBlur={(event) =>
+                              setCellSymbolBodySize(
+                                selectedHierarchyCell,
+                                selectedHierarchyCell.presentation.cellSymbol
+                                  ?.minimumBodySize?.width ?? 100,
+                                Number(event.currentTarget.value),
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                      {selectedHierarchyCell.netlist?.terminals.map(
+                        (terminal) => {
+                          const pinPlacement =
+                            selectedHierarchyCell.presentation.cellSymbol?.pinPlacements?.find(
+                              (placement) =>
+                                placement.terminalId === terminal.id,
+                            );
+                          return (
+                            <div
+                              key={terminal.id}
+                              className="cell-symbol-pin-layout-row"
+                            >
+                              <strong>{terminal.name}</strong>
+                              <label>
+                                Side
+                                <select
+                                  key={`${selectedHierarchyCell.revision}-${terminal.id}-side`}
+                                  aria-label={`Cell symbol ${terminal.name} pin side`}
+                                  defaultValue={pinPlacement?.side ?? "auto"}
+                                  onChange={(event) =>
+                                    setCellSymbolPortPlacement(
+                                      selectedHierarchyCell,
+                                      terminal.id,
+                                      event.currentTarget.value as
+                                        | "north"
+                                        | "east"
+                                        | "south"
+                                        | "west"
+                                        | "auto",
+                                      pinPlacement?.offset ?? 0,
+                                    )
+                                  }
+                                >
+                                  <option value="auto">Auto</option>
+                                  <option value="west">Left</option>
+                                  <option value="east">Right</option>
+                                  <option value="north">Top</option>
+                                  <option value="south">Bottom</option>
+                                </select>
+                              </label>
+                              <label>
+                                Offset
+                                <input
+                                  key={`${selectedHierarchyCell.revision}-${terminal.id}-offset`}
+                                  aria-label={`Cell symbol ${terminal.name} pin offset`}
+                                  defaultValue={String(
+                                    pinPlacement?.offset ?? 0,
+                                  )}
+                                  inputMode="numeric"
+                                  onBlur={(event) =>
+                                    setCellSymbolPortPlacement(
+                                      selectedHierarchyCell,
+                                      terminal.id,
+                                      pinPlacement?.side ?? "auto",
+                                      Number(event.currentTarget.value),
+                                    )
+                                  }
+                                />
+                              </label>
+                            </div>
+                          );
+                        },
+                      )}
+                    </div>
+                  ) : null}
                   <div className="property-section-heading">Canvas labels</div>
                   <div
                     className="display-toggle-row"
@@ -7275,11 +7697,23 @@ export function App({
               });
             }}
             onPointerDownCapture={(event) => {
+              const target = event.target as Element;
+              if (target.closest('[data-testid="canvas-text-editor"]')) {
+                // The SVG capture layer otherwise re-ranks the canvas below
+                // this HTML editor through elementsFromPoint() before the
+                // editor's own bubbling handlers can stop the event.
+                return;
+              }
+              if (
+                cellSymbolLayoutEnabled &&
+                target.closest('[data-testid="cell-symbol-layout-overlay"]')
+              ) {
+                return;
+              }
               if (getCurrentInteractionState().kind === "moving-selection") {
                 event.stopPropagation();
                 return;
               }
-              const target = event.target as Element;
               if (
                 selectedDrafting &&
                 (selectedDrafting.kind === "arrow" ||
@@ -7475,6 +7909,78 @@ export function App({
               </>
             ) : null}
             <g dangerouslySetInnerHTML={sceneInnerHtml} />
+            {selectedCellSymbolLayout
+              ? (() => {
+                  const placement =
+                    selectedCellSymbolLayout.instance.placement!;
+                  const world = (point: { x: number; y: number }) =>
+                    transformPoint(point, placement.position, placement);
+                  const bodyCorner = world({
+                    x: selectedCellSymbolLayout.body.right,
+                    y: selectedCellSymbolLayout.body.bottom,
+                  });
+                  return (
+                    <g
+                      className="cell-symbol-layout-overlay"
+                      data-testid="cell-symbol-layout-overlay"
+                    >
+                      <circle
+                        data-testid="cell-symbol-body-handle"
+                        className="cell-symbol-layout-handle body"
+                        cx={bodyCorner.x}
+                        cy={bodyCorner.y}
+                        r="5"
+                        onPointerDown={(event) =>
+                          beginCellSymbolLayoutDrag(event, "body")
+                        }
+                      />
+                      {selectedCellSymbolLayout.pins.map(
+                        ({ terminal, pin }) => {
+                          const bodyPoint =
+                            pin.direction === "west"
+                              ? {
+                                  x: selectedCellSymbolLayout.body.left,
+                                  y: pin.at.y,
+                                }
+                              : pin.direction === "east"
+                                ? {
+                                    x: selectedCellSymbolLayout.body.right,
+                                    y: pin.at.y,
+                                  }
+                                : pin.direction === "north"
+                                  ? {
+                                      x: pin.at.x,
+                                      y: selectedCellSymbolLayout.body.top,
+                                    }
+                                  : {
+                                      x: pin.at.x,
+                                      y: selectedCellSymbolLayout.body.bottom,
+                                    };
+                          const pinPoint = world(bodyPoint);
+                          return (
+                            <g key={terminal.id}>
+                              <circle
+                                data-testid={`cell-symbol-pin-handle-${terminal.id}`}
+                                className="cell-symbol-layout-handle pin"
+                                cx={pinPoint.x}
+                                cy={pinPoint.y}
+                                r="4.5"
+                                onPointerDown={(event) =>
+                                  beginCellSymbolLayoutDrag(
+                                    event,
+                                    "pin",
+                                    terminal.id,
+                                  )
+                                }
+                              />
+                            </g>
+                          );
+                        },
+                      )}
+                    </g>
+                  );
+                })()
+              : null}
             {highlightedNet ? (
               <g
                 data-testid="net-highlight-overlay"
@@ -7798,6 +8304,16 @@ export function App({
                 .map((instance) => {
                   const hitBox = instanceHitBox(instance, resolver);
                   if (!hitBox) return null;
+                  if (
+                    cellSymbolLayoutEnabled &&
+                    selectedInstance?.id === instance.id
+                  ) {
+                    // The layout overlay is the exclusive interaction surface
+                    // for the selected Cell instance while editing its
+                    // definition. Rendering the generic hit box here still
+                    // wins elementsFromPoint() even with pointer-events:none.
+                    return null;
+                  }
                   const childDocumentId = referencedDocumentId(
                     project,
                     instance,

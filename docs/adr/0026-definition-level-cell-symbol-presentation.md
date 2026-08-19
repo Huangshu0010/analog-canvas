@@ -22,8 +22,8 @@ Instance, Route, and renderer authorities already retained by ADR 0025.
 Advance the Project format to schema 13. A Cell Document may persist optional
 `presentation.cellSymbol` intent containing a minimum body size and unique
 stable-terminal `side`/grid-offset placements. Electrical terminal direction
-remains separate from visual side. The child canvas Port marker position does
-not determine the parent-block pin position.
+remains separate from visual side. The child canvas Port marker position does not
+determine the parent-block pin position.
 
 All readers return the sole schema-13 in-memory Project shape.
 

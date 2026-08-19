@@ -403,7 +403,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           ? {
               annotation: {
                 ...annotation,
-                content: semanticTextDocument(formalName, "instance-label"),
+                content: semanticTextDocument(formalName, "formal-port"),
               },
             }
           : {}),

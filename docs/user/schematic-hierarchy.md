@@ -55,6 +55,14 @@ Rectangles remain drafting geometry. Selecting an unlocked rectangle and using
 creates a child Cell, and places an ordinary hierarchical Instance. Saved
 hierarchy never depends on rectangle drawing data.
 
+Select a Cell Instance in a parent and open **Properties** to adjust that
+Cell's shared symbol layout: body width/height and each pin side/offset. Pin
+names follow their pin automatically and never take over the external wiring
+anchor. Use **Auto** to return a pin to direction-aware placement. **Edit
+symbol layout on canvas** reveals explicit drag grips for the body and pins;
+the Properties values remain the precise fallback. These are definition operations,
+not top-level drawing tools.
+
 Hierarchy presentation is saved as definition-level size and pin-placement
 intent in Project schema 13. Older schema-12 projects open with deterministic
 automatic pin layout; schema-11 files are outside the supported rolling
