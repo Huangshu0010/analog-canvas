@@ -1,5 +1,5 @@
 ---
-status: completed
+status: active
 experience: none
 ---
 
@@ -28,6 +28,8 @@ read-only.
 2. Route only formal Cell Port annotations through hierarchy reconciliation;
    preserve ordinary annotation commits.
 3. Re-run affected browser coverage and canonical CI before mainline delivery.
+4. Preserve the complete release-contract gate while giving its remote job a
+   sufficient timeout after the observed 15-minute cancellation.
 
 ## Validation
 
@@ -57,6 +59,8 @@ Repaired the compact Properties-browser assertions and constrained formal Cell
 Port annotation reconciliation to formal Port annotations only. Ordinary
 instance-label edits again use the shared canvas text-editing transaction.
 
-Validation passed: focused six-scenario Playwright coverage and canonical
-`pnpm ci:check` (146 unit files / 889 tests, build, release smoke, and 154
-browser scenarios).
+The application changes passed focused six-scenario Playwright coverage and
+canonical `pnpm ci:check` (146 unit files / 889 tests, build, release smoke,
+and 154 browser scenarios). Remote release contracts then timed out at the
+workflow's 15-minute job limit without a test failure; completion remains
+pending its timeout-budget correction and green remote rerun.

@@ -3301,4 +3301,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: focused six-scenario Playwright coverage and `pnpm ci:check`
   passed (146 unit files / 889 tests, build, release smoke, and 154 browser
   scenarios).
-- Commit status: committed on `codex/properties-panel-simplify`.
+- Remote CI: all other required checks passed; Release contracts was cancelled
+  at its configured 15-minute timeout while running the unchanged full gate.
+  The target remains active while a 25-minute timeout-budget correction reruns
+  the same gate.
