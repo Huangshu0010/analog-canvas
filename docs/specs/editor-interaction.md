@@ -29,11 +29,12 @@ Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.
 
-There is no separate Cell Interface authoring surface. The selected Port's
-normal Properties own terminal name and direction; rename reconciles callers
-by stable terminal identity. Ordinary Delete dispatches through formal-terminal
-removal so connected callers and attached route geometry retain their existing
-safety checks. Definition-level pin placement data remains compatible, while
+There is no separate Cell Interface authoring surface. A child Cell Port's
+single object-anchored annotation owns its terminal name; normal Properties own
+direction. Annotation rename reconciles callers by stable terminal identity.
+Ordinary Delete reuses the normal instance/route deletion proposal, with the
+formal-terminal and caller projection appended only by the Project transaction.
+Definition-level pin placement data remains compatible, while
 new interfaces use deterministic direction-aware automatic layout.
 
 Canonical `nmos`/`pmos` use the asset's `textbook-3terminal` visual variant by

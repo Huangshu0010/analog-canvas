@@ -1405,7 +1405,7 @@ test("selects an attached label without selecting its host", async ({
     page.getByTestId("annotation-hit-instance-label-R1"),
   ).toHaveClass(/selected/u);
   await expect(page.getByTestId("selection-shelf")).toContainText(
-    "instance-label-R1",
+    "Annotation · instance-label",
   );
 });
 
@@ -1480,7 +1480,6 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await page
     .getByRole("textbox", { name: "Electrical Net label" })
     .fill("SIGNAL");
-  await page.getByRole("button", { name: "Apply Net label" }).click();
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
     "SIGNAL",
   );
@@ -1513,11 +1512,8 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await page
     .getByRole("textbox", { name: "Electrical Net label" })
     .fill("SIGNAL");
-  await page.getByRole("button", { name: "Apply Net label" }).click();
   await expect(page.getByTestId("net-count")).toHaveText("1");
-  await expect(page.getByTestId("status")).toHaveText(
-    "Connected Nets through label SIGNAL",
-  );
+  await expect(page.getByTestId("status")).toHaveText("Saved Net Label SIGNAL");
 
   await clickCommand(page, "Draw", "Text");
   const textInput = page.getByRole("textbox", {
@@ -1947,9 +1943,9 @@ test("selects and moves multiple instances while viewport gestures stay transien
   );
   await page.mouse.up();
   await openSelectionShelf(page);
-  await expect(
-    page.getByTestId("selection-shelf").getByText("M1, M2", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByTestId("selection-shelf")).toContainText(
+    "2 components",
+  );
 
   await page
     .getByTestId("hit-M1")
@@ -3053,9 +3049,7 @@ test("surfaces and locates current-document ERC diagnostics", async ({
   await expect(page.getByTestId("project-diagnostics")).toContainText(
     "ERC_UNCONNECTED_PIN",
   );
-  await page.getByTestId("diagnostic-domain-erc").click();
-  await page.getByTestId("diagnostic-severity-error").click();
-  await expect(page.getByTestId("project-diagnostics")).toHaveText("");
+  await expect(page.getByTestId("diagnostic-severity-error")).toHaveCount(0);
   await page.getByTestId("diagnostic-severity-warning").click();
   await expect(page.getByTestId("project-diagnostics")).toContainText(
     "ERC_UNCONNECTED_PIN",
@@ -3102,9 +3096,7 @@ test("filters and navigates locator-backed visual diagnostics", async ({
   await placeComponent(page, "resistor", { x: 420, y: 300 });
   await openSelectionShelf(page);
 
-  await expect(page.getByTestId("diagnostic-domain-visual")).toHaveCount(0);
   await page.getByTestId("diagnostic-observations-toggle").click();
-  await page.getByTestId("diagnostic-domain-visual").click();
   const diagnostics = page.getByTestId("project-diagnostics");
   await expect(diagnostics).toContainText("VISUAL_SYMBOL_OVERLAP");
   await diagnostics

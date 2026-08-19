@@ -4,7 +4,7 @@ Analog Canvas treats every Project Document as one reusable schematic Cell.
 The top Cell is the export root; other Cells may be instantiated any number of
 times or kept unreferenced while they are being authored.
 
-Use **Cell → Manage Cells…** to manage the Project's definitions in one place. It shows each
+Use **Manage Cells…** in the hierarchy row to manage the Project's definitions in one place. It shows each
 Cell's formal port and caller counts, opens or renames a definition, and lists
 each caller with **Jump to caller**. A referenced Cell's delete control is
 disabled; delete its caller Instances normally before deleting the now
@@ -29,8 +29,8 @@ reusable child Cell, place a Port to define a real Cell port:
 1. Place the ordinary **Port** or **Filled Port** from the Library.
 2. Click an exact existing electrical contact to attach to its Net, or click
    empty grid space to create a new local Net.
-3. Select the placed Port to edit its interface name and direction in normal
-   **Properties**.
+3. Double-click its default annotation to edit the interface name; use normal
+   **Properties** only for direction.
 
 Child-Cell placement commits the ordinary `port`/`port-filled` Instance, its
 pin-`P` connection, and the stable formal Cell terminal as one revision. Inputs
@@ -38,15 +38,15 @@ are placed on the left of generated parent symbols, outputs on the right, and
 other directions are balanced automatically. The symbol body and pin placement
 adapt without a separate interface editor.
 
-The visible marker remains an ordinary Instance for selection, move, and
-wiring. Its Properties own the interface name and direction. The formal
-terminal adds stable identity, ordering, and the Net binding used by parent
+The visible marker remains an ordinary Instance for selection, move, wiring,
+and deletion. Its single annotation is the interface name; the formal terminal
+adds stable identity, ordering, and the Net binding used by parent
 blocks and netlist export.
 
-Renaming a selected Port updates all connected parent Instances atomically.
-Ordinary Delete removes its formal terminal and marker together, but is
-rejected while a parent still references that pin or wire geometry is attached;
-remove those uses first. **Delete Cell** removes only a non-top, unreferenced Cell definition.
+Renaming that annotation updates all connected parent Instances atomically.
+Ordinary Delete uses the same local Port/instance deletion behavior as the top
+Cell and removes the formal terminal together; it is rejected only while a
+parent still electrically references that interface pin. **Delete Cell** removes only a non-top, unreferenced Cell definition and can be undone or redone.
 Deleting a hierarchical Instance with the normal Delete command never deletes
 its reusable child Cell.
 

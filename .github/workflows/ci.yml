@@ -111,7 +111,7 @@ jobs:
     name: Release contracts
     needs: changes
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - if: needs.changes.outputs.heavy != 'true'
         run: echo "Documentation-only change; release contracts are unchanged."

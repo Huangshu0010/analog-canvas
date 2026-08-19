@@ -338,6 +338,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       properties: {},
       netlist: initialInstanceNetlist(options.document, symbolId, {}),
     };
+    const annotation = defaultInstanceLabel(
+      options.document,
+      instance,
+      options.resolver,
+      options.styleProfile,
+    );
     const contact = proposePlacementContact(
       options.document,
       options.resolver,
@@ -393,6 +399,14 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           direction: placementRequest.direction,
           interfaceInstanceId: id,
         },
+        ...(annotation
+          ? {
+              annotation: {
+                ...annotation,
+                content: semanticTextDocument(formalName, "instance-label"),
+              },
+            }
+          : {}),
       }),
     );
     if (!committed) return;

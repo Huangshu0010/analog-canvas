@@ -150,8 +150,8 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
   await expect(page.getByTestId("hit-R1")).toBeVisible();
   await expect(page.getByTestId("canvas-empty-state")).toHaveCount(0);
   await page.getByTestId("selection-shelf").click();
-  await expect(page.locator(".selection-overview")).toContainText(
-    "ComponentR1Symbolresistor",
+  await expect(page.getByTestId("selection-shelf")).toContainText(
+    "R1 · resistor",
   );
   await expect
     .poll(() =>
@@ -374,9 +374,14 @@ test("carries a manual Value through placement and Q property editing", async ({
     "true",
   );
   await expect(page.getByLabel("Component geometry")).toContainText("XYRotate");
-  await expect(
-    page.locator(".selection-overview").filter({ hasText: "ComponentR1" }),
-  ).not.toContainText("Position");
+  await expect(page.locator(".selection-overview")).toHaveCount(0);
+  await expect(page.getByTestId("selection-shelf")).toContainText(
+    "R1 · resistor",
+  );
+  await expect(page.getByLabel("Component display toggles")).toContainText(
+    "ReferenceValue",
+  );
+  await expect(page.getByText("More actions", { exact: true })).toBeVisible();
   const propertyValue = page.getByLabel("Component value");
   // Opening focuses the shelf header, never the first field: Q stays a pure
   // toggle and editing starts only when the user clicks an input.
@@ -398,14 +403,17 @@ test("carries a manual Value through placement and Q property editing", async ({
   await propertyValue.click();
   await expect(propertyValue).toBeFocused();
   await propertyValue.fill("12k");
-  await page
-    .getByRole("button", { name: "Apply component properties" })
-    .click();
+  await expect(propertyValue).toHaveValue("12k");
   await expect(page.getByTestId("revision")).toHaveText("2");
-
-  await page.keyboard.press("u");
+  await expect(
+    page.getByRole("button", { name: "Apply component properties" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Discard changes" }).click();
   await expect(page.getByTestId("revision")).toHaveText("3");
   await expect(propertyValue).toHaveValue("10k");
+  await expect(
+    page.getByRole("button", { name: "Discard changes" }),
+  ).toHaveCount(0);
 });
 
 test("keeps the workspace inside the viewport and exposes low-interference zoom controls", async ({
