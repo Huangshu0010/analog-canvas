@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -77,6 +77,7 @@ Validation passed: `pnpm test:e2e:local apps/editor/e2e/hierarchy.spec.ts`
 (6 scenarios), `pnpm typecheck`, `pnpm test:impact -- --base origin/main`, and
 `git diff --check`.
 
-Mainline delivery is in progress at the user's request: run the canonical CI
-gate, open a GitHub pull request, wait for its required checks, then merge to
-`main`.
+Mainline delivery gate passed with `pnpm install --frozen-lockfile` followed
+by `pnpm ci:check` (891 unit tests and 154 browser tests, plus static, build,
+release, packaging, and production-smoke contracts). PR #126 also passed all
+required GitHub checks before merge.
