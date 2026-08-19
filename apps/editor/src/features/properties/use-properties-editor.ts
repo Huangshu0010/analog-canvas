@@ -10,6 +10,11 @@ import {
   effectiveComponentParameterValue,
 } from "../component-insert/component-parameters";
 import {
+  additionalParameterDrafts,
+  planAdditionalParameterPatch,
+} from "./additional-parameters";
+import type { AdditionalParameterDraft } from "./additional-parameters";
+import {
   createTextEditingSession,
   proposeTextEditingCommit,
   textDeletionEdit,
@@ -51,6 +56,21 @@ function sameInstancePropertyDraft(
   ]);
   return [...keys].every(
     (key) => left.parameters[key] === right.parameters[key],
+  );
+}
+
+function sameAdditionalParameterDrafts(
+  left: readonly AdditionalParameterDraft[],
+  right: readonly AdditionalParameterDraft[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (entry, index) =>
+        entry.originalName === right[index]?.originalName &&
+        entry.name === right[index]?.name &&
+        entry.value === right[index]?.value,
+    )
   );
 }
 
@@ -100,6 +120,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   const [netLabelEditorOpen, setNetLabelEditorOpen] = useState(false);
   const [instancePropertyDraft, setInstancePropertyDraft] =
     useState<InstancePropertyDraft>(EMPTY_INSTANCE_PROPERTY_DRAFT);
+  const [additionalParameterDraft, setAdditionalParameterDraft] = useState<
+    readonly AdditionalParameterDraft[]
+  >([]);
   const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
     null,
   );
@@ -111,6 +134,10 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   const instancePropertyBaselineRef = useRef<InstancePropertyDraft>(
     EMPTY_INSTANCE_PROPERTY_DRAFT,
   );
+  const additionalParameterBaselineRef = useRef<
+    readonly AdditionalParameterDraft[]
+  >([]);
+  const additionalParameterSerialRef = useRef(0);
 
   const draftForInstance = (instance: Instance): InstancePropertyDraft => ({
     instanceId: instance.id,
@@ -174,6 +201,11 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     instancePropertyDraftRef.current = nextDraft;
     instancePropertyBaselineRef.current = nextDraft;
     setInstancePropertyDraft(nextDraft);
+    const nextAdditionalDraft = options.selectedInstance
+      ? additionalParameterDrafts(options.selectedInstance)
+      : [];
+    additionalParameterBaselineRef.current = nextAdditionalDraft;
+    setAdditionalParameterDraft(nextAdditionalDraft);
   }, [options.selectedInstance]);
 
   const updateInstancePropertyDraft = (
@@ -190,6 +222,71 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     }
     const { edits, invalidPosition } = options.instancePropertyEdits(nextDraft);
     if (!invalidPosition && edits.length > 0) options.transact(edits);
+  };
+
+  const addAdditionalParameter = (): void => {
+    const instance = options.selectedInstance;
+    if (!instance?.netlist) {
+      options.setStatus("This component has no netlist parameters to edit");
+      return;
+    }
+    additionalParameterSerialRef.current += 1;
+    setAdditionalParameterDraft((current) => [
+      ...current,
+      {
+        id: `${instance.id}:additional:new:${additionalParameterSerialRef.current}`,
+        originalName: null,
+        name: "",
+        value: "",
+      },
+    ]);
+  };
+
+  const updateAdditionalParameter = (
+    id: string,
+    change: Partial<Pick<AdditionalParameterDraft, "name" | "value">>,
+  ): void => {
+    setAdditionalParameterDraft((current) =>
+      current.map((entry) =>
+        entry.id === id ? { ...entry, ...change } : entry,
+      ),
+    );
+  };
+
+  const removeAdditionalParameter = (id: string): void => {
+    setAdditionalParameterDraft((current) =>
+      current.filter((entry) => entry.id !== id),
+    );
+  };
+
+  const applyAdditionalParameters = (): void => {
+    const instance = options.selectedInstance;
+    if (!instance) return;
+    const plan = planAdditionalParameterPatch(
+      instance,
+      additionalParameterDraft,
+    );
+    if (plan.kind === "invalid") {
+      options.setStatus(plan.message);
+      return;
+    }
+    if (plan.kind === "unchanged") return;
+    if (!options.transact([plan.edit]).ok) return;
+    const baseline = additionalParameterDraft
+      .filter((entry) => entry.name.trim() && entry.value.trim())
+      .map((entry) => ({
+        ...entry,
+        originalName: entry.name.trim(),
+        name: entry.name.trim(),
+        value: entry.value.trim(),
+      }));
+    additionalParameterBaselineRef.current = baseline;
+    setAdditionalParameterDraft(baseline);
+    options.setStatus(`Updated additional parameters for ${instance.id}`);
+  };
+
+  const cancelAdditionalParameters = (): void => {
+    setAdditionalParameterDraft(additionalParameterBaselineRef.current);
   };
 
   const applyNetLabel = (): void => {
@@ -470,7 +567,14 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   };
 
   return {
+    additionalParameterDraft,
+    additionalParameterDraftChanges: !sameAdditionalParameterDrafts(
+      additionalParameterDraft,
+      additionalParameterBaselineRef.current,
+    ),
+    addAdditionalParameter,
     applyNetLabel,
+    applyAdditionalParameters,
     beginAnnotationTextEditing,
     beginDraftingTextEditing,
     beginNetLabelEditing,
@@ -478,6 +582,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     commitNetLabelEditing,
     commitPendingNetLabelDraft,
     commitTextEditing,
+    cancelAdditionalParameters,
     clearTextEditing: () => setTextEditing(null),
     deleteSelectedRouteNetLabel,
     deleteTextEditing,
@@ -489,7 +594,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     ),
     netLabelDraft,
     netLabelEditorOpen,
+    removeAdditionalParameter,
     updateInstancePropertyDraft,
+    updateAdditionalParameter,
     updateNetLabelDraft,
     setNetLabelEditorOpen,
     setReferenceLabelsVisible,

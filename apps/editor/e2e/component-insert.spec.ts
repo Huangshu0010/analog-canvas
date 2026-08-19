@@ -414,6 +414,20 @@ test("carries a manual Value through placement and Q property editing", async ({
   await expect(
     page.getByRole("button", { name: "Discard changes" }),
   ).toHaveCount(0);
+  await expect(page.getByLabel("Component identity")).toContainText(
+    "ReferenceR1SymbolresistorDevice classresistor",
+  );
+  await page.getByRole("button", { name: "Add parameter" }).click();
+  await page.getByLabel("Additional parameter name 1").fill("tc");
+  await page.getByLabel("Additional parameter value 1").fill("0.1");
+  await page.getByRole("button", { name: "Apply parameters" }).click();
+  await expect(page.getByTestId("revision")).toHaveText("4");
+  await expect(page.getByLabel("Additional parameter name 1")).toHaveValue(
+    "tc",
+  );
+  await expect(page.getByLabel("Additional parameter value 1")).toHaveValue(
+    "0.1",
+  );
 });
 
 test("keeps the workspace inside the viewport and exposes low-interference zoom controls", async ({

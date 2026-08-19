@@ -732,7 +732,6 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
-        let changed = false;
         const before: SchematicDocument["instances"][number] =
           structuredClone(instance);
         const netlist = instance.netlist;
@@ -744,18 +743,35 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
-        for (const [key, value] of Object.entries(set)) {
-          if (netlist.parameters[key] !== value) {
-            netlist.parameters[key] = value;
-            changed = true;
-          }
-        }
+        const nextParameters = { ...netlist.parameters };
+        // Delete first so a case-only rename (for example `w` to `W`) is one
+        // valid atomic field change instead of a transient duplicate.
         for (const key of unset) {
-          if (key in netlist.parameters) {
-            delete netlist.parameters[key];
-            changed = true;
-          }
+          delete nextParameters[key];
         }
+        for (const [key, value] of Object.entries(set)) {
+          nextParameters[key] = value;
+        }
+        const namesByFoldedName = new Map<string, string>();
+        for (const name of Object.keys(nextParameters)) {
+          const foldedName = name.toLowerCase();
+          const prior = namesByFoldedName.get(foldedName);
+          if (prior && prior !== name) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Netlist parameter ${name} duplicates ${prior} under case folding`,
+              [],
+              [edit.instanceId],
+            );
+          }
+          namesByFoldedName.set(foldedName, name);
+        }
+        const changed =
+          Object.keys(nextParameters).length !==
+            Object.keys(netlist.parameters).length ||
+          Object.entries(nextParameters).some(
+            ([key, value]) => netlist.parameters[key] !== value,
+          );
         if (!changed) {
           return rejectAt(
             "EDIT_PRECONDITION",
@@ -764,6 +780,7 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
+        netlist.parameters = nextParameters;
         refreshInstanceValueAnnotation(
           draft,
           before,

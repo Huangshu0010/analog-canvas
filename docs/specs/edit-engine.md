@@ -89,6 +89,10 @@ is not another `SchematicEdit` member.
 existing netlist record. `set_instance_netlist` remains the whole-record
 operation for object initialization, import, and bounded migrations; product
 editing must not rebuild unrelated netlist facts through it.
+Parameter patches construct one final record before commit: an unset followed
+by a set permits a case-only rename, while a final case-folded duplicate is
+rejected atomically. This is the shared contract for descriptor fields and the
+Additional Parameters table.
 
 `upsert_schematic_annotation` / `remove_schematic_annotation` replace the
 narrowed SchematicAnnotation set (`instance-label | instance-value |

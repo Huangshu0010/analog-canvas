@@ -1,5 +1,16 @@
 # Maintenance Log
 
+## 2026-08-20 - S2 Component Properties workbench
+
+- Changed areas: typed Identity/target/source-evidence projections, editable
+  model target, atomic Additional Parameters Apply/Cancel table, and the
+  case-folded parameter patch contract.
+- Validation: `pnpm typecheck`; focused unit/UI contracts; focused Component
+  Properties Playwright workflow; `pnpm docs:check`;
+  `pnpm test:impact -- --base origin/main`; `git diff --check`.
+- Commit status: committed locally on
+  `codex/phase1-schematic-foundation-plan`.
+
 ## 2026-08-19 - S1 descriptor-backed property protocol
 
 - Changed areas: descriptor-owned ordered parameter metadata; editor Insert,

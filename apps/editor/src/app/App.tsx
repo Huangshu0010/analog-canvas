@@ -8,6 +8,7 @@ import type {
   AgentHostSemanticIntentRequest,
   AgentHostSemanticIntentResult,
 } from "@icm/agent-adapter";
+import { deviceDescriptor } from "@icm/devices";
 
 import {
   buildManualWirePath,
@@ -167,6 +168,7 @@ import {
   RenderCrashProbe,
 } from "./editor-runtime-helpers";
 import {
+  bindingForEditedModel,
   initialInstanceNetlist,
   netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
@@ -794,6 +796,16 @@ export function App({
           candidate.id === referencedDocumentId(project, selectedInstance),
       )
     : undefined;
+  const selectedDevice = selectedInstance
+    ? deviceDescriptor(selectedInstance.symbolId)
+    : undefined;
+  const selectedBinding = selectedInstance?.netlist?.binding;
+  const selectedExternalSubcircuit =
+    selectedBinding?.kind === "external-subcircuit"
+      ? project.externalSubcircuitDefinitions.find(
+          (definition) => definition.id === selectedBinding.definitionId,
+        )
+      : undefined;
   const selectedCellSymbolLayout = useMemo(() => {
     if (
       !cellSymbolLayoutEnabled ||
@@ -872,6 +884,10 @@ export function App({
     selectedDrafting?.kind === "rectangle",
   );
   const {
+    addAdditionalParameter,
+    additionalParameterDraft,
+    additionalParameterDraftChanges,
+    applyAdditionalParameters,
     applyNetLabel,
     beginAnnotationTextEditing,
     beginDraftingTextEditing,
@@ -881,6 +897,7 @@ export function App({
     commitPendingNetLabelDraft,
     commitTextEditing,
     clearTextEditing,
+    cancelAdditionalParameters,
     deleteSelectedRouteNetLabel,
     deleteTextEditing,
     discardInstancePropertyDraft,
@@ -888,12 +905,14 @@ export function App({
     instancePropertyDraft,
     netLabelDraft,
     netLabelEditorOpen,
+    removeAdditionalParameter,
     setNetLabelEditorOpen,
     setReferenceLabelsVisible,
     setValueLabelsVisible,
     showSelectedInstanceValue,
     textEditing,
     updateInstancePropertyDraft,
+    updateAdditionalParameter,
     updateTextEditing,
     updateNetLabelDraft,
   } = usePropertiesEditor({
@@ -4916,6 +4935,29 @@ export function App({
     return { edits, invalidPosition };
   }
 
+  function updateSelectedModelTarget(value: string): void {
+    if (!selectedInstance?.netlist) return;
+    const binding = bindingForEditedModel(selectedInstance.symbolId, value);
+    const nextBinding = binding ?? null;
+    const currentBinding = selectedInstance.netlist.binding ?? null;
+    if (JSON.stringify(nextBinding) === JSON.stringify(currentBinding)) return;
+    if (
+      transact([
+        {
+          kind: "set_instance_binding",
+          instanceId: selectedInstance.id,
+          binding: nextBinding,
+        },
+      ]).ok
+    ) {
+      setStatus(
+        nextBinding?.kind === "model"
+          ? `Set model target ${nextBinding.name}`
+          : `Cleared model target for ${selectedInstance.id}`,
+      );
+    }
+  }
+
   /*
    * Text sessions use one persistence proposal for both annotation and
    * drafting owners. The tagged target keeps their typed edit differences at
@@ -7011,6 +7053,102 @@ export function App({
                       )}
                     </div>
                   ) : null}
+                  <div
+                    className="formal-port-properties"
+                    aria-label="Component identity"
+                  >
+                    <div className="property-section-heading">Identity</div>
+                    <dl className="component-readonly-fields">
+                      <div>
+                        <dt>Reference</dt>
+                        <dd>
+                          {selectedInstance.netlist?.reference ??
+                            "Not exportable"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Symbol</dt>
+                        <dd>{selectedInstance.symbolId}</dd>
+                      </div>
+                      <div>
+                        <dt>Device class</dt>
+                        <dd>{selectedDevice?.deviceClass ?? "none"}</dd>
+                      </div>
+                      <div>
+                        <dt>Cell</dt>
+                        <dd>{document.netlist?.name ?? document.name}</dd>
+                      </div>
+                    </dl>
+                    <small>
+                      Stable internal IDs stay hidden. Reference editing joins
+                      this panel when S3's shared uniqueness policy is active.
+                    </small>
+                  </div>
+                  {selectedInstance.netlist ? (
+                    <div
+                      className="formal-port-properties"
+                      aria-label="Netlist target"
+                    >
+                      <div className="property-section-heading">
+                        Netlist target
+                      </div>
+                      {selectedInstance.netlist.binding?.kind === "model" ? (
+                        <label>
+                          Model
+                          <input
+                            key={`${selectedInstance.id}-${document.revision}-model-target`}
+                            aria-label="Component model target"
+                            defaultValue={selectedInstance.netlist.binding.name}
+                            onBlur={(event) =>
+                              updateSelectedModelTarget(
+                                event.currentTarget.value,
+                              )
+                            }
+                          />
+                        </label>
+                      ) : selectedDevice?.targetPolicy === "required-model" ? (
+                        <label>
+                          Model
+                          <input
+                            key={`${selectedInstance.id}-${document.revision}-model-target`}
+                            aria-label="Component model target"
+                            placeholder="Model name"
+                            onBlur={(event) =>
+                              updateSelectedModelTarget(
+                                event.currentTarget.value,
+                              )
+                            }
+                          />
+                        </label>
+                      ) : selectedInstance.netlist.binding?.kind ===
+                        "primitive" ? (
+                        <small>
+                          Built-in primitive:{" "}
+                          {selectedInstance.netlist.binding.deviceClass}
+                        </small>
+                      ) : selectedInstance.netlist.binding?.kind ===
+                        "subcircuit" ? (
+                        <small>
+                          Internal Cell:{" "}
+                          {selectedHierarchyCell?.netlist?.name ?? "unresolved"}
+                        </small>
+                      ) : selectedInstance.netlist.binding?.kind ===
+                        "external-subcircuit" ? (
+                        <small>
+                          External subcircuit:{" "}
+                          {selectedExternalSubcircuit?.name ?? "unresolved"}
+                        </small>
+                      ) : selectedInstance.netlist.binding?.kind ===
+                        "unresolved-subcircuit" ? (
+                        <small>
+                          Unresolved subcircuit:{" "}
+                          {selectedInstance.netlist.binding.name}
+                        </small>
+                      ) : (
+                        <small>No target is bound yet.</small>
+                      )}
+                    </div>
+                  ) : null}
                   <div className="property-section-heading">Canvas labels</div>
                   <div
                     className="display-toggle-row"
@@ -7081,6 +7219,95 @@ export function App({
                       </label>
                     ),
                   )}
+                  {selectedInstance.netlist ? (
+                    <div
+                      className="additional-parameters"
+                      aria-label="Additional parameters"
+                    >
+                      <div className="property-section-heading">
+                        Additional parameters
+                      </div>
+                      <small>
+                        Model- or dialect-specific raw values. Apply commits all
+                        rows as one undoable edit.
+                      </small>
+                      {additionalParameterDraft.map((parameter, index) => (
+                        <div
+                          className="component-geometry-row"
+                          key={parameter.id}
+                        >
+                          <label>
+                            Name
+                            <input
+                              aria-label={`Additional parameter name ${index + 1}`}
+                              value={parameter.name}
+                              onChange={(event) =>
+                                updateAdditionalParameter(parameter.id, {
+                                  name: event.currentTarget.value,
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            Value
+                            <input
+                              aria-label={`Additional parameter value ${index + 1}`}
+                              value={parameter.value}
+                              onChange={(event) =>
+                                updateAdditionalParameter(parameter.id, {
+                                  value: event.currentTarget.value,
+                                })
+                              }
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            aria-label={`Remove additional parameter ${index + 1}`}
+                            onClick={() =>
+                              removeAdditionalParameter(parameter.id)
+                            }
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      <div className="component-mirror-row">
+                        <button type="button" onClick={addAdditionalParameter}>
+                          Add parameter
+                        </button>
+                        {additionalParameterDraftChanges ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={applyAdditionalParameters}
+                            >
+                              Apply parameters
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelAdditionalParameters}
+                            >
+                              Cancel parameter edits
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                  {selectedInstance.importProvenance ? (
+                    <div
+                      className="formal-port-properties"
+                      aria-label="Imported source evidence"
+                    >
+                      <div className="property-section-heading">
+                        Imported source evidence
+                      </div>
+                      <small>
+                        {selectedInstance.importProvenance.kind}:{" "}
+                        {selectedInstance.importProvenance.sourceTarget}
+                      </small>
+                    </div>
+                  ) : null}
                   {selectedInstance.placement ? (
                     <>
                       <div className="property-section-heading">

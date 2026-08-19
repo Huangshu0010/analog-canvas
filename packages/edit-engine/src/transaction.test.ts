@@ -636,6 +636,55 @@ describe("Edit Transaction envelope", () => {
     expect(document.instances[0]!.netlist).toBeUndefined();
   });
 
+  it("allows a case-only parameter rename as one atomic patch", () => {
+    const document = documentWithInstance();
+    document.instances[0]!.netlist!.parameters = { gain: "10" };
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "patch_instance_netlist_parameters",
+          instanceId: "M1",
+          set: { Gain: "10" },
+          unset: ["gain"],
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        instances: [{ netlist: { parameters: { Gain: "10" } } }],
+      },
+    });
+  });
+
+  it("rejects a case-folded duplicate parameter patch without changing the instance", () => {
+    const document = documentWithInstance();
+    document.instances[0]!.netlist!.parameters = { value: "10k" };
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "patch_instance_netlist_parameters",
+          instanceId: "M1",
+          set: { VALUE: "12k" },
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      applied: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+    expect(document.instances[0]!.netlist!.parameters).toEqual({
+      value: "10k",
+    });
+  });
+
   it("edits reference and binding as independent typed netlist fields", () => {
     const document = documentWithInstance();
     const result = executeTransaction(document, {
