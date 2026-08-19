@@ -3412,5 +3412,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   field edits, and the descriptor-driven Component Properties work package.
 - Validation: documentation links, test-impact against `main`, diff check,
   and final branch-status review passed.
+- Commit status: committed and pushed on
+  `codex/phase1-schematic-foundation-plan` as `931dda2`.
+
+## 2026-08-19 - Stage 1 S3-S5 protocol refinement
+
+- Changed areas: refined the Reference Policy/Index/Planner, definition-level
+  Project Instance Index and Batch Property Planner, and Connectivity Intent /
+  Proposal protocols, with existing GUI gestures and results recorded as the
+  migration compatibility boundary.
+- Validation: documentation links, test-impact against `main`, diff check,
+  and final branch-status review passed.
 - Commit status: prepared for commit on
   `codex/phase1-schematic-foundation-plan`.
