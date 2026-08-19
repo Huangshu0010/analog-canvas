@@ -3423,5 +3423,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   migration compatibility boundary.
 - Validation: documentation links, test-impact against `main`, diff check,
   and final branch-status review passed.
+- Commit status: committed and pushed on
+  `codex/phase1-schematic-foundation-plan` as `f173e5d`.
+
+## 2026-08-19 - Stage 1 S6 hierarchy netlist refinement
+
+- Changed areas: reframed S6 around hierarchy netlist completeness; separated
+  formal terminal order from visual Cell Symbol Layout; defined shared
+  internal/external interface and formal-parameter semantics, explicit
+  unresolved targets, caller-impact proposals, Property/Connectivity protocol
+  composition, and the IR/Preflight closure.
+- Validation: documentation links, test-impact against `main`, diff check, and
+  final branch-status review passed.
 - Commit status: prepared for commit on
   `codex/phase1-schematic-foundation-plan`.

@@ -458,24 +458,117 @@ command semantics 一致。
 
 ### S6. Cell 与 Subcircuit 网表 authoring
 
-目标：在现有 typed hierarchy 上补齐 IR 所需的可编辑 Cell/subcircuit 事实。
+目标：把 S6 限定为现有 typed hierarchy 的网表完备化，而不是重建层次编辑或 Cell Symbol
+Layout。已有 Cell Manager、Port authoring、caller-aware navigation、derived Cell Symbol、typed
+Project transaction，以及 definition-level body size、visual pin side/offset 和 caller Route follow
+继续作为基础能力复用；S6 不复制这些 GUI 或 planner。
 
-工作：
+formal netlist terminal order 与 visual Cell Symbol layout 是两个正交事实：
 
-- Cell name 与 netlist name 的单一编辑入口；
-- formal terminal order、name、direction 和 Net binding；
-- caller impact preview 与已有 caller reconciliation；
-- Cell parameter defaults 及 parent Instance raw-string override；
-- internal Cell、external subcircuit 和 unresolved target 的明确区分；
-- external black box 的 terminal order 与 parameter authoring；
-- hierarchy cycle、duplicate Cell name、missing target 和 interface mismatch 检查；
-- optional flatten preview 只用于检查，不写回为第二种 Project hierarchy。
+- `Document.netlist.terminals[]` 的数组顺序继续是 internal Cell 的 canonical netlist order；
+- Cell Symbol 的 body size、pin side 和 offset 只属于 definition-level presentation；
+- 改变 visual side/offset 不改变网表 terminal order，重排网表 terminal 也不以画布坐标反推；
+- 已有 Cell Symbol Layout 交互和可见结果不因 S6 改造而变化。
 
-Cell 参数在阶段一只保存和传递原始字符串，不建立表达式 evaluator 或设计变量依赖图。
+#### S6.1 单一 Subcircuit interface 协议
 
-验收：同一个 child Cell 被多次实例化时，每个 caller 保持独立 reference/parameter
-override，共享同一 ordered interface；修改 interface 前显示影响，提交后 caller、Symbol、
-connectivity 和 IR 一致。
+S6 新增一个共享的 formal-interface value protocol，统一解释 ordered terminal 和 formal
+parameter；internal 与 external target 可以有不同的持久化 owner，但不得拥有不同的 terminal
+或 parameter 语义。
+
+internal Cell 继续以 `Document.netlist` 为权威：
+
+- Cell netlist name；
+- ordered formal terminals：stable terminal ID、name、direction、`netId` 与
+  `interfaceInstanceId`；
+- ordered formal parameter definitions 与 optional raw-string default。
+
+external black box 使用 Project-level、stable-ID 的 `ExternalSubcircuitDefinition` 作为共享
+权威，至少保存 target name、ordered formal terminals 和同一套 formal parameter definitions。
+每个 external Instance 的 binding 引用该 definition；不得把某个 Instance 的 imported
+`netlist.terminals` source-position mapping 提升为共享接口，也不得为每个 caller 复制一份
+可独立漂移的 terminal definition。
+
+target 必须是互斥的三态，而不是依靠字符串或 provenance 猜测：
+
+```text
+internal Cell       -> stable child Document ID
+external black box  -> stable ExternalSubcircuitDefinition ID
+unresolved target   -> source/用户 target name + unresolved status，无可用 formal interface
+```
+
+`Instance.importProvenance` 继续只读。它可以解释 unresolved 的来源，但不参与 target
+resolution。internal/external definition 的 shared derived adapter 向 Symbol、Properties、ERC、
+Preflight 和 IR 提供同一种 ordered interface view。
+
+Cell engineering/netlist name 只有一个可编辑权威。当前 Rename Cell gesture 继续同步现有
+画布、Cell Manager 和 caller 可见名称；如果 schema 过渡期仍保留 `Document.name` 与
+`Document.netlist.name` 两个字段，其中一个必须是严格投影并由 validation/canonical save
+阻止分叉，不能形成 display name 与 netlist name 两个独立编辑入口。
+
+#### S6.2 Formal parameter 与 Instance override
+
+formal parameter definition 使用 ordered、case-folded-unique 的统一结构：
+
+```text
+stable ID, name, optional raw default
+```
+
+internal Cell 与 external black box 使用同一结构。阶段一只保存和传递 raw strings，不建立
+expression evaluator、设计变量依赖图、单位换算或 PDK 合法性判断。requiredness 由是否存在
+default 唯一派生，不再保存一个可能与 default 冲突的独立 required flag。
+
+parent Instance 的显式 override 继续只写 `Instance.netlist.parameters`：
+
+- default 留在 target definition，不复制进每个 caller；
+- caller 未写 override 时使用 definition default；
+- 没有 default 的 formal parameter 在 caller 上 required；
+- unknown、duplicate-folded 或空 required override 由同一 Property/Preflight 规则报告；
+- 同一个 child 被多次实例化时，每个 caller 的 Reference 和 override 相互独立；
+- Properties、S4 table、clipboard、IR 与后续 import/export 不新增 Cell-specific property bag。
+
+#### S6.3 Interface Change Proposal 与产品面
+
+新增统一 `SubcircuitInterfaceChangePlanner`。Cell rename、terminal add/remove/rename/reorder、
+direction/Net binding、formal parameter add/remove/rename/reorder/default change 都先产生 proposal：
+
+```text
+source structure/document revisions
+target definition and requested semantic change
+affected caller locators
+pin/parameter reconciliation
+preserved and broken connectivity
+Symbol/Route presentation consequences
+blocked/skipped reasons and diagnostics
+typed Project edits
+```
+
+preview 与 commit 使用同一 proposal；stale revision 必须重新规划。提交是一个 Project
+transaction、一个结构 revision 和一个 Undo step。现有 rename 自动 reconciliation、referenced
+Port 删除保护、caller navigation 和 save/reopen 行为先成为 characterization，随后作为同一
+planner 的 gesture adapter 保持用户可见等价，不保留另一套直接修改 caller 的产品路径。
+
+产品面补充一个统一的 Cell/Subcircuit Interface editor：internal Cell 可编辑 formal terminal
+order、name、direction、Net binding 与 formal parameters；external definition 可编辑 target、
+ordered terminals 与 formal parameters；unresolved target 只能 resolve 为 internal/external 或
+保持阻塞。Cell Symbol Layout 继续放在 presentation 区域，不与网表 order 表格合并为一个
+隐含规则。
+
+#### S6.4 校验与 IR 闭环
+
+复用并收敛现有 hierarchy cycle、duplicate Cell name、missing target、unknown/mismatched pin、
+stale caller interface 和 unresolved Symbol 检查。S6 负责提供同一 semantic validator 与
+ObjectLocator evidence；S7 把这些 findings 汇总为完整 Preflight，不在 exporter 另建规则。
+
+`DesignNetlistIR` 扩展为明确携带 internal/external definition 的 ordered terminals、formal
+parameter/defaults，以及每个 caller 的 raw overrides。external black box 有完整 definition 时
+可以进入 IR；unresolved target 必须阻塞。optional flatten preview 只用于检查 elaboration，
+不写回为第二种 Project hierarchy，也不成为导出权威。
+
+验收：同一个 child Cell 被多次实例化时，每个 caller 保持独立 Reference/parameter override，
+共享同一 ordered interface；external black box 同样由一个 shared definition 驱动所有 caller；
+修改 interface 前显示完整影响，提交后 caller、Symbol、connectivity、Properties、Preflight
+和 IR 一致，Undo 原子恢复；已有 Cell Symbol Layout 与层次 GUI 行为保持不变。
 
 ### S7. Netlist Preflight 与阶段出口
 
@@ -511,8 +604,8 @@ S1 authority and unified property protocol
  ├─→ S2 descriptor-driven Component Properties
  │    └─→ S3 Reference Policy / Index / Planner
  │         └─→ S4 Project Instance Index / batch planner
- ├─→ S5 Connectivity Intent / Wire-Net closure
- └─→ S6 Cell / subcircuit authoring
+ ├─→ S5 Connectivity Intent / Wire-Net closure ─┐
+ └─→ S6 Cell / subcircuit netlist authoring ←───┘
 
 S2 + S4 + S5 + S6
           ↓
@@ -522,6 +615,11 @@ S7 preflight and DesignNetlistIR exit gate
 每个 S 包是一个跨模块 outcome，不是一个必须单提交完成的巨大 target。实施时应继续按
 ownership 和 validation boundary 拆成小 target；共享 Schema、Edit union 或 Device
 Descriptor 变更必须先更新 accepted spec/ADR，再让 UI 依赖它。
+
+S6 的 interface planner 在改变 terminal Net binding 或 caller connectivity 时必须组合 S5 的
+canonical connectivity intent/edit service；在呈现 target、formal parameter 和 Instance
+override 时必须组合 S1/S2 的 Property Field protocol。层次结构 transaction 可以继续作为
+原子外壳，但不能在其内部另建一套 Net 或 parameter 修改语义。
 
 S5 的详细技术迁移继续由
 [连通性、走线与电气调试统一实施方案](connectivity-routing-debugging-plan.md)
@@ -616,6 +714,8 @@ Project with duplicate Reference, missing model and stale Cell interface
 | 编号依赖 DOM、ID/Reference 偶合或当前数组顺序 | 单一 ReferencePolicy/Index、per-Cell placement/stable-ID 排序与 preview |
 | 协议统一意外改变当前 GUI 行为 | producer-by-producer characterization；gesture adapter 保持相同 Project delta、状态与 Undo |
 | Wire 改造破坏已经稳定的 connectivity | 复用 canonical index/geometry，由显式 intent adapter 对照迁移每个 producer |
+| visual pin layout 被误当作 netlist terminal order | presentation 只保存 side/offset/body；formal array order 单独 author，双方不互相反推 |
+| imported Instance terminal mapping 被提升为 external interface | external definition 是共享权威；Instance mapping 继续只是只读 source evidence |
 | external subcircuit 被错误解释为 PDK/model | 只保存 target、ordered pins 和 raw parameters，不判断物理模型 |
 | Preflight 与 exporter 各自检查一遍 | Stage 1 Preflight 是 printer 前的唯一可导出性入口；printer 仍做防御校验 |
 | Stage 2 方言需求反向污染 Project | 所有 text/source/dialect evidence 留在 parser/printer/provenance 边界 |
