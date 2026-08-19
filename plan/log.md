@@ -3388,7 +3388,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: Prettier; static contracts; test-impact; release verification;
   single-worker browser suite (154/154); and Playwright shard-list verification
   (77 tests for `1/2`). The Windows-host default 16-worker shard had resource
-  timeouts; container and Linux runner validation are pending GitHub Actions.
-- Commit status: pushed on `codex/prebuilt-playwright-ci`; review-branch remote
-  validation is pending.
+  timeouts; all GitHub Actions jobs passed in the prebuilt Linux environment
+  (static 30s, unit 49s, release 1m 03s, browser shards 3m 16s and 3m 45s).
+- Commit status: PR #127 merged to `main` as `92e63ea`.
 ```

@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -88,5 +88,7 @@ the stable local command was used for browser validation. Docker Desktop is not
 running, so the container launch preflight and Linux runner behavior await the
 review-branch GitHub Actions run.
 
-The implementation commit is pushed on `codex/prebuilt-playwright-ci`; remote
-validation is pending before this target can be marked completed.
+The implementation was merged to `main` by PR #127. GitHub Actions completed
+successfully: static (30s), unit (49s), release (1m 03s), browser shard 1/2
+(3m 16s), and browser shard 2/2 (3m 45s). The container image initialized
+successfully in all browser-dependent jobs.
