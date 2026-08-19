@@ -4,7 +4,6 @@ import {
   CellNetlistTerminalSchema,
   DraftingObjectSchema,
   InstanceNetlistDataSchema,
-  InstancePropertyValueSchema,
   InstanceSchema,
   JunctionRoleSchema,
   LayoutConstraintSchema,
@@ -72,24 +71,12 @@ export const MirrorInstanceEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   mirror: MirrorSchema,
 });
-export const PatchInstancePropertiesEditSchema = z
-  .strictObject({
-    kind: z.literal("patch_instance_properties"),
-    instanceId: StableIdSchema,
-    set: z.record(z.string().min(1), InstancePropertyValueSchema).optional(),
-    unset: z.array(z.string().min(1)).max(64).optional(),
-  })
-  .superRefine((edit, context) => {
-    for (const key of [...Object.keys(edit.set ?? {}), ...(edit.unset ?? [])]) {
-      if (!key.startsWith("spice.")) continue;
-      context.addIssue({
-        code: "custom",
-        path: [edit.set && key in edit.set ? "set" : "unset", key],
-        message:
-          "Legacy spice.* properties are migration-only; use typed netlist facts or import provenance",
-      });
-    }
-  });
+export const PatchInstanceNetlistParametersEditSchema = z.strictObject({
+  kind: z.literal("patch_instance_netlist_parameters"),
+  instanceId: StableIdSchema,
+  set: z.record(z.string().min(1), z.string().min(1).max(1024)).optional(),
+  unset: z.array(z.string().min(1)).max(64).optional(),
+});
 export const SetInstanceNetlistEditSchema = z.strictObject({
   kind: z.literal("set_instance_netlist"),
   instanceId: StableIdSchema,
@@ -300,7 +287,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MoveInstanceEditSchema,
   RotateInstanceEditSchema,
   MirrorInstanceEditSchema,
-  PatchInstancePropertiesEditSchema,
+  PatchInstanceNetlistParametersEditSchema,
   SetInstanceNetlistEditSchema,
   AddCellTerminalEditSchema,
   UpdateCellTerminalEditSchema,

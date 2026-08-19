@@ -321,15 +321,6 @@ function extractHierarchyInstance(
     );
     return null;
   }
-  if (binding.name.toLowerCase() !== child.netlist.name.toLowerCase()) {
-    diagnostic(
-      diagnostics,
-      document.id,
-      "CHILD_NAME_MISMATCH",
-      `Hierarchy target ${binding.name} does not match child cell ${child.netlist.name}`,
-      [instance.id, child.id],
-    );
-  }
   const nodes = child.netlist.terminals.flatMap((terminal) => {
     const netName = terminalNetName(
       document,
@@ -633,7 +624,7 @@ function extractCell(
         diagnostics,
         document.id,
         "EXTERNAL_SUBCIRCUIT_INTERFACE_UNAVAILABLE",
-        `External subcircuit ${binding.name} has no persisted ordered interface`,
+        `External subcircuit definition ${binding.definitionId} has no persisted ordered interface`,
         [instance.id],
       );
       continue;

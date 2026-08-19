@@ -71,7 +71,6 @@ describe("editor document helpers", () => {
       id: "R1",
       symbolId: "resistor",
       placement: null,
-      properties: { reference: "R1" },
       netlist: {
         reference: "R1",
         parameters: { value: "1k", keep: "yes" },

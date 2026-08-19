@@ -17,7 +17,6 @@ const resolver = new InMemorySymbolResolver(builtInSymbols);
 function canonicalValueContent(instance: {
   symbolId: string;
   netlist?: unknown;
-  properties: Record<string, unknown>;
 }): RichTextDocument {
   const display = displayableInstanceValue(
     instance as Parameters<typeof displayableInstanceValue>[0],
@@ -34,7 +33,11 @@ function documentWithInstance() {
     id: "M1",
     symbolId: "nmos",
     placement: null,
-    properties: {},
+    netlist: {
+      reference: "M1",
+      binding: { kind: "primitive", deviceClass: "mos" },
+      parameters: {},
+    },
   });
   return document;
 }
@@ -103,7 +106,6 @@ describe("Edit Transaction envelope", () => {
       id: "label-vdd",
       symbolId: "resistor",
       placement: null,
-      properties: {},
     });
     const before = JSON.stringify(document);
     const result = executeTransaction(
@@ -168,7 +170,6 @@ describe("Edit Transaction envelope", () => {
       id: "M1",
       symbolId: "nmos",
       placement: null,
-      properties: {},
     });
     document.nets.push({
       id: "net-substrate",
@@ -205,7 +206,6 @@ describe("Edit Transaction envelope", () => {
       symbolId: "nmos",
       symbolVariantId: "textbook-3terminal",
       placement: { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
-      properties: {},
     });
     const reconciled = executeTransaction(
       document,
@@ -312,7 +312,6 @@ describe("Edit Transaction envelope", () => {
         id: "A",
         symbolId: "port",
         placement: null,
-        properties: {},
       },
       {
         id: "B",
@@ -322,7 +321,6 @@ describe("Edit Transaction envelope", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
     );
 
@@ -453,7 +451,6 @@ describe("Edit Transaction envelope", () => {
       id: "M2",
       symbolId: "pmos",
       placement: null,
-      properties: {},
     });
     const result = executeTransaction(
       document,
@@ -578,9 +575,9 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
-  it("patches instance properties atomically and records a non-source edit", () => {
+  it("patches instance netlist parameters atomically and records a non-source edit", () => {
     const document = documentWithInstance();
-    document.instances[0]!.properties = {
+    document.instances[0]!.netlist!.parameters = {
       value: "8k",
     };
     document.sourceStatus = "in-sync";
@@ -589,9 +586,9 @@ describe("Edit Transaction envelope", () => {
       ...transaction(),
       edits: [
         {
-          kind: "patch_instance_properties",
+          kind: "patch_instance_netlist_parameters",
           instanceId: "M1",
-          set: { value: "12k", enabled: true },
+          set: { value: "12k", enabled: "true" },
           unset: ["unused"],
         },
       ],
@@ -605,25 +602,26 @@ describe("Edit Transaction envelope", () => {
         sourceStatus: "geometry-only-changed",
         instances: [
           {
-            properties: { value: "12k", enabled: true },
+            netlist: { parameters: { value: "12k", enabled: "true" } },
           },
         ],
       },
     });
-    expect(document.instances[0]!.properties).toEqual({
+    expect(document.instances[0]!.netlist!.parameters).toEqual({
       value: "8k",
     });
   });
 
-  it("rejects legacy SPICE property patches before any candidate mutation", () => {
+  it("rejects a parameter patch on an Instance without netlist authority", () => {
     const document = documentWithInstance();
+    delete document.instances[0]!.netlist;
     const result = executeTransaction(document, {
       ...transaction(),
       edits: [
         {
-          kind: "patch_instance_properties",
+          kind: "patch_instance_netlist_parameters",
           instanceId: "M1",
-          set: { "spice.param.value": "10k" },
+          set: { value: "10k" },
         },
       ],
     });
@@ -631,23 +629,22 @@ describe("Edit Transaction envelope", () => {
     expect(result.diagnostics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: "INVALID_TRANSACTION",
-          path: ["edits", 0, "set", "spice.param.value"],
+          code: "EDIT_PRECONDITION",
         }),
       ]),
     );
-    expect(document.instances[0]!.properties).toEqual({});
+    expect(document.instances[0]!.netlist).toBeUndefined();
   });
 
-  it("rejects an invalid property patch without partially changing the instance", () => {
+  it("rejects an invalid parameter patch without partially changing the instance", () => {
     const document = documentWithInstance();
-    document.instances[0]!.properties = { value: "10k" };
+    document.instances[0]!.netlist!.parameters = { value: "10k" };
 
     const result = executeTransaction(document, {
       ...transaction(),
       edits: [
         {
-          kind: "patch_instance_properties",
+          kind: "patch_instance_netlist_parameters",
           instanceId: "M1",
           set: { value: "12k" },
           unset: ["value"],
@@ -660,7 +657,9 @@ describe("Edit Transaction envelope", () => {
       applied: false,
       error: { code: "EDIT_PRECONDITION" },
     });
-    expect(document.instances[0]!.properties).toEqual({ value: "10k" });
+    expect(document.instances[0]!.netlist!.parameters).toEqual({
+      value: "10k",
+    });
   });
 
   it("reuses upright label placement when a BJT rotates", () => {
@@ -673,7 +672,6 @@ describe("Edit Transaction envelope", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     document.instances.push(instance);
     const resolved = resolver.resolve("npn");
@@ -759,7 +757,6 @@ describe("Edit Transaction envelope", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     document.instances.push(instance);
     const resolved = resolver.resolve("nmos", "textbook-3terminal");
@@ -826,7 +823,6 @@ describe("Edit Transaction envelope", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     document.instances.push(instance);
     const resolved = resolver.resolve("nmos", "textbook-3terminal");
@@ -924,7 +920,6 @@ describe("Edit Transaction envelope", () => {
       id: "M1",
       symbolId: "nmos",
       placement: null,
-      properties: {},
       netlist: {
         reference: "M1",
         binding: { kind: "primitive" as const, deviceClass: "mos" as const },
@@ -990,7 +985,6 @@ describe("Edit Transaction envelope", () => {
       id: "M1",
       symbolId: "nmos",
       placement: null,
-      properties: {},
       netlist: baseNetlist({ w: "10u", l: "0.5u" }),
     });
     handEdited.annotations.push({
@@ -1033,7 +1027,6 @@ describe("Edit Transaction envelope", () => {
       id: "M1",
       symbolId: "nmos",
       placement: null,
-      properties: {},
       netlist: baseNetlist({ w: "10u", l: "0.5u" }),
     };
     emptied.instances.push(emptiedInstance);
@@ -1071,13 +1064,20 @@ describe("Edit Transaction envelope", () => {
     }
   });
 
-  it("refreshes an instance value from the properties compatibility surface", () => {
+  it("refreshes an instance value from netlist parameters", () => {
     const document = createEmptyDocument("document-main", "Properties value");
     const instance = {
       id: "R1",
       symbolId: "resistor",
       placement: null,
-      properties: { value: "10k" },
+      netlist: {
+        reference: "R1",
+        binding: {
+          kind: "primitive" as const,
+          deviceClass: "resistor" as const,
+        },
+        parameters: { value: "10k" },
+      },
     };
     document.instances.push(instance);
     document.annotations.push({
@@ -1100,7 +1100,7 @@ describe("Edit Transaction envelope", () => {
         ...transaction(),
         edits: [
           {
-            kind: "patch_instance_properties",
+            kind: "patch_instance_netlist_parameters",
             instanceId: "R1",
             set: { value: "22k" },
           },
@@ -1113,7 +1113,11 @@ describe("Edit Transaction envelope", () => {
     expect(result.document.annotations[0]!.content).toEqual(
       canonicalValueContent({
         ...instance,
-        properties: { value: "22k" },
+        netlist: {
+          reference: "R1",
+          binding: { kind: "primitive", deviceClass: "resistor" },
+          parameters: { value: "22k" },
+        },
       }),
     );
   });

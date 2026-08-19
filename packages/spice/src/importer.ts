@@ -7,6 +7,7 @@ import { isRazaviProductSymbolId, resolvePdkSymbolMapping } from "@icm/symbols";
 import type { PdkSymbolMappingOverride } from "@icm/symbols";
 import type {
   CircuitProject,
+  ExternalSubcircuitDefinition,
   Instance,
   InstanceNetlistBinding,
   NetlistDeviceClass,
@@ -59,7 +60,10 @@ function importedNetlistBinding(
   mapping: ImportSymbolMapping,
 ): InstanceNetlistBinding | undefined {
   if (instance.target.kind === "subcircuit") {
-    return { kind: "external-subcircuit", name: instance.target.cellName };
+    return {
+      kind: "unresolved-subcircuit",
+      name: instance.target.cellName,
+    };
   }
   const deviceClass = netlistDeviceClass(mapping.symbolId);
   if (!deviceClass) return undefined;
@@ -228,22 +232,25 @@ function importInstance(
     );
     return null;
   }
-  const properties: Instance["properties"] = {};
-  if (mapping?.registryId) {
-    properties["symbol.mapping.registry"] = mapping.registryId;
-  }
   const netlistBinding = importedNetlistBinding(instance, mapping);
   return {
     id: instance.id,
     symbolId: mapping.symbolId,
     sourceRef: instance.sourceRef,
-    importProvenance: importProvenance(
-      instance,
-      modelTypeByName,
-      symbolMappings,
-    ),
+    importProvenance: {
+      ...importProvenance(instance, modelTypeByName, symbolMappings),
+      ...(mapping.registryId
+        ? { symbolMappingRegistryId: mapping.registryId }
+        : {}),
+      terminalMapping: instance.terminals.map((terminal) => ({
+        sourcePosition: terminal.position,
+        pinName:
+          mapping.pinNames?.[terminal.position] ??
+          terminal.name ??
+          `P${terminal.position + 1}`,
+      })),
+    },
     placement: null,
-    properties,
     netlist: {
       reference: instance.name,
       ...(netlistBinding ? { binding: netlistBinding } : {}),
@@ -253,13 +260,6 @@ function importInstance(
           parameter.rawText,
         ]),
       ),
-      terminals: instance.terminals.map((terminal) => ({
-        sourcePosition: terminal.position,
-        pinName:
-          mapping.pinNames?.[terminal.position] ??
-          terminal.name ??
-          `P${terminal.position + 1}`,
-      })),
     },
   };
 }
@@ -306,7 +306,7 @@ function importDocument(
             pinName: String(
               importedInstanceById
                 .get(instance.id)
-                ?.netlist?.terminals?.find(
+                ?.importProvenance?.terminalMapping?.find(
                   (candidate) => candidate.sourcePosition === terminal.position,
                 )?.pinName ?? `P${terminal.position + 1}`,
             ),
@@ -324,7 +324,6 @@ function importDocument(
       id: interfaceInstanceId,
       symbolId: "port",
       placement: null,
-      properties: {},
     });
     const net = nets.find((candidate) => candidate.id === port.netId);
     net?.terminals.push({ instanceId: interfaceInstanceId, pinName: "P" });
@@ -346,6 +345,7 @@ function importDocument(
     netlist: {
       name: cell.name,
       terminals: formalTerminals,
+      formalParameters: [],
     },
     instances,
     nets,
@@ -368,16 +368,18 @@ function importDocument(
  * `netlist.binding` is the navigation authority; import provenance retains the
  * source spelling without becoming an electrical runtime fallback.
  */
-function bindImportedChildDocuments(
-  documents: readonly SchematicDocument[],
-): SchematicDocument[] {
+function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
+  documents: SchematicDocument[];
+  externalSubcircuitDefinitions: ExternalSubcircuitDefinition[];
+} {
   const documentIdByCellName = new Map(
     documents.flatMap((document) => {
       const cellName = document.sourceBinding?.cellName;
       return cellName ? [[cellName.toLowerCase(), document.id] as const] : [];
     }),
   );
-  return documents.map((document) => ({
+  const externalDefinitions = new Map<string, ExternalSubcircuitDefinition>();
+  const boundDocuments = documents.map((document) => ({
     ...document,
     instances: document.instances.map((instance) => {
       if (instance.importProvenance?.kind !== "subcircuit") {
@@ -386,11 +388,32 @@ function bindImportedChildDocuments(
       const childDocumentId = documentIdByCellName.get(
         instance.importProvenance.name.toLowerCase(),
       );
+      const externalDefinition = !childDocumentId
+        ? (() => {
+            const key = instance.importProvenance!.name.toLowerCase();
+            const existing = externalDefinitions.get(key);
+            if (existing) return existing;
+            const definition: ExternalSubcircuitDefinition = {
+              id: deriveStableId("external-subcircuit", key),
+              name: instance.importProvenance!.name,
+              terminals: (instance.importProvenance!.terminalMapping ?? [])
+                .toSorted(
+                  (left, right) => left.sourcePosition - right.sourcePosition,
+                )
+                .map((terminal) => ({ name: terminal.pinName })),
+              formalParameters: [],
+            };
+            externalDefinitions.set(key, definition);
+            return definition;
+          })()
+        : undefined;
       return {
         ...instance,
         importProvenance: {
           ...instance.importProvenance,
-          status: childDocumentId ? "resolved" : "missing",
+          status: childDocumentId
+            ? ("resolved" as const)
+            : ("missing" as const),
         },
         netlist: instance.netlist
           ? {
@@ -398,18 +421,21 @@ function bindImportedChildDocuments(
               binding: childDocumentId
                 ? {
                     kind: "subcircuit" as const,
-                    name: instance.importProvenance.name,
                     childDocumentId,
                   }
                 : {
                     kind: "external-subcircuit" as const,
-                    name: instance.importProvenance.name,
+                    definitionId: externalDefinition!.id,
                   },
             }
           : undefined,
       };
     }),
   }));
+  return {
+    documents: boundDocuments,
+    externalSubcircuitDefinitions: [...externalDefinitions.values()],
+  };
 }
 
 function sourceProjectName(bundle: SourceBundle): string {
@@ -438,7 +464,8 @@ export function importCircuitIR(
       options.symbolMappings ?? [],
     ),
   );
-  const documents = bindImportedChildDocuments(importedDocuments);
+  const { documents, externalSubcircuitDefinitions } =
+    bindImportedChildDocuments(importedDocuments);
   const topCell = ir.topCells[0] ?? ir.cells[0]?.name;
   const topDocument = documents.find(
     (document) =>
@@ -472,6 +499,7 @@ export function importCircuitIR(
     structureRevision: 0,
     topDocumentId: topDocument.id,
     documents,
+    externalSubcircuitDefinitions,
   });
   return { project, diagnostics };
 }

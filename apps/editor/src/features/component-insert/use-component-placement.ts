@@ -121,11 +121,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         rotation: options.componentPlacementRotation,
         mirror: options.componentPlacementMirror,
       },
-      properties: placementRequest.properties,
       netlist: initialInstanceNetlist(
         options.document,
         symbolId,
-        placementRequest.properties,
+        placementRequest.parameters,
         netlistReferenceMatchesPlacement(symbolId) ? id : undefined,
       ),
     };
@@ -335,7 +334,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         rotation: options.componentPlacementRotation,
         mirror: options.componentPlacementMirror,
       },
-      properties: {},
+      parameters: {},
       netlist: initialInstanceNetlist(options.document, symbolId, {}),
     };
     const annotation = defaultInstanceLabel(
@@ -499,7 +498,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         ? {
             kind: "cell-port",
             symbolId: request.symbolId,
-            properties: {},
+            parameters: {},
             initialRotation: request.initialRotation,
             showReference: false,
             referenceText: null,

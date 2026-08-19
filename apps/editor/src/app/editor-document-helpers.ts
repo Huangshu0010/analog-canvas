@@ -47,7 +47,6 @@ export function previewInstanceValueSource(
   return {
     symbolId: instance.symbolId,
     netlist: Object.keys(parameters).length > 0 ? { parameters } : undefined,
-    properties: instance.properties,
   };
 }
 

@@ -30,7 +30,6 @@ describe("schematic clipboard", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
         netlist: {
           reference: "R1",
           binding: { kind: "primitive", deviceClass: "resistor" },
@@ -45,7 +44,6 @@ describe("schematic clipboard", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
         netlist: {
           reference: "R2",
           binding: { kind: "primitive", deviceClass: "resistor" },
@@ -112,7 +110,6 @@ describe("schematic clipboard", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     });
     const clipboard = copySelection(document, ["R1"]);
     expect(clipboard).not.toBeNull();
@@ -167,7 +164,6 @@ describe("schematic clipboard", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
       ...(reference ? { netlist: { reference, parameters: {} } } : {}),
     };
   }
@@ -327,7 +323,6 @@ describe("schematic clipboard", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     });
     document.noConnects.push({
       id: "nc-r1-1",
@@ -367,7 +362,6 @@ describe("schematic clipboard", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
       {
         id: "M2",
@@ -378,7 +372,6 @@ describe("schematic clipboard", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
     );
     document.nets.push({

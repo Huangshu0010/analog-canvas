@@ -15,7 +15,6 @@ describe("route-attached current arrows", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
       {
         id: "R2",
@@ -25,7 +24,6 @@ describe("route-attached current arrows", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
     );
     document.nets.push({
@@ -93,7 +91,6 @@ describe("route-attached current arrows", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
       {
         id: "R2",
@@ -103,7 +100,6 @@ describe("route-attached current arrows", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
     );
     document.nets.push({

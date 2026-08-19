@@ -79,7 +79,7 @@ describe("shapes quick-place", () => {
       showReference: true,
       referenceText: null,
     });
-    expect(request?.kind === "symbol" ? request.properties.value : null).toBe(
+    expect(request?.kind === "symbol" ? request.parameters.value : null).toBe(
       "",
     );
   });

@@ -15,7 +15,6 @@ function instance(
     id,
     symbolId: "port",
     placement: { position: { x, y }, rotation, mirror },
-    properties: {},
   };
 }
 

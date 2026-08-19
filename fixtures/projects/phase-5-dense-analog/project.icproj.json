@@ -93,7 +93,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "port"
         },
         {
@@ -105,9 +104,6 @@
               "y": 200
             },
             "rotation": 0
-          },
-          "properties": {
-            "role": "input-positive"
           },
           "symbolId": "nmos"
         },
@@ -121,9 +117,6 @@
             },
             "rotation": 0
           },
-          "properties": {
-            "role": "input-negative"
-          },
           "symbolId": "nmos"
         },
         {
@@ -136,7 +129,6 @@
             },
             "rotation": 180
           },
-          "properties": {},
           "symbolId": "port-filled"
         },
         {
@@ -149,7 +141,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "ground"
         }
       ],
@@ -167,6 +158,7 @@
       ],
       "name": "Differential Stage",
       "netlist": {
+        "formalParameters": [],
         "name": "DifferentialStage",
         "terminals": []
       },
@@ -345,9 +337,10 @@
       "sourceStatus": "in-sync"
     }
   ],
+  "externalSubcircuitDefinitions": [],
   "id": "project-phase-5-dense-analog",
   "name": "Current Differential Stage",
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "source": {
     "dialect": "none",
     "entry": null,

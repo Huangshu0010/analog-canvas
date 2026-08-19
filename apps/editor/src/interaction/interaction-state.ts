@@ -25,7 +25,7 @@ export type InteractionMode = InteractionState<unknown>["kind"];
 export interface PendingComponentPlacement {
   kind: "symbol" | "cell" | "cell-port";
   symbolId: string;
-  properties: Record<string, string>;
+  parameters: Record<string, string>;
   initialRotation: 0 | 90 | 180 | 270;
   showReference: boolean;
   referenceText: string | null;
@@ -166,11 +166,11 @@ function sameComponentPlacement(
   ) {
     return false;
   }
-  const leftEntries = Object.entries(left.properties);
-  const rightEntries = Object.entries(right.properties);
+  const leftEntries = Object.entries(left.parameters);
+  const rightEntries = Object.entries(right.parameters);
   return (
     leftEntries.length === rightEntries.length &&
-    leftEntries.every(([key, value]) => right.properties[key] === value)
+    leftEntries.every(([key, value]) => right.parameters[key] === value)
   );
 }
 

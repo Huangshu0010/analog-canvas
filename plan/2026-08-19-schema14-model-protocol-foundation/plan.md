@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -41,6 +41,11 @@ Owned paths:
 - `docs/specs/persistence-and-recovery.md`
 - `docs/overall-product-plan.md`
 - `docs/user/schematic-hierarchy.md`
+- `docs/specs/edit-engine.md`, `docs/specs/editor-interaction.md`, and
+  `docs/user/project-compatibility.md` for executable schema/edit-contract
+  wording exposed by full-suite documentation checks
+- `docs/adr/0026-definition-level-cell-symbol-presentation.md` only for its
+  superseded current-version reference
 - `scripts/audit-schema13-properties.mjs`
 - `plan/2026-08-19-schema14-model-protocol-foundation/plan.md`
 - `plan/root-audit.md`
@@ -68,16 +73,21 @@ Read-only shared dependencies:
    necessary producers/consumers to compile while retaining their present GUI
    behavior.
 
+The full-suite contract tests additionally require updating schema-version and
+typed-edit names in the documents above. This is a bounded documentation
+correction caused by the shared schema target, not a separate product decision.
+
 The audited migration must use a scoped fixture-aware transformation, not a
 textual repository-wide replacement: `terminals` is also the electrical Net and
 Cell-interface authority, so only `Instance.netlist.terminals` may relocate to
 provenance.
 
-Audit evidence as of 2026-08-19: eight tracked Project inputs contain exactly
-three non-empty legacy property records—`R1.value = 10k` in
-`phase-1-manual` (migrate to `netlist.parameters.value`) and two `role` values
-in `phase-5-dense-analog` (unknown, therefore blocking migration inputs until
-explicitly classified; they must not survive in a generic bag).
+Audit evidence as of 2026-08-19: eight tracked Project inputs initially
+contained exactly three non-empty legacy property records. `R1.value = 10k` in
+`phase-1-manual` migrated to `netlist.parameters.value`; the two undefined
+`role` values in `phase-5-dense-analog` were deliberately removed rather than
+inventing a generic replacement. Re-running the audit after fixture migration
+reports no non-empty legacy property records.
 
 ## Validation
 
@@ -106,5 +116,23 @@ feat(protocol): establish schema 14 netlist foundation
 
 ## Outcome
 
-At close-out, record the migrated shape, audit disposition, validation, and
-commit status, then set `status: completed`.
+Implemented the schema-14 current-only runtime shape: Instance electrical facts
+now live in typed netlist fields, imported terminal mapping lives in typed
+provenance, Cell formal parameters and external definitions normalize to
+explicit arrays, and hierarchy targets use stable IDs or explicit unresolved
+state. The direct schema-13 adapter migrates audited electrical values,
+preserves source evidence, rejects parameter conflicts, and lowers inconsistent
+external interfaces to unresolved targets rather than inventing a resolution.
+
+The existing GUI interaction remains behaviorally unchanged; its transient
+insertion request now uses `parameters` terminology and persists through the
+same typed netlist writer. Agent API source and generated artifacts reflect the
+shared current contract, but its public API version/release boundary is
+unchanged.
+
+Validation passed: `pnpm test` (146 files / 894 tests), `pnpm typecheck`,
+`pnpm build`, Agent/MCP artifact regeneration, `pnpm docs:check`,
+`pnpm test:impact -- --base origin/main`, `git diff --check`, and the schema-13
+property audit (8 Project inputs; no non-empty legacy properties). Commit
+status: committed locally on `codex/phase1-schematic-foundation-plan`;
+push/PR remain a separate delivery action.

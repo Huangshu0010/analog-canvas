@@ -1,5 +1,4 @@
 import type {
-  Instance,
   InstanceNetlistBinding,
   InstanceNetlistData,
   SchematicDocument,
@@ -80,16 +79,13 @@ export function nextInstanceReference(
 }
 
 function rawParameters(
-  properties: Readonly<Instance["properties"]>,
+  parameterValues: Readonly<Record<string, string>>,
 ): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(properties)
+    Object.entries(parameterValues)
       .filter(
         ([name, value]) =>
-          /^[A-Za-z_][A-Za-z0-9_]*$/u.test(name) &&
-          (typeof value === "string" ||
-            typeof value === "number" ||
-            typeof value === "boolean"),
+          /^[A-Za-z_][A-Za-z0-9_]*$/u.test(name) && typeof value === "string",
       )
       .map(([name, value]) => [name, String(value)])
       .filter(([, value]) => value !== ""),
@@ -116,14 +112,14 @@ function defaultBinding(symbolId: string): InstanceNetlistBinding | undefined {
 export function initialInstanceNetlist(
   document: SchematicDocument,
   symbolId: string,
-  properties: Readonly<Instance["properties"]>,
+  parameterValues: Readonly<Record<string, string>>,
   reference?: string,
 ): InstanceNetlistData {
   const binding = defaultBinding(symbolId);
   return {
     reference: reference ?? nextInstanceReference(document, symbolId),
     ...(binding ? { binding } : {}),
-    parameters: rawParameters(properties),
+    parameters: rawParameters(parameterValues),
   };
 }
 

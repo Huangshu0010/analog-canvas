@@ -12,6 +12,7 @@
       "layoutGroups": [],
       "name": "Main",
       "netlist": {
+        "formalParameters": [],
         "name": "Main",
         "terminals": []
       },
@@ -27,9 +28,10 @@
       "sourceStatus": "in-sync"
     }
   ],
+  "externalSubcircuitDefinitions": [],
   "id": "project-minimal",
   "name": "Minimal Project",
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "source": {
     "dialect": "none",
     "entry": null,

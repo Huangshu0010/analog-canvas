@@ -67,7 +67,6 @@ function placeDual(
     id: "I1",
     symbolId: "dual",
     placement: { position, rotation, mirror: "none" as const },
-    properties: {},
   };
 }
 
@@ -187,9 +186,7 @@ describe("endpoint primitives", () => {
           terminal("no", "R"),
         ),
       ).toBeNull();
-      document.instances = [
-        { id: "I1", symbolId: "dual", placement: null, properties: {} },
-      ];
+      document.instances = [{ id: "I1", symbolId: "dual", placement: null }];
       expect(
         resolveEndpointOutwardDirection(
           document,

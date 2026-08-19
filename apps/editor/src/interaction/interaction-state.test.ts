@@ -137,7 +137,7 @@ describe("editor interaction state", () => {
         placement: {
           kind: "symbol",
           symbolId: "nmos",
-          properties: { w: "2u", l: "150n", m: "2" },
+          parameters: { w: "2u", l: "150n", m: "2" },
           initialRotation: 90,
           showReference: false,
           referenceText: "MIN",
@@ -150,7 +150,7 @@ describe("editor interaction state", () => {
       placement: {
         kind: "symbol",
         symbolId: "nmos",
-        properties: { w: "2u", l: "150n", m: "2" },
+        parameters: { w: "2u", l: "150n", m: "2" },
         initialRotation: 90,
         showReference: false,
         referenceText: "MIN",

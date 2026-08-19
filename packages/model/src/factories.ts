@@ -18,7 +18,11 @@ export function createEmptyDocument(
     name,
     revision: 0,
     sourceStatus: "in-sync",
-    netlist: { name: defaultCellName(name), terminals: [] },
+    netlist: {
+      name: defaultCellName(name),
+      terminals: [],
+      formalParameters: [],
+    },
     instances: [],
     nets: [],
     routes: [],
@@ -59,5 +63,6 @@ export function createEmptyProject(
     structureRevision: 0,
     topDocumentId: documentId,
     documents: [createEmptyDocument(documentId, "Main")],
+    externalSubcircuitDefinitions: [],
   });
 }

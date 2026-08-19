@@ -124,7 +124,6 @@ describe("resolved route geometry", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     });
     schematic.junctions.push({
       id: "j1",

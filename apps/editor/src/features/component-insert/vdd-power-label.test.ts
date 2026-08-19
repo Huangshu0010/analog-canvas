@@ -52,7 +52,6 @@ describe("vdd power label annotation", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     const proposal = proposedStandalonePowerConnection(document, instance);
     const powerNetId = proposal.powerNetId;

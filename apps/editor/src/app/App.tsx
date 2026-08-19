@@ -4847,7 +4847,7 @@ export function App({
     const edits: SchematicEdit[] = [];
     const baseNetlist =
       instance.netlist ??
-      initialInstanceNetlist(document, instance.symbolId, instance.properties);
+      initialInstanceNetlist(document, instance.symbolId, {});
     const netlistParameters = { ...baseNetlist.parameters };
     for (const parameter of componentParameters(instance.symbolId)) {
       const value = (draft.parameters[parameter.key] ?? "").trim();

@@ -16,6 +16,7 @@ describe("hierarchical block formal terminals", () => {
       },
       netlist: {
         name: "child",
+        formalParameters: [],
         terminals: [
           {
             id: "cell-terminal-in",
@@ -41,7 +42,7 @@ describe("hierarchical block formal terminals", () => {
   it("creates a formal zero-terminal block for a manual Cell", () => {
     const symbol = createHierarchicalBlockSymbol({
       name: "Cell1",
-      netlist: { name: "Cell1", terminals: [] },
+      netlist: { name: "Cell1", terminals: [], formalParameters: [] },
     });
 
     expect(symbol).toMatchObject({
@@ -67,6 +68,7 @@ describe("hierarchical block formal terminals", () => {
       name: "GainStage",
       netlist: {
         name: "GainStage",
+        formalParameters: [],
         terminals: [
           {
             id: "terminal-vin",
@@ -133,7 +135,7 @@ describe("hierarchical block formal terminals", () => {
     }));
     const symbol = createHierarchicalBlockSymbol({
       name: "DenseStage",
-      netlist: { name: "DenseStage", terminals },
+      netlist: { name: "DenseStage", terminals, formalParameters: [] },
       presentation: {
         styleProfileId: "razavi-textbook-v1",
         grid: 10,

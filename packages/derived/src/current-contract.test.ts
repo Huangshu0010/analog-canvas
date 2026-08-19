@@ -18,7 +18,6 @@ describe("current terminal-only connectivity contract", () => {
       document.instances.push({
         id: "VIN",
         symbolId,
-        properties: {},
         placement: {
           position: { x: 100, y: 80 },
           rotation: 0,
@@ -51,7 +50,6 @@ describe("current terminal-only connectivity contract", () => {
     document.instances.push({
       id: "VOUT",
       symbolId: "port-filled",
-      properties: {},
       placement: null,
     });
     document.nets.push({

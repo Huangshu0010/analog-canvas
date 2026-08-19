@@ -12,7 +12,6 @@ function instance(id: string) {
     id,
     symbolId: "resistor",
     placement: null,
-    properties: {},
   };
 }
 
@@ -23,7 +22,7 @@ function hierarchicalProject() {
     ...structuredClone(top),
     id: "document-child",
     name: "child",
-    netlist: { name: "child", terminals: [] },
+    netlist: { name: "child", terminals: [], formalParameters: [] },
   };
   project.documents.push(child);
   return project;
@@ -147,14 +146,11 @@ describe("EditorDocumentController", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
       netlist: {
         reference: "X1",
         parameters: {},
-        terminals: [],
         binding: {
           kind: "subcircuit",
-          name: "Cell1",
           childDocumentId: child.id,
         },
       },

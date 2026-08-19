@@ -53,7 +53,7 @@ export function quickPlaceRequest(
     // Quick-place follows the full Insert dialog's existing blank-value
     // semantics. Placeholders remain hints rather than silently persisted
     // electrical parameters.
-    properties: initialComponentParameterValues(symbolId),
+    parameters: initialComponentParameterValues(symbolId),
     initialRotation: 0,
     showReference: true,
     referenceText: null,

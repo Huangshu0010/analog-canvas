@@ -23,7 +23,6 @@ function placedInstance(symbolId: "nmos" | "npn" | "pnp", rotation = 0) {
       rotation: rotation as 0 | 90 | 180 | 270,
       mirror: "none" as const,
     },
-    properties: {},
   };
 }
 
@@ -42,7 +41,6 @@ function placedDefaultLabel(
       symbolId,
       ...(symbolVariantId ? { symbolVariantId } : {}),
       placement: { position: { x: 100, y: 100 }, rotation, mirror },
-      properties: {},
     },
     resolved,
     profile,

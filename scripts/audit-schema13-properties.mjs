@@ -4,7 +4,13 @@ import { readFileSync } from "node:fs";
 function trackedProjectPaths() {
   return execFileSync(
     "git",
-    ["ls-files", "--", "fixtures/projects", "netlists", "apps/editor/src/examples"],
+    [
+      "ls-files",
+      "--",
+      "fixtures/projects",
+      "netlists",
+      "apps/editor/src/examples",
+    ],
     { encoding: "utf8" },
   )
     .split("\n")
@@ -24,7 +30,9 @@ for (const path of trackedProjectPaths()) {
         path,
         documentId: document.id,
         instanceId: instance.id,
-        properties: Object.fromEntries(keys.map((key) => [key, properties[key]])),
+        properties: Object.fromEntries(
+          keys.map((key) => [key, properties[key]]),
+        ),
       });
     }
   }

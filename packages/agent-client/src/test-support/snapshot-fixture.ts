@@ -45,7 +45,6 @@ export function testSnapshot(): AgentSessionSnapshot {
           symbolVariantId: null,
           target: null,
           model: null,
-          properties: { w: "2u" },
           parameters: {},
           placement: {
             position: { x: 300, y: 240 },
@@ -87,11 +86,6 @@ export function testSnapshot(): AgentSessionSnapshot {
             reference: "M1",
             binding: { kind: "primitive", deviceClass: "mos" },
             parameters: { w: "2u", l: "1u" },
-            terminals: [
-              { sourcePosition: 0, pinName: "D" },
-              { sourcePosition: 1, pinName: "G" },
-              { sourcePosition: 2, pinName: "S" },
-            ],
           },
         },
         {
@@ -101,7 +95,7 @@ export function testSnapshot(): AgentSessionSnapshot {
           symbolVariantId: null,
           target: null,
           model: null,
-          properties: {},
+
           parameters: {},
           placement: {
             position: { x: 460, y: 160 },

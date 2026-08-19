@@ -52,7 +52,6 @@ function projectWithInstance(): CircuitProject {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     },
   ];
   return project;

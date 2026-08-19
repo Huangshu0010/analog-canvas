@@ -32,8 +32,7 @@ describe("hierarchy domain planners", () => {
       placement: { rotation: 90, mirror: "x" },
       netlist: {
         reference: "X1",
-        terminals: [{ sourcePosition: 0, pinName: "IN" }],
-        binding: { childDocumentId: "child", name: "Stage" },
+        binding: { childDocumentId: "child" },
       },
     });
   });
@@ -74,7 +73,6 @@ describe("hierarchy domain planners", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     const result = executeProjectTransaction(project, {
       transactionId: "add-port",

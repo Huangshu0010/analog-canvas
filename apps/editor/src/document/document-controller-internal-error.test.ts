@@ -20,7 +20,6 @@ function instance(id: string) {
     id,
     symbolId: "resistor",
     placement: null,
-    properties: {},
   };
 }
 

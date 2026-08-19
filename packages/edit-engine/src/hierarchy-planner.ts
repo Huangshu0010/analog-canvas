@@ -48,18 +48,12 @@ export function createHierarchyInstance(
     id,
     symbolId: hierarchicalSymbolId(child.netlist.name),
     placement,
-    properties: {},
     netlist: {
       reference: id,
       parameters: {},
-      terminals: child.netlist.terminals.map((terminal, sourcePosition) => ({
-        sourcePosition,
-        pinName: terminal.name,
-      })),
       binding: {
         kind: "subcircuit",
         childDocumentId: child.id,
-        name: child.netlist.name,
       },
     },
   };
@@ -377,7 +371,7 @@ export function planRenameCellTerminal(
             noConnect.endpoint.instanceId === instance.id &&
             noConnect.endpoint.pinName === terminal.name,
         ) ||
-        (instance.netlist?.terminals ?? []).some(
+        (instance.importProvenance?.terminalMapping ?? []).some(
           (reference) => reference.pinName === terminal.name,
         );
       if (!referencesOldPin) continue;
@@ -559,26 +553,10 @@ export function planRemoveCellTerminals(
       const binding = instance.netlist?.binding;
       if (
         binding?.kind !== "subcircuit" ||
-        binding.childDocumentId !== documentId ||
-        !instance.netlist?.terminals?.some((reference) =>
-          terminalNames.has(reference.pinName),
-        )
+        binding.childDocumentId !== documentId
       ) {
         continue;
       }
-      callerEdits.push({
-        kind: "set_instance_netlist",
-        instanceId: instance.id,
-        netlist: {
-          ...structuredClone(instance.netlist),
-          terminals: instance.netlist.terminals
-            .filter((reference) => !terminalNames.has(reference.pinName))
-            .map((reference, sourcePosition) => ({
-              ...reference,
-              sourcePosition,
-            })),
-        },
-      });
     }
     if (callerEdits.length > 0) {
       structureEdits.push({

@@ -3471,3 +3471,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `git diff --check` passed.
 - Commit status: committed and pushed with force-with-lease on
   `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-19 - Schema-14 model and protocol foundation
+
+- Changed areas: current-only typed Instance netlist/provenance model,
+  direct schema-13 migration, external subcircuit definitions, Cell formal
+  parameters, hierarchy consumer contracts, GUI transient parameter naming,
+  fixtures, generated Agent/MCP contracts, and current-version documentation.
+- Validation: full unit suite (146 files / 894 tests), typecheck, workspace
+  build, generated-contract refresh, docs links, test-impact against
+  `origin/main`, diff check, and schema-13 property audit passed.
+- Commit status: committed locally on
+  `codex/phase1-schematic-foundation-plan`; push/PR not requested.

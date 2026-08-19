@@ -340,11 +340,6 @@ describe("authoring helper compilation", () => {
         reference: "MN0",
         binding: { kind: "primitive", deviceClass: "mos" },
         parameters: { w: "2u", l: "1u" },
-        terminals: [
-          { sourcePosition: 0, pinName: "D" },
-          { sourcePosition: 1, pinName: "G" },
-          { sourcePosition: 2, pinName: "S" },
-        ],
       });
     }
     const [netTransaction] = compile([
@@ -399,7 +394,7 @@ describe("authoring helper compilation", () => {
       },
     ]);
     expect(transaction?.edits?.[0]).toEqual({
-      kind: "patch_instance_properties",
+      kind: "patch_instance_netlist_parameters",
       instanceId: "instance-1",
       set: { w: "4u" },
       unset: ["note"],

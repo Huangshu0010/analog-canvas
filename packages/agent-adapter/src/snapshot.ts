@@ -103,16 +103,6 @@ function placedInstanceBounds(
   };
 }
 
-function primitiveRecord(
-  input: Readonly<Record<string, string | number | boolean>>,
-): Record<string, string | number | boolean> {
-  return Object.fromEntries(
-    Object.entries(input).sort(([left], [right]) =>
-      left.localeCompare(right, "en"),
-    ),
-  );
-}
-
 function instanceTarget(
   instance: SchematicDocument["instances"][number],
 ): string | null {
@@ -122,6 +112,12 @@ function instanceTarget(
   if (!binding) return null;
   if (binding.kind === "primitive") return `primitive:${binding.deviceClass}`;
   if (binding.kind === "model") return `model:${binding.name}`;
+  if (binding.kind === "subcircuit") {
+    return `subcircuit:${binding.childDocumentId}`;
+  }
+  if (binding.kind === "external-subcircuit") {
+    return `subcircuit:${binding.definitionId}`;
+  }
   return `subcircuit:${binding.name}`;
 }
 
@@ -145,6 +141,7 @@ function projectIndex(options: BuildAgentSessionSnapshotOptions) {
   const documents = projectDocuments(options);
   const documentIdByName = new Map<string, string>();
   for (const document of documents) {
+    documentIdByName.set(document.id.toLowerCase(), document.id);
     documentIdByName.set(document.name.toLowerCase(), document.id);
     if (document.sourceBinding) {
       documentIdByName.set(
@@ -230,7 +227,6 @@ function documentSnapshot(
         }
       }
       const hidden = new Set(resolved?.variant?.hiddenPinNames ?? []);
-      const properties = primitiveRecord(instance.properties);
       const parameters = Object.fromEntries(
         Object.entries(instance.netlist?.parameters ?? {}).sort(
           ([left], [right]) => left.localeCompare(right, "en"),
@@ -248,7 +244,6 @@ function documentSnapshot(
         symbolVariantId: instance.symbolVariantId ?? null,
         target,
         model,
-        properties,
         parameters,
         ...(instance.netlist
           ? {
@@ -262,9 +257,11 @@ function documentSnapshot(
                     ([left], [right]) => left.localeCompare(right, "en"),
                   ),
                 ),
-                ...(instance.netlist.terminals
+                ...(instance.importProvenance?.terminalMapping
                   ? {
-                      terminals: [...instance.netlist.terminals]
+                      terminalMapping: [
+                        ...instance.importProvenance.terminalMapping,
+                      ]
                         .sort(
                           (left, right) =>
                             left.sourcePosition - right.sourcePosition,

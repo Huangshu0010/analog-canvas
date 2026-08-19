@@ -26,7 +26,6 @@ describe("connected instance deletion", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     });
     document.annotations.push({
       id: "label-M1",
@@ -73,7 +72,6 @@ describe("connected instance deletion", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
       {
         id: "R2",
@@ -83,7 +81,6 @@ describe("connected instance deletion", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
     );
     document.nets.push({

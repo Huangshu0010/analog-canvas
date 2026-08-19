@@ -4,6 +4,21 @@ import { CURRENT_PROJECT_SCHEMA_VERSION, StableIdSchema } from "./common.js";
 import { SourceManifestSchema, SymbolLibraryLockSchema } from "./source.js";
 import { SchematicDocumentSchema } from "./document.js";
 import { reportDuplicateIds } from "./validation.js";
+
+export const ExternalSubcircuitTerminalSchema = z.strictObject({
+  name: z.string().min(1).max(128),
+});
+export const ExternalSubcircuitFormalParameterSchema = z.strictObject({
+  name: z.string().min(1).max(128),
+  defaultValue: z.string().min(1).max(1024).optional(),
+});
+export const ExternalSubcircuitDefinitionSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1).max(128),
+  terminals: z.array(ExternalSubcircuitTerminalSchema).max(128),
+  formalParameters: z.array(ExternalSubcircuitFormalParameterSchema).max(128),
+});
+
 export const CircuitProjectSchema = z
   .strictObject({
     schemaVersion: z.literal(CURRENT_PROJECT_SCHEMA_VERSION),
@@ -14,6 +29,10 @@ export const CircuitProjectSchema = z
     structureRevision: z.number().int().nonnegative(),
     topDocumentId: StableIdSchema,
     documents: z.array(SchematicDocumentSchema).min(1),
+    externalSubcircuitDefinitions: z
+      .array(ExternalSubcircuitDefinitionSchema)
+      .max(256)
+      .default([]),
   })
   .superRefine((project, context) => {
     const cellNames = new Set<string>();
@@ -30,6 +49,55 @@ export const CircuitProjectSchema = z
       cellNames.add(name);
     }
     reportDuplicateIds(project.documents, "documents", context);
+    const externalSubcircuitDefinitions = project.externalSubcircuitDefinitions;
+    reportDuplicateIds(
+      externalSubcircuitDefinitions,
+      "externalSubcircuitDefinitions",
+      context,
+    );
+    const externalDefinitionIds = new Set<string>();
+    const externalDefinitionNames = new Set<string>();
+    for (const [
+      definitionIndex,
+      definition,
+    ] of externalSubcircuitDefinitions.entries()) {
+      externalDefinitionIds.add(definition.id);
+      const normalizedName = definition.name.toLowerCase();
+      if (externalDefinitionNames.has(normalizedName)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate external subcircuit name: ${definition.name}`,
+          path: ["externalSubcircuitDefinitions", definitionIndex, "name"],
+        });
+      }
+      externalDefinitionNames.add(normalizedName);
+      for (const [field, values] of [
+        ["terminals", definition.terminals.map((terminal) => terminal.name)],
+        [
+          "formalParameters",
+          definition.formalParameters.map((parameter) => parameter.name),
+        ],
+      ] as const) {
+        const seen = new Set<string>();
+        for (const [index, value] of values.entries()) {
+          const normalized = value.toLowerCase();
+          if (seen.has(normalized)) {
+            context.addIssue({
+              code: "custom",
+              message: `Duplicate external subcircuit ${field} name: ${value}`,
+              path: [
+                "externalSubcircuitDefinitions",
+                definitionIndex,
+                field,
+                index,
+                "name",
+              ],
+            });
+          }
+          seen.add(normalized);
+        }
+      }
+    }
     if (
       !project.documents.some(
         (document) => document.id === project.topDocumentId,
@@ -81,21 +149,6 @@ export const CircuitProjectSchema = z
             ],
           });
           continue;
-        }
-        if (binding.name.toLowerCase() !== child.netlist.name.toLowerCase()) {
-          context.addIssue({
-            code: "custom",
-            message: `Hierarchy binding name ${binding.name} does not match child Cell ${child.netlist.name}`,
-            path: [
-              "documents",
-              documentIndex,
-              "instances",
-              instanceIndex,
-              "netlist",
-              "binding",
-              "name",
-            ],
-          });
         }
         const childPinNames = new Set(
           child.netlist.terminals.map((terminal) => terminal.name),
@@ -159,23 +212,6 @@ export const CircuitProjectSchema = z
             ],
           });
         }
-        for (const [terminalIndex, terminal] of (
-          instance.netlist?.terminals ?? []
-        ).entries()) {
-          referencedPins.push({
-            pinName: terminal.pinName,
-            path: [
-              "documents",
-              documentIndex,
-              "instances",
-              instanceIndex,
-              "netlist",
-              "terminals",
-              terminalIndex,
-              "pinName",
-            ],
-          });
-        }
         for (const reference of referencedPins) {
           if (childPinNames.has(reference.pinName)) continue;
           context.addIssue({
@@ -185,6 +221,24 @@ export const CircuitProjectSchema = z
           });
         }
         children.push(child.id);
+      }
+      for (const [instanceIndex, instance] of document.instances.entries()) {
+        const binding = instance.netlist?.binding;
+        if (binding?.kind !== "external-subcircuit") continue;
+        if (externalDefinitionIds.has(binding.definitionId)) continue;
+        context.addIssue({
+          code: "custom",
+          message: `External subcircuit binding references unknown definition: ${binding.definitionId}`,
+          path: [
+            "documents",
+            documentIndex,
+            "instances",
+            instanceIndex,
+            "netlist",
+            "binding",
+            "definitionId",
+          ],
+        });
       }
       childrenByDocument.set(document.id, children);
     }

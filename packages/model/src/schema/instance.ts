@@ -16,11 +16,6 @@ export const PlacementSchema = z.strictObject({
   rotation: RotationSchema,
   mirror: MirrorSchema,
 });
-export const InstancePropertyValueSchema = z.union([
-  z.string(),
-  z.number().finite(),
-  z.boolean(),
-]);
 export const NetlistIdentifierSchema = z.string().min(1).max(128);
 export const NetlistParameterNameSchema = NetlistIdentifierSchema;
 export const NetlistParameterValueSchema = z.string().min(1).max(1024);
@@ -48,10 +43,13 @@ export const InstanceNetlistBindingSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("subcircuit"),
     childDocumentId: StableIdSchema,
-    name: NetlistIdentifierSchema,
   }),
   z.strictObject({
     kind: z.literal("external-subcircuit"),
+    definitionId: StableIdSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("unresolved-subcircuit"),
     name: NetlistIdentifierSchema,
   }),
 ]);
@@ -60,7 +58,7 @@ export const InstanceNetlistBindingSchema = z.discriminatedUnion("kind", [
  * connectivity; this preserves the order an imported structural source used
  * without smuggling it through editable `properties` keys.
  */
-export const InstanceNetlistTerminalSchema = z.strictObject({
+export const InstanceTerminalMappingSchema = z.strictObject({
   sourcePosition: z.number().int().nonnegative(),
   pinName: z.string().min(1).max(128),
 });
@@ -72,15 +70,12 @@ export const InstanceNetlistDataSchema = z.strictObject({
     .refine((parameters) => Object.keys(parameters).length <= 128, {
       message: "An instance may contain at most 128 netlist parameters",
     }),
-  // Manual instances need not claim a source ordering. Import and any author
-  // that does claim one must provide an unambiguous, typed mapping.
-  terminals: z.array(InstanceNetlistTerminalSchema).max(128).optional(),
 });
 /**
  * Bounded source evidence that explains imported facts but cannot become a
  * second electrical/netlist authority. It is not part of normal editable
  * properties and no runtime consumer may derive connectivity or hierarchy from
- * `sourceTarget` or `attributes`.
+ * `sourceTarget` or mapping metadata.
  */
 export const InstanceImportProvenanceSchema = z.strictObject({
   kind: z.enum(["primitive", "model", "subcircuit", "opaque"]),
@@ -90,12 +85,8 @@ export const InstanceImportProvenanceSchema = z.strictObject({
   // status is unavailable; current importers write status when it is known.
   status: z.enum(["resolved", "missing", "unsupported"]).optional(),
   modelType: z.string().min(1).optional(),
-  attributes: z
-    .record(z.string().min(1).max(128), InstancePropertyValueSchema)
-    .refine((attributes) => Object.keys(attributes).length <= 128, {
-      message: "An import provenance record may contain at most 128 attributes",
-    })
-    .optional(),
+  symbolMappingRegistryId: z.string().min(1).max(128).optional(),
+  terminalMapping: z.array(InstanceTerminalMappingSchema).max(128).optional(),
 });
 export const MosBulkBindingSchema = z.strictObject({
   origin: z.enum(["cell-default", "supply-default"]),
@@ -112,20 +103,10 @@ export const InstanceSchema = z
     // Explicit SPICE/user B connections need no parallel metadata.
     mosBulkBinding: MosBulkBindingSchema.optional(),
     placement: PlacementSchema.nullable(),
-    properties: z.record(z.string(), InstancePropertyValueSchema),
     netlist: InstanceNetlistDataSchema.optional(),
   })
   .superRefine((instance, context) => {
-    for (const key of Object.keys(instance.properties)) {
-      if (!key.startsWith("spice.")) continue;
-      context.addIssue({
-        code: "custom",
-        path: ["properties", key],
-        message:
-          "spice.* properties are invalid; use typed netlist facts or import provenance",
-      });
-    }
-    const terminals = instance.netlist?.terminals;
+    const terminals = instance.importProvenance?.terminalMapping;
     if (!terminals) return;
     const positions = new Set<number>();
     const pinNames = new Set<string>();
@@ -133,16 +114,21 @@ export const InstanceSchema = z
       if (positions.has(terminal.sourcePosition)) {
         context.addIssue({
           code: "custom",
-          path: ["netlist", "terminals", index, "sourcePosition"],
-          message: "Netlist terminal source positions must be unique",
+          path: [
+            "importProvenance",
+            "terminalMapping",
+            index,
+            "sourcePosition",
+          ],
+          message: "Imported terminal source positions must be unique",
         });
       }
       positions.add(terminal.sourcePosition);
       if (pinNames.has(terminal.pinName)) {
         context.addIssue({
           code: "custom",
-          path: ["netlist", "terminals", index, "pinName"],
-          message: "Netlist terminal pin names must be unique",
+          path: ["importProvenance", "terminalMapping", index, "pinName"],
+          message: "Imported terminal pin names must be unique",
         });
       }
       pinNames.add(terminal.pinName);

@@ -95,9 +95,5 @@ export function effectiveComponentParameterValue(
 ): string {
   const netlist = instance.netlist?.parameters[parameter.key];
   if (netlist !== undefined) return netlist;
-  const explicit = instance.properties[parameter.key];
-  if (typeof explicit === "string" || typeof explicit === "number") {
-    return String(explicit);
-  }
   return "";
 }

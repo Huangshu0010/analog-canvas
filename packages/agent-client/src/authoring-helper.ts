@@ -66,7 +66,7 @@ interface SnapshotInstance {
     reference: string;
     binding?: Record<string, unknown>;
     parameters: Record<string, string>;
-    terminals?: { sourcePosition: number; pinName: string }[];
+    terminalMapping?: { sourcePosition: number; pinName: string }[];
   };
 }
 
@@ -120,8 +120,8 @@ function resolvedDocument(snapshot: AgentSessionSnapshot): ResolvedDocument {
                   }
                 : {}),
               parameters: instance.netlist.parameters,
-              ...(instance.netlist.terminals
-                ? { terminals: instance.netlist.terminals }
+              ...(instance.netlist.terminalMapping
+                ? { terminalMapping: instance.netlist.terminalMapping }
                 : {}),
             },
           }
@@ -508,7 +508,6 @@ export function compileActions(
               reference: action.name,
               ...(netlist?.binding ? { binding: netlist.binding } : {}),
               parameters: netlist?.parameters ?? {},
-              ...(netlist?.terminals ? { terminals: netlist.terminals } : {}),
             },
           });
         }
@@ -533,7 +532,7 @@ export function compileActions(
           }
         }
         pushEdit(index, action.kind, {
-          kind: "patch_instance_properties",
+          kind: "patch_instance_netlist_parameters",
           instanceId: instance.id,
           ...(action.set ? { set: action.set } : {}),
           ...(action.unset ? { unset: action.unset } : {}),
@@ -642,7 +641,6 @@ function compilePlaceComponent(
         rotation: action.rotation ?? 0,
         mirror: action.mirror ?? "none",
       },
-      properties: {},
       netlist: {
         reference: action.name,
         parameters: action.parameters ?? {},

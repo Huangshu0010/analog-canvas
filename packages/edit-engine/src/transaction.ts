@@ -435,7 +435,8 @@ export function executeTransaction(
             currentPins.add(noConnect.endpoint.pinName);
           }
         }
-        for (const terminal of instance.netlist?.terminals ?? []) {
+        for (const terminal of instance.importProvenance?.terminalMapping ??
+          []) {
           currentPins.add(terminal.pinName);
         }
         const pinMap = edit.pinMap ?? {};
@@ -493,13 +494,12 @@ export function executeTransaction(
             pinMap[noConnect.endpoint.pinName] ?? noConnect.endpoint.pinName;
           changedObjectIds.add(noConnect.id);
         }
-        if (instance.netlist?.terminals) {
-          instance.netlist.terminals = instance.netlist.terminals.map(
-            (terminal) => ({
+        if (instance.importProvenance?.terminalMapping) {
+          instance.importProvenance.terminalMapping =
+            instance.importProvenance.terminalMapping.map((terminal) => ({
               ...terminal,
               pinName: pinMap[terminal.pinName] ?? terminal.pinName,
-            }),
-          );
+            }));
         }
         instance.symbolId = edit.symbolId;
         if (symbolVariantId === undefined) delete instance.symbolVariantId;
@@ -690,7 +690,7 @@ export function executeTransaction(
         changedObjectIds.add(edit.instanceId);
         break;
       }
-      case "patch_instance_properties": {
+      case "patch_instance_netlist_parameters": {
         const instance = draft.instances.find(
           (candidate) => candidate.id === edit.instanceId,
         );
@@ -707,7 +707,7 @@ export function executeTransaction(
         if (Object.keys(set).length === 0 && unset.length === 0) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            "Property patch must set or unset at least one property",
+            "Netlist parameter patch must set or unset at least one parameter",
             [],
             [edit.instanceId],
           );
@@ -716,7 +716,7 @@ export function executeTransaction(
         if (duplicateUnset.size !== unset.length) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            "Property patch cannot unset the same property more than once",
+            "Netlist parameter patch cannot unset the same parameter more than once",
             [],
             [edit.instanceId],
           );
@@ -727,7 +727,7 @@ export function executeTransaction(
         if (conflictingKey) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            `Property patch cannot set and unset ${conflictingKey}`,
+            `Netlist parameter patch cannot set and unset ${conflictingKey}`,
             [],
             [edit.instanceId],
           );
@@ -735,22 +735,31 @@ export function executeTransaction(
         let changed = false;
         const before: SchematicDocument["instances"][number] =
           structuredClone(instance);
+        const netlist = instance.netlist;
+        if (!netlist) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Netlist parameter patch requires an instance netlist record",
+            [],
+            [edit.instanceId],
+          );
+        }
         for (const [key, value] of Object.entries(set)) {
-          if (instance.properties[key] !== value) {
-            instance.properties[key] = value;
+          if (netlist.parameters[key] !== value) {
+            netlist.parameters[key] = value;
             changed = true;
           }
         }
         for (const key of unset) {
-          if (key in instance.properties) {
-            delete instance.properties[key];
+          if (key in netlist.parameters) {
+            delete netlist.parameters[key];
             changed = true;
           }
         }
         if (!changed) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            "Property patch does not change the instance",
+            "Netlist parameter patch does not change the instance",
             [],
             [edit.instanceId],
           );

@@ -2410,7 +2410,6 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     },
     {
       id: "R1",
@@ -2420,7 +2419,6 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     },
     {
       id: "GND1",
@@ -2430,7 +2428,6 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     },
   );
   document.nets.push({

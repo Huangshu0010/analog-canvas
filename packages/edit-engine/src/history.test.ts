@@ -9,7 +9,11 @@ function historyFixture() {
     id: "R1",
     symbolId: "resistor",
     placement: null,
-    properties: {},
+    netlist: {
+      reference: "R1",
+      binding: { kind: "primitive", deviceClass: "resistor" },
+      parameters: {},
+    },
   });
   return new DocumentHistory(document);
 }
@@ -40,7 +44,6 @@ describe("DocumentHistory", () => {
       id: "R1",
       symbolId: "resistor",
       placement: null,
-      properties: {},
     });
     document.nets.push({
       id: "net-vss",
@@ -169,31 +172,35 @@ describe("DocumentHistory", () => {
     expect(history.document.revision).toBe(1);
   });
 
-  it("undoes and redoes a property patch", () => {
+  it("undoes and redoes a netlist parameter patch", () => {
     const history = historyFixture();
     const patched = history.transact(
       transaction(0, [
         {
-          kind: "patch_instance_properties",
+          kind: "patch_instance_netlist_parameters",
           instanceId: "R1",
           set: { value: "10k" },
         },
       ]),
     );
     expect(patched).toMatchObject({ ok: true, revision: 1 });
-    expect(history.document.instances[0]!.properties).toEqual({ value: "10k" });
+    expect(history.document.instances[0]!.netlist!.parameters).toEqual({
+      value: "10k",
+    });
 
     expect(history.transact(transaction(1, [{ kind: "undo" }]))).toMatchObject({
       ok: true,
       revision: 2,
     });
-    expect(history.document.instances[0]!.properties).toEqual({});
+    expect(history.document.instances[0]!.netlist!.parameters).toEqual({});
 
     expect(history.transact(transaction(2, [{ kind: "redo" }]))).toMatchObject({
       ok: true,
       revision: 3,
     });
-    expect(history.document.instances[0]!.properties).toEqual({ value: "10k" });
+    expect(history.document.instances[0]!.netlist!.parameters).toEqual({
+      value: "10k",
+    });
   });
 
   it("rejects undo when no prior state exists", () => {
@@ -211,7 +218,11 @@ describe("DocumentHistory", () => {
       id: "R1",
       symbolId: "resistor",
       placement: null,
-      properties: {},
+      netlist: {
+        reference: "R1",
+        binding: { kind: "primitive", deviceClass: "resistor" },
+        parameters: {},
+      },
     });
     const history = new DocumentHistory(document, {}, 2);
 
@@ -220,7 +231,7 @@ describe("DocumentHistory", () => {
         history.transact(
           transaction(revision, [
             {
-              kind: "patch_instance_properties",
+              kind: "patch_instance_netlist_parameters",
               instanceId: "R1",
               set: { value: `${revision}` },
             },
@@ -233,12 +244,12 @@ describe("DocumentHistory", () => {
       ok: true,
       revision: 4,
     });
-    expect(history.document.instances[0]!.properties.value).toBe("1");
+    expect(history.document.instances[0]!.netlist!.parameters.value).toBe("1");
     expect(history.transact(transaction(4, [{ kind: "undo" }]))).toMatchObject({
       ok: true,
       revision: 5,
     });
-    expect(history.document.instances[0]!.properties.value).toBe("0");
+    expect(history.document.instances[0]!.netlist!.parameters.value).toBe("0");
     expect(history.transact(transaction(5, [{ kind: "undo" }]))).toMatchObject({
       ok: false,
       error: { code: "HISTORY_EMPTY" },

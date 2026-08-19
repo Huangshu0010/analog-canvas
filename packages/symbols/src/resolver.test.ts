@@ -78,7 +78,6 @@ describe("Symbol Resolver boundary", () => {
       id: "D1",
       symbolId: "diode",
       placement: null,
-      properties: {},
     });
     expect(findUnsupportedProjectSymbolIds(project, [resistor])).toEqual([
       "diode",
@@ -87,7 +86,11 @@ describe("Symbol Resolver boundary", () => {
 
   it("does not derive an unreferenced manual top Cell over a catalog symbol", () => {
     const project = createEmptyProject("coverage", "Coverage");
-    project.documents[0]!.netlist = { name: "resistor", terminals: [] };
+    project.documents[0]!.netlist = {
+      name: "resistor",
+      terminals: [],
+      formalParameters: [],
+    };
 
     const resolver = createProjectSymbolResolver(project, [resistor]);
 

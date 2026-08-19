@@ -56,7 +56,7 @@ for readability; these groups do not create separate mutation endpoints:
 - control/history: `noop`, `clear_document`, `undo`, `redo`;
 - Instance: `add_instance`, `remove_instance`, `set_instance_symbol`,
   `place_instance`, `move_instance`, `rotate_instance`, `mirror_instance`,
-  `patch_instance_properties`, `set_instance_netlist`;
+  `patch_instance_netlist_parameters`, `set_instance_netlist`;
 - Cell interface: `add_cell_terminal`, `update_cell_terminal`,
   `remove_cell_terminal`, `reorder_cell_terminals`;
 - Route/Junction/connectivity: `set_route_points`, `route_orthogonal`,

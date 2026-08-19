@@ -14,7 +14,6 @@ export interface InstanceValueSource {
   readonly symbolId: string;
   readonly netlist?:
     { readonly parameters: Record<string, string> } | undefined;
-  readonly properties: Record<string, string | number | boolean>;
 }
 
 /** Display unit per device class, appended to the raw parameter string. */
@@ -33,9 +32,6 @@ function effectiveParameterValue(
 ): string {
   const netlist = instance.netlist?.parameters[key];
   if (netlist !== undefined) return netlist.trim();
-  const explicit = instance.properties[key];
-  if (typeof explicit === "string") return explicit.trim();
-  if (typeof explicit === "number") return String(explicit);
   return "";
 }
 
@@ -59,8 +55,8 @@ function boldDocument(value: string): RichTextDocument {
 
 /**
  * One pure authority for the optional Value annotation beside an instance.
- * Electrical truth stays in the typed netlist parameters (with the legacy
- * `properties` fallback); this only projects it to display text and never
+ * Electrical truth stays in the typed netlist parameters; this only projects
+ * it to display text and never
  * writes back. Display is Razavi textbook style: upright bold text with the
  * engineering unit, and a stacked fraction bar for MOS W/L.
  */

@@ -149,7 +149,8 @@ export function runErcChecks(
           resolved.definition.pins.map((pin) => pin.name),
         );
         const seenImportedPins = new Set<string>();
-        const importedPinFacts = instance.netlist?.terminals ?? [];
+        const importedPinFacts =
+          instance.importProvenance?.terminalMapping ?? [];
         for (const fact of importedPinFacts) {
           const pinName = fact.pinName;
           const invalid =

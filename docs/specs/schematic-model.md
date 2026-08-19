@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 13 and has
+geometric, and presentation facts. The current model is strict schema 14 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -108,10 +108,13 @@ two explicit placements may occupy the same side/offset slot.
 - Layout groups and constraints reference existing objects.
 - Netlist interfaces reference existing Nets and connected Port Instances with
   unique stable IDs, ordered names, and marker bindings.
-- Subcircuit bindings reference existing child Documents, use that child's
-  Cell name and formal pin set, and cannot form hierarchy cycles.
-- Imported netlist facts and provenance are typed; retired `spice.*`
-  properties are invalid.
+- Internal subcircuit bindings reference one child Document; their emitted
+  Cell name is derived from that child. External bindings reference one
+  project-level external definition, and unresolved imported bindings retain
+  only a target name until resolution.
+- Netlist references and parameter values live in `Instance.netlist`.
+  Imported terminal order and symbol-mapping identity live only in typed
+  `Instance.importProvenance`; `Instance.properties` does not persist.
 - `electricalTopologyHash` includes Instances, Nets, terminal membership,
   Routes, Junctions, NoConnects, and formal cell terminals, but excludes
   placement, annotation, and drafting presentation.
@@ -123,6 +126,6 @@ ordinary Schematic edits inside one Project structural transaction. The
 Project's `structureRevision` protects this cross-Document boundary and the
 editor records it as one undoable structural commit.
 
-Persistence writes only schema 13. `packages/project-protocol` accepts schema
-12 through the bounded direct upgrade defined by ADR 0026, then supplies the
+Persistence writes only schema 14. `packages/project-protocol` accepts schema
+13 through the bounded direct upgrade defined by ADR 0027, then supplies the
 current model only; no compatibility shape enters `packages/model`.

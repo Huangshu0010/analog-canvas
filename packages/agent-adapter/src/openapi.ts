@@ -130,7 +130,6 @@ export const agentCircuitRequestExamples = {
               rotation: 0,
               mirror: "none",
             },
-            properties: {},
           },
         },
       ],

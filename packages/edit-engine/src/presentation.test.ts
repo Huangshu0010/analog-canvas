@@ -54,7 +54,6 @@ describe("presentation and layout edits", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     }));
     document.annotations.push(
       {

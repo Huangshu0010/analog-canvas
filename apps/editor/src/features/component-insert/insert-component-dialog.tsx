@@ -183,11 +183,13 @@ export function InsertComponentDialog({
   );
   const valueDisplay = displayableInstanceValue({
     symbolId: selected?.kind === "symbol" ? selected.symbol.id : "",
-    properties: Object.fromEntries(
-      Object.entries(parameterValues)
-        .map(([key, value]) => [key, value.trim()] as const)
-        .filter(([, value]) => value !== ""),
-    ),
+    netlist: {
+      parameters: Object.fromEntries(
+        Object.entries(parameterValues)
+          .map(([key, value]) => [key, value.trim()] as const)
+          .filter(([, value]) => value !== ""),
+      ),
+    },
   });
   const valueAvailable =
     selected?.kind === "cell" || valueDisplay.kind === "displayable";
@@ -268,7 +270,7 @@ export function InsertComponentDialog({
         symbolName: selected.cellName ?? selected.symbol.name,
         childDocumentId: selected.childDocumentId!,
         cellName: selected.cellName ?? selected.symbol.name,
-        properties: {},
+        parameters: {},
         initialRotation,
         showReference: false,
         referenceText: null,
@@ -276,7 +278,7 @@ export function InsertComponentDialog({
       });
       return;
     }
-    const properties = Object.fromEntries(
+    const parameters = Object.fromEntries(
       Object.entries(parameterValues)
         .map(([key, value]) => [key, value.trim()] as const)
         .filter(([, value]) => value !== ""),
@@ -286,7 +288,7 @@ export function InsertComponentDialog({
       kind: "symbol",
       symbolId: selected.symbol.id,
       symbolName: selected.symbol.name,
-      properties,
+      parameters,
       initialRotation,
       showReference,
       referenceText: trimmedReference === "" ? null : trimmedReference,

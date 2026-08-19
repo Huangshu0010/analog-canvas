@@ -274,7 +274,6 @@ export function executeProjectTransaction(
           )
             continue;
           instance.symbolId = hierarchicalSymbolId(edit.name);
-          binding.name = edit.name;
           changed = true;
         }
         if (changed) {

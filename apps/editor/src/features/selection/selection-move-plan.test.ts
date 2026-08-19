@@ -11,7 +11,6 @@ describe("selection move plan", () => {
       {
         id: "R1",
         symbolId: "resistor",
-        properties: {},
         placement: {
           position: { x: 100, y: 100 },
           rotation: 0,
@@ -21,7 +20,6 @@ describe("selection move plan", () => {
       {
         id: "R2",
         symbolId: "resistor",
-        properties: {},
         placement: {
           position: { x: 300, y: 100 },
           rotation: 0,

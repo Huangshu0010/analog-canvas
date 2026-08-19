@@ -831,7 +831,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "nmos",
           "symbolVariantId": "textbook-3terminal"
         },
@@ -856,7 +855,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "pmos",
           "symbolVariantId": "textbook-3terminal"
         },
@@ -880,7 +878,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "resistor"
         },
         {
@@ -903,7 +900,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "resistor"
         },
         {
@@ -926,7 +922,6 @@
             },
             "rotation": 90
           },
-          "properties": {},
           "symbolId": "capacitor"
         },
         {
@@ -949,7 +944,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "inductor"
         },
         {
@@ -972,7 +966,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "voltage-source"
         },
         {
@@ -995,7 +988,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "current-source"
         },
         {
@@ -1019,7 +1011,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "nmos",
           "symbolVariantId": "textbook-3terminal"
         }
@@ -1028,6 +1019,7 @@
       "layoutGroups": [],
       "name": "Main",
       "netlist": {
+        "formalParameters": [],
         "name": "Main",
         "terminals": []
       },
@@ -1043,9 +1035,10 @@
       "sourceStatus": "in-sync"
     }
   ],
+  "externalSubcircuitDefinitions": [],
   "id": "instance-value-display",
   "name": "Instance Value Display",
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "source": {
     "dialect": "none",
     "entry": null,

@@ -1091,7 +1091,6 @@ describe("routing Edit Engine", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       });
       // This deliberately differs from the canonical default and represents a
       // label explicitly moved by the user. Its coordinates are still on the

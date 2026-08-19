@@ -16,7 +16,6 @@ function manualMos(id: string, symbolId: "nmos" | "pmos") {
     symbolId,
     symbolVariantId: "textbook-3terminal",
     placement: null,
-    properties: {},
   };
 }
 

@@ -10,7 +10,6 @@ function resistorProject(parameters: Record<string, string>) {
     id: "R1",
     symbolId: "resistor",
     placement: null,
-    properties: {},
     netlist: {
       reference: "R1",
       binding: { kind: "primitive", deviceClass: "resistor" },
@@ -40,6 +39,7 @@ describe("current formal cell interface", () => {
     const document = project.documents[0]!;
     document.netlist = {
       name: "inverter",
+      formalParameters: [],
       terminals: [
         {
           id: "cell-terminal-in",
@@ -58,8 +58,8 @@ describe("current formal cell interface", () => {
       ],
     };
     document.instances.push(
-      { id: "P1", symbolId: "port", placement: null, properties: {} },
-      { id: "P2", symbolId: "port", placement: null, properties: {} },
+      { id: "P1", symbolId: "port", placement: null },
+      { id: "P2", symbolId: "port", placement: null },
     );
     document.nets.push(
       {

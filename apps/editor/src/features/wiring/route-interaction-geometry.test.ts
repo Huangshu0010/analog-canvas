@@ -195,7 +195,6 @@ describe("route interaction geometry", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     document.instances.push(instance);
     const profile = resolveSchematicStyleProfile(
@@ -225,7 +224,6 @@ describe("route interaction geometry", () => {
         rotation: 90 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     document.instances.push(instance);
     const profile = resolveSchematicStyleProfile(

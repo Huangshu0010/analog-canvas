@@ -5,7 +5,6 @@ import { displayableInstanceValue } from "./instance-value.js";
 function instance(
   symbolId: string,
   netlistParameters: Record<string, string> = {},
-  properties: Record<string, string | number> = {},
 ) {
   return {
     id: "X1",
@@ -15,7 +14,6 @@ function instance(
       rotation: 0 as const,
       mirror: "none" as const,
     },
-    properties,
     ...(Object.keys(netlistParameters).length > 0
       ? {
           netlist: {
@@ -124,12 +122,10 @@ describe("displayableInstanceValue", () => {
     });
   });
 
-  it("falls back to legacy properties when netlist parameters are absent", () => {
-    expect(
-      displayableInstanceValue(instance("inductor", {}, { value: "3n" })),
-    ).toEqual({
-      kind: "displayable",
-      content: { runs: [bold("3nH")] },
+  it("does not display a value when netlist parameters are absent", () => {
+    expect(displayableInstanceValue(instance("inductor"))).toEqual({
+      kind: "undisplayable",
+      reason: "inductor value parameter is empty",
     });
   });
 
