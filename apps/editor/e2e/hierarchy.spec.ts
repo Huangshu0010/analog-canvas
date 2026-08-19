@@ -213,6 +213,41 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await expect(page.getByTestId("status")).toContainText(
     "Moved Cell symbol pin",
   );
+
+  // Closing Properties must leave the transient grip mode too; otherwise the
+  // selected Cell keeps suppressing its ordinary hit target.
+  await layoutShelf.click();
+  await expect(layoutOverlay).toBeHidden();
+  await expect(page.getByTestId("hit-X1")).toBeVisible();
+
+  await layoutShelf.click();
+  await layout
+    .getByRole("button", { name: "Edit symbol layout on canvas" })
+    .click();
+  await expect(layoutOverlay).toBeVisible();
+
+  // A normal canvas click exits the mode before normal pointer handling. The
+  // Cell can then use its normal direct-manipulation path again.
+  await canvas.click({ position: { x: 40, y: 420 } });
+  await expect(layoutOverlay).toBeHidden();
+  const instanceHit = page.getByTestId("hit-X1");
+  const beforeMove = await instanceHit.boundingBox();
+  expect(beforeMove).not.toBeNull();
+  if (beforeMove) {
+    await page.mouse.move(
+      beforeMove.x + beforeMove.width / 2,
+      beforeMove.y + beforeMove.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      beforeMove.x + beforeMove.width / 2 + 40,
+      beforeMove.y + beforeMove.height / 2,
+    );
+    await page.mouse.up();
+    await expect
+      .poll(async () => (await instanceHit.boundingBox())?.x ?? 0)
+      .toBeGreaterThan(beforeMove.x + 10);
+  }
 });
 
 test("deletes a wired child Cell Port through the ordinary instance path", async ({

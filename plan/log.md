@@ -3366,4 +3366,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   at its configured 15-minute timeout while running the unchanged full gate.
   The target remains active while a 25-minute timeout-budget correction reruns
   the same gate.
+
+## 2026-08-19 - Predictable Cell symbol layout exit
+
+- Changed areas: scoped Cell symbol layout ownership, automatic exit on
+  Properties/context/tool/canvas changes, and hierarchy browser regression
+  coverage for restored normal Cell movement.
+- Validation: hierarchy Playwright (6 scenarios), TypeScript typecheck,
+  test-impact against `origin/main`, and diff check passed.
+- Commit status: pending local commit on `codex/cell-pin-edit-exit`.
 ```
