@@ -52,6 +52,9 @@ RichText renderer. Their contracts must be reused rather than duplicated.
 7. Follow-up: remove manual pin-name placement entirely, restore the protocol
    to schema 13 because schema 14 carried only that now-rejected intent, and
    give enabled canvas grips priority over the selected Instance hit target.
+8. Follow-up: move automatic north/south hierarchy pin-name baselines inward
+   from the Cell body edge without adding a manual label-placement parameter or
+   changing ordinary symbol labels.
 
 ## Validation
 
@@ -98,6 +101,8 @@ Initial implementation and layout interaction refinement completed on
 - Added an opt-in canvas layout mode with body and pin grips. Enabled grips
   take priority over the selected instance hit target, while normal canvas
   selection and wiring remain unchanged when the mode is disabled.
+- Moved automatic north/south hierarchy pin-name baselines 10 units inward
+  from the Cell body border; ordinary symbol labels remain unchanged.
 - Updated current fixtures and compatibility/hierarchy documentation.
 
 ## Validation Record
@@ -117,3 +122,6 @@ Initial implementation and layout interaction refinement completed on
   Playwright with direct body/pin grip coverage: 6 passed; `pnpm build`;
   `pnpm test:impact -- --base origin/main`; and `git diff --check`.
 - Follow-up commit: `refine(hierarchy): prioritize Cell pin editing`.
+- Final follow-up: `pnpm typecheck`; render/symbol Vitest: 10 passed;
+  hierarchy Playwright: 6 passed; `pnpm build`;
+  `pnpm test:impact -- --base origin/main`; and `git diff --check`.

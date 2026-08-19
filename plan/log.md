@@ -3326,7 +3326,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   (94); hierarchy/project-file Playwright (14); hierarchy Playwright with
   direct body/pin grip coverage (6); workspace build; test-impact; and diff
   check.
-- Commit status: ready to commit.
+- Commit status: committed with `refine(hierarchy): prioritize Cell pin editing`.
+
+## 2026-08-19 - Hierarchy vertical pin-name clearance
+
+- Changed areas: automatic north/south hierarchy pin-name baseline geometry
+  and its render contract coverage.
+- Validation: typecheck; render/symbol Vitest (10); hierarchy Playwright (6);
+  workspace build; test-impact; and diff check.
+- Commit status: committed with `refine(hierarchy): clear vertical pin names`.
 
 ## 2026-08-19 - Properties panel mainline regression
 

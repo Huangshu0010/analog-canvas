@@ -314,6 +314,7 @@ function renderVisiblePinNames(
   instance: SchematicDocument["instances"][number],
   profile: SchematicStyleProfile,
 ): string {
+  const hierarchyVerticalPinNameInset = 10;
   const placement = instance.placement;
   if (!placement) return "";
   const hidden = new Set(hiddenPinNames);
@@ -329,7 +330,18 @@ function renderVisiblePinNames(
       const outward = transformedDirection(pin.direction, placement);
       const distance = (pin.presentation.leadLength ?? 0) + 4;
       const x = anchor.x - outward.x * distance;
-      const y = anchor.y - outward.y * distance + 4;
+      // A north/south label's baseline otherwise lands on, or nearly on, the
+      // Cell body border. Hierarchy labels are always automatic, so keep this
+      // as derived renderer geometry rather than a second persisted setting.
+      const hierarchyVerticalInset =
+        definition.hierarchicalBlock && outward.y !== 0
+          ? hierarchyVerticalPinNameInset
+          : 0;
+      const y =
+        anchor.y -
+        outward.y * distance +
+        4 -
+        outward.y * hierarchyVerticalInset;
       const alignment =
         outward.x < 0 ? "start" : outward.x > 0 ? "end" : "middle";
       const sizeAttribute =
