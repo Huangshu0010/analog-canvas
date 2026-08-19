@@ -58,6 +58,8 @@ RichText renderer. Their contracts must be reused rather than duplicated.
 9. Follow-up: keep the canvas RichText editor above canvas hit processing and
    reduce its frame height; distinguish a formal Port's display-only RichText
    normalization from a real electrical terminal rename.
+10. Mainline delivery follow-up: normalize the changed hierarchy geometry file
+    to the repository formatter and rerun the required CI gate before merge.
 
 ## Validation
 
@@ -137,3 +139,6 @@ Initial implementation and layout interaction refinement completed on
   render/editor Vitest: 23 passed; direct hierarchy and editor-shield
   Playwright: 2 passed; hierarchy Playwright: 6 passed; `pnpm build`;
   `pnpm test:impact -- --base origin/main`; and `git diff --check`.
+- Mainline delivery gate: `pnpm install --frozen-lockfile`; isolated
+  `pnpm ci:check` passed (891 unit tests, 154 browser tests, build, release
+  packaging, and production smoke).

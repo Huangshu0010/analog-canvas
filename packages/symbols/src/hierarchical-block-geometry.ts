@@ -145,11 +145,7 @@ function bodySize(
   return { width: roundUp(width), height: roundUp(height) };
 }
 
-function pinForSlot(
-  slot: PinSlot,
-  width: number,
-  height: number,
-): SymbolPin {
+function pinForSlot(slot: PinSlot, width: number, height: number): SymbolPin {
   const presentation = {
     visibility: "visible" as const,
     leadLength: PIN_LEAD,

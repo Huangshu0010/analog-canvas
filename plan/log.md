@@ -3346,6 +3346,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   workspace build; test-impact; and diff check.
 - Commit status: committed with `refine(hierarchy): shield RichText editing`.
 
+## 2026-08-19 - Cell hierarchy mainline delivery gate
+
+- Changed areas: Prettier-only normalization of hierarchy block geometry and
+  target delivery records.
+- Validation: `pnpm install --frozen-lockfile`; isolated `pnpm ci:check`
+  passed (891 unit tests, 154 browser tests, workspace build, release
+  packaging, and production smoke); diff check.
+- Commit status: committed with `style(symbols): format hierarchy geometry`.
+
 ## 2026-08-19 - Properties panel mainline regression
 
 - Changed areas: formal-Cell-Port annotation routing, compact Properties
