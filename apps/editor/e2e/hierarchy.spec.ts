@@ -159,17 +159,38 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await expect(layout).toBeVisible();
   await layout.getByLabel("Cell symbol width").fill("120");
   await layout.getByLabel("Cell symbol width").press("Tab");
-  await expect(page.getByTestId("status")).toContainText(
-    "Resized ReusableStage",
-  );
+  await expect(page.getByTestId("status")).toContainText("Resized ReusableStage");
   await layout.getByLabel("Cell symbol IN pin side").selectOption("north");
   await expect(page.getByTestId("status")).toContainText(
     "Moved Cell symbol pin",
   );
-  await layout.getByLabel("Cell symbol IN name along pin").fill("10");
-  await layout.getByLabel("Cell symbol IN name along pin").press("Tab");
+  await layout.getByLabel("Cell symbol IN name inward").fill("10");
+  await layout.getByLabel("Cell symbol IN name inward").press("Tab");
   await expect(page.getByTestId("status")).toContainText(
     "Moved Cell symbol pin name",
+  );
+  await layout
+    .getByRole("button", { name: "Edit symbol layout on canvas" })
+    .click();
+  const layoutOverlay = page.getByTestId("cell-symbol-layout-overlay");
+  await expect(layoutOverlay).toBeVisible();
+  const bodyHandle = page.getByTestId("cell-symbol-body-handle");
+  const bodyHandleBox = await bodyHandle.boundingBox();
+  expect(bodyHandleBox).not.toBeNull();
+  if (bodyHandleBox) {
+    await page.mouse.move(
+      bodyHandleBox.x + bodyHandleBox.width / 2,
+      bodyHandleBox.y + bodyHandleBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      bodyHandleBox.x + bodyHandleBox.width / 2 + 30,
+      bodyHandleBox.y + bodyHandleBox.height / 2 + 30,
+    );
+    await page.mouse.up();
+  }
+  await expect(page.getByTestId("status")).toContainText(
+    /Resized ReusableStage|Committed revision/u,
   );
 });
 

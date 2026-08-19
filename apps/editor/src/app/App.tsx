@@ -82,6 +82,7 @@ import {
   createId,
   defaultDraftTextDocument,
   flattenRichText,
+  inverseTransformPoint,
   snapGridPoint,
   semanticTextDocument,
   transformPoint,
@@ -570,6 +571,12 @@ export function App({
     setAgentStatusDismissed(false);
   }, [agentSession.status, publicAgentUiEnabled]);
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
+  const [cellSymbolLayoutEnabled, setCellSymbolLayoutEnabled] = useState(false);
+  const [cellSymbolLayoutDrag, setCellSymbolLayoutDrag] = useState<{
+    kind: "body" | "pin" | "label";
+    pointerId: number;
+    terminalId?: string;
+  } | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [routeStretchPreview, setRouteStretchPreview] =
     useState<RouteStretchPreview | null>(null);
@@ -784,6 +791,43 @@ export function App({
           candidate.id === referencedDocumentId(project, selectedInstance),
       )
     : undefined;
+  const selectedCellSymbolLayout = useMemo(() => {
+    if (
+      !cellSymbolLayoutEnabled ||
+      !selectedInstance?.placement ||
+      !selectedHierarchyCell?.netlist
+    ) {
+      return null;
+    }
+    const definition = resolver.resolve(selectedInstance.symbolId)?.definition;
+    const body = definition?.primitives.find(
+      (primitive) => primitive.kind === "polygon",
+    );
+    if (!definition || !body || body.kind !== "polygon") return null;
+    const xs = body.points.map((point) => point.x);
+    const ys = body.points.map((point) => point.y);
+    return {
+      child: selectedHierarchyCell,
+      instance: selectedInstance,
+      body: {
+        left: Math.min(...xs),
+        right: Math.max(...xs),
+        top: Math.min(...ys),
+        bottom: Math.max(...ys),
+      },
+      pins: selectedHierarchyCell.netlist.terminals.flatMap((terminal) => {
+        const pin = definition.pins.find(
+          (candidate) => candidate.name === terminal.name,
+        );
+        return pin ? [{ terminal, pin }] : [];
+      }),
+    };
+  }, [
+    cellSymbolLayoutEnabled,
+    resolver,
+    selectedHierarchyCell,
+    selectedInstance,
+  ]);
   const selectedRoute = selectedRouteId
     ? document.routes.find((route) => route.id === selectedRouteId)
     : undefined;
@@ -1698,7 +1742,6 @@ export function App({
   function setCellSymbolPortLabelPlacement(
     child: SchematicDocument,
     terminalId: string,
-    tangentOffset: number,
     inwardOffset: number,
   ): void {
     try {
@@ -1706,7 +1749,6 @@ export function App({
         commitStructure(
           "move-cell-symbol-pin-label",
           planSetCellTerminalLabelPlacement(project, child.id, terminalId, {
-            tangentOffset,
             inwardOffset,
           }),
         )
@@ -1720,6 +1762,86 @@ export function App({
           : "Could not move Cell symbol pin name",
       );
     }
+  }
+
+  function beginCellSymbolLayoutDrag(
+    event: ReactPointerEvent<SVGCircleElement>,
+    kind: "body" | "pin" | "label",
+    terminalId?: string,
+  ): void {
+    if (!selectedCellSymbolLayout) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setCellSymbolLayoutDrag({
+      kind,
+      pointerId: event.pointerId,
+      ...(terminalId ? { terminalId } : {}),
+    });
+  }
+
+  function completeCellSymbolLayoutDrag(
+    event: ReactPointerEvent<SVGSVGElement>,
+  ): boolean {
+    const drag = cellSymbolLayoutDrag;
+    const layout = selectedCellSymbolLayout;
+    if (!drag || drag.pointerId !== event.pointerId || !layout) return false;
+    const point = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget,
+    );
+    const local = inverseTransformPoint(
+      point,
+      layout.instance.placement!.position,
+      layout.instance.placement!,
+    );
+    setCellSymbolLayoutDrag(null);
+    if (drag.kind === "body") {
+      setCellSymbolBodySize(
+        layout.child,
+        Math.max(10, snapCoordinate(Math.abs(local.x) * 2, 10)),
+        Math.max(10, snapCoordinate(Math.abs(local.y) * 2, 10)),
+      );
+      return true;
+    }
+    if (!drag.terminalId) return true;
+    const selectedPin = layout.pins.find(
+      ({ terminal }) => terminal.id === drag.terminalId,
+    );
+    if (!selectedPin) return true;
+    if (drag.kind === "pin") {
+      const distances = [
+        ["west", Math.abs(local.x - layout.body.left)],
+        ["east", Math.abs(local.x - layout.body.right)],
+        ["north", Math.abs(local.y - layout.body.top)],
+        ["south", Math.abs(local.y - layout.body.bottom)],
+      ] as const;
+      const side = distances.reduce((closest, candidate) =>
+        candidate[1] < closest[1] ? candidate : closest,
+      )[0];
+      const offset = snapCoordinate(
+        side === "west" || side === "east" ? local.y : local.x,
+        10,
+      );
+      setCellSymbolPortPlacement(layout.child, drag.terminalId, side, offset);
+      return true;
+    }
+    const leadAndBaseline = 14;
+    const inward =
+      selectedPin.pin.direction === "west"
+        ? local.x - selectedPin.pin.at.x - leadAndBaseline
+        : selectedPin.pin.direction === "east"
+          ? selectedPin.pin.at.x - local.x - leadAndBaseline
+          : selectedPin.pin.direction === "north"
+            ? local.y - selectedPin.pin.at.y - leadAndBaseline
+            : selectedPin.pin.at.y - local.y - leadAndBaseline;
+    setCellSymbolPortLabelPlacement(
+      layout.child,
+      drag.terminalId,
+      Math.max(0, snapCoordinate(inward, 10)),
+    );
+    return true;
   }
 
   const selectedFormalTerminal = selectedInstance
@@ -5126,6 +5248,14 @@ export function App({
   }
 
   function finishCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
+    if (
+      event.type === "pointercancel" &&
+      cellSymbolLayoutDrag?.pointerId === event.pointerId
+    ) {
+      setCellSymbolLayoutDrag(null);
+      return;
+    }
+    if (completeCellSymbolLayoutDrag(event)) return;
     if (panPreview?.pointerId === event.pointerId) {
       event.currentTarget.releasePointerCapture(event.pointerId);
       setPanPreview(null);
@@ -6724,6 +6854,24 @@ export function App({
                         These definition-level changes apply to every parent
                         instance; connected routes follow the moved pin.
                       </small>
+                      <button
+                        type="button"
+                        className="cell-symbol-layout-toggle"
+                        aria-pressed={cellSymbolLayoutEnabled}
+                        onClick={() =>
+                          setCellSymbolLayoutEnabled((enabled) => !enabled)
+                        }
+                      >
+                        {cellSymbolLayoutEnabled
+                          ? "Done editing canvas layout"
+                          : "Edit symbol layout on canvas"}
+                      </button>
+                      {cellSymbolLayoutEnabled ? (
+                        <small>
+                          Drag the corner to resize, a pin dot to change its
+                          side/offset, or a name dot inward from its pin.
+                        </small>
+                      ) : null}
                       <div className="component-geometry-row">
                         <label>
                           Width
@@ -6779,97 +6927,76 @@ export function App({
                                 placement.terminalId === terminal.id,
                             );
                           return (
-                            <fieldset key={terminal.id}>
-                              <legend>{terminal.name}</legend>
-                              <div className="component-geometry-row">
-                                <label>
-                                  Pin side
-                                  <select
-                                    key={`${selectedHierarchyCell.revision}-${terminal.id}-side`}
-                                    aria-label={`Cell symbol ${terminal.name} pin side`}
-                                    defaultValue={pinPlacement?.side ?? "auto"}
-                                    onChange={(event) =>
-                                      setCellSymbolPortPlacement(
-                                        selectedHierarchyCell,
-                                        terminal.id,
-                                        event.currentTarget.value as
-                                          | "north"
-                                          | "east"
-                                          | "south"
-                                          | "west"
-                                          | "auto",
-                                        pinPlacement?.offset ?? 0,
-                                      )
-                                    }
-                                  >
-                                    <option value="auto">Auto</option>
-                                    <option value="west">Left</option>
-                                    <option value="east">Right</option>
-                                    <option value="north">Top</option>
-                                    <option value="south">Bottom</option>
-                                  </select>
-                                </label>
-                                <label>
-                                  Pin offset
-                                  <input
-                                    key={`${selectedHierarchyCell.revision}-${terminal.id}-offset`}
-                                    aria-label={`Cell symbol ${terminal.name} pin offset`}
-                                    defaultValue={String(
+                            <div
+                              key={terminal.id}
+                              className="cell-symbol-pin-layout-row"
+                            >
+                              <strong>{terminal.name}</strong>
+                              <label>
+                                Pin side
+                                <select
+                                  key={`${selectedHierarchyCell.revision}-${terminal.id}-side`}
+                                  aria-label={`Cell symbol ${terminal.name} pin side`}
+                                  defaultValue={pinPlacement?.side ?? "auto"}
+                                  onChange={(event) =>
+                                    setCellSymbolPortPlacement(
+                                      selectedHierarchyCell,
+                                      terminal.id,
+                                      event.currentTarget.value as
+                                        | "north"
+                                        | "east"
+                                        | "south"
+                                        | "west"
+                                        | "auto",
                                       pinPlacement?.offset ?? 0,
-                                    )}
-                                    inputMode="numeric"
-                                    onBlur={(event) =>
-                                      setCellSymbolPortPlacement(
-                                        selectedHierarchyCell,
-                                        terminal.id,
-                                        pinPlacement?.side ?? "auto",
-                                        Number(event.currentTarget.value),
-                                      )
-                                    }
-                                  />
-                                </label>
-                              </div>
-                              <div className="component-geometry-row">
-                                <label>
-                                  Name along pin
-                                  <input
-                                    key={`${selectedHierarchyCell.revision}-${terminal.id}-label-tangent`}
-                                    aria-label={`Cell symbol ${terminal.name} name along pin`}
-                                    defaultValue={String(
-                                      labelPlacement?.tangentOffset ?? 0,
-                                    )}
-                                    inputMode="numeric"
-                                    onBlur={(event) =>
-                                      setCellSymbolPortLabelPlacement(
-                                        selectedHierarchyCell,
-                                        terminal.id,
-                                        Number(event.currentTarget.value),
-                                        labelPlacement?.inwardOffset ?? 0,
-                                      )
-                                    }
-                                  />
-                                </label>
-                                <label>
-                                  Name inward
-                                  <input
-                                    key={`${selectedHierarchyCell.revision}-${terminal.id}-label-inward`}
-                                    aria-label={`Cell symbol ${terminal.name} name inward`}
-                                    defaultValue={String(
-                                      labelPlacement?.inwardOffset ?? 0,
-                                    )}
-                                    inputMode="numeric"
-                                    onBlur={(event) =>
-                                      setCellSymbolPortLabelPlacement(
-                                        selectedHierarchyCell,
-                                        terminal.id,
-                                        labelPlacement?.tangentOffset ?? 0,
-                                        Number(event.currentTarget.value),
-                                      )
-                                    }
-                                  />
-                                </label>
-                              </div>
-                            </fieldset>
+                                    )
+                                  }
+                                >
+                                  <option value="auto">Auto</option>
+                                  <option value="west">Left</option>
+                                  <option value="east">Right</option>
+                                  <option value="north">Top</option>
+                                  <option value="south">Bottom</option>
+                                </select>
+                              </label>
+                              <label>
+                                Pin offset
+                                <input
+                                  key={`${selectedHierarchyCell.revision}-${terminal.id}-offset`}
+                                  aria-label={`Cell symbol ${terminal.name} pin offset`}
+                                  defaultValue={String(
+                                    pinPlacement?.offset ?? 0,
+                                  )}
+                                  inputMode="numeric"
+                                  onBlur={(event) =>
+                                    setCellSymbolPortPlacement(
+                                      selectedHierarchyCell,
+                                      terminal.id,
+                                      pinPlacement?.side ?? "auto",
+                                      Number(event.currentTarget.value),
+                                    )
+                                  }
+                                />
+                              </label>
+                              <label>
+                                Name inward
+                                <input
+                                  key={`${selectedHierarchyCell.revision}-${terminal.id}-label-inward`}
+                                  aria-label={`Cell symbol ${terminal.name} name inward`}
+                                  defaultValue={String(
+                                    labelPlacement?.inwardOffset ?? 0,
+                                  )}
+                                  inputMode="numeric"
+                                  onBlur={(event) =>
+                                    setCellSymbolPortLabelPlacement(
+                                      selectedHierarchyCell,
+                                      terminal.id,
+                                      Number(event.currentTarget.value),
+                                    )
+                                  }
+                                />
+                              </label>
+                            </div>
                           );
                         },
                       )}
@@ -7819,6 +7946,106 @@ export function App({
               </>
             ) : null}
             <g dangerouslySetInnerHTML={sceneInnerHtml} />
+            {selectedCellSymbolLayout
+              ? (() => {
+                  const placement =
+                    selectedCellSymbolLayout.instance.placement!;
+                  const world = (point: { x: number; y: number }) =>
+                    transformPoint(point, placement.position, placement);
+                  const bodyCorner = world({
+                    x: selectedCellSymbolLayout.body.right,
+                    y: selectedCellSymbolLayout.body.bottom,
+                  });
+                  return (
+                    <g
+                      className="cell-symbol-layout-overlay"
+                      data-testid="cell-symbol-layout-overlay"
+                    >
+                      <circle
+                        data-testid="cell-symbol-body-handle"
+                        className="cell-symbol-layout-handle body"
+                        cx={bodyCorner.x}
+                        cy={bodyCorner.y}
+                        r="5"
+                        onPointerDown={(event) =>
+                          beginCellSymbolLayoutDrag(event, "body")
+                        }
+                      />
+                      {selectedCellSymbolLayout.pins.map(
+                        ({ terminal, pin }) => {
+                          const bodyPoint =
+                            pin.direction === "west"
+                              ? {
+                                  x: selectedCellSymbolLayout.body.left,
+                                  y: pin.at.y,
+                                }
+                              : pin.direction === "east"
+                                ? {
+                                    x: selectedCellSymbolLayout.body.right,
+                                    y: pin.at.y,
+                                  }
+                                : pin.direction === "north"
+                                  ? {
+                                      x: pin.at.x,
+                                      y: selectedCellSymbolLayout.body.top,
+                                    }
+                                  : {
+                                      x: pin.at.x,
+                                      y: selectedCellSymbolLayout.body.bottom,
+                                    };
+                          const normalLabelPoint = pin.presentation.labelOffset
+                            ? {
+                                x: pin.at.x + pin.presentation.labelOffset.x,
+                                y:
+                                  pin.at.y + pin.presentation.labelOffset.y + 4,
+                              }
+                            : pin.direction === "west"
+                              ? { x: pin.at.x + 14, y: pin.at.y + 4 }
+                              : pin.direction === "east"
+                                ? { x: pin.at.x - 14, y: pin.at.y + 4 }
+                                : pin.direction === "north"
+                                  ? { x: pin.at.x, y: pin.at.y + 18 }
+                                  : { x: pin.at.x, y: pin.at.y - 10 };
+                          const pinPoint = world(bodyPoint);
+                          const labelPoint = world(normalLabelPoint);
+                          return (
+                            <g key={terminal.id}>
+                              <circle
+                                data-testid={`cell-symbol-pin-handle-${terminal.id}`}
+                                className="cell-symbol-layout-handle pin"
+                                cx={pinPoint.x}
+                                cy={pinPoint.y}
+                                r="4.5"
+                                onPointerDown={(event) =>
+                                  beginCellSymbolLayoutDrag(
+                                    event,
+                                    "pin",
+                                    terminal.id,
+                                  )
+                                }
+                              />
+                              <circle
+                                data-testid={`cell-symbol-label-handle-${terminal.id}`}
+                                className="cell-symbol-layout-handle label"
+                                cx={labelPoint.x}
+                                cy={labelPoint.y}
+                                r="4"
+                                onPointerDown={(event) =>
+                                  beginCellSymbolLayoutDrag(
+                                    event,
+                                    "label",
+                                    terminal.id,
+                                  )
+                                }
+                              />
+                            </g>
+                          );
+                        },
+                      )}
+                    </g>
+                  );
+                })()
+              : null}
             {highlightedNet ? (
               <g
                 data-testid="net-highlight-overlay"

@@ -44,9 +44,13 @@ RichText renderer. Their contracts must be reused rather than duplicated.
    migrate schema-13 Projects deterministically, and extend validation,
    symbols, rendering, and Agent parity.
 4. Add compact Cell Symbol Layout controls in Properties: body resize, pin
-   side/offset, pin-label tangent/inward offsets, automatic placement, caller
+   side/offset, pin-label inward offsets, automatic placement, caller
    Route follow, and structural undo/redo.
 5. Update hierarchy documentation and focused unit/browser coverage.
+6. Follow-up: correct north/south text-baseline placement; compact each pin's
+   Properties controls to one row; remove the redundant tangential label
+   parameter; and provide an opt-in canvas drag mode whose grips commit the
+   same definition-level planners.
 
 ## Validation
 
@@ -76,7 +80,8 @@ feat(hierarchy): add direct Cell symbol layout
 
 ## Outcome
 
-Completed on `codex/cell-symbol-layout`.
+Initial implementation and layout interaction refinement completed on
+`codex/cell-symbol-layout`.
 
 - Replaced the UI-only formal-Port deletion gate with one shared visual-delete
   proposal and an atomic multi-Port structural planner. Caller-wired Ports are
@@ -88,7 +93,13 @@ Completed on `codex/cell-symbol-layout`.
   `instance-label` RichText path as child Port annotations; empty formal names
   are rejected instead of deleting the annotation.
 - Added compact Properties controls for a selected hierarchy instance: body
-  width/height, pin side/offset, and pin-name tangent/inward offsets.
+  width/height, pin side/offset, and pin-name inward offsets.
+- Corrected the manual pin-label baseline so top/bottom names align with their
+  automatic counterparts, removed the redundant tangential name parameter, and
+  compacted every pin to one Properties row.
+- Added an opt-in canvas layout mode with body, pin, and label grips. The grips
+  use the same definition-level planners and preserve normal canvas selection
+  and wiring while disabled.
 - Updated current fixtures and compatibility/hierarchy documentation.
 
 ## Validation Record
@@ -103,3 +114,5 @@ Completed on `codex/cell-symbol-layout`.
 - `node scripts/editor-production-smoke.mjs --check`
 - `pnpm test:impact -- --base origin/main`
 - `git diff --check`
+- follow-up: `pnpm typecheck`; focused Vitest: 39 passed; hierarchy Playwright:
+  6 passed

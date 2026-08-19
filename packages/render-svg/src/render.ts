@@ -340,7 +340,9 @@ function renderVisiblePinNames(
         : undefined;
       const distance = (pin.presentation.leadLength ?? 0) + 4;
       const x = labelPoint ? labelPoint.x : anchor.x - outward.x * distance;
-      const y = labelPoint ? labelPoint.y : anchor.y - outward.y * distance + 4;
+      const y = labelPoint
+        ? labelPoint.y + 4
+        : anchor.y - outward.y * distance + 4;
       const alignment =
         outward.x < 0 ? "start" : outward.x > 0 ? "end" : "middle";
       const sizeAttribute =

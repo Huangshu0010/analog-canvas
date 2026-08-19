@@ -22,7 +22,7 @@ Instance, Route, and renderer authorities already retained by ADR 0025.
 Advance the Project format to schema 14. A Cell Document may persist optional
 `presentation.cellSymbol` intent containing a minimum body size, unique
 stable-terminal `side`/grid-offset pin placements, and optional stable-terminal
-pin-label tangent/inward offsets. Electrical terminal direction remains
+pin-label inward offsets. Electrical terminal direction remains
 separate from visual side. The child canvas Port marker position does not
 determine the parent-block pin position.
 

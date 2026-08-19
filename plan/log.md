@@ -3307,6 +3307,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   check.
 - Commit status: included in the local `codex/cell-symbol-layout` target commit.
 
+## 2026-08-19 - Cell symbol layout interaction refinement
+
+- Changed areas: pin-label baseline geometry, schema-14 pin-label intent
+  simplification, compact per-pin Properties row, and opt-in canvas body/pin/
+  label grips.
+- Validation: typecheck; focused model/symbol/render/edit-engine Vitest (39);
+  hierarchy Playwright (6); and diff check.
+- Commit status: included in the follow-up local target commit on
+  `codex/cell-symbol-layout`.
+
 ## 2026-08-19 - Properties panel mainline regression
 
 - Changed areas: formal-Cell-Port annotation routing, compact Properties

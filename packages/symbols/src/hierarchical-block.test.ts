@@ -102,7 +102,6 @@ describe("hierarchical block formal terminals", () => {
           pinLabelPlacements: [
             {
               terminalId: "terminal-vout",
-              tangentOffset: 10,
               inwardOffset: 20,
             },
           ],
@@ -127,7 +126,7 @@ describe("hierarchical block formal terminals", () => {
     expect(
       symbol?.pins.find((pin) => pin.name === "OUT")?.presentation,
     ).toMatchObject({
-      labelOffset: { x: -34, y: 10 },
+      labelOffset: { x: -34, y: 0 },
     });
     expect(symbol?.viewBox.width).toBeGreaterThan(100);
     expect(

@@ -31,12 +31,6 @@ export const CellSymbolPinPlacementSchema = z.strictObject({
  */
 export const CellSymbolPinLabelPlacementSchema = z.strictObject({
   terminalId: StableIdSchema,
-  tangentOffset: z
-    .number()
-    .int()
-    .refine(symbolGridMultiple, {
-      message: `Cell symbol label tangent offset must align to the ${CELL_SYMBOL_CONNECTION_GRID}-unit connection grid`,
-    }),
   inwardOffset: z
     .number()
     .int()

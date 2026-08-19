@@ -256,13 +256,11 @@ export function planSetCellTerminalLabelPlacement(
   project: CircuitProject,
   documentId: string,
   terminalId: string,
-  placement: { tangentOffset: number; inwardOffset: number } | null,
+  placement: { inwardOffset: number } | null,
 ): ProjectStructureEdit[] {
   if (
     placement &&
-    (!Number.isInteger(placement.tangentOffset) ||
-      !Number.isInteger(placement.inwardOffset) ||
-      placement.tangentOffset % 10 !== 0 ||
+    (!Number.isInteger(placement.inwardOffset) ||
       placement.inwardOffset < 0 ||
       placement.inwardOffset % 10 !== 0)
   ) {

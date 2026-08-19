@@ -2264,21 +2264,59 @@ body {
   font-size: var(--icm-font-xs);
 }
 
-.cell-symbol-layout-properties fieldset {
+.cell-symbol-layout-toggle {
+  justify-self: start;
+}
+
+.cell-symbol-pin-layout-row {
   display: grid;
+  grid-template-columns: minmax(4rem, 1fr) repeat(3, minmax(0, 1.15fr));
+  align-items: end;
   gap: 0.35rem;
   min-inline-size: 0;
-  margin: 0;
   padding: 0.45rem;
   border: 1px solid var(--icm-border);
   border-radius: var(--icm-radius-sm);
 }
 
-.cell-symbol-layout-properties legend {
-  padding: 0 0.2rem;
-  color: var(--icm-text);
-  font-size: var(--icm-font-xs);
-  font-weight: 650;
+.cell-symbol-pin-layout-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-symbol-pin-layout-row label,
+.cell-symbol-pin-layout-row input,
+.cell-symbol-pin-layout-row select {
+  min-width: 0;
+  width: 100%;
+}
+
+.cell-symbol-layout-overlay {
+  pointer-events: none;
+}
+
+.cell-symbol-layout-handle {
+  pointer-events: all;
+  stroke: var(--icm-surface, #fff);
+  stroke-width: 1.5px;
+  cursor: grab;
+}
+
+.cell-symbol-layout-handle:active {
+  cursor: grabbing;
+}
+
+.cell-symbol-layout-handle.body {
+  fill: var(--icm-accent);
+}
+
+.cell-symbol-layout-handle.pin {
+  fill: var(--icm-warning);
+}
+
+.cell-symbol-layout-handle.label {
+  fill: var(--icm-success);
 }
 
 .property-parameter-name {

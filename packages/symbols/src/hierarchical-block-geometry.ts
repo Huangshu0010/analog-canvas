@@ -22,7 +22,7 @@ interface PinSlot {
 
 function pinLabelOffset(
   side: CellSymbolSide,
-  placement: { tangentOffset: number; inwardOffset: number } | undefined,
+  placement: { inwardOffset: number } | undefined,
 ): { x: number; y: number } | undefined {
   if (!placement) return undefined;
   // The default text baseline is four local units inside the body beyond the
@@ -31,13 +31,13 @@ function pinLabelOffset(
   const inward = PIN_LEAD + 4 + placement.inwardOffset;
   switch (side) {
     case "west":
-      return { x: inward, y: placement.tangentOffset };
+      return { x: inward, y: 0 };
     case "east":
-      return { x: -inward, y: placement.tangentOffset };
+      return { x: -inward, y: 0 };
     case "north":
-      return { x: placement.tangentOffset, y: inward };
+      return { x: 0, y: inward };
     case "south":
-      return { x: placement.tangentOffset, y: -inward };
+      return { x: 0, y: -inward };
   }
 }
 
@@ -170,7 +170,7 @@ function pinForSlot(
   slot: PinSlot,
   width: number,
   height: number,
-  labelPlacement: { tangentOffset: number; inwardOffset: number } | undefined,
+  labelPlacement: { inwardOffset: number } | undefined,
 ): SymbolPin {
   const presentation = {
     visibility: "visible" as const,
