@@ -3462,3 +3462,12 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   passed.
 - Commit status: prepared for commit on
   `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-19 - S0 schema-14 netlist protocol decision
+
+- Changed areas: accepted ADR 0027, ADR/current-document indexes, and the
+  implementation decision record for one schema-14 netlist-authoring contract.
+- Validation: `pnpm docs:check`, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
+- Commit status: committed and pushed with force-with-lease on
+  `codex/phase1-schematic-foundation-plan`.
