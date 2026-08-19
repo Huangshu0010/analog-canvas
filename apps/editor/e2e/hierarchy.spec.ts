@@ -116,10 +116,16 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await expect(portProperties.getByLabel("Port name")).toHaveCount(0);
   await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
   const nameEditor = page.getByRole("textbox", { name: "Canvas text editor" });
-  await nameEditor.fill("IN");
+  await nameEditor.fill("Vout");
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.getByTestId("status")).toContainText(
-    "Renamed formal port to IN",
+    "Renamed formal port to Vout",
+  );
+  await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
+  await page.getByRole("textbox", { name: "Canvas text editor" }).fill("Vout");
+  await page.getByRole("button", { name: "Apply text changes" }).click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Cell Port Vout is already current",
   );
   await page.getByTestId("hit-P1").click();
   const shelf = page.getByTestId("selection-shelf");
@@ -148,7 +154,7 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await canvas.click({ position: { x: 420, y: 180 } });
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("active-instance-count")).toHaveText("1");
-  await expect(canvas.locator('[data-pin-name="IN"]')).toHaveCount(1);
+  await expect(canvas.locator('[data-pin-name="Vout"]')).toHaveCount(1);
 
   await page.getByTestId("hit-X1").click();
   const layoutShelf = page.getByTestId("selection-shelf");
@@ -162,7 +168,7 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await expect(page.getByTestId("status")).toContainText(
     "Resized ReusableStage",
   );
-  await layout.getByLabel("Cell symbol IN pin side").selectOption("north");
+  await layout.getByLabel("Cell symbol Vout pin side").selectOption("north");
   await expect(page.getByTestId("status")).toContainText(
     "Moved Cell symbol pin",
   );

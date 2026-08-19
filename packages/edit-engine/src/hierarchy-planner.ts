@@ -293,7 +293,6 @@ export function planRenameCellTerminal(
       `Cell terminal does not exist: ${childDocumentId}.${terminalId}`,
     );
   }
-  if (terminal.name === newName) return [];
   if (
     child.netlist.terminals.some(
       (candidate) => candidate.id !== terminalId && candidate.name === newName,
@@ -302,30 +301,49 @@ export function planRenameCellTerminal(
     throw new Error(`Cell terminal name already exists: ${newName}`);
   }
 
+  const canonicalAnnotation = semanticTextDocument(newName, "formal-port");
+  const annotationEdits = child.annotations
+    .filter(
+      (annotation) =>
+        annotation.kind === "instance-label" &&
+        annotation.anchor.kind === "object" &&
+        annotation.anchor.objectId === terminal.interfaceInstanceId,
+    )
+    .filter(
+      (annotation) =>
+        JSON.stringify(annotation.content) !==
+        JSON.stringify(canonicalAnnotation),
+    )
+    .map((annotation) => ({
+      kind: "upsert_schematic_annotation" as const,
+      annotation: {
+        ...annotation,
+        content: canonicalAnnotation,
+      },
+    }));
+  const terminalRename = terminal.name !== newName;
+  if (!terminalRename && annotationEdits.length === 0) return [];
+
   const edits: ProjectStructureEdit[] = [
     {
       kind: "transact_document",
       documentId: child.id,
       expectedRevision: child.revision,
       edits: [
-        { kind: "update_cell_terminal", terminalId, name: newName },
-        ...child.annotations
-          .filter(
-            (annotation) =>
-              annotation.kind === "instance-label" &&
-              annotation.anchor.kind === "object" &&
-              annotation.anchor.objectId === terminal.interfaceInstanceId,
-          )
-          .map((annotation) => ({
-            kind: "upsert_schematic_annotation" as const,
-            annotation: {
-              ...annotation,
-              content: semanticTextDocument(newName, "instance-label"),
-            },
-          })),
+        ...(terminalRename
+          ? [
+              {
+                kind: "update_cell_terminal" as const,
+                terminalId,
+                name: newName,
+              },
+            ]
+          : []),
+        ...annotationEdits,
       ],
     },
   ];
+  if (!terminalRename) return edits;
   for (const parent of project.documents) {
     const callerEdits: Extract<
       ProjectStructureEdit,

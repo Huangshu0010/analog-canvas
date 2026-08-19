@@ -2162,7 +2162,16 @@ test("keeps the rich-text editor outside its target and shields canvas input", a
       overlayBox.y >= labelBox.y + labelBox.height,
   ).toBe(true);
 
-  await overlay.click({ position: { x: 4, y: overlayBox.height - 4 } });
+  await page.mouse.move(
+    overlayBox.x + overlayBox.width / 2,
+    overlayBox.y + overlayBox.height - 4,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    overlayBox.x + overlayBox.width / 2 + 16,
+    overlayBox.y + overlayBox.height - 4,
+  );
+  await page.mouse.up();
   await expect(overlay).toBeVisible();
   await expect(page.getByTestId("revision")).toHaveText("1");
   expect(await page.getByTestId("hit-R1").boundingBox()).toEqual(componentBox);

@@ -2057,12 +2057,12 @@ body {
    from formal SVG/export, but uses the same RichText AST as formal rendering. */
 .rich-text-editor-shell {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.15rem;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
   min-width: 0;
-  padding: 0.25rem;
+  padding: 0.2rem;
   overflow: hidden;
   border: 1px solid var(--icm-border-strong);
   border-radius: var(--icm-radius-md);
@@ -2083,9 +2083,9 @@ body {
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  gap: 0.2rem;
-  min-height: 2.2rem;
-  padding: 0.25rem;
+  gap: 0.15rem;
+  min-height: 1.9rem;
+  padding: 0.15rem;
   border: 1px solid var(--icm-border);
   border-radius: var(--icm-radius-md);
   background: var(--icm-surface);
@@ -2093,9 +2093,9 @@ body {
 }
 
 .rich-text-floating-toolbar button {
-  min-width: 1.9rem;
-  min-height: 1.8rem;
-  padding: 0.15rem 0.35rem;
+  min-width: 1.7rem;
+  min-height: 1.55rem;
+  padding: 0.1rem 0.3rem;
   border: 0;
   background: transparent;
   font-size: var(--icm-font-sm);
@@ -2115,8 +2115,8 @@ body {
 .rich-text-editable {
   box-sizing: border-box;
   max-width: 100%;
-  min-height: 1.55rem;
-  padding: 0.18rem 0.35rem;
+  min-height: 1.35rem;
+  padding: 0.1rem 0.25rem;
   border: 1px solid var(--icm-accent);
   border-radius: 0.2rem;
   outline: 0;

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { createEmptyDocument, createEmptyProject } from "@icm/model";
+import {
+  createEmptyDocument,
+  createEmptyProject,
+  flattenRichText,
+} from "@icm/model";
 import { hierarchicalSymbolId } from "@icm/symbols";
 
 import {
@@ -295,6 +299,67 @@ describe("Project structural transaction", () => {
         ],
       },
     });
+  });
+
+  it("normalizes a formatting-only formal Port edit without renaming its terminal", () => {
+    const project = createEmptyProject("project", "Project");
+    const child = createEmptyDocument("document-child", "Child");
+    child.instances.push({
+      id: "port-vout",
+      symbolId: "port",
+      placement: null,
+      properties: {},
+    });
+    child.nets.push({
+      id: "net-vout",
+      scope: "local",
+      terminals: [{ instanceId: "port-vout", pinName: "P" }],
+    });
+    child.netlist!.terminals.push({
+      id: "terminal-vout",
+      name: "Vout",
+      netId: "net-vout",
+      direction: "output",
+      interfaceInstanceId: "port-vout",
+    });
+    child.annotations.push({
+      id: "instance-label-port-vout",
+      kind: "instance-label",
+      content: { runs: [{ kind: "text", value: "Vout" }] },
+      anchor: {
+        kind: "object",
+        objectId: "port-vout",
+        localOffset: { x: 0, y: 0 },
+        fallbackPosition: { x: 0, y: 0 },
+      },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+    project.documents.push(child);
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "normalize-port-label",
+      projectId: project.id,
+      expectedStructureRevision: 0,
+      actor: { kind: "human", id: "human-local" },
+      edits: planRenameCellTerminal(project, child.id, "terminal-vout", "Vout"),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      applied: true,
+      project: {
+        documents: [{}, { netlist: { terminals: [{ name: "Vout" }] } }],
+      },
+    });
+    if (!result.ok) throw new Error("Expected formatting-only Port update");
+    expect(
+      flattenRichText(result.project.documents[1]!.annotations[0]!.content),
+    ).toBe("Vout");
+    expect(
+      JSON.stringify(result.project.documents[1]!.annotations[0]!.content),
+    ).toContain('"subscript"');
   });
 
   it("removes an unused formal port and reconciles caller source order", () => {

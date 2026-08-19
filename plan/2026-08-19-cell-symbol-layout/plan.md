@@ -55,6 +55,9 @@ RichText renderer. Their contracts must be reused rather than duplicated.
 8. Follow-up: move automatic north/south hierarchy pin-name baselines inward
    from the Cell body edge without adding a manual label-placement parameter or
    changing ordinary symbol labels.
+9. Follow-up: keep the canvas RichText editor above canvas hit processing and
+   reduce its frame height; distinguish a formal Port's display-only RichText
+   normalization from a real electrical terminal rename.
 
 ## Validation
 
@@ -103,6 +106,11 @@ Initial implementation and layout interaction refinement completed on
   selection and wiring remain unchanged when the mode is disabled.
 - Moved automatic north/south hierarchy pin-name baselines 10 units inward
   from the Cell body border; ordinary symbol labels remain unchanged.
+- Made formal Port formatting-only edits normalize and persist the shared
+  Razavi display name without issuing an empty structural transaction; `Vout`
+  now derives `V` plus subscript `out` in both the Cell and its parent symbol.
+- Let the canvas RichText editor bypass canvas hit ranking while active and
+  reduced its frame and controls to a tighter single-line editing surface.
 - Updated current fixtures and compatibility/hierarchy documentation.
 
 ## Validation Record
@@ -124,4 +132,8 @@ Initial implementation and layout interaction refinement completed on
 - Follow-up commit: `refine(hierarchy): prioritize Cell pin editing`.
 - Final follow-up: `pnpm typecheck`; render/symbol Vitest: 10 passed;
   hierarchy Playwright: 6 passed; `pnpm build`;
+  `pnpm test:impact -- --base origin/main`; and `git diff --check`.
+- Final interaction follow-up: `pnpm typecheck`; focused model/edit-engine/
+  render/editor Vitest: 23 passed; direct hierarchy and editor-shield
+  Playwright: 2 passed; hierarchy Playwright: 6 passed; `pnpm build`;
   `pnpm test:impact -- --base origin/main`; and `git diff --check`.

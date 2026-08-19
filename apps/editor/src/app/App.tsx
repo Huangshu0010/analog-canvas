@@ -929,9 +929,19 @@ export function App({
       );
       if (!terminal) return false;
       try {
+        const edits = planRenameCellTerminal(
+          project,
+          document.id,
+          terminal.id,
+          name,
+        );
+        if (edits.length === 0) {
+          setStatus(`Cell Port ${name} is already current`);
+          return true;
+        }
         const committed = commitStructure(
           "rename-cell-port-from-annotation",
-          planRenameCellTerminal(project, document.id, terminal.id, name),
+          edits,
         );
         if (committed) setStatus(`Renamed formal port to ${name}`);
         return committed;
@@ -7688,6 +7698,12 @@ export function App({
             }}
             onPointerDownCapture={(event) => {
               const target = event.target as Element;
+              if (target.closest('[data-testid="canvas-text-editor"]')) {
+                // The SVG capture layer otherwise re-ranks the canvas below
+                // this HTML editor through elementsFromPoint() before the
+                // editor's own bubbling handlers can stop the event.
+                return;
+              }
               if (
                 cellSymbolLayoutEnabled &&
                 target.closest('[data-testid="cell-symbol-layout-overlay"]')

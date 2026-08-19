@@ -3336,6 +3336,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   workspace build; test-impact; and diff check.
 - Commit status: committed with `refine(hierarchy): clear vertical pin names`.
 
+## 2026-08-19 - Formal Port formatting and RichText editor shielding
+
+- Changed areas: formal Port display-name derivation and formatting-only
+  transaction planning, hierarchy pin rendering, canvas RichText hit handling,
+  compact editor frame styling, and focused browser coverage.
+- Validation: typecheck; focused model/edit-engine/render/editor Vitest (23);
+  direct hierarchy/editor-shield Playwright (2); hierarchy Playwright (6);
+  workspace build; test-impact; and diff check.
+- Commit status: committed with `refine(hierarchy): shield RichText editing`.
+
 ## 2026-08-19 - Properties panel mainline regression
 
 - Changed areas: formal-Cell-Port annotation routing, compact Properties

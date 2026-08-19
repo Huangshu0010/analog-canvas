@@ -349,7 +349,7 @@ function renderVisiblePinNames(
           ? ' style="font-size:8px"'
           : schematicTextSizeAttribute("pin-name", profile);
       const content = definition.hierarchicalBlock
-        ? semanticTextDocument(pin.name, "instance-label")
+        ? semanticTextDocument(pin.name, "formal-port")
         : { runs: [{ kind: "text" as const, value: pin.name }] };
       return `<text data-pin-name="${escapeXml(pin.name)}" x="${x}" y="${y}" text-anchor="${alignment}"${sizeAttribute}>${renderRichTextDocument(content, profile)}</text>`;
     })
