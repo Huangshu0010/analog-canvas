@@ -24,6 +24,28 @@ export const CellSymbolPinPlacementSchema = z.strictObject({
     }),
 });
 
+/**
+ * Definition-level label position, measured from a pin's normal in-body
+ * label location. `inwardOffset` is always toward the block body; keeping it
+ * non-negative means a moved label cannot obscure the external wire target.
+ */
+export const CellSymbolPinLabelPlacementSchema = z.strictObject({
+  terminalId: StableIdSchema,
+  tangentOffset: z
+    .number()
+    .int()
+    .refine(symbolGridMultiple, {
+      message: `Cell symbol label tangent offset must align to the ${CELL_SYMBOL_CONNECTION_GRID}-unit connection grid`,
+    }),
+  inwardOffset: z
+    .number()
+    .int()
+    .nonnegative()
+    .refine(symbolGridMultiple, {
+      message: `Cell symbol label inward offset must align to the ${CELL_SYMBOL_CONNECTION_GRID}-unit connection grid`,
+    }),
+});
+
 export const CellSymbolBodySizeSchema = z.strictObject({
   width: z
     .number()
@@ -48,6 +70,10 @@ export const CellSymbolBodySizeSchema = z.strictObject({
 export const CellSymbolPresentationSchema = z.strictObject({
   minimumBodySize: CellSymbolBodySizeSchema.optional(),
   pinPlacements: z.array(CellSymbolPinPlacementSchema).max(256).optional(),
+  pinLabelPlacements: z
+    .array(CellSymbolPinLabelPlacementSchema)
+    .max(256)
+    .optional(),
 });
 
 export const PresentationIntentSchema = z.strictObject({
@@ -95,6 +121,9 @@ export const LayoutConstraintSchema = z.strictObject({
 export type CellSymbolSide = z.infer<typeof CellSymbolSideSchema>;
 export type CellSymbolPinPlacement = z.infer<
   typeof CellSymbolPinPlacementSchema
+>;
+export type CellSymbolPinLabelPlacement = z.infer<
+  typeof CellSymbolPinLabelPlacementSchema
 >;
 export type CellSymbolPresentation = z.infer<
   typeof CellSymbolPresentationSchema

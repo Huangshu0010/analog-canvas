@@ -392,6 +392,18 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
 
   const deleteTextEditing = (): void => {
     if (!textEditing) return;
+    const editedAnnotation =
+      textEditing.owner === "annotation"
+        ? options.document.annotations.find(
+            (annotation) => annotation.id === textEditing.id,
+          )
+        : undefined;
+    if (editedAnnotation && options.isCellPortAnnotation?.(editedAnnotation)) {
+      options.setStatus(
+        "Cell Port name cannot be empty or deleted independently",
+      );
+      return;
+    }
     if (options.transact([textDeletionEdit(textEditing)]).ok) {
       options.clearSelectionKinds(["annotation", "drafting"]);
       setTextEditing(null);
@@ -403,6 +415,15 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     if (!textEditing) return;
     const proposal = proposeTextEditingCommit(options.document, textEditing);
     if (proposal.kind === "blocked") return;
+    if (proposal.kind === "delete" && textEditing.owner === "annotation") {
+      const annotation = options.document.annotations.find(
+        (candidate) => candidate.id === textEditing.id,
+      );
+      if (annotation && options.isCellPortAnnotation?.(annotation)) {
+        options.setStatus("Cell Port name cannot be empty");
+        return;
+      }
+    }
     if (proposal.kind === "unchanged") {
       setTextEditing(null);
       return;

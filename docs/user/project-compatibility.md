@@ -1,14 +1,15 @@
 # Project File Compatibility
 
-The released Project schema version is `13`. It retains schematic-only
+The released Project schema version is `14`. It retains schematic-only
 hierarchy integrity, a Project structural revision, and stable formal Cell
 ports bound to ordinary Port Instances, and adds optional definition-level Cell
-symbol presentation intent. A canonical v13 file can be opened, saved,
+symbol presentation intent. A canonical v14 file can be opened, saved,
 reopened, and saved again without byte drift.
-Schema v12 is accepted through one direct upgrade to v13. It does not remain a
-v12 Project in the editor: absent Cell symbol presentation selects deterministic
-automatic geometry, and the next save writes v13. The original file is never
-overwritten silently. Schema v11 and older, and versions newer than v13, are
+Schema v13 is accepted through one direct upgrade to v14. It does not remain a
+v13 Project in the editor: absent Cell symbol presentation and pin-label
+placement select deterministic
+automatic geometry, and the next save writes v14. The original file is never
+overwritten silently. Schema v12 and older, and versions newer than v14, are
 rejected; there is no accumulating migration registry.
 
 The canonical-current corpus at
@@ -21,7 +22,7 @@ Retired fields such as first-class
 
 An incompatible Project is rejected before it can replace the current browser
 Project. Conversion, when needed, is an explicit external operation that must
-produce and validate a complete v13 candidate before a human chooses to load it.
+produce and validate a complete v14 candidate before a human chooses to load it.
 
 The editor never silently merges duplicate canonical Ground (`0`) or VDD Nets.
 Duplicate folded Net names are invalid and remain diagnostics until the author

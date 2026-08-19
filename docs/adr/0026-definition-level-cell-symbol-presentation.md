@@ -19,16 +19,17 @@ Instance, Route, and renderer authorities already retained by ADR 0025.
 
 ## Decision
 
-Advance the Project format to schema 13. A Cell Document may persist optional
-`presentation.cellSymbol` intent containing a minimum body size and unique
-stable-terminal `side`/grid-offset placements. Electrical terminal direction
-remains separate from visual side. The child canvas Port marker position does
-not determine the parent-block pin position.
+Advance the Project format to schema 14. A Cell Document may persist optional
+`presentation.cellSymbol` intent containing a minimum body size, unique
+stable-terminal `side`/grid-offset pin placements, and optional stable-terminal
+pin-label tangent/inward offsets. Electrical terminal direction remains
+separate from visual side. The child canvas Port marker position does not
+determine the parent-block pin position.
 
-All readers return the sole schema-13 in-memory Project shape.
+All readers return the sole schema-14 in-memory Project shape.
 
 `@icm/symbols` deterministically derives the rectangular block, pin anchors,
-and leads from formal terminals and this intent. Unspecified inputs default
+leads, and label positions from formal terminals and this intent. Unspecified inputs default
 west, outputs east, and passive/inout terminals balance across those sides;
 north/south positions are explicit. Generated primitives and parent-local pin
 coordinates are never persisted. No name-based supply inference or implicit
@@ -77,9 +78,9 @@ no logical Net membership.
 ## Compatibility and migration
 
 The rolling compatibility reader replaces the schema-11-to-12 adapter with a
-direct schema-12-to-13 adapter. The adapter only advances `schemaVersion`; an
+direct schema-13-to-14 adapter. The adapter only advances `schemaVersion`; an
 absent optional `cellSymbol` selects automatic geometry. Schema 11 becomes
-unsupported. Canonical fixtures and saved output are schema 13.
+unsupported. Canonical fixtures and saved output are schema 14.
 
 This ADR supersedes ADR 0025 only where it names schema 12 as current or its
 schema-11-to-12 migration as the active compatibility adapter. ADR 0025's
@@ -89,7 +90,7 @@ Document/Instance/ordinary-Port hierarchy model remains accepted.
 
 - strict intent, unknown-terminal, duplicate-terminal, and duplicate-slot
   schema tests;
-- direct v12-to-v13 parse/save/reopen tests;
+- direct v13-to-v14 parse/save/reopen tests;
 - deterministic geometry tests for direction, explicit placement, long names,
   and grid alignment;
 - Project transaction and Agent parity tests, including caller Route follow.

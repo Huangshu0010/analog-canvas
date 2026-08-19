@@ -149,6 +149,28 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("active-instance-count")).toHaveText("1");
   await expect(canvas.locator('[data-pin-name="IN"]')).toHaveCount(1);
+
+  await page.getByTestId("hit-X1").click();
+  const layoutShelf = page.getByTestId("selection-shelf");
+  if ((await layoutShelf.getAttribute("aria-expanded")) === "false") {
+    await layoutShelf.click();
+  }
+  const layout = page.getByLabel("Cell symbol layout");
+  await expect(layout).toBeVisible();
+  await layout.getByLabel("Cell symbol width").fill("120");
+  await layout.getByLabel("Cell symbol width").press("Tab");
+  await expect(page.getByTestId("status")).toContainText(
+    "Resized ReusableStage",
+  );
+  await layout.getByLabel("Cell symbol IN pin side").selectOption("north");
+  await expect(page.getByTestId("status")).toContainText(
+    "Moved Cell symbol pin",
+  );
+  await layout.getByLabel("Cell symbol IN name along pin").fill("10");
+  await layout.getByLabel("Cell symbol IN name along pin").press("Tab");
+  await expect(page.getByTestId("status")).toContainText(
+    "Moved Cell symbol pin name",
+  );
 });
 
 test("deletes a wired child Cell Port through the ordinary instance path", async ({

@@ -264,6 +264,7 @@
 - Changed areas: files, directories, or subsystems changed.
 - Validation: commands or review performed.
 - Commit status: committed, ready to commit, not committed, or blocked.
+
 ```
 
 Keep reusable lessons in `docs/experience/`, not in this log.
@@ -3294,6 +3295,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   files / 889 tests, workspace build and production smoke).
 - Commit status: committed on `codex/properties-panel-simplify` as `30eab90`.
 
+## 2026-08-19 - Cell symbol layout and hierarchy deletion
+
+- Changed areas: formal-Port mixed-selection deletion, schema-14 Cell symbol
+  pin-label presentation, parent pin RichText rendering, selected hierarchy
+  instance Properties controls, fixtures, documentation, and focused browser
+  coverage.
+- Validation: typecheck; focused model/protocol/edit-engine/symbol/render
+  tests (40); hierarchy Playwright (6); hierarchy/project-file Playwright (14);
+  workspace build; static checks; production smoke; test-impact; and diff
+  check.
+- Commit status: included in the local `codex/cell-symbol-layout` target commit.
+
 ## 2026-08-19 - Properties panel mainline regression
 
 - Changed areas: formal-Cell-Port annotation routing, compact Properties
@@ -3305,3 +3318,4 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   at its configured 15-minute timeout while running the unchanged full gate.
   The target remains active while a 25-minute timeout-budget correction reruns
   the same gate.
+```

@@ -18,7 +18,7 @@ describe("current rendering contract", () => {
     const child = createEmptyDocument("child", "GainStage");
     child.netlist!.terminals.push({
       id: "terminal-v-in",
-      name: "V_in",
+      name: "VGS1",
       netId: "net-in",
       direction: "input",
       interfaceInstanceId: "P1",
@@ -35,7 +35,7 @@ describe("current rendering contract", () => {
       netlist: {
         reference: "X1",
         parameters: {},
-        terminals: [{ sourcePosition: 0, pinName: "V_in" }],
+        terminals: [{ sourcePosition: 0, pinName: "VGS1" }],
         binding: {
           kind: "subcircuit",
           childDocumentId: child.id,
@@ -52,7 +52,7 @@ describe("current rendering contract", () => {
       createProjectSymbolResolver(project, builtInSymbols),
     );
 
-    expect(svg).toContain('data-pin-name="V_in"');
+    expect(svg).toContain('data-pin-name="VGS1"');
     expect(svg).toContain("font-style:italic;font-weight:700");
     expect(svg).toContain('data-text-run="subscript"');
     expect(svg).toContain("font-style:normal;font-weight:700");

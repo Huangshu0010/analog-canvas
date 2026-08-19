@@ -55,9 +55,17 @@ Rectangles remain drafting geometry. Selecting an unlocked rectangle and using
 creates a child Cell, and places an ordinary hierarchical Instance. Saved
 hierarchy never depends on rectangle drawing data.
 
-Hierarchy presentation is saved as definition-level size and pin-placement
-intent in Project schema 13. Older schema-12 projects open with deterministic
-automatic pin layout; schema-11 files are outside the supported rolling
-compatibility window. The block uses a closed polygon body and the shared
-Razavi rich-text renderer for pin and Cell names; it is compatible with that
-visual grammar rather than a pixel-for-pixel textbook symbol asset.
+Select a Cell Instance in a parent and open **Properties** to adjust that
+Cell's shared symbol layout: body width/height, each pin side/offset, and each
+pin name's in-body tangent/inward offset. The name offset travels with the pin
+through rotation and mirroring; it never takes over the external wiring anchor.
+Use **Auto** to return a pin to direction-aware placement. These are definition
+operations, not top-level drawing tools.
+
+Hierarchy presentation is saved as definition-level size, pin-placement, and
+pin-label-placement intent in Project schema 14. Older schema-13 projects open
+with deterministic automatic pin and label layout; schema-12 files are outside
+the supported rolling compatibility window. The block uses a closed polygon
+body and the shared Razavi rich-text renderer for pin and Cell names; it is
+compatible with that visual grammar rather than a pixel-for-pixel textbook
+symbol asset.

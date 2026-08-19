@@ -70,11 +70,11 @@ describe("Project persistence", () => {
     }
   });
 
-  it("directly upgrades schema 12 and reports its source version", () => {
+  it("directly upgrades schema 13 and reports its source version", () => {
     const project = createEmptyProject("project-test", "Test Project");
     const source = {
       ...JSON.parse(serializeProject(project)),
-      schemaVersion: 12,
+      schemaVersion: 13,
     };
     source.documents[0].annotations.push({
       id: "plain-v12-value",
@@ -88,22 +88,22 @@ describe("Project persistence", () => {
     const parsed = parseProjectWithMetadata(JSON.stringify(source));
 
     expect(parsed).toMatchObject({
-      sourceSchemaVersion: 12,
+      sourceSchemaVersion: 13,
       migrated: true,
-      project: { schemaVersion: 13, structureRevision: 0 },
+      project: { schemaVersion: 14, structureRevision: 0 },
     });
     expect({
       ...parsed.project,
-      schemaVersion: 12,
+      schemaVersion: 13,
     }).toEqual(source);
   });
 
-  it("lets an upgraded schema-12 Project author and persist schema-13 content", () => {
+  it("lets an upgraded schema-13 Project author and persist schema-14 content", () => {
     const source = {
       ...JSON.parse(
         serializeProject(createEmptyProject("project-test", "Test Project")),
       ),
-      schemaVersion: 12,
+      schemaVersion: 13,
     };
     const project = parseProject(JSON.stringify(source));
     project.documents[0]!.annotations.push({
@@ -125,7 +125,7 @@ describe("Project persistence", () => {
     });
 
     const reopened = parseProject(serializeProject(project));
-    expect(reopened.schemaVersion).toBe(13);
+    expect(reopened.schemaVersion).toBe(14);
     expect(
       reopened.documents[0]!.annotations[0]?.content.runs[0],
     ).toMatchObject({
@@ -139,17 +139,17 @@ describe("Project persistence", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/must be 12 or 13/);
+    ).toThrow(/must be 13 or 14/);
     expect(() =>
-      parseProject(JSON.stringify({ ...project, schemaVersion: 11 })),
-    ).toThrow(/must be 12 or 13/);
+      parseProject(JSON.stringify({ ...project, schemaVersion: 12 })),
+    ).toThrow(/must be 13 or 14/);
   });
 
-  it("preserves schema-12 formal terminal identity without adding visual intent", () => {
+  it("preserves schema-13 formal terminal identity without adding label intent", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-port", "Port migration")),
     );
-    source.schemaVersion = 12;
+    source.schemaVersion = 13;
     source.documents[0].nets.push({
       id: "net-input",
       name: "VIN",
@@ -182,7 +182,7 @@ describe("Project persistence", () => {
     );
 
     expect(migrated).toMatchObject({
-      sourceSchemaVersion: 12,
+      sourceSchemaVersion: 13,
       migrated: true,
     });
     expect(terminal).toMatchObject({

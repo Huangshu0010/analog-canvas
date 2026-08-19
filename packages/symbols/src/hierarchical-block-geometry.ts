@@ -20,6 +20,27 @@ interface PinSlot {
   readonly offset: number;
 }
 
+function pinLabelOffset(
+  side: CellSymbolSide,
+  placement: { tangentOffset: number; inwardOffset: number } | undefined,
+): { x: number; y: number } | undefined {
+  if (!placement) return undefined;
+  // The default text baseline is four local units inside the body beyond the
+  // ten-unit pin lead. The persisted displacement is therefore independent of
+  // the body size and follows a pin when it moves.
+  const inward = PIN_LEAD + 4 + placement.inwardOffset;
+  switch (side) {
+    case "west":
+      return { x: inward, y: placement.tangentOffset };
+    case "east":
+      return { x: -inward, y: placement.tangentOffset };
+    case "north":
+      return { x: placement.tangentOffset, y: inward };
+    case "south":
+      return { x: placement.tangentOffset, y: -inward };
+  }
+}
+
 function roundUp(value: number, multiple = 20): number {
   return Math.ceil(value / multiple) * multiple;
 }
@@ -145,11 +166,19 @@ function bodySize(
   return { width: roundUp(width), height: roundUp(height) };
 }
 
-function pinForSlot(slot: PinSlot, width: number, height: number): SymbolPin {
+function pinForSlot(
+  slot: PinSlot,
+  width: number,
+  height: number,
+  labelPlacement: { tangentOffset: number; inwardOffset: number } | undefined,
+): SymbolPin {
   const presentation = {
     visibility: "visible" as const,
     leadLength: PIN_LEAD,
     showName: true,
+    ...(labelPlacement
+      ? { labelOffset: pinLabelOffset(slot.side, labelPlacement) }
+      : {}),
   };
   switch (slot.side) {
     case "west":
@@ -207,7 +236,15 @@ export function createHierarchicalBlockGeometry(
 ): SymbolDefinition {
   const slots = resolvePinSlots(terminals, presentation);
   const { width, height } = bodySize(slots, presentation?.minimumBodySize);
-  const pins = slots.map((slot) => pinForSlot(slot, width, height));
+  const labelPlacements = new Map(
+    (presentation?.pinLabelPlacements ?? []).map((placement) => [
+      placement.terminalId,
+      placement,
+    ]),
+  );
+  const pins = slots.map((slot) =>
+    pinForSlot(slot, width, height, labelPlacements.get(slot.terminal.id)),
+  );
   const left = -width / 2;
   const top = -height / 2;
   return {

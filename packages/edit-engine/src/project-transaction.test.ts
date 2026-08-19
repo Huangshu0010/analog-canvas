@@ -6,6 +6,7 @@ import { hierarchicalSymbolId } from "@icm/symbols";
 import {
   planRenameCell,
   planRemoveCellTerminal,
+  planRemoveCellTerminals,
   planRenameCellTerminal,
   planSetCellSymbolPresentation,
 } from "./hierarchy-planner.js";
@@ -337,6 +338,85 @@ describe("Project structural transaction", () => {
     expect(result).toMatchObject({
       ok: true,
       applied: true,
+      project: {
+        documents: [
+          { instances: [{ netlist: { terminals: [] } }] },
+          { instances: [], netlist: { terminals: [] } },
+        ],
+      },
+    });
+  });
+
+  it("removes multiple unreferenced formal ports in one atomic transaction", () => {
+    const project = createEmptyProject("project", "Project");
+    const child = createEmptyDocument("document-child", "Child");
+    child.instances.push(
+      {
+        id: "port-a",
+        symbolId: "port",
+        placement: null,
+        properties: {},
+      },
+      {
+        id: "port-b",
+        symbolId: "port",
+        placement: null,
+        properties: {},
+      },
+    );
+    child.nets.push(
+      {
+        id: "net-a",
+        scope: "local",
+        terminals: [{ instanceId: "port-a", pinName: "P" }],
+      },
+      {
+        id: "net-b",
+        scope: "local",
+        terminals: [{ instanceId: "port-b", pinName: "P" }],
+      },
+    );
+    child.netlist!.terminals.push(
+      {
+        id: "terminal-a",
+        name: "A",
+        netId: "net-a",
+        direction: "input",
+        interfaceInstanceId: "port-a",
+      },
+      {
+        id: "terminal-b",
+        name: "B",
+        netId: "net-b",
+        direction: "output",
+        interfaceInstanceId: "port-b",
+      },
+    );
+    project.documents.push(child);
+    project.documents[0]!.instances.push({
+      ...hierarchyInstance("X1", "Child", child.id),
+      netlist: {
+        ...hierarchyInstance("X1", "Child", child.id).netlist,
+        terminals: [
+          { sourcePosition: 0, pinName: "A" },
+          { sourcePosition: 1, pinName: "B" },
+        ],
+      },
+    });
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "remove-unused-ports",
+      projectId: project.id,
+      expectedStructureRevision: 0,
+      actor: { kind: "human", id: "human-local" },
+      edits: planRemoveCellTerminals(project, child.id, [
+        "terminal-a",
+        "terminal-b",
+      ]),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
       project: {
         documents: [
           { instances: [{ netlist: { terminals: [] } }] },

@@ -17,6 +17,8 @@ export const SymbolPinSchema = z.strictObject({
     visibility: z.enum(["visible", "implicit", "conditional"]),
     leadLength: z.number().int().nonnegative().optional(),
     showName: z.boolean().optional(),
+    /** Derived definition-local offset from the electrical pin anchor. */
+    labelOffset: SymbolLocalPointSchema.optional(),
   }),
 });
 export const SymbolStrokeRoleSchema = z.enum([

@@ -875,6 +875,24 @@ export function executeTransaction(
             }
           }
         }
+        if (draft.presentation.cellSymbol?.pinLabelPlacements) {
+          const retained =
+            draft.presentation.cellSymbol.pinLabelPlacements.filter(
+              (placement) => placement.terminalId !== edit.terminalId,
+            );
+          if (
+            retained.length !==
+            draft.presentation.cellSymbol.pinLabelPlacements.length
+          ) {
+            draft.presentation.cellSymbol = {
+              ...draft.presentation.cellSymbol,
+              ...(retained.length > 0 ? { pinLabelPlacements: retained } : {}),
+            };
+            if (retained.length === 0) {
+              delete draft.presentation.cellSymbol.pinLabelPlacements;
+            }
+          }
+        }
         changedObjectIds.add(edit.terminalId);
         connectivityChanged = true;
         break;

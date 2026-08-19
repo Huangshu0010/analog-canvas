@@ -2249,6 +2249,38 @@ body {
   font-size: var(--icm-font-xs);
 }
 
+.cell-symbol-layout-properties {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.7rem;
+  padding: 0.65rem;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-md);
+  background: var(--icm-surface-muted);
+}
+
+.cell-symbol-layout-properties > small {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+}
+
+.cell-symbol-layout-properties fieldset {
+  display: grid;
+  gap: 0.35rem;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0.45rem;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+}
+
+.cell-symbol-layout-properties legend {
+  padding: 0 0.2rem;
+  color: var(--icm-text);
+  font-size: var(--icm-font-xs);
+  font-weight: 650;
+}
+
 .property-parameter-name {
   color: var(--icm-text);
   font-weight: 650;
