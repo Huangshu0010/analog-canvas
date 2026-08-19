@@ -3401,5 +3401,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   index, and target records.
 - Validation: documentation links, test-impact against `main`, diff check,
   and final branch-status review passed.
+- Commit status: committed and pushed on
+  `codex/phase1-schematic-foundation-plan` as `04b0d80`.
+
+## 2026-08-19 - Stage 1 S1/S2 roadmap refinement
+
+- Changed areas: refined the Stage 1 authority/property protocol, removal path
+  for the electrical `Instance.properties` branch, Descriptor parameter
+  definitions, user-visible References, strict display projections, typed
+  field edits, and the descriptor-driven Component Properties work package.
+- Validation: documentation links, test-impact against `main`, diff check,
+  and final branch-status review passed.
 - Commit status: prepared for commit on
   `codex/phase1-schematic-foundation-plan`.

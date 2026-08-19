@@ -26,7 +26,8 @@ source preservation 和文本 round-trip 属于阶段二；阶段一只对其交
 以下能力已经存在，后续实施必须复用而不是平行重建：
 
 - schema-13 Project、rolling previous-version migration 和 canonical save；
-- `Instance.netlist` 中的 reference、binding、parameters 和可选 terminal order；
+- `Instance.netlist` 中的 reference、binding、parameters 和可选 imported
+  source-position mapping；
 - `Document.netlist` 中的 Cell name 与 ordered formal terminals；
 - 内置 Device Descriptor registry 与 SPICE/Spectre `DesignNetlistIR` extraction；
 - typed Edit Engine、revision、atomic transaction、undo/redo 和 history；
@@ -45,7 +46,7 @@ source preservation 和文本 round-trip 属于阶段二；阶段一只对其交
 | Instance 网表身份 | `Instance.netlist.reference` | 可见 Reference annotation |
 | 器件/模型/子电路目标 | `Instance.netlist.binding` | Properties 文本、导入 provenance |
 | Instance 参数 | `Instance.netlist.parameters` | 可见 Value annotation、表格单元格 |
-| Device pin order | Device Descriptor；需要时由 `netlist.terminals` 显式覆盖 | Symbol 绘制顺序 |
+| Device/interface pin order | built-in Device Descriptor、internal child formal interface，或 S6 external black-box interface | Symbol 绘制顺序、import source-position mapping |
 | Cell interface | `Document.netlist.terminals` | child Port marker 与 parent Cell Symbol |
 | Net identity 与 membership | `Net.id` 及 terminal/port membership | Net label、Wire、Flightline |
 | 可见 Wire | persisted Route + canonical resolved geometry | hit target、selection overlay、highlight |
@@ -83,54 +84,138 @@ Wire planner 和 Preflight 不得直接修改 Project JSON，也不得从 SVG、
 
 ## 5. 工作包
 
-### S1. 冻结网表事实与展示投影
+### S1. 权威数据模型与统一 Properties 协议
 
-目标：消除 Reference、Value、Properties、Device Descriptor 与 netlist extraction
-之间潜在的多重权威。
+目标：在扩展 Properties UI 前消除旧 `Instance.properties`、typed netlist facts、编辑器
+硬编码参数和 Device Descriptor 之间的并行协议。阶段完成后，每项 Instance 工程事实
+只有一个持久化权威，所有编辑入口通过一个 Property Sheet 协议生成 typed edits；统一
+协议不等于把异构事实重新压平为自由字符串 property bag。
 
-工作：
+#### S1.1 权威规则
 
-1. 接受 Instance Reference、binding、parameters、terminal order 和 Cell interface 的
-   单一权威关系。
-2. 定义 Reference annotation 为 `netlist.reference` 的展示投影；值始终跟随权威，
-   用户拖动只改变展示位置。
-3. 定义 Value annotation 的 descriptor-owned projection；用户未手动编辑位置时，参数
-   变化允许刷新文本但不得重置位置。
-4. 冻结 known parameters 与 arbitrary parameters 的共存规则：descriptor 提供顺序、
-   标签、帮助、required 和默认展示，Project 仍保存全部显式 name/value。
-5. 冻结 binding kind、pin-order override 和 import provenance 的编辑/只读边界。
+1. `Instance.id` 是内部稳定对象 ID；连接、locator 和 history 继续引用它。它不参与网表
+   编号，不随重编号变化，也不作为普通工程属性暴露给用户。
+2. `Instance.netlist.reference` 是用户可见、可编辑、最终进入网表的 Instance name /
+   Reference。系统在插入时自动分配；唯一性范围是每个 Cell，而不是整个 Project。
+3. `Instance.netlist.binding` 唯一拥有 primitive、model、internal Cell 或 external
+   subcircuit target。Device class 来自 reviewed Device Descriptor；binding 中的 class
+   是需要验证的 target assertion，不是第二个器件类型权威。
+4. `Instance.netlist.parameters` 唯一保存全部显式电气参数，value 均为未求值 raw string。
+5. Device Descriptor 唯一拥有 built-in device class、Reference prefix、canonical pin
+   order、target policy、已知参数定义、dialect capability 与 Value display policy。
+6. built-in primitive/model 器件的 pin order 只读并来自 Descriptor；internal Cell order
+   只读并来自 child formal interface。external-subcircuit interface authoring 由 S6
+   明确定义，不把普通 Instance 的 source terminal mapping 当作任意 pin-order override。
+7. `Instance.importProvenance` 只解释导入来源，永远只读，也不参与 target、parameters、
+   connectivity 或 hierarchy resolution。
 
-初始编号系统不新增持久化 Reference lock。每次 planner preview 明确列出 preserved
-与 reassigned 对象；只有实际工作流证明长期 lock 必不可少时，才通过独立 schema/ADR
-目标引入。
+#### S1.2 终止双重参数协议
 
-验收：同一 Instance 经 Properties、annotation、copy/paste、save/reopen 和 IR extraction
-观察到同一个 reference、target 与参数集合。
+Stage 1 从当前 Project 模型移除通用 `Instance.properties` 电气分支；不保留双写、fallback
+读取或长期 compatibility alias。若删除该持久化字段需要 Project schema 前进，S1 负责
+一次 current-schema 决策和直接 N-1 adapter，而不是让两个运行时形状并存。
 
-### S2. 通用 Instance Netlist Properties
+直接迁移规则：
 
-目标：让单个 Instance 的全部可编辑网表事实通过 GUI 完成，而不是只支持硬编码的
-R/C/L Value、MOS W/L/M 和 source DC。
+- `w`、`l`、`m`、`value` 和 `dc` 等已知电气值在 typed 参数缺失时迁入
+  `netlist.parameters`；
+- 两边值相同则保留 typed 值并删除旧 property；
+- 两边值冲突时报告结构化迁移错误，不静默选择、不覆盖；
+- `symbol.mapping.registry` 等导入映射证据迁入 typed provenance；
+- 未知旧 property 必须由明确 adapter 归类或报告，不能继续成为任意电气后门。
+
+Insert dialog、Properties、clipboard、search、import、Instance Table、Project save 和内部
+adapter 随后只消费 typed facts。当前不发布公共 Agent 版本不构成保留旧 snapshot/property
+分支的理由。
+
+#### S1.3 Descriptor 参数协议
+
+Device Descriptor 新增 ordered parameter definitions，至少表达：
+
+```text
+name, label, required, editor, unit hint, placeholder, help, display role
+```
+
+`placeholder` 只是示例，不是自动写入的电气默认值。`requiredParameters`、Insert dialog、
+Properties 表单、Preflight 和 Value projection 从同一参数定义派生，不再各自维护名单。
+
+第一批内置 known parameters 只覆盖无 PDK 也能稳定解释的常用面：
+
+- resistor/capacitor/inductor：required `value`；
+- NMOS/PMOS：required `w`、`l`，optional `m`；
+- voltage/current source：required `dc`；
+- diode/BJT：required model target，模型相关参数通过 arbitrary parameters author；
+- internal/external subcircuit formal parameters 与 defaults 留给 S6。
+
+`nf`、`ad/as/pd/ps`、`nrd/nrs`、`area`、`temp` 等模型或方言相关字段可以作为 Additional
+Parameters 保存，但 Stage 1 不为其发明 PDK 范围、数值类型、默认值或跨方言等价声明。
+
+#### S1.4 单一编辑与展示协议
+
+保留 `set_instance_netlist` 给 import、migration 和 object initialization；普通产品编辑
+增加并复用字段级 typed intents：
+
+```text
+set_instance_reference
+set_instance_binding
+patch_instance_netlist_parameters
+```
+
+统一 Property Sheet adapter 把 typed facts、Descriptor metadata 和 diagnostics 投影为字段，
+再生成这些 edits。不得通过 JSON path、自由 property key 或 UI-local object 直接写 Project。
+
+Reference annotation 的文字严格投影 `netlist.reference`；直接编辑画布 Reference 等价于
+编辑该 typed fact。Value annotation 的文字严格由 Descriptor + parameters 生成。用户可
+移动、隐藏和调整展示，但不能维护一份与工程事实分叉的 Reference/Value 文本；事实变化
+刷新文字时必须保留用户移动的 anchor。
+
+初始编号系统不新增持久化 Reference lock。planner preview 明确列出 preserved 与
+reassigned 对象；只有实际工作流证明长期 lock 必不可少时，才通过独立 schema/ADR 目标
+引入。
+
+验收：同一 Instance 经 Insert、Properties、画布 Reference、clipboard、search、
+save/reopen、Preflight 和 IR extraction 观察到同一个 reference、target 与参数集合；
+canonical Project 不再包含可与 `netlist.parameters` 竞争的 `Instance.properties` 数据。
+
+### S2. Descriptor 驱动的通用 Component Properties
+
+目标：在 S1 单一协议上交付一个接近成熟 EDA 的 Component Properties 工作面。Reference
+默认自动分配但不隐藏；常用参数获得结构化表单，所有模型特有参数仍能通过同一 typed
+record author，而不是再出现 Netlist Properties 与普通 Properties 两套界面。
 
 Properties 分为：
 
-- **Identity**：Reference、Symbol/device class、Cell path、export readiness；
-- **Common parameters**：descriptor-known 参数；
-- **Advanced netlist**：binding kind、model/internal Cell/external subcircuit target、任意
-  参数表和 terminal order；
-- **Source evidence**：import provenance 与 source span，只读。
+- **Identity**：可编辑 Instance name / Reference、只读 Symbol/device class、Cell path
+  与 export readiness；内部稳定 `Instance.id` 不作为普通字段展示；
+- **Netlist target**：primitive class 只读；model-backed 器件编辑 model name；internal
+  Cell 显示 target 并可导航；external subcircuit 编辑 target name；改变器件类型使用
+  Replace Symbol，不通过修改 device class 实现；
+- **Parameters**：Descriptor-known 参数按统一顺序和 metadata 展示；Additional Parameters
+  使用 name/raw-value 表格，支持新增、重命名、赋值和删除；
+- **Display**：Reference/Value 可见性与位置属于 presentation，内容继续由 S1 权威事实投影；
+- **Advanced / Source evidence**：canonical pin/interface order 只读；import provenance 与
+  source span 只读；external-subcircuit terminal authoring 导航到 S6 的明确工作流。
 
-规则：
+编辑规则：
 
-- known 与 arbitrary 参数使用同一 `netlist.parameters` record；
-- 增删参数、切换 binding、修改 reference 和 pin order 都是 typed atomic edits；
-- 非法或未完成输入不产生部分提交；
-- Reference/Value 投影与权威事实同步，但不覆盖用户移动的 annotation anchor；
-- Undo/Redo、clipboard、history、recovery 和 canonical Project save 完整保留；
+- known 与 arbitrary 参数只使用同一个 `netlist.parameters` record，并按 case folding
+  检查重复 name；
+- 单字段输入使用本地 editing session：Enter 或 blur 提交一次，Esc 放弃；
+- binding 和 Additional Parameters 表格使用明确 Apply/Cancel；一次 Apply 是一个
+  Project transaction、一个 revision 和一个 Undo step；
+- 不再每次键入字符就提交 Project，也不以“再写回旧值”的 transaction 冒充 Cancel；
+- empty required parameter、非法 Reference、prefix/重复冲突、非法 target 或重复参数名
+  不产生部分提交，并在字段旁显示与 Preflight 同源的诊断；
+- Reference 可手动修改，也可保持系统自动值；rename 只改变 `netlist.reference` 和展示
+  投影，不改变 `Instance.id`、Net membership 或 locator identity；
+- Undo/Redo、clipboard、history、recovery、canonical save、search 和后续 Instance Table
+  必须复用同一个 field definition 与 typed edit service；
 - imported source evidence 不成为第二套 editable properties。
 
-验收：用户能人工 author 一个 model-backed MOS、primitive passive、internal Cell Instance
-和 external-subcircuit black box，并让每个对象通过 Preflight 所需的本地事实检查。
+验收：用户能从空 Project 人工 author primitive passive、model-backed MOS、model-backed
+diode/BJT 和 source，查看并修改自动 Reference、target、known 与 arbitrary parameters；
+一次 Apply 可撤销，save/reopen 后无旧 property 分支，画布投影、Properties、Preflight 与
+IR 对全部事实解释一致。internal Cell 和 external black-box 的完整接口验收仍由 S6 完成。
 
 ### S3. Reference planner 与批量编号
 
@@ -224,7 +309,7 @@ connectivity hash、source status、diagnostics 和 Undo 结果符合命令语�
 
 ### S6. Cell 与 Subcircuit 网表 authoring
 
-目标：在现有 schema-13 hierarchy 上补齐 IR 所需的可编辑 Cell/subcircuit 事实。
+目标：在现有 typed hierarchy 上补齐 IR 所需的可编辑 Cell/subcircuit 事实。
 
 工作：
 
@@ -273,8 +358,8 @@ bindings/targets、ordered pins、raw parameters、Nets、globals 与 hierarchy�
 ## 6. 依赖与交付顺序
 
 ```text
-S1 authority and projection contract
- ├─→ S2 instance netlist properties
+S1 authority and unified property protocol
+ ├─→ S2 descriptor-driven Component Properties
  │    └─→ S3 reference planner
  │         └─→ S4 instance table and bulk editing
  ├─→ S5 Wire / Net editing closure
