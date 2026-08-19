@@ -854,6 +854,16 @@ export function App({
     instancePropertyEdits,
     referenceLabelVisibilityEdits,
     valueVisibilityEdits,
+    isCellPortAnnotation: (annotation) => {
+      const anchor = annotation.anchor;
+      if (anchor.kind !== "object") return false;
+      const interfaceInstanceId = anchor.objectId;
+      return (
+        document.netlist?.terminals.some(
+          (terminal) => terminal.interfaceInstanceId === interfaceInstanceId,
+        ) === true
+      );
+    },
     commitCellPortAnnotation: (annotation, name) => {
       if (annotation.anchor.kind !== "object") return false;
       const interfaceInstanceId = annotation.anchor.objectId;

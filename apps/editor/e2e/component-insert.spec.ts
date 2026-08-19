@@ -150,8 +150,8 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
   await expect(page.getByTestId("hit-R1")).toBeVisible();
   await expect(page.getByTestId("canvas-empty-state")).toHaveCount(0);
   await page.getByTestId("selection-shelf").click();
-  await expect(page.locator(".selection-overview")).toContainText(
-    "ComponentR1Symbolresistor",
+  await expect(page.getByTestId("selection-shelf")).toContainText(
+    "R1 · resistor",
   );
   await expect
     .poll(() =>

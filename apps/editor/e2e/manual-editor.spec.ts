@@ -1405,7 +1405,7 @@ test("selects an attached label without selecting its host", async ({
     page.getByTestId("annotation-hit-instance-label-R1"),
   ).toHaveClass(/selected/u);
   await expect(page.getByTestId("selection-shelf")).toContainText(
-    "instance-label-R1",
+    "Annotation · instance-label",
   );
 });
 
@@ -1513,9 +1513,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
     .getByRole("textbox", { name: "Electrical Net label" })
     .fill("SIGNAL");
   await expect(page.getByTestId("net-count")).toHaveText("1");
-  await expect(page.getByTestId("status")).toHaveText(
-    "Connected Nets through label SIGNAL",
-  );
+  await expect(page.getByTestId("status")).toHaveText("Saved Net Label SIGNAL");
 
   await clickCommand(page, "Draw", "Text");
   const textInput = page.getByRole("textbox", {
@@ -1945,9 +1943,9 @@ test("selects and moves multiple instances while viewport gestures stay transien
   );
   await page.mouse.up();
   await openSelectionShelf(page);
-  await expect(
-    page.getByTestId("selection-shelf").getByText("M1, M2", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByTestId("selection-shelf")).toContainText(
+    "2 components",
+  );
 
   await page
     .getByTestId("hit-M1")

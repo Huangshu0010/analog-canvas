@@ -3293,3 +3293,12 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   check, test-impact, diff check, and `pnpm verify:branch` passed (146 unit
   files / 889 tests, workspace build and production smoke).
 - Commit status: committed on `codex/properties-panel-simplify` as `30eab90`.
+
+## 2026-08-19 - Properties panel mainline regression
+
+- Changed areas: formal-Cell-Port annotation routing, compact Properties
+  browser assertions, and target records.
+- Validation: focused six-scenario Playwright coverage and `pnpm ci:check`
+  passed (146 unit files / 889 tests, build, release smoke, and 154 browser
+  scenarios).
+- Commit status: committed on `codex/properties-panel-simplify`.

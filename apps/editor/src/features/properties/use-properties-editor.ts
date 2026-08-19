@@ -90,6 +90,7 @@ export interface UsePropertiesEditorOptions {
     instanceIds: readonly string[],
     visible: boolean,
   ) => SchematicEdit[];
+  isCellPortAnnotation?: (annotation: Annotation) => boolean;
   commitCellPortAnnotation?: (annotation: Annotation, name: string) => boolean;
 }
 
@@ -410,6 +411,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       proposal.kind === "update" &&
       proposal.edit.kind === "upsert_schematic_annotation" &&
       options.commitCellPortAnnotation &&
+      options.isCellPortAnnotation?.(proposal.edit.annotation) &&
       proposal.edit.annotation.kind === "instance-label" &&
       proposal.edit.annotation.anchor.kind === "object"
     ) {
