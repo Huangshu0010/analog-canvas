@@ -571,6 +571,10 @@ export function App({
   }, [agentSession.status, publicAgentUiEnabled]);
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
   const [cellSymbolLayoutEnabled, setCellSymbolLayoutEnabled] = useState(false);
+  const [
+    cellSymbolLayoutTargetInstanceId,
+    setCellSymbolLayoutTargetInstanceId,
+  ] = useState<string | null>(null);
   const [cellSymbolLayoutDrag, setCellSymbolLayoutDrag] = useState<{
     kind: "body" | "pin";
     pointerId: number;
@@ -1506,6 +1510,27 @@ export function App({
   }, [selectedRouteId]);
 
   useEffect(() => {
+    if (!cellSymbolLayoutEnabled) return;
+    // Symbol geometry is definition-level, but its canvas grips belong to one
+    // selected parent instance. Do not let them survive a selection change.
+    if (
+      selectedInstance?.id !== cellSymbolLayoutTargetInstanceId ||
+      !selectedHierarchyCell?.netlist
+    ) {
+      exitCellSymbolLayout();
+    }
+  }, [
+    cellSymbolLayoutEnabled,
+    cellSymbolLayoutTargetInstanceId,
+    selectedHierarchyCell?.netlist,
+    selectedInstance?.id,
+  ]);
+
+  useEffect(() => {
+    if (!selectionOpen && cellSymbolLayoutEnabled) exitCellSymbolLayout();
+  }, [cellSymbolLayoutEnabled, selectionOpen]);
+
+  useEffect(() => {
     const pruned = pruneVisualSelection(visualSelection, document);
     if (pruned !== visualSelection) replaceSelection(pruned);
   }, [document, visualSelection]);
@@ -1540,6 +1565,7 @@ export function App({
   }
 
   function resetInteractionState(): void {
+    exitCellSymbolLayout();
     cancelAllTransientInteraction();
     resetSelection();
     setSelectedRouteSegmentIndex(null);
@@ -1743,6 +1769,22 @@ export function App({
           : "Could not move Cell symbol pin",
       );
     }
+  }
+
+  function exitCellSymbolLayout(): void {
+    setCellSymbolLayoutDrag(null);
+    setCellSymbolLayoutEnabled(false);
+    setCellSymbolLayoutTargetInstanceId(null);
+  }
+
+  function toggleCellSymbolLayout(): void {
+    if (cellSymbolLayoutEnabled) {
+      exitCellSymbolLayout();
+      return;
+    }
+    if (!selectedHierarchyCell || !selectedInstance?.placement) return;
+    setCellSymbolLayoutTargetInstanceId(selectedInstance.id);
+    setCellSymbolLayoutEnabled(true);
   }
 
   function beginCellSymbolLayoutDrag(
@@ -2553,6 +2595,7 @@ export function App({
         currentInteraction.tool === nextTool) ||
       (nextTool === "pointer" && currentInteraction.kind === "idle");
     if (alreadyActive) return;
+    exitCellSymbolLayout();
     canvasDragSessionRef.current?.cancel();
     clearTransientCanvasState();
     paintSnapGuides([]);
@@ -5869,6 +5912,7 @@ export function App({
           openProperties();
           return;
         case "close-properties":
+          exitCellSymbolLayout();
           setSelectionOpen(false);
           setImportReviewOpen(false);
           return;
@@ -6714,6 +6758,7 @@ export function App({
               data-testid="selection-shelf"
               aria-expanded={selectionOpen}
               onClick={() => {
+                if (selectionOpen) exitCellSymbolLayout();
                 setSelectionOpen((current) => !current);
                 if (selectionOpen) setImportReviewOpen(false);
               }}
@@ -6832,9 +6877,7 @@ export function App({
                         type="button"
                         className="cell-symbol-layout-toggle"
                         aria-pressed={cellSymbolLayoutEnabled}
-                        onClick={() =>
-                          setCellSymbolLayoutEnabled((enabled) => !enabled)
-                        }
+                        onClick={toggleCellSymbolLayout}
                       >
                         {cellSymbolLayoutEnabled
                           ? "Done editing canvas layout"
@@ -7709,6 +7752,12 @@ export function App({
                 target.closest('[data-testid="cell-symbol-layout-overlay"]')
               ) {
                 return;
+              }
+              if (cellSymbolLayoutEnabled) {
+                // Layout grips are a short-lived edit mode. Any ordinary
+                // canvas action leaves it first, so the next hit can use the
+                // regular selection and movement rules.
+                exitCellSymbolLayout();
               }
               if (getCurrentInteractionState().kind === "moving-selection") {
                 event.stopPropagation();
