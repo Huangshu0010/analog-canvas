@@ -3391,4 +3391,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   timeouts; all GitHub Actions jobs passed in the prebuilt Linux environment
   (static 30s, unit 49s, release 1m 03s, browser shards 3m 16s and 3m 45s).
 - Commit status: PR #127 merged to `main` as `92e63ea`.
-```
+- Commit status: merged to `main` through PR #126 as `0948d83`.
+
+## 2026-08-19 - Stage 1 schematic foundation roadmap
+
+- Changed areas: proposed Stage 1 authority boundary, instance netlist
+  properties, reference planning, bulk editing, Wire/Net closure, Cell and
+  external-subcircuit authoring, Preflight/DesignNetlistIR exit gate, roadmap
+  index, and target records.
+- Validation: documentation links, test-impact against `main`, diff check,
+  and final branch-status review passed.
+- Commit status: prepared for commit on
+  `codex/phase1-schematic-foundation-plan`.
