@@ -9,6 +9,17 @@ export interface DeviceCapabilities {
   readonly supportsValueAnnotation: boolean;
 }
 
+export interface DeviceParameterDefinition {
+  readonly name: string;
+  readonly label: string;
+  readonly required: boolean;
+  readonly editor: "text" | "decimal";
+  readonly unitHint?: string;
+  readonly placeholder: string;
+  readonly help: string;
+  readonly displayRole: "value" | "width" | "length" | "multiplier" | "none";
+}
+
 export interface DeviceDescriptor {
   /** Stable device-protocol identity; it is not persisted in Project JSON. */
   readonly id: string;
@@ -18,9 +29,18 @@ export interface DeviceDescriptor {
   readonly referencePrefix: string | null;
   readonly pinOrder: readonly string[];
   readonly targetPolicy: DeviceNetlistTargetPolicy;
-  readonly requiredParameters: readonly string[];
+  /** Ordered authoring metadata; placeholders never create persisted values. */
+  readonly parameters: readonly DeviceParameterDefinition[];
   readonly dialects: readonly ["spice", "spectre"];
   readonly capabilities: DeviceCapabilities;
+}
+
+export function requiredParameterNames(
+  descriptor: DeviceDescriptor,
+): readonly string[] {
+  return descriptor.parameters
+    .filter((parameter) => parameter.required)
+    .map((parameter) => parameter.name);
 }
 
 export interface DeviceDescriptorIssue {

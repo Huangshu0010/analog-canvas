@@ -7,7 +7,18 @@ export const inductorDevice = {
   referencePrefix: "L",
   pinOrder: ["1", "2"],
   targetPolicy: "builtin",
-  requiredParameters: ["value"],
+  parameters: [
+    {
+      name: "value",
+      label: "Value",
+      required: true,
+      editor: "text",
+      unitHint: "H",
+      placeholder: "3n",
+      help: "Inductance",
+      displayRole: "value",
+    },
+  ],
   dialects: ["spice", "spectre"],
   capabilities: {
     supportsModel: false,

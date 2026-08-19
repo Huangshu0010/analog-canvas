@@ -7,7 +7,7 @@ export const vddPortDevice = {
   referencePrefix: null,
   pinOrder: ["P"],
   targetPolicy: "none",
-  requiredParameters: [],
+  parameters: [],
   dialects: ["spice", "spectre"],
   capabilities: {
     supportsModel: false,

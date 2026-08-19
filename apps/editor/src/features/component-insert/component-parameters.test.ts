@@ -6,6 +6,7 @@ import {
   effectiveComponentParameterValue,
   initialComponentParameterValues,
 } from "./component-parameters";
+import { deviceDescriptor } from "@icm/devices";
 
 describe("component parameter catalogue", () => {
   it("keeps R/L/C values as raw strings with their physical unit hints", () => {
@@ -32,6 +33,20 @@ describe("component parameter catalogue", () => {
       l: "",
       m: "",
     });
+  });
+
+  it("projects the descriptor's ordered field metadata without local defaults", () => {
+    const descriptor = deviceDescriptor("voltage-source");
+    expect(componentParameters("voltage-source")).toEqual(
+      descriptor?.parameters.map((parameter) => ({
+        key: parameter.name,
+        label: parameter.label,
+        ...(parameter.unitHint ? { unit: parameter.unitHint } : {}),
+        placeholder: parameter.placeholder,
+        help: parameter.help,
+        inputMode: parameter.editor,
+      })),
+    );
   });
 
   it("uses typed netlist parameters as the single component-value authority", () => {

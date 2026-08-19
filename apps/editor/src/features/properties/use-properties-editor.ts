@@ -328,15 +328,29 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       instancePropertyDraft.instanceId === instance.id
         ? options
             .instancePropertyEdits(instancePropertyDraft)
-            .edits.filter((edit) => edit.kind === "set_instance_netlist")
+            .edits.filter(
+              (edit) =>
+                edit.kind === "set_instance_netlist" ||
+                edit.kind === "patch_instance_netlist_parameters",
+            )
         : [];
     const projected = structuredClone(options.document);
     for (const edit of propertyEdits) {
-      if (edit.kind !== "set_instance_netlist") continue;
       const target = projected.instances.find(
         (item) => item.id === edit.instanceId,
       );
-      if (target) target.netlist = structuredClone(edit.netlist);
+      if (!target) continue;
+      if (edit.kind === "set_instance_netlist") {
+        target.netlist = structuredClone(edit.netlist);
+      } else if (edit.kind === "patch_instance_netlist_parameters") {
+        if (!target.netlist) continue;
+        for (const [name, value] of Object.entries(edit.set ?? {})) {
+          target.netlist.parameters[name] = value;
+        }
+        for (const name of edit.unset ?? []) {
+          delete target.netlist.parameters[name];
+        }
+      }
     }
     const valueEdits = options.valueVisibilityEdits(
       projected,

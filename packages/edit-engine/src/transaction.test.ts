@@ -636,6 +636,39 @@ describe("Edit Transaction envelope", () => {
     expect(document.instances[0]!.netlist).toBeUndefined();
   });
 
+  it("edits reference and binding as independent typed netlist fields", () => {
+    const document = documentWithInstance();
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "set_instance_reference",
+          instanceId: "M1",
+          reference: "MN0",
+        },
+        {
+          kind: "set_instance_binding",
+          instanceId: "M1",
+          binding: { kind: "model", deviceClass: "mos", name: "nch" },
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        instances: [
+          {
+            netlist: {
+              reference: "MN0",
+              binding: { kind: "model", deviceClass: "mos", name: "nch" },
+            },
+          },
+        ],
+      },
+    });
+  });
+
   it("rejects an invalid parameter patch without partially changing the instance", () => {
     const document = documentWithInstance();
     document.instances[0]!.netlist!.parameters = { value: "10k" };

@@ -4,6 +4,7 @@ import {
   CellNetlistTerminalSchema,
   DraftingObjectSchema,
   InstanceNetlistDataSchema,
+  InstanceNetlistBindingSchema,
   InstanceSchema,
   JunctionRoleSchema,
   LayoutConstraintSchema,
@@ -76,6 +77,16 @@ export const PatchInstanceNetlistParametersEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   set: z.record(z.string().min(1), z.string().min(1).max(1024)).optional(),
   unset: z.array(z.string().min(1)).max(64).optional(),
+});
+export const SetInstanceReferenceEditSchema = z.strictObject({
+  kind: z.literal("set_instance_reference"),
+  instanceId: StableIdSchema,
+  reference: z.string().min(1).max(128),
+});
+export const SetInstanceBindingEditSchema = z.strictObject({
+  kind: z.literal("set_instance_binding"),
+  instanceId: StableIdSchema,
+  binding: InstanceNetlistBindingSchema.nullable(),
 });
 export const SetInstanceNetlistEditSchema = z.strictObject({
   kind: z.literal("set_instance_netlist"),
@@ -288,6 +299,8 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   RotateInstanceEditSchema,
   MirrorInstanceEditSchema,
   PatchInstanceNetlistParametersEditSchema,
+  SetInstanceReferenceEditSchema,
+  SetInstanceBindingEditSchema,
   SetInstanceNetlistEditSchema,
   AddCellTerminalEditSchema,
   UpdateCellTerminalEditSchema,

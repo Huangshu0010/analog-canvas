@@ -154,8 +154,10 @@ export function agentEditCategory(
     case "align_instances":
       return "geometry";
     case "patch_instance_netlist_parameters":
+    case "set_instance_reference":
       return "presentation";
     case "set_instance_netlist":
+    case "set_instance_binding":
     case "add_cell_terminal":
     case "update_cell_terminal":
     case "remove_cell_terminal":

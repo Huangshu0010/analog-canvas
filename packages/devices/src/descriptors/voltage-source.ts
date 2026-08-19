@@ -7,7 +7,18 @@ export const voltageSourceDevice = {
   referencePrefix: "V",
   pinOrder: ["+", "-"],
   targetPolicy: "builtin",
-  requiredParameters: ["dc"],
+  parameters: [
+    {
+      name: "dc",
+      label: "Value",
+      required: true,
+      editor: "text",
+      unitHint: "V",
+      placeholder: "1.8",
+      help: "DC voltage",
+      displayRole: "value",
+    },
+  ],
   dialects: ["spice", "spectre"],
   capabilities: {
     supportsModel: false,

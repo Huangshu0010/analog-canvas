@@ -500,15 +500,10 @@ export function compileActions(
             action.kind,
             action.target,
           );
-          const netlist = instance.netlist;
           pushEdit(index, action.kind, {
-            kind: "set_instance_netlist",
+            kind: "set_instance_reference",
             instanceId: instance.id,
-            netlist: {
-              reference: action.name,
-              ...(netlist?.binding ? { binding: netlist.binding } : {}),
-              parameters: netlist?.parameters ?? {},
-            },
+            reference: action.name,
           });
         }
         break;

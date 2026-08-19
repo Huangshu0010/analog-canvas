@@ -7,7 +7,18 @@ export const resistorDevice = {
   referencePrefix: "R",
   pinOrder: ["1", "2"],
   targetPolicy: "builtin",
-  requiredParameters: ["value"],
+  parameters: [
+    {
+      name: "value",
+      label: "Value",
+      required: true,
+      editor: "text",
+      unitHint: "Ohm",
+      placeholder: "10k",
+      help: "Resistance",
+      displayRole: "value",
+    },
+  ],
   dialects: ["spice", "spectre"],
   capabilities: {
     supportsModel: false,

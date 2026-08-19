@@ -329,19 +329,16 @@ describe("authoring helper compilation", () => {
     ]);
   });
 
-  it("compiles rename preserving typed netlist facts for instances", () => {
+  it("compiles instance rename as a typed reference edit", () => {
     const [transaction] = compile([
       { kind: "rename", target: { kind: "instance", name: "M1" }, name: "MN0" },
     ]);
     const edit = transaction?.edits?.[0];
-    expect(edit?.kind).toBe("set_instance_netlist");
-    if (edit?.kind === "set_instance_netlist") {
-      expect(edit.netlist).toEqual({
-        reference: "MN0",
-        binding: { kind: "primitive", deviceClass: "mos" },
-        parameters: { w: "2u", l: "1u" },
-      });
-    }
+    expect(edit).toEqual({
+      kind: "set_instance_reference",
+      instanceId: "instance-1",
+      reference: "MN0",
+    });
     const [netTransaction] = compile([
       { kind: "rename", target: { kind: "net", name: "Vout" }, name: "Vfb" },
     ]);

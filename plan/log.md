@@ -1,5 +1,16 @@
 # Maintenance Log
 
+## 2026-08-19 - S1 descriptor-backed property protocol
+
+- Changed areas: descriptor-owned ordered parameter metadata; editor Insert,
+  Properties, and Value projection adapters; typed instance reference/binding
+  writers; export required-parameter derivation; shared Agent schema artifacts.
+- Validation: `pnpm typecheck`; focused unit contracts (10 files / 105 tests);
+  `pnpm agent-api:artifacts:check`; `pnpm docs:check`;
+  `pnpm test:impact -- --base origin/main`; `git diff --check`.
+- Commit status: committed locally as `c6fbe6f` on
+  `codex/phase1-schematic-foundation-plan`.
+
 ## 2026-08-18 - Deliver schematic hierarchy protocol v12
 
 - Changed areas: schema-12 Cell hierarchy authoring, editor navigation,

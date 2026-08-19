@@ -4849,21 +4849,36 @@ export function App({
       instance.netlist ??
       initialInstanceNetlist(document, instance.symbolId, {});
     const netlistParameters = { ...baseNetlist.parameters };
+    const set: Record<string, string> = {};
+    const unset: string[] = [];
     for (const parameter of componentParameters(instance.symbolId)) {
       const value = (draft.parameters[parameter.key] ?? "").trim();
-      if (value === "") delete netlistParameters[parameter.key];
-      else netlistParameters[parameter.key] = value;
+      const current = netlistParameters[parameter.key];
+      if (value === "") {
+        delete netlistParameters[parameter.key];
+        if (current !== undefined) unset.push(parameter.key);
+      } else {
+        netlistParameters[parameter.key] = value;
+        if (current !== value) set[parameter.key] = value;
+      }
     }
 
     const nextNetlist = {
       ...baseNetlist,
       parameters: netlistParameters,
     };
-    if (JSON.stringify(nextNetlist) !== JSON.stringify(instance.netlist)) {
+    if (!instance.netlist) {
       edits.push({
         kind: "set_instance_netlist",
         instanceId: instance.id,
         netlist: nextNetlist,
+      });
+    } else if (Object.keys(set).length > 0 || unset.length > 0) {
+      edits.push({
+        kind: "patch_instance_netlist_parameters",
+        instanceId: instance.id,
+        ...(Object.keys(set).length > 0 ? { set } : {}),
+        ...(unset.length > 0 ? { unset } : {}),
       });
     }
 

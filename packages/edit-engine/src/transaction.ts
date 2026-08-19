@@ -773,6 +773,58 @@ export function executeTransaction(
         changedObjectIds.add(edit.instanceId);
         break;
       }
+      case "set_instance_reference": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance?.netlist) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Reference edit requires an instance netlist record",
+            [],
+            [edit.instanceId],
+          );
+        }
+        if (instance.netlist.reference === edit.reference) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Reference edit does not change the instance",
+            [],
+            [edit.instanceId],
+          );
+        }
+        instance.netlist.reference = edit.reference;
+        changedObjectIds.add(edit.instanceId);
+        break;
+      }
+      case "set_instance_binding": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance?.netlist) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Binding edit requires an instance netlist record",
+            [],
+            [edit.instanceId],
+          );
+        }
+        const current = instance.netlist.binding ?? null;
+        if (JSON.stringify(current) === JSON.stringify(edit.binding)) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Binding edit does not change the instance",
+            [],
+            [edit.instanceId],
+          );
+        }
+        if (edit.binding)
+          instance.netlist.binding = structuredClone(edit.binding);
+        else delete instance.netlist.binding;
+        changedObjectIds.add(edit.instanceId);
+        connectivityChanged = true;
+        break;
+      }
       case "set_instance_netlist": {
         const instance = draft.instances.find(
           (candidate) => candidate.id === edit.instanceId,

@@ -6,7 +6,7 @@ import type {
   SchematicDocument,
   StableId,
 } from "@icm/model";
-import { deviceDescriptor } from "@icm/devices";
+import { deviceDescriptor, requiredParameterNames } from "@icm/devices";
 
 import type {
   DesignNetlistCell,
@@ -442,7 +442,7 @@ function extractDeviceInstance(
       parameterByFoldedName.set(folded, { name: parameter, rawValue });
     }
   }
-  for (const parameter of definition.requiredParameters) {
+  for (const parameter of requiredParameterNames(definition)) {
     if (!parameterByFoldedName.get(parameter.toLowerCase())?.rawValue.trim()) {
       diagnostic(
         diagnostics,

@@ -123,9 +123,14 @@ interface DeviceNetlistDefinition {
   referencePrefix: string | null;
   pinOrder: string[];
   targetPolicy: "builtin" | "required-model" | "child-cell" | "none";
-  requiredParameters: string[];
+  parameters: DeviceParameterDefinition[];
 }
 ```
+
+`DeviceParameterDefinition` is the same descriptor-owned field metadata used
+by Insert and Properties (key, label, requiredness, editor kind, optional unit
+hint/example/help, and display role). Required export fields are derived from
+`parameters`; there is no separate `requiredParameters` registry.
 
 Pin order names canonical Symbol pins. Hidden or implicit pins remain present.
 Canonical MOS ordering is D/G/S/B. Ground is a Net marker that verifies an

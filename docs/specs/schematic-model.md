@@ -113,6 +113,11 @@ two explicit placements may occupy the same side/offset slot.
   project-level external definition, and unresolved imported bindings retain
   only a target name until resolution.
 - Netlist references and parameter values live in `Instance.netlist`.
+  Parameters are defined only by the matching Device Descriptor: every field
+  declares its key, requiredness, editor kind, optional unit/example/help, and
+  display role. Insert, Properties, validation, Value projection, and export
+  consume that definition; UI adapters do not maintain a second parameter
+  registry.
   Imported terminal order and symbol-mapping identity live only in typed
   `Instance.importProvenance`; `Instance.properties` does not persist.
 - `electricalTopologyHash` includes Instances, Nets, terminal membership,
