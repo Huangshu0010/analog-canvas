@@ -10,9 +10,10 @@ async function runCellCommand(
   page: import("@playwright/test").Page,
   name: "Manage Cells…" | "Place Cell",
 ): Promise<void> {
-  const menu = page.getByTestId("cell-command-menu");
-  await menu.locator("summary").click();
-  await menu.getByRole("button", { name, exact: true }).click();
+  await page
+    .getByTestId("cell-command-menu")
+    .getByRole("button", { name, exact: true })
+    .click();
 }
 
 async function createCell(
@@ -21,39 +22,23 @@ async function createCell(
 ): Promise<void> {
   await runCellCommand(page, "Manage Cells…");
   const manager = page.getByRole("dialog", { name: "Cell Manager" });
-  page.once("dialog", (dialog) => dialog.accept(name));
   await manager.getByRole("button", { name: "New Cell" }).click();
+  const editor = page.getByRole("dialog", { name: "New Cell" });
+  await editor.getByLabel("Cell name").fill(name);
+  await editor.getByRole("button", { name: "Create" }).click();
 }
 
-test("overlays an adaptive Cell menu without growing the hierarchy row", async ({
-  page,
-}) => {
+test("keeps direct Cell commands in one hierarchy row", async ({ page }) => {
   await page.setViewportSize({ width: 420, height: 700 });
   await page.goto("/");
   const toolbar = page.locator('.toolbar-row[aria-label="Document hierarchy"]');
-  const menu = page.getByTestId("cell-command-menu");
-  const heightBefore = await toolbar.evaluate(
-    (element) => element.getBoundingClientRect().height,
-  );
-
-  await menu.locator("summary").click();
-
-  const heightAfter = await toolbar.evaluate(
-    (element) => element.getBoundingClientRect().height,
-  );
-  const overlay = await menu.locator(".command-popover").evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    return {
-      position: getComputedStyle(element).position,
-      left: rect.left,
-      right: rect.right,
-      viewportWidth: window.innerWidth,
-    };
-  });
-  expect(heightAfter).toBe(heightBefore);
-  expect(overlay.position).toBe("absolute");
-  expect(overlay.left).toBeGreaterThanOrEqual(0);
-  expect(overlay.right).toBeLessThanOrEqual(overlay.viewportWidth);
+  await expect(
+    page.getByRole("button", { name: "Manage Cells…" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Place Cell" })).toBeVisible();
+  expect(
+    await toolbar.evaluate((element) => element.getBoundingClientRect().height),
+  ).toBeLessThan(90);
 });
 
 test("creates and deletes an unreferenced reusable Cell", async ({ page }) => {
@@ -68,8 +53,9 @@ test("creates and deletes an unreferenced reusable Cell", async ({ page }) => {
 
   await runCellCommand(page, "Manage Cells…");
   const manager = page.getByRole("dialog", { name: "Cell Manager" });
-  page.once("dialog", (dialog) => dialog.accept());
   await manager.getByRole("button", { name: "Delete" }).last().click();
+  const confirm = page.getByRole("dialog", { name: "Delete Cell" });
+  await confirm.getByRole("button", { name: "Delete Cell" }).click();
   await expect(page.getByTestId("document-count")).toHaveText("1");
   await expect(page.getByTestId("active-document-id")).toHaveText(
     "document-main",
@@ -77,6 +63,10 @@ test("creates and deletes an unreferenced reusable Cell", async ({ page }) => {
   await expect(page.getByTestId("status")).toContainText(
     "Deleted Cell ReusableStage",
   );
+  await page.keyboard.press("Control+z");
+  await expect(page.getByTestId("document-count")).toHaveText("2");
+  await page.keyboard.press("Control+Shift+z");
+  await expect(page.getByTestId("document-count")).toHaveText("1");
 });
 
 test("manages Cell rename and lists callers", async ({ page }) => {
@@ -98,8 +88,10 @@ test("manages Cell rename and lists callers", async ({ page }) => {
   await runCellCommand(page, "Manage Cells…");
   const manager = page.getByRole("dialog", { name: "Cell Manager" });
   await expect(manager).toContainText("1 callers");
-  page.once("dialog", (dialog) => dialog.accept("Stage"));
   await manager.getByRole("button", { name: "Rename" }).last().click();
+  const rename = page.getByRole("dialog", { name: "Rename Cell" });
+  await rename.getByLabel("Cell name").fill("Stage");
+  await rename.getByRole("button", { name: "Rename" }).click();
   await expect(manager).toContainText("Stage");
   await manager.getByRole("button", { name: "Jump to caller" }).click();
   await expect(page.getByTestId("active-document-id")).toHaveText(
@@ -121,12 +113,23 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await page.getByTestId("selection-shelf").click();
   const portProperties = page.getByLabel("Cell Port properties");
   await expect(portProperties).toBeVisible();
-  await portProperties.getByLabel("Port name").fill("IN");
-  await portProperties.getByLabel("Port name").press("Enter");
+  await expect(portProperties.getByLabel("Port name")).toHaveCount(0);
+  await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
+  const nameEditor = page.getByRole("textbox", { name: "Canvas text editor" });
+  await nameEditor.fill("IN");
+  await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.getByTestId("status")).toContainText(
     "Renamed formal port to IN",
   );
-  await portProperties.getByLabel("Cell Port direction").selectOption("input");
+  await page.getByTestId("hit-P1").click();
+  const shelf = page.getByTestId("selection-shelf");
+  if ((await shelf.getAttribute("aria-expanded")) === "false") {
+    await shelf.click();
+  }
+  const renamedPortProperties = page.getByLabel("Cell Port properties");
+  await renamedPortProperties
+    .getByLabel("Cell Port direction")
+    .selectOption("input");
   await expect(page.getByTestId("status")).toContainText(
     "Updated Cell port direction",
   );
@@ -135,12 +138,10 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
     .getByTestId("cell-navigation")
     .getByRole("button", { name: "Top", exact: true })
     .click();
-  const cellMenu = page.getByTestId("cell-command-menu");
-  await cellMenu.locator("summary").click();
-  await expect(
-    cellMenu.getByRole("button", { name: "Edit Interface…" }),
-  ).toHaveCount(0);
-  await cellMenu.getByRole("button", { name: "Place Cell" }).click();
+  await page
+    .getByTestId("cell-command-menu")
+    .getByRole("button", { name: "Place Cell" })
+    .click();
   const insertDialog = page.getByRole("dialog", { name: "Insert Component" });
   await insertDialog.getByRole("option", { name: /ReusableStage/u }).click();
   await insertDialog.getByRole("button", { name: "Apply" }).click();
@@ -148,6 +149,22 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("active-instance-count")).toHaveText("1");
   await expect(canvas.locator('[data-pin-name="IN"]')).toHaveCount(1);
+});
+
+test("deletes a wired child Cell Port through the ordinary instance path", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await createCell(page, "ReusableStage");
+  const canvas = page.getByTestId("schematic-canvas");
+  await page.getByTestId("shapes-chip-port").click();
+  await canvas.click({ position: { x: 300, y: 180 } });
+  await page.keyboard.press("Escape");
+  await page.getByTestId("hit-P1").click();
+  await page.keyboard.press("Delete");
+  await expect(page.getByTestId("hit-P1")).toHaveCount(0);
+  await page.keyboard.press("Control+z");
+  await expect(page.getByTestId("hit-P1")).toHaveCount(1);
 });
 
 test("places an existing Cell and blocks deleting its shared definition", async ({

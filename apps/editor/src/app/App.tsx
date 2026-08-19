@@ -174,6 +174,7 @@ import {
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
+import { proposeConnectedInstanceDeletion } from "../features/selection/delete-selection";
 import {
   createLibraryExampleProject,
   type LibraryProjectExample,
@@ -853,6 +854,27 @@ export function App({
     instancePropertyEdits,
     referenceLabelVisibilityEdits,
     valueVisibilityEdits,
+    commitCellPortAnnotation: (annotation, name) => {
+      if (annotation.anchor.kind !== "object") return false;
+      const interfaceInstanceId = annotation.anchor.objectId;
+      const terminal = document.netlist?.terminals.find(
+        (candidate) => candidate.interfaceInstanceId === interfaceInstanceId,
+      );
+      if (!terminal) return false;
+      try {
+        const committed = commitStructure(
+          "rename-cell-port-from-annotation",
+          planRenameCellTerminal(project, document.id, terminal.id, name),
+        );
+        if (committed) setStatus(`Renamed formal port to ${name}`);
+        return committed;
+      } catch (error) {
+        setStatus(
+          error instanceof Error ? error.message : "Could not rename port",
+        );
+        return false;
+      }
+    },
   });
   const hasRotatableSelection =
     selectedIds.some((id) =>
@@ -1507,9 +1529,8 @@ export function App({
     return false;
   }
 
-  function createCell(): void {
-    const fallbackName = `Cell${project.documents.length}`;
-    const name = window.prompt("New Cell name", fallbackName)?.trim();
+  function createCell(name: string): void {
+    name = name.trim();
     if (!name) return;
     const child = createEmptyDocument(createId("document"), name);
     child.netlist!.name = name;
@@ -1520,12 +1541,12 @@ export function App({
     }
   }
 
-  function renameCell(documentId: string): void {
+  function renameCell(documentId: string, name: string): void {
     const target = project.documents.find(
       (candidate) => candidate.id === documentId,
     );
     if (!target) return;
-    const name = window.prompt("Rename Cell", target.name)?.trim();
+    name = name.trim();
     if (!name || name === target.name) return;
     if (
       commitStructure("rename-cell", planRenameCell(project, documentId, name))
@@ -1618,6 +1639,12 @@ export function App({
         project,
         document.id,
         selectedFormalTerminal.id,
+        proposeConnectedInstanceDeletion(
+          document,
+          resolver,
+          [selectedFormalTerminal.interfaceInstanceId],
+          ++uniqueSuffixCounter.current,
+        ),
       );
       if (commitStructure("delete-cell-port", edits)) {
         resetSelection();
@@ -1640,7 +1667,15 @@ export function App({
       visualSelection.instanceIds.length === 1 &&
       visualSelection.routeIds.length === 0 &&
       visualSelection.junctionIds.length === 0 &&
-      visualSelection.annotationIds.length === 0 &&
+      visualSelection.annotationIds.every((annotationId) =>
+        document.annotations.some(
+          (annotation) =>
+            annotation.id === annotationId &&
+            annotation.anchor.kind === "object" &&
+            annotation.anchor.objectId ===
+              formalTerminals[0]?.interfaceInstanceId,
+        ),
+      ) &&
       visualSelection.draftingIds.length === 0;
     if (onlyOneFormalPort) {
       deleteSelectedFormalPort();
@@ -6040,25 +6075,18 @@ export function App({
             >
               Enter Cell
             </button>
-            <details
-              className="command-menu"
-              name="editor-command-menu"
-              data-testid="cell-command-menu"
-            >
-              <summary>Cell</summary>
-              <div className="command-popover">
-                <button type="button" onClick={() => setCellManagerOpen(true)}>
-                  Manage Cells…
-                </button>
-                <button
-                  type="button"
-                  onClick={placeCellInstance}
-                  disabled={project.documents.length < 2}
-                >
-                  Place Cell
-                </button>
-              </div>
-            </details>
+            <div className="cell-command-row" data-testid="cell-command-menu">
+              <button type="button" onClick={() => setCellManagerOpen(true)}>
+                Manage Cells…
+              </button>
+              <button
+                type="button"
+                onClick={placeCellInstance}
+                disabled={project.documents.length < 2}
+              >
+                Place Cell
+              </button>
+            </div>
           </div>
         </div>
         <div data-testid="editor-test-telemetry" hidden>
@@ -6166,9 +6194,9 @@ export function App({
         open={cellManagerOpen}
         cells={cellManagerEntries}
         onClose={() => setCellManagerOpen(false)}
-        onCreate={() => {
+        onCreate={(name) => {
+          createCell(name);
           setCellManagerOpen(false);
-          createCell();
         }}
         onOpen={(documentId) => {
           setCellManagerOpen(false);
@@ -6179,11 +6207,7 @@ export function App({
           const target = project.documents.find(
             (candidate) => candidate.id === documentId,
           );
-          if (
-            !target ||
-            !window.confirm(`Delete unreferenced Cell "${target.name}"?`)
-          )
-            return;
+          if (!target) return;
           if (
             commitStructure(
               "delete-cell",
@@ -6472,23 +6496,6 @@ export function App({
                       className="formal-port-properties"
                       aria-label="Cell Port properties"
                     >
-                      <label>
-                        <span>Port name</span>
-                        <input
-                          key={`${selectedFormalTerminal.id}:${selectedFormalTerminal.name}`}
-                          aria-label="Port name"
-                          defaultValue={selectedFormalTerminal.name}
-                          onBlur={(event) =>
-                            renameSelectedFormalPort(event.currentTarget.value)
-                          }
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              event.currentTarget.blur();
-                            }
-                          }}
-                        />
-                      </label>
                       <label>
                         <span>Direction</span>
                         <select

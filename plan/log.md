@@ -3283,3 +3283,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   scenarios), TypeScript typecheck, test-impact against `origin/main`, diff
   check, and desktop visual inspection passed.
 - Commit status: committed locally on `codex/properties-panel-simplify`.
+
+## 2026-08-19 - Hierarchy authoring polish
+
+- Changed areas: in-app Cell dialogs, direct hierarchy row commands, child
+  Port annotation/name projection, shared Port deletion planning, browser
+  regressions, and hierarchy interaction documentation.
+- Validation: hierarchy and top-level Port Playwright (7 scenarios), docs
+  check, test-impact, diff check, and `pnpm verify:branch` passed (146 unit
+  files / 889 tests, workspace build and production smoke).
+- Commit status: committed on `codex/properties-panel-simplify` as `30eab90`.

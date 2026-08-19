@@ -1,3 +1,4 @@
+import { semanticTextDocument } from "@icm/model";
 import type {
   Annotation,
   CellSymbolPresentation,
@@ -146,6 +147,7 @@ export function planCreateCellPort(
     instance: SchematicDocument["instances"][number];
     connectionEdits: DocumentEdits;
     terminal: NonNullable<SchematicDocument["netlist"]>["terminals"][number];
+    annotation?: Annotation;
   },
 ): ProjectStructureEdit[] {
   const document = requireDocument(project, documentId);
@@ -174,6 +176,14 @@ export function planCreateCellPort(
       { kind: "add_instance", instance: input.instance },
       ...input.connectionEdits,
       { kind: "add_cell_terminal", terminal: input.terminal },
+      ...(input.annotation
+        ? [
+            {
+              kind: "upsert_schematic_annotation" as const,
+              annotation: input.annotation,
+            },
+          ]
+        : []),
     ]),
   ];
 }
@@ -297,7 +307,23 @@ export function planRenameCellTerminal(
       kind: "transact_document",
       documentId: child.id,
       expectedRevision: child.revision,
-      edits: [{ kind: "update_cell_terminal", terminalId, name: newName }],
+      edits: [
+        { kind: "update_cell_terminal", terminalId, name: newName },
+        ...child.annotations
+          .filter(
+            (annotation) =>
+              annotation.kind === "instance-label" &&
+              annotation.anchor.kind === "object" &&
+              annotation.anchor.objectId === terminal.interfaceInstanceId,
+          )
+          .map((annotation) => ({
+            kind: "upsert_schematic_annotation" as const,
+            annotation: {
+              ...annotation,
+              content: semanticTextDocument(newName, "instance-label"),
+            },
+          })),
+      ],
     },
   ];
   for (const parent of project.documents) {
@@ -383,6 +409,7 @@ export function planRemoveCellTerminal(
   project: CircuitProject,
   documentId: string,
   terminalId: string,
+  instanceDeletionEdits?: DocumentEdits,
 ): ProjectStructureEdit[] {
   const document = project.documents.find((item) => item.id === documentId);
   const terminal = document?.netlist?.terminals.find(
@@ -420,6 +447,7 @@ export function planRemoveCellTerminal(
     { kind: "transact_document" }
   >["edits"] = [];
   if (
+    !instanceDeletionEdits &&
     document.routes.some((route) =>
       [route.from, route.to].some(
         (endpoint) =>
@@ -438,6 +466,7 @@ export function planRemoveCellTerminal(
     }
   }
   if (
+    !instanceDeletionEdits &&
     document.nets.some((net) =>
       net.terminals.some(
         (reference) =>
@@ -456,8 +485,28 @@ export function planRemoveCellTerminal(
     });
   }
   edits.push(
+    ...(instanceDeletionEdits ?? []),
+    ...(instanceDeletionEdits
+      ? []
+      : document.annotations
+          .filter(
+            (annotation) =>
+              annotation.anchor.kind === "object" &&
+              annotation.anchor.objectId === terminal.interfaceInstanceId,
+          )
+          .map((annotation) => ({
+            kind: "remove_schematic_annotation" as const,
+            annotationId: annotation.id,
+          }))),
     { kind: "remove_cell_terminal", terminalId },
-    { kind: "remove_instance", instanceId: terminal.interfaceInstanceId },
+    ...(instanceDeletionEdits
+      ? []
+      : [
+          {
+            kind: "remove_instance" as const,
+            instanceId: terminal.interfaceInstanceId,
+          },
+        ]),
   );
   const structureEdits: ProjectStructureEdit[] = [
     {

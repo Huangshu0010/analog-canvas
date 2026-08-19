@@ -90,6 +90,7 @@ export interface UsePropertiesEditorOptions {
     instanceIds: readonly string[],
     visible: boolean,
   ) => SchematicEdit[];
+  commitCellPortAnnotation?: (annotation: Annotation, name: string) => boolean;
 }
 
 /** Flat owner for property drafts, Net Labels, and canvas text sessions. */
@@ -402,6 +403,22 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     const proposal = proposeTextEditingCommit(options.document, textEditing);
     if (proposal.kind === "blocked") return;
     if (proposal.kind === "unchanged") {
+      setTextEditing(null);
+      return;
+    }
+    if (
+      proposal.kind === "update" &&
+      proposal.edit.kind === "upsert_schematic_annotation" &&
+      options.commitCellPortAnnotation &&
+      proposal.edit.annotation.kind === "instance-label" &&
+      proposal.edit.annotation.anchor.kind === "object"
+    ) {
+      const name = flattenRichText(proposal.edit.annotation.content).trim();
+      if (
+        !name ||
+        !options.commitCellPortAnnotation(proposal.edit.annotation, name)
+      )
+        return;
       setTextEditing(null);
       return;
     }
