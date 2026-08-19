@@ -36,6 +36,10 @@ source preservation 和文本 round-trip 属于阶段二；阶段一只对其交
 - canonical resolved Route geometry、connectivity index、Net highlight 和 Project search；
 - 基础 ERC、统一 diagnostic envelope 与 ObjectLocator navigation；
 - 单对象 Properties 中的 Reference/Value 展示与有限常用参数编辑。
+- 当前 Properties 的 W/L/M/value、位置与旋转随输入即时生效，Reference/Value toggle 立即
+  更新，Discard 恢复选择该对象时的基线；这些是已有 GUI 行为，不是旧数据协议的理由；
+- 当前 `extractDesignNetlist(Project)` 已返回 `{ ir: DesignNetlistIR | null, diagnostics }`，
+  是 S7 唯一 analyzer 的现有实现基础，不需要并行重建。
 
 阶段一是对这些基础的产品化收口，不是第二次数据模型重写。
 
@@ -43,9 +47,9 @@ source preservation 和文本 round-trip 属于阶段二；阶段一只对其交
 
 | Concern | 唯一权威 | 非权威投影或派生 |
 | --- | --- | --- |
-| emitting Instance 网表身份 | `Instance.netlist.reference` | managed Reference annotation；detached attached note 仅属 presentation |
+| emitting Instance 网表身份 | `Instance.netlist.reference` | canonical Reference projection；其他 attached label 仅属 presentation |
 | 器件/模型/子电路目标 | `Instance.netlist.binding` | Properties 文本、导入 provenance |
-| Instance 参数 | `Instance.netlist.parameters` | managed Value annotation、detached attached note、表格单元格 |
+| Instance 参数 | `Instance.netlist.parameters` | canonical Value projection、hand-edited attached text、表格单元格 |
 | Device/interface pin order | built-in Device Descriptor、internal child formal interface，或 S6 external black-box interface | Symbol 绘制顺序、import source-position mapping |
 | Cell engineering/netlist name | Cell Document 的 `Document.netlist.name` | Cell 的 `Document.name` 严格同步投影 |
 | Cell interface | `Document.netlist.terminals` | child Port marker 与 parent Cell Symbol |
@@ -62,6 +66,12 @@ Wire planner 和 Preflight 不得直接修改 Project JSON，也不得从 SVG、
 阶段一首先是协议收口，不是交互重设计。当前 gesture、可见结果、快捷键、selection、focus、
 status/diagnostic、preview、Undo/Redo 和 save/reopen 行为共同构成兼容合同。底层权威迁移必须
 通过 adapter 保持这些结果；“协议更统一”或“实现更干净”本身不是改变 GUI 的收益理由。
+
+这里的兼容合同是 **Properties GUI 行为兼容边界**，不是保留持久化
+`Instance.properties`。Stage 1 删除旧电气 property branch，但已有参数/位置/旋转仍即时生效，
+Reference/Value toggle、selection/focus、Discard、Undo 和 save/reopen 的可见结果保持。新字段
+可选择适合自己的提交 gesture；统一的是 Field definition、validator 和 typed writer，不要求
+所有字段都使用同一种 Apply/blur 交互。
 
 允许新增 Properties 区域、Instance Table、terminal-order editor 或 Preflight 面板，但旧入口
 默认仍按原来的动作和可见语义工作。只有同时满足以下条件，才可改变既有 GUI 行为：
@@ -128,9 +138,9 @@ status/diagnostic、preview、Undo/Redo 和 save/reopen 行为共同构成兼容
 
 #### S1.2 终止双重参数协议
 
-Stage 1 从当前 Project 模型移除通用 `Instance.properties` 电气分支；不保留双写、fallback
-读取或长期 compatibility alias。若删除该持久化字段需要 Project schema 前进，S1 负责
-一次 current-schema 决策和直接 N-1 adapter，而不是让两个运行时形状并存。
+Stage 1 以 schema 14 从当前 Project 模型移除持久化 `Instance.properties`；不保留双写、
+fallback 读取或长期 compatibility alias。S1 负责直接的 schema-13 → schema-14 adapter，
+继续遵守滚动 N-1 窗口，而不是让两个运行时形状并存。
 
 直接迁移规则：
 
@@ -140,6 +150,11 @@ Stage 1 从当前 Project 模型移除通用 `Instance.properties` 电气分支�
 - 两边值冲突时报告结构化迁移错误，不静默选择、不覆盖；
 - `symbol.mapping.registry` 等导入映射证据迁入 typed provenance；
 - 未知旧 property 必须由明确 adapter 归类或报告，不能继续成为任意电气后门。
+
+实现 adapter 前先扫描 compatibility corpus 和现有 fixtures 中非空 property keys。已知电气
+参数及 import mapping 按上述规则迁移；若存在真实未知 key，必须在 schema target 中逐项决定
+迁移或给出结构化 load diagnostic，不能为了“保险”新增通用 metadata/property bag，也不能
+静默丢弃。当前 fixture 大量空 `properties: {}` 只需机械迁移，不构成保留字段的语义理由。
 
 Insert dialog、Properties、clipboard、search、import、Instance Table、Project save 和内部
 adapter 随后只消费 typed facts。当前不发布公共 Agent 版本不构成保留旧 snapshot/property
@@ -155,6 +170,10 @@ name, label, required, editor, unit hint, placeholder, help, display role
 
 `placeholder` 只是示例，不是自动写入的电气默认值。`requiredParameters`、Insert dialog、
 Properties 表单、Preflight 和 Value projection 从同一参数定义派生，不再各自维护名单。
+当前编辑器 `PARAMETERS_BY_SYMBOL` 与 Descriptor `requiredParameters` 是两份名单；S1 在同一
+target 中把 metadata 迁入 Descriptor，并移除这两个旧入口，而不是长期保留 compatibility
+fallback。Descriptor 现有 `dialects` 字段可暂留供阶段二使用，但 Stage 1 analyzer 不读取它
+判断设计可导出性。
 
 第一批内置 known parameters 只覆盖无 PDK 也能稳定解释的常用面：
 
@@ -182,26 +201,32 @@ patch_instance_netlist_parameters
 统一 Property Sheet adapter 把 typed facts、Descriptor metadata 和 diagnostics 投影为字段，
 再生成这些 edits。不得通过 JSON path、自由 property key 或 UI-local object 直接写 Project。
 
-新增的 machine-managed Reference/Value annotation 严格投影 typed facts；但当前 GUI 已允许
-用户把 instance label/value 改成任意可见文本，且 Value 刷新会保留 hand-edited 内容。阶段一
-不得为协议统一而静默覆盖、拒绝或改变这些已有结果。画布文本提交按以下一条规则处理：
+当前 GUI 已允许用户把 instance label/value 改成任意可见文本，Value refresh 和 clipboard
+也已通过“内容是否仍等于 canonical projection”隐式区分系统投影与 hand-edited 内容。S1
+把这条规则收敛为唯一 derived classifier，不新增持久化 `managed/detached` flag：
 
-- 能合法解释为 Reference/Value fact 时，写 typed fact，并保留现有 style、anchor 和可见性；
-- 任意或无效文本按当前可见结果转为 detached、presentation-only 的 attached note，不再冒充
-  netlist authority，也不被后续参数刷新覆盖；
-- managed 与 detached 状态必须显式、可迁移、可测试，Properties/Preflight/IR 只读 typed fact。
+```text
+annotation content == current canonical slot projection  -> canonical projection
+otherwise                                                -> presentation-only attached text
+```
 
-因此工程事实仍然只有一个协议，同时保留既有自由标注行为。若未来要禁止或改造自由文本，
-必须通过 3.1 的显著收益门槛，而不能夹带在 schema migration 中。事实投影变化仍须保留用户
-移动的 anchor；detached note 的文字与 presentation 完全保持。
+Canvas 双击文字编辑继续只编辑 presentation；即使结果看起来像合法 Reference，也不得偷偷
+修改 `netlist.reference`。真正的 Reference 只通过 Insert、Properties Reference 和 S3 planner
+编辑。参数变化只刷新仍匹配旧 canonical projection 的 Value；hand-edited text 保持当前文字、
+style、anchor 和可见性。当前显式“Show Value”动作可以按既有行为重新投影 fresh Value。
+
+所有语义 consumer 只读 typed facts，不从 annotation kind/content 反推 Reference 或参数。若未来
+要禁止自由文本或增加显式 detach/relink UI，必须通过 3.1 的显著收益门槛与独立 schema/UX
+目标；Stage 1 不为尚不存在的 UI 状态增加持久化字段。
 
 初始编号系统不新增持久化 Reference lock。planner preview 明确列出 preserved 与
 reassigned 对象；只有实际工作流证明长期 lock 必不可少时，才通过独立 schema/ADR 目标
 引入。
 
-验收：同一 Instance 经 Insert、Properties、画布 Reference、clipboard、search、
+验收：同一 Instance 经 Insert、Properties Reference、clipboard、search、
 save/reopen、Preflight 和 IR extraction 观察到同一个 reference、target 与参数集合；
-canonical Project 不再包含可与 `netlist.parameters` 竞争的 `Instance.properties` 数据。
+Canvas hand-edited label 保持 presentation-only，不能改变该事实；canonical Project 不再包含
+可与 `netlist.parameters` 竞争的 `Instance.properties` 数据。
 
 ### S2. Descriptor 驱动的通用 Component Properties
 
@@ -228,11 +253,15 @@ Properties 分为：
   检查重复 name；
 - 沿用当前 schema 边界：每个 Instance 至多 128 个参数，name 至多 128 字符，非空 raw value
   至多 1024 字符；Additional Parameters 的空 value 表示删除，不持久化空字符串；
-- 单字段输入使用本地 editing session：Enter 或 blur 提交一次，Esc 放弃；
-- binding 和 Additional Parameters 表格使用明确 Apply/Cancel；一次 Apply 是一个
-  Document transaction、一个 Document revision、一个 history entry 和一次 Undo；跨 Cell
-  的 S4 操作才使用 Project transaction；
-- 不再每次键入字符就提交 Project，也不以“再写回旧值”的 transaction 冒充 Cancel；
+- 现有 W/L/M/value、X/Y 和 rotation 保持当前即时生效；Reference 与 model target 是新增
+  单字段，也采用字段级即时提交，但非法/冲突输入不产生部分工程事实并显示同源诊断；
+- Reference/Value toggle、selection/focus、即时 Canvas 结果与 Discard 的可见恢复结果保持；
+  Stage 1 允许在内部替换旧 property edit，但不顺带改变这些 gesture；
+- Additional Parameters 多行表格使用明确 Apply/Cancel；一次 Apply 是一个 Document
+  transaction、一个 Document history entry 和一次 Undo；跨 Cell 的 S4 操作才使用 Project
+  transaction；
+- 当前 per-keystroke history granularity 是否合并为 field-session Undo 是独立 UX target，须先
+  证明收益并补 before/after 验收；S1/S2 协议迁移默认不改变它；
 - empty required parameter、非法 Reference、prefix/重复冲突、非法 target 或重复参数名
   不产生部分提交，并在字段旁显示与 Preflight 同源的诊断；
 - Reference 可手动修改，也可保持系统自动值；rename 只改变 `netlist.reference` 和展示
@@ -243,8 +272,9 @@ Properties 分为：
 
 验收：用户能从空 Project 人工 author primitive passive、model-backed MOS、model-backed
 diode/BJT 和 source，查看并修改自动 Reference、target、known 与 arbitrary parameters；
-一次 Apply 可撤销，save/reopen 后无旧 property 分支，画布投影、Properties、Preflight 与
-IR 对全部事实解释一致。internal Cell 和 external black-box 的完整接口验收仍由 S6 完成。
+现有单字段即时行为与 Additional Parameters 的一次 Apply 均可按各自现有/新增合同撤销；
+save/reopen 后无旧 property 分支，画布投影、Properties、Preflight 与 IR 对全部事实解释一致。
+internal Cell 和 external black-box 的完整接口验收仍由 S6 完成。
 
 ### S3. Reference Policy、Index 与 Planner
 
@@ -265,9 +295,9 @@ none(non-emitting marker/interface object)
 - R/C/L/M/Q/D/V/I 等输出器件需要其 reviewed prefix；
 - internal/external subcircuit instance 使用 `X`；
 - Port、ground、VDD/net-marker 不为满足内部实现而制造假的输出 Reference；其现有画布
-  Port/ground/VDD 名称和符号外观保持不变。当前 `InstanceNetlistData.reference` 是必填，
-  因此实施前必须明确非输出对象不携带 `Instance.netlist`，或把 netlist schema 改为 emitting /
-  non-emitting discriminated shape；不得用假 Reference 绕过 schema；
+  Port/ground/VDD 名称和符号外观保持不变。最终协议选择最小形状：这些 non-emitting
+  Instance 不携带 `Instance.netlist`，不新增 emitting/non-emitting union。analyzer 必须先按
+  Descriptor 识别 marker 并校验其 Net 语义，不得为通过 required reference schema 制造假值；
 - `Instance.id` 只由内部 stable-ID allocator 产生。已有 ID 不必迁移为新字符串，但所有
   新 producer 不得依赖 `id === netlist.reference`，也不得把 ID collision 当 Reference policy。
 
@@ -307,9 +337,13 @@ typed edits。一次用户 Apply 是一个原子 Project transaction、一个 Pr
 前进，不能笼统承诺“整个操作只有一个 revision”。
 
 当前 `SchematicTransaction.edits`、每个 `transact_document.edits` 和 Project structural edits
-均有 256 上限。S3 大范围编号实施前必须先交付有界 bulk assignment edit（或经实测接受的
-上限调整），由引擎原子校验/应用并保持一个 history entry。禁止把一次用户操作拆成多个可见
-部分提交；在 bulk 能力到位前，GUI 必须阻止超限 proposal 并给出确定诊断。
+均有 256 上限。S3 大范围编号实施前必须先交付一个引擎级 bounded
+`bulk_patch_instance_netlist`（最终命名可在 Edit spec 中确定）。它按 Document 接收 bounded
+assignments，每项以 `instanceId` 指定 reference、binding 或 parameter set/unset；引擎先整体
+校验 uniqueness、field limits 与 compatibility，再原子应用。whole Project 每个受影响
+Document 使用一个 bulk edit，而不是提高普通 edit-array 上限或展开每个 Instance。assignment
+资源上限通过 5,000-instance benchmark 决定并写入 schema 常量。禁止把一次用户操作拆成多个
+可见部分提交；在 bulk 能力到位前，GUI 必须阻止超限 proposal 并给出确定诊断。
 
 #### S3.3 GUI 行为兼容边界
 
@@ -318,6 +352,8 @@ typed edits。一次用户 Apply 是一个原子 Project transaction、一个 Pr
 - rectangle-to-Cell 等 hierarchy authoring 继续产生用户熟悉的 `Xn`；
 - GND/VDD/Port 当前可见名称不因移除假 netlist Reference 而变化；
 - Properties 手动 rename、批量 renumber、Cancel、Undo、save/reopen 的可见结果保持一致。
+- Canvas instance-label 文字编辑继续只改变 presentation，不作为 S3 rename producer；合法
+  Reference 的入口是 Insert、Properties 和明确 renumber/rename command。
 
 这组现有行为先成为 characterization tests，再逐 producer 迁移到 Planner；迁移期间不得
 保留两套 allocator 供新功能选择。初始协议不新增持久化 Reference lock。
@@ -378,9 +414,9 @@ JSON path patch。批量 target/model 修改必须明确显示不兼容器件和
 为一个原子 Project transaction、一个 Project history entry 和一次 Undo，而不是每个 Cell
 一次；每个受影响 Document revision 仍按现有语义前进。
 
-S4 与 S3 共用 bulk-edit 前置能力。大批量不能展开为超过当前 256 上限的普通 edit arrays，
-也不能分批产生多个 history entry；planner 必须输出有界 bulk payload，或在能力尚未落地时
-以明确容量诊断拒绝 Apply。参数数量与字符串长度继续遵守 S2/schema 边界。
+S4 与 S3 共用上述 `bulk_patch_instance_netlist`。大批量不能展开为超过当前 256 上限的普通
+edit arrays，也不能分批产生多个 history entry；能力尚未落地时以明确容量诊断拒绝 Apply。
+参数数量与字符串长度继续遵守 S2/schema 边界。
 
 #### S4.3 产品面
 
@@ -533,13 +569,27 @@ internal Cell 继续以 `Document.netlist` 为权威：
 - Cell netlist name；
 - ordered formal terminals：stable terminal ID、name、direction、`netId` 与
   `interfaceInstanceId`；
-- ordered formal parameter definitions 与 optional raw-string default。
+- `formalParameters[]`：ordered name 与 optional raw-string default。
 
-external black box 使用 Project-level、stable-ID 的 `ExternalSubcircuitDefinition` 作为共享
-权威，至少保存 target name、ordered formal terminals 和同一套 formal parameter definitions。
-每个 external Instance 的 binding 引用该 definition；不得把某个 Instance 的 imported
+schema-14 adapter 对现有 internal binding 校验 child ID 后删除重复 name；caller 上旧
+`netlist.terminals` copy 直接由 child interface 取代。新 `formalParameters` 初始为空。
+
+Project 增加 `externalSubcircuitDefinitions[]`，每个 stable-ID
+`ExternalSubcircuitDefinition` 保存 name、ordered terminals 和同一套 `formalParameters[]`。
+每个 external Instance 的 binding 只引用 definition ID；不得把某个 Instance 的 imported
 terminal mapping 提升为共享接口，也不得为每个 caller 复制一份可独立漂移的 terminal
-definition。该 mapping 按 S1 迁入只读 `importProvenance.terminalMapping`。
+definition。
+
+schema-14 adapter 把 Project `externalSubcircuitDefinitions` 初始化为空，并按 case-folded target
+name 汇总现有 external callers：terminal mappings 一致时生成一个 shared definition（direction
+按 passive），不完整或互相冲突时保留为 explicit unresolved target 并报告 migration diagnostic；
+不得为每个 caller 各造 definition。原 source-position mapping 仍迁入 provenance。
+
+当前 `Instance.netlist.terminals` 同时承载 import source-position evidence 和 internal caller
+的 child-terminal copy。S1/S6 将 imported mapping 迁入只读
+`importProvenance.terminalMapping`；internal caller 不再保存该数组，只从 child stable
+Document/interface 派生。interface change planner 使用 child stable terminal ID 与修改前后
+name 更新 parent Net/Route pin references，不依赖 caller copy。
 
 当前每个 `Instance` 必须有 `symbolId`，因此 external black box 不能“没有 Symbol”存在；它
 由 `ExternalSubcircuitDefinition` 的 ordered interface 派生 generic black-box Symbol。用户
@@ -550,10 +600,13 @@ Stage 1 导出阻塞项。
 target 必须是互斥的三态，而不是依靠字符串或 provenance 猜测：
 
 ```text
-internal Cell       -> stable child Document ID
-external black box  -> stable ExternalSubcircuitDefinition ID
-unresolved target   -> source/用户 target name + unresolved status，无可用 formal interface
+internal Cell       -> { kind: subcircuit, childDocumentId }
+external black box  -> { kind: external-subcircuit, definitionId }
+unresolved target   -> { kind: unresolved-subcircuit, name }
 ```
+
+binding 不再重复保存 internal/external definition name；name 从被引用 definition 派生。只有
+unresolved state 保存尚未解析的用户/source name，避免 ID 与 name 两个 target authority。
 
 `Instance.importProvenance` 继续只读。它可以解释 unresolved 的来源，但不参与 target
 resolution。internal/external definition 的 shared derived adapter 向 Symbol、Properties、ERC、
@@ -650,6 +703,10 @@ Preflight UI、IR extraction 与阶段二 printer 各自实现一套可导出性
 analyzeDesignNetlist(Project) -> { ir, diagnostics }
 ```
 
+它不是新建第二套实现：把当前已经返回 `DesignNetlistExtractionResult { ir|null,
+diagnostics }` 的 `extractDesignNetlist` 原地升级/重命名为该入口，并迁移现有 callers/tests；
+迁移完成后不保留两个可供 producer 选择的公共分析函数。
+
 Preflight UI 展示同一次分析的 diagnostics，阶段出口与后续 exporter 消费同一次分析的 IR；
 存在 blocking diagnostics 时不交付可导出 IR。printer 仍做边界防御校验，但不得维护第二份
 业务规则或给缺失事实猜默认值。
@@ -668,8 +725,8 @@ Preflight 至少检查：
 - duplicate/illegal Cell 与 Net names；
 - IR resource limits。
 
-所有 finding 使用统一 Diagnostic 和 ObjectLocator；点击后切 Cell、恢复 caller path、fit、
-select，并在适用时 highlight Net。
+当前 extraction diagnostic 的 `documentId + objectIds` 在该迁移中接入统一 Diagnostic 与
+ObjectLocator；点击后切 Cell、恢复 caller path、fit、select，并在适用时 highlight Net。
 
 analysis 通过后，唯一阶段出口是 analyzer 返回的 `DesignNetlistIR`。IR 必须完整、稳定地
 包含 dependency-ordered internal Cells、non-emitted external masters/interfaces、formal
@@ -681,7 +738,29 @@ globals 与 hierarchy。
 
 ## 6. 依赖与交付顺序
 
+### S0. 实施准备 Gate
+
+S0 不是新的产品层，也不阻塞读取/characterization 工作；它在共享 schema/Edit/UI producer
+修改前冻结以下合同：
+
+1. **一个对外 schema-14 形状**：一次包含 `Instance.properties` removal、
+   `importProvenance.terminalMapping`、internal `formalParameters[]`、Project
+   `externalSubcircuitDefinitions[]` 和三态 subcircuit binding。Stage 1 分 target 实施，但不得
+   连续公开 schema 14/15 导致上一发布版 schema 13 跌出滚动 N-1 窗口；
+2. **迁移语料审计**：列出所有非空旧 property keys、冲突规则和 schema-13 → 14 结果；
+3. **GUI characterization**：冻结现有 Properties 即时字段/Discard/display toggle、Canvas
+   hand-edited label/value、Reference insertion/paste/hierarchy，以及 S5 兼容矩阵；
+4. **bounded bulk Edit spec**：冻结 assignment shape、整体校验、atomic history 与资源限制的
+   measurement 方法；实际 edit 在 S3/S4 依赖前交付；
+5. **S6 集成边界**：在进入 terminal-order 产品面前，先合入并验证已有新分支 GUI，复用
+   `planReorderCellTerminal`，不得重新实现第二套 reorder workflow。
+
+这些决定完成后不再需要额外产品决策才能按 S1–S7 推进；每个 implementation target 仍按
+其 ownership/validation boundary 拆分和验收。
+
 ```text
+S0 accepted schema / GUI characterization / bulk spec
+ ↓
 S1 authority and unified property protocol
  ├─→ S2 descriptor-driven Component Properties
  │    └─→ S3 Reference Policy / Index / Planner
@@ -709,6 +788,19 @@ S5 的详细技术迁移继续由
 connectivity index 的底层设计。
 
 ## 7. 阶段验收场景
+
+### Properties 与 Canvas text 兼容
+
+```text
+existing component with Reference R1
+→ edit current Value/W/L/M or position/rotation fields
+→ visible result continues updating with the current immediate gesture
+→ Discard, selection/focus, Undo and save/reopen retain characterized results
+→ double-click its Canvas label and author R_LOAD
+→ R_LOAD remains visible presentation text while netlist.reference remains R1
+→ change Reference through Properties
+→ typed reference, canonical projection, Search, Preflight and IR agree
+```
 
 ### 人工 model-backed MOS
 
@@ -793,14 +885,17 @@ Project with duplicate Reference, missing model binding/name and stale Cell inte
 
 | 风险 | 处理 |
 | --- | --- |
-| Properties、annotation 和 netlist facts 各自成权威 | S1 先冻结 authority/projection，再实施 UI |
+| 删除旧 property branch 被误解为重做 Properties GUI | 数据协议与 GUI 兼容边界分开；typed writer 替换但现有即时字段/Discard/toggle 保持 |
+| hand-edited annotation 被误当工程事实或为其过度建模 | derived canonical classifier；Canvas text 只属 presentation，Stage 1 不持久化 managed/detached flag |
 | arbitrary parameters 绕过 descriptor required rules | 保存全部显式参数；descriptor 仅拥有 known/required/display policy |
 | 大批量超过 edit-array 上限或产生部分提交 | 先交付 bounded bulk edit；一次用户命令对应原子 Project history entry 和 Undo，保留真实 revision 语义 |
+| 多次 schema bump 使上一发布版跌出 N-1 窗口 | S0 一次冻结并最终发布完整 schema-14；分 target 实施不形成多个公开 current versions |
 | 编号依赖 DOM、ID/Reference 偶合或当前数组顺序 | 单一 ReferencePolicy/Index、per-Cell placement/stable-ID 排序与 preview |
 | 协议统一意外改变当前 GUI 行为 | producer-by-producer characterization；gesture adapter 保持相同 Project delta、状态与 Undo |
 | Wire 改造破坏已经稳定的 connectivity | 复用 canonical index/geometry，由显式 intent adapter 对照迁移每个 producer |
 | visual pin layout 被误当作 netlist terminal order | presentation 只保存 side/offset/body；formal array order 单独 author，双方不互相反推 |
 | imported Instance terminal mapping 被提升为 external interface | external definition 是共享权威；Instance mapping 继续只是只读 source evidence |
+| hierarchy binding 同时保存 ID 与可漂移 name | resolved binding 只保存 definition ID；name 只由 definition 派生，unresolved 才保存 name |
 | external subcircuit 被错误解释为 PDK/model | 只保存 target、ordered pins 和 raw parameters，不判断物理模型 |
 | Preflight、extraction 与 exporter 各自检查一遍 | 单一 `analyzeDesignNetlist(Project)` 产出 IR + diagnostics；printer 只做边界防御校验 |
 | Stage 2 方言需求反向污染 Project | 所有 text/source/dialect evidence 留在 parser/printer/provenance 边界 |
@@ -812,6 +907,9 @@ Project with duplicate Reference, missing model binding/name and stale Cell inte
   interface 事实全部可通过 GUI 创建和编辑；
 - Properties、Instance Table、编号、annotation、search、ERC 和 extraction 对同一事实
   解释一致；
+- 旧 `Instance.properties` 已移除，但已有 Properties 即时字段、Discard、display toggle、
+  selection/focus 和 Canvas hand-edited text 通过 characterization；Canvas text 不修改 typed
+  Reference/parameters；
 - Wire/Net 的当前创建、移动、分支、断开和删除语义统一到共享 proposal envelope；完成
   Stage 1 所需的基本局部 corner/vertex 整形，optional S5 增强不阻塞出口；
 - internal Cell 与 external subcircuit 均能无猜测地进入 IR；

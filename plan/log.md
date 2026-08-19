@@ -3447,5 +3447,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   and reduced S5/S6 to focused planners and Stage 1-essential behavior.
 - Validation: documentation links, test-impact against `main`, and diff check
   passed.
+- Commit status: committed and pushed on
+  `codex/phase1-schematic-foundation-plan` as `e344933`.
+
+## 2026-08-19 - Stage 1 accepted data and GUI contracts
+
+- Changed areas: separated removal of persisted electrical properties from
+  current Properties GUI compatibility; made canvas instance text
+  presentation-only with a derived canonical classifier; selected the minimal
+  non-emitting shape, bounded bulk edit, hierarchy binding/external-definition
+  shapes, and existing-extraction analyzer path; and added the S0 implementation
+  preparation gate.
+- Validation: documentation links, test-impact against `main`, and diff check
+  passed.
 - Commit status: prepared for commit on
   `codex/phase1-schematic-foundation-plan`.
