@@ -158,6 +158,7 @@ export function agentEditCategory(
       return "presentation";
     case "set_instance_netlist":
     case "set_instance_binding":
+    case "bulk_patch_instance_netlist":
     case "add_cell_terminal":
     case "update_cell_terminal":
     case "remove_cell_terminal":

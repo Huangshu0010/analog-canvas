@@ -3510,3 +3510,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Changed areas: centralized per-Cell reference allocation, validation, hierarchy X policy, clipboard/insertion authoring, typed rename planning, Properties Reference editing, canonical label refresh, and netlist extraction diagnostics/marker behavior.
 - Validation: typecheck; focused unit contracts (58 tests); focused Properties/hierarchy browser contracts (8 tests); test-impact against `origin/main`; docs links; and diff check passed.
 - Commit status: committed locally on `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-20 - S4 Project Instance Index and batch authoring
+
+- Changed areas: definition-level project instance index and caller context,
+  bounded atomic typed bulk netlist edit, batch property and Reference
+  renumber planners, explicit Instance Table UI, and editor regression tests.
+- Validation: TypeScript typecheck; 50 focused unit/component tests; Instance
+  Table and existing Properties Playwright paths; test-impact against
+  `origin/main`; docs links; and diff check passed.
+- Commit status: committed locally on `codex/phase1-schematic-foundation-plan`.

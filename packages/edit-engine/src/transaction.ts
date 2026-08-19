@@ -921,6 +921,143 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
+      case "bulk_patch_instance_netlist": {
+        const assignedIds = new Set<string>();
+        for (const assignment of edit.assignments) {
+          if (assignedIds.has(assignment.instanceId)) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Bulk netlist patch repeats instance ${assignment.instanceId}`,
+              [],
+              [assignment.instanceId],
+            );
+          }
+          assignedIds.add(assignment.instanceId);
+          const instance = draft.instances.find(
+            (candidate) => candidate.id === assignment.instanceId,
+          );
+          if (!instance?.netlist) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Bulk netlist patch requires a netlist record: ${assignment.instanceId}`,
+              [],
+              [assignment.instanceId],
+            );
+          }
+          const before: SchematicDocument["instances"][number] =
+            structuredClone(instance);
+          let changed = false;
+          let parametersChanged = false;
+          if (
+            assignment.reference !== undefined &&
+            instance.netlist.reference !== assignment.reference
+          ) {
+            instance.netlist.reference = assignment.reference;
+            changed = true;
+          }
+          if (assignment.binding !== undefined) {
+            const current = instance.netlist.binding ?? null;
+            if (
+              JSON.stringify(current) !== JSON.stringify(assignment.binding)
+            ) {
+              if (assignment.binding) {
+                instance.netlist.binding = structuredClone(assignment.binding);
+              } else {
+                delete instance.netlist.binding;
+              }
+              changed = true;
+              connectivityChanged = true;
+            }
+          }
+          const set = assignment.set ?? {};
+          const unset = assignment.unset ?? [];
+          const unsetNames = new Set(
+            unset.map((name) => name.toLowerCase()),
+          );
+          if (unsetNames.size !== unset.length) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Bulk netlist patch repeats an unset parameter on ${instance.id}`,
+              [],
+              [instance.id],
+            );
+          }
+          const conflictingKey = Object.keys(set).find((key) =>
+            unsetNames.has(key.toLowerCase()),
+          );
+          if (conflictingKey) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Bulk netlist patch cannot set and unset ${conflictingKey}`,
+              [],
+              [instance.id],
+            );
+          }
+          if (Object.keys(set).length > 0 || unset.length > 0) {
+            const nextParameters = { ...instance.netlist.parameters };
+            for (const key of unset) delete nextParameters[key];
+            for (const [key, value] of Object.entries(set)) {
+              nextParameters[key] = value;
+            }
+            const namesByFoldedName = new Map<string, string>();
+            for (const name of Object.keys(nextParameters)) {
+              const folded = name.toLowerCase();
+              const prior = namesByFoldedName.get(folded);
+              if (prior && prior !== name) {
+                return rejectAt(
+                  "EDIT_PRECONDITION",
+                  `Netlist parameter ${name} duplicates ${prior} under case folding`,
+                  [],
+                  [instance.id],
+                );
+              }
+              namesByFoldedName.set(folded, name);
+            }
+            parametersChanged =
+              Object.keys(nextParameters).length !==
+                Object.keys(instance.netlist.parameters).length ||
+              Object.entries(nextParameters).some(
+                ([key, value]) => instance.netlist!.parameters[key] !== value,
+              );
+            if (parametersChanged) {
+              instance.netlist.parameters = nextParameters;
+              changed = true;
+            }
+          }
+          if (!changed) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Bulk netlist patch does not change ${instance.id}`,
+              [],
+              [instance.id],
+            );
+          }
+          if (assignment.reference !== undefined) {
+            refreshInstanceReferenceAnnotation(
+              draft,
+              before,
+              instance.id,
+              changedObjectIds,
+            );
+          }
+          if (parametersChanged) {
+            refreshInstanceValueAnnotation(
+              draft,
+              before,
+              instance.id,
+              changedObjectIds,
+            );
+          }
+          changedObjectIds.add(instance.id);
+        }
+        for (const instanceId of assignedIds) {
+          const failure = referencePolicyFailure(draft, instanceId);
+          if (failure) {
+            return rejectAt("EDIT_PRECONDITION", failure, [], [instanceId]);
+          }
+        }
+        break;
+      }
       case "add_cell_terminal": {
         if (!draft.netlist) {
           return rejectAt(

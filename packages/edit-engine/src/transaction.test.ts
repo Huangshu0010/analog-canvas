@@ -77,6 +77,28 @@ describe("Edit Transaction envelope", () => {
     ).toBe(false);
   });
 
+  it("bounds one bulk netlist patch before it reaches a transaction", () => {
+    const assignments = Array.from({ length: 5_000 }, (_, index) => ({
+      instanceId: `M${index + 1}`,
+      set: { l: "120n" },
+    }));
+    expect(
+      SchematicEditSchema.safeParse({
+        kind: "bulk_patch_instance_netlist",
+        assignments,
+      }).success,
+    ).toBe(true);
+    expect(
+      SchematicEditSchema.safeParse({
+        kind: "bulk_patch_instance_netlist",
+        assignments: [
+          ...assignments,
+          { instanceId: "M5001", set: { l: "120n" } },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects an invalid power rail atomically", () => {
     const document = createEmptyDocument("document-main", "Main");
     const before = JSON.stringify(document);
@@ -779,6 +801,59 @@ describe("Edit Transaction envelope", () => {
     expect(flattenRichText(renamed.document.annotations[0]!.content)).toBe(
       "M3",
     );
+  });
+
+  it("applies a bounded bulk netlist patch atomically", () => {
+    const document = documentWithInstance();
+    document.instances.push({
+      id: "M2",
+      symbolId: "nmos",
+      placement: null,
+      netlist: {
+        reference: "M2",
+        binding: { kind: "primitive", deviceClass: "mos" },
+        parameters: { l: "60n" },
+      },
+    });
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "bulk_patch_instance_netlist",
+          assignments: [
+            { instanceId: "M1", set: { l: "120n" } },
+            { instanceId: "M2", set: { l: "120n" } },
+          ],
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        instances: [
+          { id: "M1", netlist: { parameters: { l: "120n" } } },
+          { id: "M2", netlist: { parameters: { l: "120n" } } },
+        ],
+      },
+    });
+    const rejected = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "bulk_patch_instance_netlist",
+          assignments: [
+            { instanceId: "M1", reference: "M3" },
+            { instanceId: "M2", reference: "m3" },
+          ],
+        },
+      ],
+    });
+    expect(rejected).toMatchObject({ ok: false, applied: false });
+    expect(
+      document.instances.map((instance) => instance.netlist?.reference),
+    ).toEqual(["M1", "M2"]);
   });
 
   it("rejects an invalid parameter patch without partially changing the instance", () => {

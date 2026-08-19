@@ -266,6 +266,7 @@ import type { BrowserRecoveryGeneration } from "../document/browser-recovery-con
 import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
+import { InstanceTableDialog } from "../features/properties/instance-table-dialog";
 import { useEditorPanels } from "../features/editor-shell/use-editor-panels";
 import {
   type InstanceMovePreview,
@@ -545,6 +546,7 @@ export function App({
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
+  const [instanceTableOpen, setInstanceTableOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
     useState<AgentFileCandidateSummary | null>(null);
   const browserAgentFileHost = useMemo(
@@ -1630,6 +1632,25 @@ export function App({
     );
     resetInteractionState();
     setStatus(`Opened Cell ${nextDocument.name}`);
+  }
+
+  function openInstanceFromTable(documentId: string, instanceId: string): void {
+    const paths = findHierarchyPaths(
+      projectConnectivityIndex,
+      project.topDocumentId,
+      documentId,
+    );
+    // A reused definition remains a single table row. Navigation still needs
+    // one concrete caller context, so use the deterministic first valid path.
+    setDocumentStack(paths?.[0] ? [...paths[0]] : []);
+    switchDocument(documentId);
+    selectOnly("instance", [instanceId]);
+    setInstanceTableOpen(false);
+    setStatus(
+      paths && paths.length > 1
+        ? `Opened ${documentId}.${instanceId} via one of ${paths.length} caller paths`
+        : `Opened ${documentId}.${instanceId}`,
+    );
   }
 
   function commitStructure(
@@ -6282,6 +6303,14 @@ export function App({
                   </button>
                   <button
                     type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded={instanceTableOpen}
+                    onClick={() => setInstanceTableOpen(true)}
+                  >
+                    Instance Table…
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => rotateSelected()}
                     disabled={selectedIds.length === 0}
                   >
@@ -6597,6 +6626,23 @@ export function App({
         onQueryChange={setSearchQuery}
         onSelect={selectSearchResult}
         onClose={closeSearch}
+      />
+      <InstanceTableDialog
+        open={instanceTableOpen}
+        project={project}
+        connectivityIndex={projectConnectivityIndex}
+        activeDocumentId={document.id}
+        onClose={() => setInstanceTableOpen(false)}
+        onOpenInstance={openInstanceFromTable}
+        onApply={(transactionId, edits) => {
+          const committed = commitStructure(transactionId, edits);
+          if (committed) {
+            setStatus(
+              `Updated ${edits.length} Cell${edits.length === 1 ? "" : "s"}`,
+            );
+          }
+          return committed;
+        }}
       />
       <InsertComponentDialog
         open={insertDialogOpen}

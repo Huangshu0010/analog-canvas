@@ -93,6 +93,27 @@ export const SetInstanceNetlistEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   netlist: InstanceNetlistDataSchema,
 });
+export const BulkInstanceNetlistAssignmentSchema = z
+  .strictObject({
+    instanceId: StableIdSchema,
+    reference: z.string().min(1).max(128).optional(),
+    binding: InstanceNetlistBindingSchema.nullable().optional(),
+    set: z.record(z.string().min(1), z.string().min(1).max(1024)).optional(),
+    unset: z.array(z.string().min(1)).max(64).optional(),
+  })
+  .refine(
+    (assignment) =>
+      assignment.reference !== undefined ||
+      assignment.binding !== undefined ||
+      Object.keys(assignment.set ?? {}).length > 0 ||
+      (assignment.unset?.length ?? 0) > 0,
+    "Bulk assignment must change a typed netlist field",
+  );
+/** Bounded atomic alternative to expanding a bulk request into 256 edits. */
+export const BulkPatchInstanceNetlistEditSchema = z.strictObject({
+  kind: z.literal("bulk_patch_instance_netlist"),
+  assignments: z.array(BulkInstanceNetlistAssignmentSchema).min(1).max(5000),
+});
 export const AddCellTerminalEditSchema = z.strictObject({
   kind: z.literal("add_cell_terminal"),
   terminal: CellNetlistTerminalSchema,
@@ -302,6 +323,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   SetInstanceReferenceEditSchema,
   SetInstanceBindingEditSchema,
   SetInstanceNetlistEditSchema,
+  BulkPatchInstanceNetlistEditSchema,
   AddCellTerminalEditSchema,
   UpdateCellTerminalEditSchema,
   RemoveCellTerminalEditSchema,
