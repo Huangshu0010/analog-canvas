@@ -1,9 +1,9 @@
 import { CURRENT_PROJECT_SCHEMA_VERSION } from "@icm/model";
 
 /**
- * The only active migration. Schema 14 adds optional Cell-symbol pin-label
- * placement intent; its absence preserves schema-13 geometry and electrical
- * facts exactly.
+ * The only active migration. Schema 13 adds optional derived Cell-symbol
+ * presentation intent; an absent member selects deterministic automatic
+ * geometry and preserves every schema-12 electrical fact exactly.
  */
 export function upgradePreviousProject(
   raw: Record<string, unknown>,

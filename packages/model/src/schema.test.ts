@@ -301,16 +301,5 @@ describe("CircuitProject schema", () => {
       { terminalId: "terminal-input", side: "north", offset: 20 },
     ];
     expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
-
-    document.presentation.cellSymbol.pinPlacements = undefined;
-    document.presentation.cellSymbol.pinLabelPlacements = [
-      { terminalId: "terminal-input", inwardOffset: 20 },
-    ];
-    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
-
-    document.presentation.cellSymbol.pinLabelPlacements = [
-      { terminalId: "missing-terminal", inwardOffset: 0 },
-    ];
-    expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
   });
 });

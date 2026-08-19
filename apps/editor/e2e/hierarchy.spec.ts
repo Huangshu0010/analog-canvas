@@ -159,15 +159,12 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await expect(layout).toBeVisible();
   await layout.getByLabel("Cell symbol width").fill("120");
   await layout.getByLabel("Cell symbol width").press("Tab");
-  await expect(page.getByTestId("status")).toContainText("Resized ReusableStage");
+  await expect(page.getByTestId("status")).toContainText(
+    "Resized ReusableStage",
+  );
   await layout.getByLabel("Cell symbol IN pin side").selectOption("north");
   await expect(page.getByTestId("status")).toContainText(
     "Moved Cell symbol pin",
-  );
-  await layout.getByLabel("Cell symbol IN name inward").fill("10");
-  await layout.getByLabel("Cell symbol IN name inward").press("Tab");
-  await expect(page.getByTestId("status")).toContainText(
-    "Moved Cell symbol pin name",
   );
   await layout
     .getByRole("button", { name: "Edit symbol layout on canvas" })
@@ -191,6 +188,24 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   }
   await expect(page.getByTestId("status")).toContainText(
     /Resized ReusableStage|Committed revision/u,
+  );
+  const pinHandle = page.locator('[data-testid^="cell-symbol-pin-handle-"]');
+  const pinHandleBox = await pinHandle.boundingBox();
+  expect(pinHandleBox).not.toBeNull();
+  if (pinHandleBox) {
+    await page.mouse.move(
+      pinHandleBox.x + pinHandleBox.width / 2,
+      pinHandleBox.y + pinHandleBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      pinHandleBox.x + pinHandleBox.width / 2 + 20,
+      pinHandleBox.y + pinHandleBox.height / 2,
+    );
+    await page.mouse.up();
+  }
+  await expect(page.getByTestId("status")).toContainText(
+    "Moved Cell symbol pin",
   );
 });
 

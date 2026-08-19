@@ -347,7 +347,7 @@
   ],
   "id": "project-phase-5-dense-analog",
   "name": "Current Differential Stage",
-  "schemaVersion": 14,
+  "schemaVersion": 13,
   "source": {
     "dialect": "none",
     "entry": null,

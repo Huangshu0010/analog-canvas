@@ -99,12 +99,6 @@ describe("hierarchical block formal terminals", () => {
           pinPlacements: [
             { terminalId: "terminal-vdd", side: "north", offset: 20 },
           ],
-          pinLabelPlacements: [
-            {
-              terminalId: "terminal-vout",
-              inwardOffset: 20,
-            },
-          ],
         },
       },
     });
@@ -123,11 +117,6 @@ describe("hierarchical block formal terminals", () => {
         }),
       ]),
     );
-    expect(
-      symbol?.pins.find((pin) => pin.name === "OUT")?.presentation,
-    ).toMatchObject({
-      labelOffset: { x: -34, y: 0 },
-    });
     expect(symbol?.viewBox.width).toBeGreaterThan(100);
     expect(
       symbol?.pins.every((pin) => pin.at.x % 10 === 0 && pin.at.y % 10 === 0),

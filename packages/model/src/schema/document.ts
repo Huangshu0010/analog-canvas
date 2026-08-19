@@ -312,7 +312,6 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
           document.netlist.terminals.map((terminal) => terminal.id),
         );
         const placedTerminals = new Set<string>();
-        const labelledTerminals = new Set<string>();
         const occupiedSlots = new Set<string>();
         for (const [index, placement] of (
           cellSymbol.pinPlacements ?? []
@@ -353,37 +352,6 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
             });
           }
           occupiedSlots.add(slot);
-        }
-        for (const [index, placement] of (
-          cellSymbol.pinLabelPlacements ?? []
-        ).entries()) {
-          if (!terminalIds.has(placement.terminalId)) {
-            context.addIssue({
-              code: "custom",
-              message: `Cell symbol label placement references unknown terminal: ${placement.terminalId}`,
-              path: [
-                "presentation",
-                "cellSymbol",
-                "pinLabelPlacements",
-                index,
-                "terminalId",
-              ],
-            });
-          }
-          if (labelledTerminals.has(placement.terminalId)) {
-            context.addIssue({
-              code: "custom",
-              message: `Cell symbol terminal label is placed more than once: ${placement.terminalId}`,
-              path: [
-                "presentation",
-                "cellSymbol",
-                "pinLabelPlacements",
-                index,
-                "terminalId",
-              ],
-            });
-          }
-          labelledTerminals.add(placement.terminalId);
         }
       }
     }

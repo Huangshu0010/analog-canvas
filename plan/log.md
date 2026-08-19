@@ -279,7 +279,8 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 
 - Changed areas: unified transient canvas cleanup, bounded Document undo/redo history, build-versioned Service Worker static cache, and focused unit/E2E coverage; documented the resulting interaction and history contracts.
 - Validation: focused canvas/history Vitest 11/11, Smart Snap Escape Playwright scenario, editor production build, workspace typecheck, targeted Prettier, and `git diff --check` passed. Repository-wide format chec…
-- Commit status: ready to commit.
+- Commit status: committed on `codex/cell-symbol-layout` as
+  `refine(hierarchy): prioritize Cell pin editing`.
 
 ## 2026-08-10 - Measured Razavi capacitor refinement
 
@@ -3316,6 +3317,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   hierarchy Playwright (6); and diff check.
 - Commit status: included in the follow-up local target commit on
   `codex/cell-symbol-layout`.
+
+## 2026-08-19 - Cell symbol layout pin-priority refinement
+
+- Changed areas: canvas layout-grip hit priority, compact Cell pin Side/Offset
+  controls, automatic pin-name layout, and the unmerged schema-14 rollback.
+- Validation: typecheck; focused model/protocol/symbol/render/document Vitest
+  (94); hierarchy/project-file Playwright (14); hierarchy Playwright with
+  direct body/pin grip coverage (6); workspace build; test-impact; and diff
+  check.
+- Commit status: ready to commit.
 
 ## 2026-08-19 - Properties panel mainline regression
 

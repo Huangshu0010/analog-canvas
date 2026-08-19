@@ -245,46 +245,6 @@ export function planSetCellTerminalPlacement(
       ? { minimumBodySize: current.minimumBodySize }
       : {}),
     ...(pinPlacements.length > 0 ? { pinPlacements } : {}),
-    ...(current?.pinLabelPlacements
-      ? { pinLabelPlacements: current.pinLabelPlacements }
-      : {}),
-  });
-}
-
-/** Set a pin name position relative to its pin's normal in-body label point. */
-export function planSetCellTerminalLabelPlacement(
-  project: CircuitProject,
-  documentId: string,
-  terminalId: string,
-  placement: { inwardOffset: number } | null,
-): ProjectStructureEdit[] {
-  if (
-    placement &&
-    (!Number.isInteger(placement.inwardOffset) ||
-      placement.inwardOffset < 0 ||
-      placement.inwardOffset % 10 !== 0)
-  ) {
-    throw new Error("Cell Port label position must use the 10-unit grid");
-  }
-  const document = requireDocument(project, documentId);
-  if (
-    !document.netlist?.terminals.some((terminal) => terminal.id === terminalId)
-  ) {
-    throw new Error(
-      `Cell terminal does not exist: ${documentId}.${terminalId}`,
-    );
-  }
-  const current = document.presentation.cellSymbol;
-  const pinLabelPlacements = (current?.pinLabelPlacements ?? []).filter(
-    (item) => item.terminalId !== terminalId,
-  );
-  if (placement) pinLabelPlacements.push({ terminalId, ...placement });
-  return planSetCellSymbolPresentation(project, documentId, {
-    ...(current?.minimumBodySize
-      ? { minimumBodySize: current.minimumBodySize }
-      : {}),
-    ...(current?.pinPlacements ? { pinPlacements: current.pinPlacements } : {}),
-    ...(pinLabelPlacements.length > 0 ? { pinLabelPlacements } : {}),
   });
 }
 

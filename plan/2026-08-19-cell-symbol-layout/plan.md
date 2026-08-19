@@ -9,8 +9,7 @@ experience: none
 
 Make child-Cell editing behave like ordinary schematic editing, align parent
 hierarchy-pin typography with child Port labels, and add direct,
-definition-level Cell Symbol Layout editing for pin placement, pin-label
-placement, and body size.
+definition-level Cell Symbol Layout editing for pin placement and body size.
 
 ## State and Ownership
 
@@ -40,17 +39,19 @@ RichText renderer. Their contracts must be reused rather than duplicated.
    allowing ordinary Cell content deletion.
 2. Use the same semantic instance-label RichText conversion for hierarchy pins
    and child formal-Port annotations; reject empty formal-Port labels.
-3. Advance the Project protocol for definition-level pin-label placement,
-   migrate schema-13 Projects deterministically, and extend validation,
-   symbols, rendering, and Agent parity.
+3. Keep the Project protocol at schema 13 for definition-level body and pin
+   placement intent, with deterministic automatic pin-name layout.
 4. Add compact Cell Symbol Layout controls in Properties: body resize, pin
-   side/offset, pin-label inward offsets, automatic placement, caller
-   Route follow, and structural undo/redo.
+   side/offset, automatic placement, caller Route follow, and structural
+   undo/redo.
 5. Update hierarchy documentation and focused unit/browser coverage.
 6. Follow-up: correct north/south text-baseline placement; compact each pin's
    Properties controls to one row; remove the redundant tangential label
    parameter; and provide an opt-in canvas drag mode whose grips commit the
    same definition-level planners.
+7. Follow-up: remove manual pin-name placement entirely, restore the protocol
+   to schema 13 because schema 14 carried only that now-rejected intent, and
+   give enabled canvas grips priority over the selected Instance hit target.
 
 ## Validation
 
@@ -86,20 +87,17 @@ Initial implementation and layout interaction refinement completed on
 - Replaced the UI-only formal-Port deletion gate with one shared visual-delete
   proposal and an atomic multi-Port structural planner. Caller-wired Ports are
   retained while all safe selected objects remain deletable.
-- Added schema-14 optional definition-level pin-label placement, deterministic
-  v13 migration, validation, geometry derivation, cleanup on Port deletion,
-  and route-follow reuse.
+- Kept schema-13 definition-level body and pin-placement intent, with
+  deterministic automatic pin-name layout and route-follow reuse.
 - Parent Cell symbols now render pin names through the same semantic
   `instance-label` RichText path as child Port annotations; empty formal names
   are rejected instead of deleting the annotation.
 - Added compact Properties controls for a selected hierarchy instance: body
-  width/height, pin side/offset, and pin-name inward offsets.
-- Corrected the manual pin-label baseline so top/bottom names align with their
-  automatic counterparts, removed the redundant tangential name parameter, and
-  compacted every pin to one Properties row.
-- Added an opt-in canvas layout mode with body, pin, and label grips. The grips
-  use the same definition-level planners and preserve normal canvas selection
-  and wiring while disabled.
+  width/height and pin side/offset.
+- Compacted every pin to one Properties row and kept its name automatic.
+- Added an opt-in canvas layout mode with body and pin grips. Enabled grips
+  take priority over the selected instance hit target, while normal canvas
+  selection and wiring remain unchanged when the mode is disabled.
 - Updated current fixtures and compatibility/hierarchy documentation.
 
 ## Validation Record
@@ -114,5 +112,8 @@ Initial implementation and layout interaction refinement completed on
 - `node scripts/editor-production-smoke.mjs --check`
 - `pnpm test:impact -- --base origin/main`
 - `git diff --check`
-- follow-up: `pnpm typecheck`; focused Vitest: 39 passed; hierarchy Playwright:
-  6 passed
+- follow-up: `pnpm typecheck`; focused model/protocol/symbol/render/document
+  Vitest: 94 passed; hierarchy/project-file Playwright: 14 passed; hierarchy
+  Playwright with direct body/pin grip coverage: 6 passed; `pnpm build`;
+  `pnpm test:impact -- --base origin/main`; and `git diff --check`.
+- Follow-up commit: `refine(hierarchy): prioritize Cell pin editing`.

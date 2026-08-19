@@ -2,16 +2,16 @@
 
 Status: `accepted`
 
-Project schema: `14`
+Current Project schema: `13`
 
 Primary owners: `packages/model` (current shape) and
 `packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`@icm/project-protocol` exposes `parseProject` and accepts Project schema 14
-and schema 13. Schema 13 advances directly to 14 by selecting absent,
+`@icm/project-protocol` exposes `parseProject` and accepts Project schema 13
+and schema 12. Schema 12 advances directly to 13 by selecting absent,
 deterministic Cell-symbol presentation intent. Every reader returns the sole
-schema-14 in-memory Project shape; schema 12 and older and all future versions
+schema-13 in-memory Project shape; schema 11 and older and all future versions
 are rejected. There is no sequential migration registry or second in-memory
 Project shape.
 
@@ -42,8 +42,8 @@ Project shape.
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 13 or 14
--> direct v13-to-v14 upgrade when needed -> strict schema-14 validation -> open
+read text -> parse JSON -> require Project schema 12 or 13
+-> direct v12-to-v13 upgrade when needed -> strict schema-13 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```
 
@@ -53,7 +53,7 @@ after explicit human approval in the editor.
 
 A migrated formal file is marked as needing save. The editor does not silently
 overwrite the source selected through the browser file input. Browser recovery
-records may be canonicalized to v14 only after a successful validated write.
+records may be canonicalized to v12 only after a successful validated write.
 
 Project entry does not repair duplicate canonical supply Nets (`0` or `VDD`).
 Duplicate folded Net names are invalid input and remain a blocking diagnostic
@@ -62,7 +62,7 @@ until the author explicitly renames or merges the Nets.
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in
 `fixtures/projects/compatibility-corpus.json`; its accepted entries must all be
-already canonical Project schema 14. The rejected corpus names expected
+already canonical Project schema 13. The rejected corpus names expected
 validation failures.
 
 Viewport, selection, undo history, canvas overlays, Agent credentials,

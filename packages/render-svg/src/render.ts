@@ -327,22 +327,9 @@ function renderVisiblePinNames(
     .map((pin) => {
       const anchor = transformPoint(pin.at, placement.position, placement);
       const outward = transformedDirection(pin.direction, placement);
-      const labelOffset = pin.presentation.labelOffset;
-      const labelPoint = labelOffset
-        ? transformPoint(
-            {
-              x: pin.at.x + labelOffset.x,
-              y: pin.at.y + labelOffset.y,
-            },
-            placement.position,
-            placement,
-          )
-        : undefined;
       const distance = (pin.presentation.leadLength ?? 0) + 4;
-      const x = labelPoint ? labelPoint.x : anchor.x - outward.x * distance;
-      const y = labelPoint
-        ? labelPoint.y + 4
-        : anchor.y - outward.y * distance + 4;
+      const x = anchor.x - outward.x * distance;
+      const y = anchor.y - outward.y * distance + 4;
       const alignment =
         outward.x < 0 ? "start" : outward.x > 0 ? "end" : "middle";
       const sizeAttribute =

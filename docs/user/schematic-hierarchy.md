@@ -56,18 +56,16 @@ creates a child Cell, and places an ordinary hierarchical Instance. Saved
 hierarchy never depends on rectangle drawing data.
 
 Select a Cell Instance in a parent and open **Properties** to adjust that
-Cell's shared symbol layout: body width/height, each pin side/offset, and each
-pin name's in-body inward offset. The name offset travels with the pin
-through rotation and mirroring; it never takes over the external wiring anchor.
-Use **Auto** to return a pin to direction-aware placement. **Edit symbol layout
-on canvas** reveals explicit drag grips for the body, pins, and names; the
-Properties values remain the precise fallback. These are definition operations,
+Cell's shared symbol layout: body width/height and each pin side/offset. Pin
+names follow their pin automatically and never take over the external wiring
+anchor. Use **Auto** to return a pin to direction-aware placement. **Edit
+symbol layout on canvas** reveals explicit drag grips for the body and pins;
+the Properties values remain the precise fallback. These are definition operations,
 not top-level drawing tools.
 
-Hierarchy presentation is saved as definition-level size, pin-placement, and
-pin-label-placement intent in Project schema 14. Older schema-13 projects open
-with deterministic automatic pin and label layout; schema-12 files are outside
-the supported rolling compatibility window. The block uses a closed polygon
-body and the shared Razavi rich-text renderer for pin and Cell names; it is
-compatible with that visual grammar rather than a pixel-for-pixel textbook
-symbol asset.
+Hierarchy presentation is saved as definition-level size and pin-placement
+intent in Project schema 13. Older schema-12 projects open with deterministic
+automatic pin layout; schema-11 files are outside the supported rolling
+compatibility window. The block uses a closed polygon body and the shared
+Razavi rich-text renderer for pin and Cell names; it is compatible with that
+visual grammar rather than a pixel-for-pixel textbook symbol asset.
