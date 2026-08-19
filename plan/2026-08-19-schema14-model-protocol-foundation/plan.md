@@ -41,6 +41,7 @@ Owned paths:
 - `docs/specs/persistence-and-recovery.md`
 - `docs/overall-product-plan.md`
 - `docs/user/schematic-hierarchy.md`
+- `scripts/audit-schema13-properties.mjs`
 - `plan/2026-08-19-schema14-model-protocol-foundation/plan.md`
 - `plan/root-audit.md`
 - `plan/log.md`
@@ -66,6 +67,17 @@ Read-only shared dependencies:
 4. Update current-format documentation and focused fixtures/tests; adapt only
    necessary producers/consumers to compile while retaining their present GUI
    behavior.
+
+The audited migration must use a scoped fixture-aware transformation, not a
+textual repository-wide replacement: `terminals` is also the electrical Net and
+Cell-interface authority, so only `Instance.netlist.terminals` may relocate to
+provenance.
+
+Audit evidence as of 2026-08-19: eight tracked Project inputs contain exactly
+three non-empty legacy property records—`R1.value = 10k` in
+`phase-1-manual` (migrate to `netlist.parameters.value`) and two `role` values
+in `phase-5-dense-analog` (unknown, therefore blocking migration inputs until
+explicitly classified; they must not survive in a generic bag).
 
 ## Validation
 

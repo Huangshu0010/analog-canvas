@@ -51,7 +51,10 @@ Shared dependencies are the current GUI behavior, Project/Document transaction s
 ## Test Impact
 
 - Decision: no-test-change
-- Evidence: this target changes planning documentation only; existing automated behavior is neither implemented nor altered. Documentation checks and impact analysis cover the changed surface.
+- Reason: this target changes planning documentation only; existing automated
+  behavior is neither implemented nor altered.
+- Existing protection: documentation checks and impact analysis cover the
+  changed surface.
 
 ## Commit Intent
 

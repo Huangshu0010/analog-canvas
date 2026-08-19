@@ -53,7 +53,7 @@ pin side/offset editing is an integration dependency, not work owned here.
 ## Test Impact
 
 - Decision: no-test-change
-- Evidence: this target changes roadmap and factual plan records only; no
+- Reason: this target changes roadmap and factual plan records only; no
   runtime, schema, transaction, or GUI behavior changes.
 
 ## Commit Intent

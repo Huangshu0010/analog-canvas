@@ -63,9 +63,10 @@ Read-only shared dependencies:
 ## Test Impact
 
 - Decision: no-test-change
-- Evidence: this target records the architectural boundary only; it changes no
-  executable schema, migration, editor behavior, or generated artifact. The
-  next implementation target owns focused model/protocol regression tests.
+- Reason: this target records the architectural boundary only; it changes no
+  executable schema, migration, editor behavior, or generated artifact.
+- Existing protection: the next implementation target owns focused
+  model/protocol regression tests.
 
 ## Commit Intent
 

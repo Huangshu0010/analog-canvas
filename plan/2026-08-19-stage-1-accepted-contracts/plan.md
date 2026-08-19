@@ -53,7 +53,10 @@ Shared dependencies are schema-13 compatibility, the rolling previous-version ad
 ## Test Impact
 
 - Decision: no-test-change
-- Evidence: this target only records accepted planning contracts; implementation behavior is unchanged. Documentation validation and test-impact analysis cover the modified surface.
+- Reason: this target only records accepted planning contracts; implementation
+  behavior is unchanged.
+- Existing protection: documentation validation and test-impact analysis cover
+  the modified surface.
 
 ## Commit Intent
 
