@@ -3378,4 +3378,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   and production-smoke contracts). PR #126 required checks passed.
 - Commit status: committed on `codex/cell-pin-edit-exit`; merge to `main` is
   requested.
+
+## 2026-08-19 - Prebuilt Playwright CI environment
+
+- Changed areas: release and browser GitHub Actions jobs now select a
+  digest-pinned, package-version-matched Playwright image for executable
+  changes, preserve the documentation-only fast path, remove runtime browser
+  installation, and correctly forward the browser shard argument.
+- Validation: Prettier; static contracts; test-impact; release verification;
+  single-worker browser suite (154/154); and Playwright shard-list verification
+  (77 tests for `1/2`). The Windows-host default 16-worker shard had resource
+  timeouts; container and Linux runner validation are pending GitHub Actions.
+- Commit status: pushed on `codex/prebuilt-playwright-ci`; review-branch remote
+  validation is pending.
 ```

@@ -111,6 +111,15 @@ jobs:
     name: Release contracts
     needs: changes
     runs-on: ubuntu-latest
+    # Do not pull the browser image for documentation-only pull requests, which
+    # intentionally run only the placeholder step below.  `needs` is available
+    # when GitHub evaluates a job container image.
+    container:
+      image: ${{ needs.changes.outputs.heavy == 'true' && 'mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e' || 'node:24-bookworm' }}
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 25
     steps:
       - if: needs.changes.outputs.heavy != 'true'
@@ -129,12 +138,22 @@ jobs:
       - if: needs.changes.outputs.heavy == 'true'
         run: pnpm install --frozen-lockfile
       - if: needs.changes.outputs.heavy == 'true'
-        run: pnpm ci:release
+        # The version-matched image already provides Chromium and its Linux
+        # dependencies. Keep `ci:release` for self-sufficient local checks.
+        run: pnpm release:verify
 
   e2e:
     name: Browser tests (${{ matrix.shard }})
     needs: changes
     runs-on: ubuntu-latest
+    # Keep documentation-only pull requests light while running executable
+    # changes in the immutable Playwright browser environment.
+    container:
+      image: ${{ needs.changes.outputs.heavy == 'true' && 'mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e' || 'node:24-bookworm' }}
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -159,6 +178,4 @@ jobs:
       - if: needs.changes.outputs.heavy == 'true'
         run: pnpm install --frozen-lockfile
       - if: needs.changes.outputs.heavy == 'true'
-        run: pnpm exec playwright install --with-deps chromium
-      - if: needs.changes.outputs.heavy == 'true'
-        run: pnpm ci:e2e -- --shard=${{ matrix.shard }}
+        run: pnpm ci:e2e --shard=${{ matrix.shard }}
