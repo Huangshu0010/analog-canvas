@@ -3577,6 +3577,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: direct performance baseline; focused repaired browser test; and
   full CI gate (155 unit files / 928 tests, production build, release
   verification, and 158 E2E tests) passed.
-- Commit status: prepared for commit on
+- Commit status: committed on
   `codex/phase1-schematic-foundation-plan`.
 ```
+
+## 2026-08-20 - Linux MCP release checksum refresh
+
+- Changed areas: updated the canonical Linux MCP tarball SHA-256 pin from the
+  required PR Release contracts job after the schema-14 bundle changed.
+- Validation: distribution metadata check and local complete release
+  verification passed; the protected remote replacement gate is pending.
+- Commit status: prepared for commit on
+  `codex/phase1-schematic-foundation-plan`.
