@@ -1,5 +1,5 @@
 ---
-status: completed
+status: active
 experience: none
 ---
 
@@ -36,7 +36,9 @@ local `main` ref and its integration records only.
 
 1. Run the required mainline CI check against the candidate history.
 2. Fast-forward local `main` to `codex/phase2-netlist-hardening`.
-3. Record the resulting commit range and validation without pushing.
+3. Record the resulting commit range and validation.
+4. Push the exact integrated history to a review branch, wait for its required
+   GitHub Actions checks, then fast-forward `origin/main` after they pass.
 
 ## Validation
 
@@ -45,6 +47,7 @@ local `main` ref and its integration records only.
 - `git diff --check`
 - `git status --short --branch`
 - Verify `main` contains `e11de334`.
+- Verify the review-branch GitHub Actions checks pass before pushing `main`.
 
 ## Test Impact
 
@@ -67,5 +70,5 @@ Local `main` fast-forwarded from `14fe2d54` to `e11de334`, incorporating
 `88a997df`, `8d62fe21`, and `e11de334` without a merge conflict. The required
 candidate mainline CI check passed: static contracts, 159 unit-test files / 956
 tests, workspace builds, release and production smoke checks, and 162 browser
-E2E tests. The integration is intentionally not pushed; `main` remains four
-commits ahead of `origin/main` until a separate push/review decision.
+E2E tests. Remote review-branch checks and the authorized `origin/main` push
+remain pending.
