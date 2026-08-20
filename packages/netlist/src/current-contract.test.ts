@@ -64,13 +64,13 @@ describe("current formal cell interface", () => {
     document.nets.push(
       {
         id: "net-in",
-        name: "VIN",
+        name: "internal_in",
         scope: "local",
         terminals: [{ instanceId: "P1", pinName: "P" }],
       },
       {
         id: "net-out",
-        name: "VOUT",
+        name: "internal_out",
         scope: "local",
         terminals: [{ instanceId: "P2", pinName: "P" }],
       },
@@ -82,6 +82,59 @@ describe("current formal cell interface", () => {
       { id: "net-in", name: "VIN", netName: "VIN" },
       { id: "net-out", name: "VOUT", netName: "VOUT" },
     ]);
+    expect(result.ir?.cells[0]?.nets.map((net) => net.name)).toEqual([
+      "VIN",
+      "VOUT",
+    ]);
+  });
+
+  it("exports explicit NoConnect terminals through deterministic floating nodes", () => {
+    const project = resistorProject({ value: "10k" });
+    const document = project.documents[0]!;
+    document.nets[1]!.terminals = [];
+    document.nets.push({
+      id: "occupied-no-connect-name",
+      name: "NC0001",
+      scope: "local",
+      terminals: [],
+    });
+    document.noConnects.push({
+      id: "no-connect-r1-2",
+      endpoint: { kind: "terminal", instanceId: "R1", pinName: "2" },
+    });
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.ir?.cells[0]?.instances[0]?.nodes).toEqual([
+      { pinName: "1", netName: "VIN" },
+      { pinName: "2", netName: "NC0002" },
+    ]);
+    expect(result.ir?.cells[0]?.nets).toContainEqual({
+      id: "no-connect-r1-2",
+      name: "NC0002",
+      scope: "local",
+    });
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "GENERATED_NO_CONNECT_NODE",
+        severity: "warning",
+        objectIds: ["no-connect-r1-2", "R1"],
+      }),
+    ]);
+  });
+
+  it("blocks required-only Cell formals that structural dialects cannot declare", () => {
+    const project = createEmptyProject("project", "Project");
+    project.documents[0]!.netlist!.formalParameters = [{ name: "required" }];
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.ir).toBeNull();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "UNREPRESENTABLE_REQUIRED_FORMAL_PARAMETER",
+      }),
+    );
   });
 
   it("uses the same case-folded parameter identity as the deterministic printers", () => {

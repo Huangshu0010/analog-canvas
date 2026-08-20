@@ -148,6 +148,7 @@ function reachableDocuments(
 interface CellNetContext {
   nameByNetId: Map<string, string>;
   netByTerminal: Map<string, Net>;
+  noConnectNameByTerminal: Map<string, string>;
   nets: DesignNetlistCell["nets"];
 }
 
@@ -201,6 +202,34 @@ function buildNetContext(
     }
   }
 
+  const formalTerminalByNetId = new Map<string, string>();
+  for (const terminal of document.netlist?.terminals ?? []) {
+    const prior = formalTerminalByNetId.get(terminal.netId);
+    if (prior && prior.toLowerCase() !== terminal.name.toLowerCase()) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "MULTIPLE_PORTS_SHARE_NET",
+        `Formal terminals ${prior} and ${terminal.name} map to the same Net ${terminal.netId}`,
+        [terminal.netId],
+      );
+      continue;
+    }
+    const folded = foldNetName(terminal.name);
+    const explicitOwner = explicitNames.get(folded);
+    if (explicitOwner && explicitOwner !== terminal.netId) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "PORT_NET_NAME_COLLISION",
+        `Formal terminal ${terminal.name} collides with a different explicit Net`,
+        [terminal.netId, explicitOwner],
+      );
+    }
+    formalTerminalByNetId.set(terminal.netId, terminal.name);
+    occupiedNames.add(folded);
+  }
+
   const nameByNetId = new Map<string, string>();
   let generatedIndex = 1;
   for (const net of [...document.nets].sort((a, b) =>
@@ -226,6 +255,9 @@ function buildNetContext(
       [net.id],
       "warning",
     );
+  }
+  for (const [netId, terminalName] of formalTerminalByNetId) {
+    nameByNetId.set(netId, terminalName);
   }
 
   const netByTerminal = new Map<string, Net>();
@@ -278,15 +310,44 @@ function buildNetContext(
     }
   }
 
+  const noConnectNameByTerminal = new Map<string, string>();
+  const noConnectNets: DesignNetlistCell["nets"] = [];
+  let noConnectIndex = 1;
+  for (const noConnect of [...document.noConnects].sort((left, right) =>
+    left.id.localeCompare(right.id),
+  )) {
+    let generated = "";
+    do {
+      generated = `NC${String(noConnectIndex).padStart(4, "0")}`;
+      noConnectIndex += 1;
+    } while (occupiedNames.has(foldNetName(generated)));
+    occupiedNames.add(foldNetName(generated));
+    const key = `${noConnect.endpoint.instanceId}\u0000${noConnect.endpoint.pinName}`;
+    noConnectNameByTerminal.set(key, generated);
+    noConnectNets.push({ id: noConnect.id, name: generated, scope: "local" });
+    diagnostic(
+      diagnostics,
+      document.id,
+      "GENERATED_NO_CONNECT_NODE",
+      `Explicit NoConnect ${noConnect.id} exports as floating node ${generated}`,
+      [noConnect.id, noConnect.endpoint.instanceId],
+      "warning",
+    );
+  }
+
   return {
     nameByNetId,
     netByTerminal,
-    nets: [...document.nets]
-      .sort((a, b) => a.id.localeCompare(b.id))
-      .flatMap((net) => {
-        const name = nameByNetId.get(net.id);
-        return name ? [{ id: net.id, name, scope: net.scope }] : [];
-      }),
+    noConnectNameByTerminal,
+    nets: [
+      ...[...document.nets]
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .flatMap((net) => {
+          const name = nameByNetId.get(net.id);
+          return name ? [{ id: net.id, name, scope: net.scope }] : [];
+        }),
+      ...noConnectNets,
+    ],
   };
 }
 
@@ -299,6 +360,10 @@ function terminalNetName(
 ): string | null {
   const net = context.netByTerminal.get(`${instance.id}\u0000${pinName}`);
   const name = net ? context.nameByNetId.get(net.id) : undefined;
+  const noConnectName = context.noConnectNameByTerminal.get(
+    `${instance.id}\u0000${pinName}`,
+  );
+  if (noConnectName) return noConnectName;
   if (!name) {
     diagnostic(
       diagnostics,
@@ -698,6 +763,15 @@ function extractCell(
       document.id,
       "INVALID_CELL_NAME",
       `Cell name is outside the portable identifier subset: ${document.netlist.name}`,
+    );
+  }
+  for (const formal of document.netlist.formalParameters) {
+    if (formal.defaultValue !== undefined) continue;
+    diagnostic(
+      diagnostics,
+      document.id,
+      "UNREPRESENTABLE_REQUIRED_FORMAL_PARAMETER",
+      `Formal parameter ${formal.name} has no portable SPICE/Spectre default`,
     );
   }
   if (document.instances.length > MAX_INSTANCES_PER_CELL) {

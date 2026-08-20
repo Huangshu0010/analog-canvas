@@ -524,6 +524,16 @@ function parseInstance(
         `${prefix} instance requires ${shape.nodes} nodes and a ${shape.value}`,
       );
     }
+    const rawValueTokens = positional.slice(shape.nodes);
+    const isIndependentSource =
+      shape.family === "voltage-source" || shape.family === "current-source";
+    const hasExplicitDc =
+      isIndependentSource && rawValueTokens[0]?.toLowerCase() === "dc";
+    const isBareDcValue = isIndependentSource && rawValueTokens.length === 1;
+    const valueName = hasExplicitDc || isBareDcValue ? "dc" : shape.value;
+    const rawValue = (
+      hasExplicitDc ? rawValueTokens.slice(1) : rawValueTokens
+    ).join(" ");
     return {
       statement: {
         kind: "instance",
@@ -532,11 +542,7 @@ function parseInstance(
         nodes: positional.slice(0, shape.nodes),
         parameters: [
           ...parameters,
-          ...valueParameter(
-            shape.value,
-            positional.slice(shape.nodes).join(" "),
-            line.sourceRef,
-          ),
+          ...valueParameter(valueName, rawValue, line.sourceRef),
         ],
       },
     };

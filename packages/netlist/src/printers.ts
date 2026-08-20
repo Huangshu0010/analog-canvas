@@ -100,7 +100,15 @@ function spiceCell(cell: DesignNetlistCell): string[] {
   const lines = wrapSpice([
     ".subckt",
     cell.name,
-    ...cell.ports.map((port) => port.netName),
+    ...cell.ports.map((port) => port.name),
+    ...(cell.formalParameters?.length
+      ? [
+          "params:",
+          ...cell.formalParameters.map(
+            (parameter) => `${parameter.name}=${parameter.defaultValue!}`,
+          ),
+        ]
+      : []),
   ]);
   for (const instance of cell.instances) lines.push(...spiceInstance(instance));
   lines.push(`.ends ${cell.name}`);
@@ -173,10 +181,17 @@ function spectreInstance(instance: DesignNetlistInstance): string {
 }
 
 function spectreCell(cell: DesignNetlistCell): string[] {
-  const portNames = cell.ports.map((port) => port.netName);
+  const portNames = cell.ports.map((port) => port.name);
   const lines = [
-    `subckt ${cell.name}${portNames.length ? ` ${portNames.join(" ")}` : ""}`,
+    `subckt ${cell.name}${portNames.length ? ` (${portNames.join(" ")})` : ""}`,
   ];
+  if (cell.formalParameters?.length) {
+    lines.push(
+      `parameters ${cell.formalParameters
+        .map((parameter) => `${parameter.name}=${parameter.defaultValue!}`)
+        .join(" ")}`,
+    );
+  }
   for (const instance of cell.instances) {
     const line = spectreInstance(instance);
     if (line) lines.push(line);

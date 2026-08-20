@@ -104,6 +104,12 @@ unique per cell and have the prefix required by their device definition. Model-
 backed devices carry an explicit target. Raw parameters remain strings such as
 `2u`, `60n`, or `{WBASE*2}` and are never evaluated by export.
 
+Internal Cell formal parameters with raw defaults are emitted in their stored
+order. A required-only formal has no portable representation in the released
+SPICE/Spectre structural dialects, so preflight blocks it rather than inventing
+a default. SPICE import restores `.subckt` parameter defaults into the Cell
+interface.
+
 An external-subcircuit binding is a project-local external master declaration,
 not a simulator model lookup. Its definition's ordered terminals select the
 emitted `X` nodes and its `name` is the emitted master token. The instance owns
@@ -165,7 +171,9 @@ represented structurally. A display string is not a source specification.
   are not silently converted to cell ports.
 - A terminal belongs to at most one Net.
 - An unconnected terminal must carry an explicit `NoConnect`; otherwise export
-  is blocked. A `NoConnect` never creates a netlist node.
+  is blocked. Each explicit `NoConnect` receives one deterministic,
+  collision-free exporter-only local node (`NC0001`, `NC0002`, ...), preserving
+  fixed device and subcircuit arity without adding a Project Net.
 - Routes, Junctions, flightlines, labels, placement, and drafting content do
   not affect the Export IR.
 
@@ -213,15 +221,16 @@ Printers are pure functions over a validated Export IR. They cannot access the
 Project, Symbol resolver, filesystem, network, or diagnostics repair path.
 
 SPICE `.spi` emits a generated-file/version comment, sorted `.global`
-declarations, dependency-first `.subckt`/`.ends` blocks, structural device
-lines, and deterministic continuations. It emits no guessed `.include`, `.lib`,
-analysis, stimulus, or `.end` deck marker.
+declarations, dependency-first `.subckt`/`.ends` blocks, ordered defaulted
+formal parameters, structural device lines, and deterministic continuations.
+It emits no guessed `.include`, `.lib`, analysis, stimulus, or `.end` deck
+marker.
 
 Spectre `.scs` emits a generated-file/version comment,
 `simulator lang=spectre`, sorted `global` declarations, dependency-first
-`subckt`/`ends` blocks, parenthesized nodes, and explicit primitive syntax. It
-emits no guessed `include`, section, parameters, options, analysis, stimulus,
-or save statement.
+`subckt`/`ends` blocks, parenthesized ports/nodes, Cell-local `parameters`
+declarations, and explicit primitive syntax. It emits no guessed `include`,
+section, global parameters, options, analysis, stimulus, or save statement.
 
 Both files are structural libraries. Successful export does not claim that a
 simulator can run them without an external simulation setup.

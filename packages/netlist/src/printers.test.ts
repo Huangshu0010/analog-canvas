@@ -45,6 +45,7 @@ function structuralIr(): DesignNetlistIR {
           netName: name,
         })),
         nets: [],
+        formalParameters: [{ name: "scale", defaultValue: "1" }],
         instances: [
           device("m1", "M1", "mos", ["d", "g", "s", "b"], "nch", [
             ["l", "60n"],
@@ -86,7 +87,7 @@ function structuralIr(): DesignNetlistIR {
             "hierarchical",
             ["vout", "vin", "0", "0"],
             "leaf",
-            [],
+            [["scale", "2"]],
           ),
         ],
       },
@@ -116,6 +117,12 @@ describe("design netlist printers", () => {
     expect(
       syntax.statements.some((statement) => statement.kind === "opaque"),
     ).toBe(false);
+    expect(
+      syntax.statements.find((statement) => statement.kind === "subckt_start"),
+    ).toMatchObject({
+      name: "leaf",
+      parameters: [{ name: "scale", rawText: "1" }],
+    });
     expect(text).not.toMatch(/^\.(?:include|lib|tran|ac|dc|end)\b/imu);
   });
 
@@ -123,9 +130,7 @@ describe("design netlist printers", () => {
     const text = printSpectreNetlist(structuralIr());
     expect(text).toBe(fixture("structural.scs"));
     expect(printSpectreNetlist(structuralIr())).toBe(text);
-    expect(text).not.toMatch(
-      /^\s*(?:include|section|parameters|save|tran|ac|dc)\b/imu,
-    );
+    expect(text).not.toMatch(/^\s*(?:include|section|save|tran|ac|dc)\b/imu);
   });
 
   it("returns explicit browser file metadata", () => {

@@ -10,6 +10,12 @@ omit includes, PDK model paths, simulator decks, corners and analyses. Unknown
 imported `X` calls remain external subcircuit calls; a display mapping never
 turns them into a primitive model call.
 
+Imported `.subckt` parameter defaults become editable Cell formal parameters
+and are emitted again. Required-only Cell parameters remain an authoring
+concept but cannot be exported by the released portable dialects until they
+have explicit defaults. Independent `V`/`I` sources are editable and
+round-trippable only for their released DC form.
+
 | Profile               | Structural status       | Detection                                                   | Important limit                                                |
 | --------------------- | ----------------------- | ----------------------------------------------------------- | -------------------------------------------------------------- |
 | ngspice 46 core       | baseline                | ngspice directives                                          | simulator commands are preserved, not executed                 |

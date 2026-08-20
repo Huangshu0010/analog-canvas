@@ -3690,3 +3690,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   tests), format, Markdown-link (117 docs), test-impact, and diff checks
   passed.
 - Commit status: prepared on `codex/phase2-netlist-closure`.
+
+## 2026-08-21 - Phase 2 structural netlist hardening
+
+- Changed areas: preserved defaulted Cell formal parameters across SPICE
+  import and SPICE/Spectre export; made formal terminal names authoritative in
+  emitted Cell headers; represented explicit NoConnects with stable floating
+  nodes and warning acknowledgement; normalized DC sources; upgraded the
+  round-trip proof to a real Project semantic comparison; and added successful
+  browser import-to-export coverage.
+- Validation: focused changed contracts (6 files / 40 tests), complete SPICE
+  and netlist package suites (10 files / 42 tests), workspace typecheck/build,
+  focused browser flows (5 tests), format, docs, test-impact, and diff checks
+  passed. Branch verification also reproduced two unrelated schema-15 baseline
+  failures on the parent branch.
+- Commit status: prepared on `codex/phase2-netlist-hardening`.

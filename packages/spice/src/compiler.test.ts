@@ -6,6 +6,30 @@ import { importCompileResult } from "./importer.js";
 import { loadSourceBundleFromFile } from "./node-source.js";
 
 describe("SPICE elaboration and Project import", () => {
+  it("imports ordered Cell formal parameter defaults", async () => {
+    const imported = importCompileResult(
+      await compileSpiceSources(
+        [
+          {
+            path: "parameterized.spi",
+            bytes: Buffer.from(`
+.subckt gain_cell IN OUT params: gain=10 bias={gain/2}
+R1 IN OUT 1k
+.ends gain_cell
+`),
+          },
+        ],
+        "parameterized.spi",
+      ),
+    );
+
+    expect(imported.successful).toBe(true);
+    expect(imported.project?.documents[0]?.netlist?.formalParameters).toEqual([
+      { name: "gain", defaultValue: "10" },
+      { name: "bias", defaultValue: "{gain/2}" },
+    ]);
+  });
+
   it("imports reviewed diode and BJT contracts", async () => {
     const source = Buffer.from(`
 .model DREF D

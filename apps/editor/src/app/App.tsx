@@ -5310,10 +5310,18 @@ export function App({
     setStatus(`Exported revision ${document.revision}`);
   }
 
-  function exportDesignNetlist(format: NetlistFormat): void {
+  function exportDesignNetlist(
+    format: NetlistFormat,
+    warningsReviewed = false,
+  ): void {
     if (!netlistAnalysis.ir) {
       setNetlistPreflightOpen(true);
       setStatus("Resolve Netlist Preflight findings before export");
+      return;
+    }
+    if (netlistAnalysis.diagnostics.length > 0 && !warningsReviewed) {
+      setNetlistPreflightOpen(true);
+      setStatus("Review Netlist Preflight warnings before export");
       return;
     }
     const artifact = printDesignNetlist(format, netlistAnalysis.ir);
@@ -7017,7 +7025,7 @@ export function App({
         result={netlistAnalysis}
         onClose={() => setNetlistPreflightOpen(false)}
         onNavigate={navigateToNetlistDiagnostic}
-        onExport={exportDesignNetlist}
+        onExport={(format) => exportDesignNetlist(format, true)}
       />
       {publicAgentUiEnabled ? (
         <ConnectAgentPanel

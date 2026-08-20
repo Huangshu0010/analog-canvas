@@ -82,6 +82,10 @@ download button or **File / SPICE netlist** and **File / Spectre netlist** to
 download it. These files contain structure only: they do not add PDK includes,
 models, corners, stimuli, analyses, or simulator options.
 
+File-menu export opens the preflight dialog before downloading when warnings
+need review. An explicitly marked NoConnect is shown as a generated floating
+node such as `NC0001`; an unmarked open pin remains a blocking error.
+
 ## Portable release
 
 Build the versioned bundle and start it with Node 24:

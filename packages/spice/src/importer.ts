@@ -382,7 +382,10 @@ function importDocument(
     netlist: {
       name: cell.name,
       terminals: formalTerminals,
-      formalParameters: [],
+      formalParameters: cell.parameters.map((parameter) => ({
+        name: parameter.name,
+        defaultValue: parameter.rawText,
+      })),
     },
     instances,
     nets,

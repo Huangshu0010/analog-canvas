@@ -2620,6 +2620,82 @@ test("keeps rejected SPICE import diagnostics in a historical report", async ({
   await expect(page.getByTestId("import-report-lifecycle")).toHaveCount(0);
 });
 
+test("imports a parameterized hierarchy and re-exports its structural semantics", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByTestId("spice-files").setInputFiles({
+    name: "circuit.spi",
+    mimeType: "application/x-spice",
+    buffer: Buffer.from(`
+.subckt leaf A B params: scale=1
+R1 A B 1k
+.ends leaf
+.subckt top IN OUT
+X1 IN OUT leaf scale=2
+X2 OUT IN EXT_MASTER l=1u nf=4
+.ends top
+`),
+  });
+
+  await expect(page.getByTestId("status")).toContainText(
+    "Imported 2 Documents",
+  );
+  const spice = (
+    await downloadBytes(page, "File", "Export SPICE netlist")
+  ).toString("utf8");
+  expect(spice).toContain(".subckt leaf A B params: scale=1");
+  expect(spice).toContain("X1 IN OUT leaf scale=2");
+  expect(spice).toContain("X2 OUT IN EXT_MASTER l=1u nf=4");
+});
+
+test("requires warning review before exporting generated NoConnect nodes", async ({
+  page,
+}) => {
+  const project = createEmptyProject("warning-project", "Warning Project");
+  const document = project.documents[0]!;
+  document.instances.push({
+    id: "R1",
+    symbolId: "resistor",
+    placement: null,
+    netlist: {
+      reference: "R1",
+      binding: { kind: "primitive", deviceClass: "resistor" },
+      parameters: { value: "10k" },
+    },
+  });
+  document.nets.push({
+    id: "net-in",
+    name: "IN",
+    scope: "local",
+    terminals: [{ instanceId: "R1", pinName: "1" }],
+  });
+  document.noConnects.push({
+    id: "r1-open",
+    endpoint: { kind: "terminal", instanceId: "R1", pinName: "2" },
+  });
+
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "warning.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await clickCommand(page, "File", "Export SPICE netlist");
+  const dialog = page.getByRole("dialog", { name: "Netlist Preflight" });
+  await expect(dialog).toContainText("GENERATED_NO_CONNECT_NODE");
+  await expect(dialog.getByTestId("netlist-preview")).toContainText(
+    "R1 IN NC0001 10k",
+  );
+
+  const downloadPromise = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download SPICE netlist" }).click();
+  const stream = await (await downloadPromise).createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  expect(Buffer.concat(chunks).toString("utf8")).toContain("R1 IN NC0001 10k");
+});
+
 test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({
   page,
 }) => {
