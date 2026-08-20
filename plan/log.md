@@ -3482,7 +3482,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   preparation gate.
 - Validation: documentation links, test-impact against `main`, and diff check
   passed.
-- Commit status: prepared for commit on
+- Commit status: committed on
   `codex/phase1-schematic-foundation-plan`.
 
 ## 2026-08-19 - S0 schema-14 netlist protocol decision
@@ -3567,4 +3567,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   console inspection; and diff check passed.
 - Commit status: prepared on
   `codex/phase1-schematic-foundation-plan` as one editor presentation target.
+
+## 2026-08-20 - Schema-14 performance baseline mainline gate
+
+- Changed areas: migrated the synthetic 500-resistor release fixture to the
+  current Instance netlist contract and aligned browser contracts with
+  schema-13-to-14 persistence, canonical internal-Cell bindings, and the
+  compact Properties authoring layout.
+- Validation: direct performance baseline; focused repaired browser test; and
+  full CI gate (155 unit files / 928 tests, production build, release
+  verification, and 158 E2E tests) passed.
+- Commit status: prepared for commit on
+  `codex/phase1-schematic-foundation-plan`.
 ```

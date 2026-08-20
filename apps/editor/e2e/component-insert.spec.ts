@@ -381,7 +381,7 @@ test("carries a manual Value through placement and Q property editing", async ({
   await expect(page.getByLabel("Component display toggles")).toContainText(
     "ReferenceValue",
   );
-  await expect(page.getByText("More actions", { exact: true })).toBeVisible();
+  await expect(page.getByText("Placement", { exact: true })).toBeVisible();
   const propertyValue = page.getByLabel("Component value");
   // Opening focuses the shelf header, never the first field: Q stays a pure
   // toggle and editing starts only when the user clicks an input.
@@ -423,6 +423,10 @@ test("carries a manual Value through placement and Q property editing", async ({
   await reference.press("Tab");
   await expect(page.getByTestId("revision")).toHaveText("4");
   await expect(reference).toHaveValue("R7");
+  await page
+    .locator("summary")
+    .filter({ hasText: "Advanced parameters" })
+    .click();
   await page.getByRole("button", { name: "Add parameter" }).click();
   await page.getByLabel("Additional parameter name 1").fill("tc");
   await page.getByLabel("Additional parameter value 1").fill("0.1");

@@ -2594,7 +2594,7 @@ test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({
   expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
 });
 
-test("does not expose netlist export or authoring semantics", async ({
+test("keeps netlist export unavailable while exposing instance authoring", async ({
   page,
 }) => {
   await page.goto("/");
@@ -2613,8 +2613,8 @@ test("does not expose netlist export or authoring semantics", async ({
   const properties = page.getByRole("complementary", { name: "Properties" });
   await expect(properties.getByLabel("Cell netlist name")).toHaveCount(0);
   await expect(properties.getByLabel("Cell netlist port order")).toHaveCount(0);
-  await expect(properties.getByLabel("Component reference")).toHaveCount(0);
-  await expect(properties.getByLabel("Component model")).toHaveCount(0);
+  await expect(properties.getByLabel("Component reference")).toBeVisible();
+  await expect(properties.getByLabel("Component model target")).toBeVisible();
   await expect(properties.getByText(/^Model:/u)).toHaveCount(0);
 });
 
