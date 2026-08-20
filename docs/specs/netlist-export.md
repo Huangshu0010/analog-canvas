@@ -104,6 +104,12 @@ unique per cell and have the prefix required by their device definition. Model-
 backed devices carry an explicit target. Raw parameters remain strings such as
 `2u`, `60n`, or `{WBASE*2}` and are never evaluated by export.
 
+An external-subcircuit binding is a project-local external master declaration,
+not a simulator model lookup. Its definition's ordered terminals select the
+emitted `X` nodes and its `name` is the emitted master token. The instance owns
+raw overrides. A PDK may provide artwork later, but artwork cannot change
+external invocation into a primitive or model binding.
+
 ## Device definition
 
 Each exportable electrical Symbol has one reviewed definition:

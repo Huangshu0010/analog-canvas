@@ -1,5 +1,17 @@
 # Maintenance Log
 
+## 2026-08-20 - External subcircuit definition authoring
+
+- Changed areas: schema-15 project external interfaces and migration; stable
+  external block symbols; caller-safe terminal rename/reorder and `X` placement;
+  SPICE preservation of unknown external calls including SKY130 generic
+  fallbacks; current fixtures, persistence contracts and ADR/spec updates.
+- Validation: focused unit/UI contracts (12 files / 91 tests); focused
+  Playwright project-file workflow (8 tests); `pnpm typecheck`; `pnpm build`;
+  `pnpm format:check`; `pnpm docs:check`;
+  `pnpm test:impact -- --base origin/main`; `git diff --check`.
+- Commit status: committed locally on `codex/external-subcircuit-definition`.
+
 ## 2026-08-20 - S2 Component Properties workbench
 
 - Changed areas: typed Identity/target/source-evidence projections, editable

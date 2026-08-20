@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { executeProjectTransaction } from "./project-transaction.js";
 import {
+  planRenameExternalSubcircuitTerminal,
   proposeSetCellFormalParameters,
   proposeUpsertExternalSubcircuitDefinition,
 } from "./hierarchy-planner.js";
@@ -49,8 +50,12 @@ describe("subcircuit interface proposals", () => {
     project.externalSubcircuitDefinitions.push({
       id: "external-ota",
       name: "OTA",
-      terminals: [{ name: "IN" }, { name: "OUT" }],
+      terminals: [
+        { id: "external-ota-in", name: "IN", direction: "passive" },
+        { id: "external-ota-out", name: "OUT", direction: "passive" },
+      ],
       formalParameters: [],
+      interfaceStatus: "declared",
     });
     document.instances.push({
       id: "X1",
@@ -71,8 +76,9 @@ describe("subcircuit interface proposals", () => {
     const proposal = proposeUpsertExternalSubcircuitDefinition(project, {
       id: "external-ota",
       name: "OTA",
-      terminals: [{ name: "IN" }],
+      terminals: [{ id: "external-ota-in", name: "IN", direction: "passive" }],
       formalParameters: [],
+      interfaceStatus: "declared",
     });
 
     expect(proposal.callers).toEqual([
@@ -95,10 +101,11 @@ describe("subcircuit interface proposals", () => {
       name: "OTA",
       terminals: [],
       formalParameters: [],
+      interfaceStatus: "declared",
     });
     document.instances.push({
       id: "X1",
-      symbolId: externalSubcircuitSymbolId("OTA"),
+      symbolId: externalSubcircuitSymbolId("external-ota"),
       placement: null,
       netlist: {
         reference: "X1",
@@ -112,13 +119,63 @@ describe("subcircuit interface proposals", () => {
       name: "OTA2",
       terminals: [],
       formalParameters: [],
+      interfaceStatus: "declared",
     });
     const result = transaction(project, proposal.edits);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.project.documents[0]!.instances[0]!.symbolId).toBe(
-      externalSubcircuitSymbolId("OTA2"),
+      externalSubcircuitSymbolId("external-ota"),
     );
+  });
+
+  it("renames a stable external terminal and reconciles connected callers", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    project.externalSubcircuitDefinitions.push({
+      id: "external-ota",
+      name: "OTA",
+      terminals: [{ id: "external-ota-out", name: "OUT", direction: "output" }],
+      formalParameters: [],
+      interfaceStatus: "declared",
+    });
+    document.instances.push({
+      id: "X1",
+      symbolId: externalSubcircuitSymbolId("external-ota"),
+      placement: null,
+      netlist: {
+        reference: "X1",
+        binding: { kind: "external-subcircuit", definitionId: "external-ota" },
+        parameters: {},
+      },
+    });
+    document.nets.push({
+      id: "net-out",
+      scope: "local",
+      terminals: [{ instanceId: "X1", pinName: "OUT" }],
+    });
+
+    const result = transaction(
+      project,
+      planRenameExternalSubcircuitTerminal(
+        project,
+        "external-ota",
+        "external-ota-out",
+        "VOUT",
+      ),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(
+      result.project.externalSubcircuitDefinitions[0]!.terminals[0],
+    ).toMatchObject({
+      id: "external-ota-out",
+      name: "VOUT",
+    });
+    expect(result.project.documents[0]!.nets[0]!.terminals).toEqual([
+      { instanceId: "X1", pinName: "VOUT" },
+    ]);
   });
 });

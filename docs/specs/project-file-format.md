@@ -2,16 +2,16 @@
 
 Status: `accepted`
 
-Current Project schema: `14`
+Current Project schema: `15`
 
 Primary owners: `packages/model` (current shape) and
 `packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`@icm/project-protocol` exposes `parseProject` and accepts Project schema 14
-and schema 13. Schema 13 advances directly to 14 by moving only typed,
-audited netlist facts into their current authority. Every reader returns the
-sole schema-14 in-memory Project shape; schema 12 and older and all future versions
+`@icm/project-protocol` exposes `parseProject` and accepts Project schema 15
+and schema 14. Schema 14 advances directly to 15 by assigning stable external
+terminal identities and preserving its interface order. Every reader returns the
+sole schema-15 in-memory Project shape; schema 13 and older and all future versions
 are rejected. There is no sequential migration registry or second in-memory
 Project shape.
 
@@ -19,9 +19,11 @@ Project shape.
 
 - `Document.netlist.terminals` defines the ordered formal Cell interface with
   stable identity, direction, Net binding, and an ordinary Port Instance.
-- `Document.netlist.formalParameters` and a project-level
-  `externalSubcircuitDefinitions` collection define exact nonlocal netlist
-  interfaces.
+- `Document.netlist.formalParameters` and project-level
+  `externalSubcircuitDefinitions` define exact nonlocal netlist interfaces.
+  Each external definition has a stable identity, an ordered list of stable
+  terminals, raw formal defaults, interface status and optional block
+  presentation. It has no internal Document body.
 - `Instance.netlist` contains its reference, binding, and typed parameter
   values. Import source order and symbol-mapping registry identity live in
   `Instance.importProvenance`; there is no persisted property bag.
@@ -48,8 +50,8 @@ Project shape.
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 13 or 14
--> direct v13-to-v14 upgrade when needed -> strict schema-14 validation -> open
+read text -> parse JSON -> require Project schema 14 or 15
+-> direct v14-to-v15 upgrade when needed -> strict schema-15 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```
 
@@ -68,7 +70,7 @@ until the author explicitly renames or merges the Nets.
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in
 `fixtures/projects/compatibility-corpus.json`; its accepted entries must all be
-already canonical Project schema 14. The rejected corpus names expected
+already canonical Project schema 15. The rejected corpus names expected
 validation failures.
 
 Viewport, selection, undo history, canvas overlays, Agent credentials,

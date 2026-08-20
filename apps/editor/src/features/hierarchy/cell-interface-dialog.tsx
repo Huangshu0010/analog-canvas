@@ -332,8 +332,23 @@ export function CellInterfaceEditor({
                   .split(",")
                   .map((item) => item.trim())
                   .filter(Boolean)
-                  .map((name) => ({ name })),
+                  .map((name, index) => {
+                    const existing = externalDefinitions
+                      .find((definition) => definition.id === externalId)
+                      ?.terminals.find(
+                        (terminal) =>
+                          terminal.name.toLowerCase() === name.toLowerCase(),
+                      );
+                    return {
+                      id:
+                        existing?.id ??
+                        `external-terminal-${externalId === "__new__" ? target.toLowerCase().replaceAll(/[^a-z0-9_-]/gu, "-") : externalId}-${index + 1}`,
+                      name,
+                      direction: existing?.direction ?? ("passive" as const),
+                    };
+                  }),
                 formalParameters: fields,
+                interfaceStatus: "declared",
               });
             }}
           >

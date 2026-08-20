@@ -41,6 +41,10 @@ interface ImportSymbolMapping {
   registryId?: string;
 }
 
+function externalDefinitionId(masterName: string): string {
+  return deriveStableId("external-subcircuit", masterName.toLowerCase());
+}
+
 function netlistDeviceClass(symbolId: string): NetlistDeviceClass | null {
   const classes: Readonly<Record<string, NetlistDeviceClass>> = {
     resistor: "resistor",
@@ -69,6 +73,12 @@ function importedNetlistBinding(
       name: instance.target.cellName,
     };
   }
+  if (instance.target.kind === "external-subcircuit") {
+    return {
+      kind: "external-subcircuit",
+      definitionId: externalDefinitionId(instance.target.masterName),
+    };
+  }
   const deviceClass = netlistDeviceClass(mapping.symbolId);
   if (!deviceClass) return undefined;
   switch (instance.target.kind) {
@@ -92,6 +102,20 @@ function symbolFor(
         "hierarchical-symbol",
         instance.target.cellName.toLowerCase(),
       ),
+    };
+  }
+  if (instance.target.kind === "external-subcircuit") {
+    const mapping = resolvePdkSymbolMapping(
+      instance.target.masterName,
+      instance.terminals.length,
+      symbolMappings,
+    );
+    return {
+      symbolId: externalSubcircuitSymbolId(
+        externalDefinitionId(instance.target.masterName),
+      ),
+      ...(mapping?.pinNames ? { pinNames: mapping.pinNames } : {}),
+      ...(mapping?.registryId ? { registryId: mapping.registryId } : {}),
     };
   }
   if (instance.target.kind === "model") {
@@ -161,6 +185,8 @@ function targetDescription(
       return `model:${instance.target.modelName}`;
     case "subcircuit":
       return `subcircuit:${instance.target.cellName}`;
+    case "external-subcircuit":
+      return `external-subcircuit:${instance.target.masterName}`;
     case "opaque":
       return resolvePdkSymbolMapping(
         instance.target.sourceName,
@@ -204,6 +230,13 @@ function importProvenance(
       return {
         kind: "subcircuit",
         name: instance.target.cellName,
+        sourceTarget: targetDescription(instance, symbolMappings),
+        status: "missing",
+      };
+    case "external-subcircuit":
+      return {
+        kind: "opaque",
+        name: instance.target.masterName,
         sourceTarget: targetDescription(instance, symbolMappings),
         status: "missing",
       };
@@ -383,29 +416,43 @@ function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
     }),
   );
   const externalDefinitions = new Map<string, ExternalSubcircuitDefinition>();
-  const boundDocuments = documents.map((document) => ({
+  const boundDocuments: SchematicDocument[] = documents.map((document) => ({
     ...document,
     instances: document.instances.map((instance) => {
-      if (instance.importProvenance?.kind !== "subcircuit") {
+      const isImportedChild = instance.importProvenance?.kind === "subcircuit";
+      const isImportedExternal =
+        instance.netlist?.binding?.kind === "external-subcircuit";
+      if (!isImportedChild && !isImportedExternal) {
         return instance;
       }
-      const childDocumentId = documentIdByCellName.get(
-        instance.importProvenance.name.toLowerCase(),
-      );
+      const childDocumentId = isImportedChild
+        ? documentIdByCellName.get(
+            instance.importProvenance!.name.toLowerCase(),
+          )
+        : undefined;
       const externalDefinition = !childDocumentId
         ? (() => {
             const key = instance.importProvenance!.name.toLowerCase();
             const existing = externalDefinitions.get(key);
             if (existing) return existing;
             const definition: ExternalSubcircuitDefinition = {
-              id: deriveStableId("external-subcircuit", key),
+              id: externalDefinitionId(instance.importProvenance!.name),
               name: instance.importProvenance!.name,
               terminals: (instance.importProvenance!.terminalMapping ?? [])
                 .toSorted(
                   (left, right) => left.sourcePosition - right.sourcePosition,
                 )
-                .map((terminal) => ({ name: terminal.pinName })),
+                .map((terminal, index) => ({
+                  id: deriveStableId(
+                    "external-subcircuit-terminal",
+                    key,
+                    String(index),
+                  ),
+                  name: terminal.pinName,
+                  direction: "passive" as const,
+                })),
               formalParameters: [],
+              interfaceStatus: "inferred-positional",
             };
             externalDefinitions.set(key, definition);
             return definition;
@@ -414,14 +461,14 @@ function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
       return {
         ...instance,
         ...(externalDefinition
-          ? { symbolId: externalSubcircuitSymbolId(externalDefinition.name) }
+          ? { symbolId: externalSubcircuitSymbolId(externalDefinition.id) }
           : {}),
         importProvenance: {
           ...instance.importProvenance,
           status: childDocumentId
             ? ("resolved" as const)
             : ("missing" as const),
-        },
+        } as NonNullable<Instance["importProvenance"]>,
         netlist: instance.netlist
           ? {
               ...instance.netlist,

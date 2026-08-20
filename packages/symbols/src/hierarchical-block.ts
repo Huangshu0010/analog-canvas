@@ -9,8 +9,9 @@ export function hierarchicalSymbolId(cellName: string): string {
   return deriveStableId("hierarchical-symbol", cellName.toLowerCase());
 }
 
-export function externalSubcircuitSymbolId(targetName: string): string {
-  return deriveStableId("external-subcircuit-symbol", targetName.toLowerCase());
+/** External symbols are keyed by immutable definition identity, never master spelling. */
+export function externalSubcircuitSymbolId(definitionId: string): string {
+  return deriveStableId("external-subcircuit-symbol", definitionId);
 }
 
 export function createHierarchicalBlockSymbol(
@@ -58,30 +59,20 @@ export function createProjectHierarchicalSymbols(
     const definition = createHierarchicalBlockSymbol(document);
     return definition ? [definition] : [];
   });
-  const referencedExternalIds = new Set(
-    project.documents.flatMap((document) =>
-      document.instances.flatMap((instance) => {
-        const binding = instance.netlist?.binding;
-        return binding?.kind === "external-subcircuit"
-          ? [binding.definitionId]
-          : [];
-      }),
-    ),
-  );
   const external = (project.externalSubcircuitDefinitions ?? []).flatMap(
     (definition) => {
-      if (!referencedExternalIds.has(definition.id)) return [];
       const positional = createHierarchicalBlockGeometry(
-        definition.terminals.map((terminal, index) => ({
-          id: `${definition.id}:terminal:${index}`,
+        definition.terminals.map((terminal) => ({
+          id: terminal.id,
           name: terminal.name,
-          direction: "passive" as const,
+          direction: terminal.direction,
         })),
+        definition.presentation,
       );
       return [
         SymbolDefinitionSchema.parse({
           ...positional,
-          id: externalSubcircuitSymbolId(definition.name),
+          id: externalSubcircuitSymbolId(definition.id),
           name: definition.name,
           hierarchicalBlock: true,
           pins: positional.pins,

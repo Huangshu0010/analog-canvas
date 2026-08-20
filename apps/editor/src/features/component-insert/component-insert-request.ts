@@ -28,5 +28,21 @@ export interface CellInsertRequest {
   showValue: true;
 }
 
+export interface ExternalSubcircuitInsertRequest {
+  kind: "external-subcircuit";
+  symbolId: string;
+  symbolName: string;
+  definitionId: string;
+  masterName: string;
+  parameters: Record<string, string>;
+  initialRotation: 0 | 90 | 180 | 270;
+  showReference: false;
+  referenceText: null;
+  showValue: true;
+}
+
 export type ComponentInsertRequest =
-  SymbolInsertRequest | CellInsertRequest | VddRailInsertRequest;
+  | SymbolInsertRequest
+  | CellInsertRequest
+  | ExternalSubcircuitInsertRequest
+  | VddRailInsertRequest;

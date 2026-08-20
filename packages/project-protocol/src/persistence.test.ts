@@ -70,11 +70,11 @@ describe("Project persistence", () => {
     }
   });
 
-  it("directly upgrades schema 13 properties to netlist parameters", () => {
+  it("upgrades the previous schema while preserving netlist parameters", () => {
     const project = createEmptyProject("project-test", "Test Project");
     const source = {
       ...JSON.parse(serializeProject(project)),
-      schemaVersion: 13,
+      schemaVersion: 14,
     };
     delete source.externalSubcircuitDefinitions;
     delete source.documents[0].netlist.formalParameters;
@@ -96,10 +96,10 @@ describe("Project persistence", () => {
     const parsed = parseProjectWithMetadata(JSON.stringify(source));
 
     expect(parsed).toMatchObject({
-      sourceSchemaVersion: 13,
+      sourceSchemaVersion: 14,
       migrated: true,
       project: {
-        schemaVersion: 14,
+        schemaVersion: 15,
         structureRevision: 0,
         externalSubcircuitDefinitions: [],
         documents: [
@@ -120,12 +120,12 @@ describe("Project persistence", () => {
     );
   });
 
-  it("lets an upgraded schema-13 Project author and persist schema-14 content", () => {
+  it("lets an upgraded previous Project author and persist current content", () => {
     const source = {
       ...JSON.parse(
         serializeProject(createEmptyProject("project-test", "Test Project")),
       ),
-      schemaVersion: 13,
+      schemaVersion: 14,
     };
     delete source.externalSubcircuitDefinitions;
     delete source.documents[0].netlist.formalParameters;
@@ -149,7 +149,7 @@ describe("Project persistence", () => {
     });
 
     const reopened = parseProject(serializeProject(project));
-    expect(reopened.schemaVersion).toBe(14);
+    expect(reopened.schemaVersion).toBe(15);
     expect(
       reopened.documents[0]!.annotations[0]?.content!.runs[0],
     ).toMatchObject({
@@ -163,7 +163,7 @@ describe("Project persistence", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-conflict", "Conflict")),
     );
-    source.schemaVersion = 13;
+    source.schemaVersion = 14;
     delete source.externalSubcircuitDefinitions;
     delete source.documents[0].netlist.formalParameters;
     source.documents[0].instances.push({
@@ -183,7 +183,7 @@ describe("Project persistence", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-external", "External")),
     );
-    source.schemaVersion = 13;
+    source.schemaVersion = 14;
     delete source.externalSubcircuitDefinitions;
     delete source.documents[0].netlist.formalParameters;
     const imported = (id: string, pinName: string) => ({
@@ -207,8 +207,15 @@ describe("Project persistence", () => {
       {
         id: "external-subcircuit-opa",
         name: "OPA",
-        terminals: [{ name: "IN" }],
+        terminals: [
+          {
+            id: "external-terminal-external-subcircuit-opa-1",
+            name: "IN",
+            direction: "passive",
+          },
+        ],
         formalParameters: [],
+        interfaceStatus: "declared",
       },
     ]);
     expect(
@@ -225,17 +232,17 @@ describe("Project persistence", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/must be 13 or 14/);
+    ).toThrow(/must be 14 or 15/);
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 12 })),
-    ).toThrow(/must be 13 or 14/);
+    ).toThrow(/must be 14 or 15/);
   });
 
-  it("preserves schema-13 formal terminal identity without adding visual intent", () => {
+  it("preserves previous-schema formal terminal identity without adding visual intent", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-port", "Port migration")),
     );
-    source.schemaVersion = 13;
+    source.schemaVersion = 14;
     delete source.externalSubcircuitDefinitions;
     delete source.documents[0].netlist.formalParameters;
     source.documents[0].nets.push({
@@ -269,7 +276,7 @@ describe("Project persistence", () => {
     );
 
     expect(migrated).toMatchObject({
-      sourceSchemaVersion: 13,
+      sourceSchemaVersion: 14,
       migrated: true,
     });
     expect(terminal).toMatchObject({

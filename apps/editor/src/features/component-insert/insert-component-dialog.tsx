@@ -21,6 +21,7 @@ export interface InsertComponentDialogProps {
   styleProfileId: string;
   recentSymbolIds: readonly string[];
   cells: readonly CellInsertCandidate[];
+  externalDefinitions?: readonly ExternalSubcircuitInsertCandidate[];
   cellOnly?: boolean;
   onApply(request: ComponentInsertRequest): void;
   onCancel(): void;
@@ -31,13 +32,20 @@ export interface CellInsertCandidate {
   readonly cellName: string;
   readonly symbol: SymbolDefinition;
 }
+export interface ExternalSubcircuitInsertCandidate {
+  readonly definitionId: string;
+  readonly masterName: string;
+  readonly symbol: SymbolDefinition;
+}
 
 interface InsertChoice {
   readonly key: string;
-  readonly kind: "symbol" | "cell";
+  readonly kind: "symbol" | "cell" | "external-subcircuit";
   readonly symbol: SymbolDefinition;
   readonly childDocumentId?: string;
   readonly cellName?: string;
+  readonly definitionId?: string;
+  readonly masterName?: string;
 }
 
 export function ComponentPlacementPreview({
@@ -90,6 +98,7 @@ export function InsertComponentDialog({
   styleProfileId,
   recentSymbolIds,
   cells,
+  externalDefinitions = [],
   cellOnly = false,
   onApply,
   onCancel,
@@ -113,8 +122,17 @@ export function InsertComponentDialog({
         childDocumentId: cell.childDocumentId,
         cellName: cell.cellName,
       })),
+      ...(cellOnly
+        ? []
+        : externalDefinitions.map((definition) => ({
+            key: `external:${definition.definitionId}`,
+            kind: "external-subcircuit" as const,
+            symbol: definition.symbol,
+            definitionId: definition.definitionId,
+            masterName: definition.masterName,
+          }))),
     ],
-    [cellOnly, cells, recentSymbolIds, styleProfileId],
+    [cellOnly, cells, externalDefinitions, recentSymbolIds, styleProfileId],
   );
   const [query, setQuery] = useState("");
   const [pickerOpen, setPickerOpen] = useState(true);
@@ -149,6 +167,23 @@ export function InsertComponentDialog({
         childDocumentId: cell.childDocumentId,
         cellName: cell.cellName,
       }));
+    const externalChoices = (cellOnly ? [] : externalDefinitions)
+      .filter((definition) => {
+        const normalized = query.trim().toLowerCase();
+        return (
+          normalized.length === 0 ||
+          `${definition.masterName} ${definition.symbol.id}`
+            .toLowerCase()
+            .includes(normalized)
+        );
+      })
+      .map<InsertChoice>((definition) => ({
+        key: `external:${definition.definitionId}`,
+        kind: "external-subcircuit",
+        symbol: definition.symbol,
+        definitionId: definition.definitionId,
+        masterName: definition.masterName,
+      }));
     return [
       ...(cellOnly
         ? []
@@ -165,8 +200,18 @@ export function InsertComponentDialog({
       ...(cellChoices.length > 0
         ? [{ category: "Cells", choices: cellChoices }]
         : []),
+      ...(externalChoices.length > 0
+        ? [{ category: "External masters", choices: externalChoices }]
+        : []),
     ];
-  }, [cellOnly, cells, query, recentSymbolIds, styleProfileId]);
+  }, [
+    cellOnly,
+    cells,
+    externalDefinitions,
+    query,
+    recentSymbolIds,
+    styleProfileId,
+  ]);
   const choices = useMemo(
     () => groups.flatMap((group) => group.choices),
     [groups],
@@ -216,7 +261,8 @@ export function InsertComponentDialog({
   }, [selected]);
 
   useEffect(() => {
-    if (selected?.kind === "cell") setShowValue(true);
+    if (selected?.kind === "cell" || selected?.kind === "external-subcircuit")
+      setShowValue(true);
   }, [selected?.kind]);
 
   useEffect(() => {
@@ -270,6 +316,21 @@ export function InsertComponentDialog({
         symbolName: selected.cellName ?? selected.symbol.name,
         childDocumentId: selected.childDocumentId!,
         cellName: selected.cellName ?? selected.symbol.name,
+        parameters: {},
+        initialRotation,
+        showReference: false,
+        referenceText: null,
+        showValue: true,
+      });
+      return;
+    }
+    if (selected.kind === "external-subcircuit") {
+      onApply({
+        kind: "external-subcircuit",
+        symbolId: selected.symbol.id,
+        symbolName: selected.masterName ?? selected.symbol.name,
+        definitionId: selected.definitionId!,
+        masterName: selected.masterName ?? selected.symbol.name,
         parameters: {},
         initialRotation,
         showReference: false,

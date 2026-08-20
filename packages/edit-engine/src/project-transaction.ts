@@ -315,12 +315,11 @@ export function executeProjectTransaction(
           if (
             binding?.kind !== "external-subcircuit" ||
             binding.definitionId !== edit.definition.id ||
-            instance.symbolId ===
-              externalSubcircuitSymbolId(edit.definition.name)
+            instance.symbolId === externalSubcircuitSymbolId(edit.definition.id)
           ) {
             continue;
           }
-          instance.symbolId = externalSubcircuitSymbolId(edit.definition.name);
+          instance.symbolId = externalSubcircuitSymbolId(edit.definition.id);
           changed = true;
         }
         if (changed) {

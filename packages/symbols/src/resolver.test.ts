@@ -105,12 +105,16 @@ describe("Symbol Resolver boundary", () => {
     project.externalSubcircuitDefinitions.push({
       id: "external-ota",
       name: "OTA",
-      terminals: [{ name: "INP" }, { name: "OUT" }],
+      terminals: [
+        { id: "external-ota-inp", name: "INP", direction: "passive" },
+        { id: "external-ota-out", name: "OUT", direction: "passive" },
+      ],
       formalParameters: [],
+      interfaceStatus: "declared",
     });
     project.documents[0]!.instances.push({
       id: "X1",
-      symbolId: externalSubcircuitSymbolId("OTA"),
+      symbolId: externalSubcircuitSymbolId("external-ota"),
       placement: null,
       netlist: {
         reference: "X1",
@@ -123,7 +127,7 @@ describe("Symbol Resolver boundary", () => {
 
     expect(
       resolver
-        .resolve(externalSubcircuitSymbolId("OTA"))
+        .resolve(externalSubcircuitSymbolId("external-ota"))
         ?.definition.pins.map((pin) => pin.name),
     ).toEqual(["INP", "OUT"]);
   });

@@ -113,6 +113,7 @@ import { renderCrashRequested, sceneCrashRequested } from "./crash-test-hooks";
 import { buildSceneSafely } from "./scene-safety";
 import {
   builtInSymbols,
+  externalSubcircuitSymbolId,
   findUnsupportedProjectSymbolIds,
   hierarchicalSymbolId,
 } from "@icm/symbols";
@@ -1354,6 +1355,24 @@ export function App({
           : [];
       }),
     [document.id, project.documents, resolver],
+  );
+  const externalSubcircuitInsertCandidates = useMemo(
+    () =>
+      project.externalSubcircuitDefinitions.flatMap((definition) => {
+        const symbol = resolver.resolve(
+          externalSubcircuitSymbolId(definition.id),
+        )?.definition;
+        return symbol
+          ? [
+              {
+                definitionId: definition.id,
+                masterName: definition.name,
+                symbol,
+              },
+            ]
+          : [];
+      }),
+    [project.externalSubcircuitDefinitions, resolver],
   );
   const pendingPlacementSymbol = pendingSymbolId
     ? resolver.resolve(pendingSymbolId)?.definition
@@ -6914,6 +6933,7 @@ export function App({
         styleProfileId={document.presentation.styleProfileId}
         recentSymbolIds={recentSymbolIds}
         cells={cellInsertCandidates}
+        externalDefinitions={externalSubcircuitInsertCandidates}
         cellOnly={cellInsertOnly}
         onApply={beginInsertedComponentPlacementFromHook}
         onCancel={cancelComponentInsertFromHook}

@@ -179,8 +179,13 @@ describe("current formal cell interface", () => {
     project.externalSubcircuitDefinitions.push({
       id: "external-ota",
       name: "OTA",
-      terminals: [{ name: "INP" }, { name: "INN" }, { name: "OUT" }],
+      terminals: [
+        { id: "external-ota-inp", name: "INP", direction: "passive" },
+        { id: "external-ota-inn", name: "INN", direction: "passive" },
+        { id: "external-ota-out", name: "OUT", direction: "passive" },
+      ],
       formalParameters: [{ name: "gain", defaultValue: "10" }],
+      interfaceStatus: "declared",
     });
     document.instances.push({
       id: "X1",
@@ -240,8 +245,9 @@ describe("current formal cell interface", () => {
     project.externalSubcircuitDefinitions.push({
       id: "external-gain",
       name: "GAIN",
-      terminals: [{ name: "IN" }],
+      terminals: [{ id: "external-gain-in", name: "IN", direction: "passive" }],
       formalParameters: [{ name: "gain" }],
+      interfaceStatus: "declared",
     });
     document.instances.push({
       id: "X1",
@@ -269,5 +275,55 @@ describe("current formal cell interface", () => {
         objectIds: ["X1"],
       }),
     );
+  });
+
+  it("uses external terminal array order for X nodes while retaining terminal identities", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    project.externalSubcircuitDefinitions.push({
+      id: "external-order",
+      name: "ORDERED",
+      terminals: [
+        { id: "terminal-b", name: "B", direction: "passive" },
+        { id: "terminal-a", name: "A", direction: "passive" },
+      ],
+      formalParameters: [],
+      interfaceStatus: "declared",
+    });
+    document.instances.push({
+      id: "X1",
+      symbolId: "external-order-symbol",
+      placement: null,
+      netlist: {
+        reference: "X1",
+        binding: {
+          kind: "external-subcircuit",
+          definitionId: "external-order",
+        },
+        parameters: {},
+      },
+    });
+    document.nets.push(
+      {
+        id: "net-a",
+        name: "NET_A",
+        scope: "local",
+        terminals: [{ instanceId: "X1", pinName: "A" }],
+      },
+      {
+        id: "net-b",
+        name: "NET_B",
+        scope: "local",
+        terminals: [{ instanceId: "X1", pinName: "B" }],
+      },
+    );
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.cells[0]!.instances[0]!.nodes).toEqual([
+      { pinName: "B", netName: "NET_B" },
+      { pinName: "A", netName: "NET_A" },
+    ]);
   });
 });
