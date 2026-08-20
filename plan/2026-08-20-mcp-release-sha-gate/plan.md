@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -77,4 +77,5 @@ declared-checksum command.
 
 Validation passed locally: focused helper contract (5 tests), normal MCP
 package, static contracts, test-impact, and the full `pnpm ci:check` gate.
-GitHub Actions validation remains pending before completion.
+PR #131 was merged to `main`; GitHub Actions passed static (26s), unit (41s),
+release (55s), browser shard 1/2 (3m 18s), and browser shard 2/2 (3m 54s).
