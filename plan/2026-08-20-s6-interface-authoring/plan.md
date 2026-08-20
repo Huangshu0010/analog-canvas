@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -83,6 +83,7 @@ in the new parameter editor.
 Validation passed: full formatting check; TypeScript typecheck; 108 focused
 unit/component tests across model, transaction, hierarchy, connectivity,
 netlist, symbols, and editor; focused Cell Interface Playwright workflow;
-workspace build; documentation links; test-impact; and diff check. Commit is
-pending because the environment cannot create this linked worktree's Git
-`index.lock`.
+workspace build; documentation links; test-impact; and diff check. Committed
+as `50b6c28` (`feat(schematic): complete stage 1 netlist foundation`) after
+the worktree Git lock was restored and the branch was rebased onto
+`origin/main`.

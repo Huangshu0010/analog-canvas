@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -75,5 +75,6 @@ the existing hierarchy locator flow (including fitting document-level evidence).
 
 Validation passed: full formatting check; TypeScript typecheck; 109 focused
 unit/component tests; focused Preflight Playwright workflow; workspace build;
-documentation links; test-impact; and diff check. Git staging/commit remains
-blocked until the workspace permits creation of the linked-worktree index lock.
+documentation links; test-impact; and diff check. Committed as `50b6c28`
+(`feat(schematic): complete stage 1 netlist foundation`) after the worktree Git
+lock was restored and the branch was rebased onto `origin/main`.

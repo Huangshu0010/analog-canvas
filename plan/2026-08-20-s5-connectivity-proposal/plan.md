@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -79,6 +79,6 @@ planner rejection when normalization cannot create an isolated jog.
 Validation passed: TypeScript typecheck; 66 focused unit/component tests;
 five focused Wire/Net/NoConnect Playwright tests including the new jog path;
 test-impact against `origin/main`; documentation links; and `git diff --check`.
-Commit is pending: the current environment cannot create this worktree's Git
-`index.lock`; the implementation and validation evidence remain in the working
-tree.
+Committed as `50b6c28` (`feat(schematic): complete stage 1 netlist foundation`)
+after the worktree Git lock was restored and the branch was rebased onto
+`origin/main`.

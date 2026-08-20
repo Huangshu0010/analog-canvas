@@ -3531,8 +3531,8 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: TypeScript typecheck; 66 focused unit/component tests; five
   focused Playwright gesture contracts; test-impact against `origin/main`;
   docs links; and diff check passed.
-- Commit status: pending because the current environment cannot create the
-  worktree Git `index.lock`; implementation and validation remain present.
+- Commit status: committed as `50b6c28` on
+  `codex/phase1-schematic-foundation-plan`, then rebased onto `origin/main`.
 
 ## 2026-08-20 - S6 Cell and Subcircuit Interface Authoring
 
@@ -3543,8 +3543,8 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: formatting; typecheck; focused model/edit-engine/netlist/symbol
   and editor tests; focused Cell Interface browser workflow; workspace build;
   docs links; test-impact; and diff check passed.
-- Commit status: pending because the environment cannot create the worktree
-  Git `index.lock`; implementation and validation remain present.
+- Commit status: committed as `50b6c28` on
+  `codex/phase1-schematic-foundation-plan`, then rebased onto `origin/main`.
 
 ## 2026-08-20 - S7 Design-netlist analysis and Preflight
 
@@ -3554,5 +3554,5 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: formatting; typecheck; focused 109-test unit/component set;
   focused preflight browser workflow; workspace build; docs links;
   test-impact; and diff check passed.
-- Commit status: pending because the environment cannot create the worktree
-  Git `index.lock`; implementation and validation remain present.
+- Commit status: committed as `50b6c28` on
+  `codex/phase1-schematic-foundation-plan`, then rebased onto `origin/main`.

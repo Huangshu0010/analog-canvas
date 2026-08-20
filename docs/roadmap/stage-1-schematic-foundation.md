@@ -1,6 +1,6 @@
 # 阶段一：Schematic 与网表语义基础
 
-状态：`proposed`
+状态：`completed`（2026-08-20）
 
 ## 1. 目标
 
