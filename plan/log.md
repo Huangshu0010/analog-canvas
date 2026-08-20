@@ -3612,3 +3612,12 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   check, and the preceding focused protocol tests passed.
 - Commit status: pending push of this release-gate correction on
   `codex/octilinear-route-protocol`.
+
+## 2026-08-20 - Octilinear Linux MCP checksum refresh
+
+- Changed areas: replaced the canonical Linux MCP package checksum with the
+  digest emitted by PR #130's Release contracts job.
+- Validation: `pnpm mcp:distribution:check`, complete `pnpm release:verify`,
+  and diff check passed locally.
+- Commit status: pending push and replacement remote checks on
+  `codex/octilinear-route-protocol`.
