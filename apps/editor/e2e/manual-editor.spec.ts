@@ -1513,9 +1513,11 @@ test("edits instance, electrical Net, and free text with bounded label handles",
 
   await page.getByTestId("hit-R1").click();
   await page.getByTestId("annotation-hit-instance-label-R1").dblclick();
-  await page
-    .getByRole("textbox", { name: "Canvas text editor" })
-    .fill("R_LOAD");
+  const referenceEditor = page.getByRole("textbox", {
+    name: "Canvas text editor",
+  });
+  await expect(referenceEditor).toHaveAttribute("type", "text");
+  await referenceEditor.fill("R_LOAD");
   await page.getByRole("button", { name: "Apply text changes" }).click();
   // Bound instance labels update their reference source and render the
   // underscore suffix as Razavi upright subscript text.
@@ -1538,9 +1540,10 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   const annotationEditor = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
+  await expect(annotationEditor).toHaveAttribute("type", "text");
   await annotationEditor.fill("Vref");
   await annotationEditor.press("Control+a");
-  await expect(page.getByRole("button", { name: "Italic" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Italic" })).toHaveCount(0);
   await page.getByRole("button", { name: "Increase text size" }).click();
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
@@ -1581,6 +1584,29 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   });
   const afterBox = await noteHandle.boundingBox();
   expect(afterBox?.x).not.toBe(beforeBox.x);
+});
+
+test("keeps literal text line breaks and overbars visible while editing", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "Draw", "Text");
+  const editor = page.getByRole("textbox", { name: "Canvas text editor" });
+  await editor.fill("Vx");
+  await editor.press("Control+a");
+  await page.getByRole("button", { name: "Overbar" }).click();
+  await expect(editor.locator('[data-rich-text-style="overbar"]')).toHaveCSS(
+    "text-decoration-line",
+    "overline",
+  );
+  await editor.press("End");
+  await editor.press("Enter");
+  await editor.type("bias");
+  await page.getByRole("button", { name: "Apply text changes" }).click();
+  await expect(
+    page.locator('[data-layer="drafting"] [data-text-run="line-break"]'),
+  ).toHaveCount(1);
+  await expect(page.locator('[data-layer="drafting"]')).toContainText("Vxbias");
 });
 
 test("L edits a selected route Net Label without opening Properties", async ({

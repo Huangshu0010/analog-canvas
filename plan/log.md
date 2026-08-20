@@ -3645,3 +3645,12 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   test-impact; and `pnpm verify:branch` (158 files / 945 tests, build, and
   production smoke) passed.
 - Commit status: committed as `d4a22fbc` on `codex/unified-text-binding`.
+
+## 2026-08-20 - Bound text editor repair
+
+- Changed areas: semantic labels now use a direct single-line source editor;
+  literal RichText uses deterministic line-break insertion and renders overbars
+  inside its editing surface.
+- Validation: focused browser regression (2 tests), workspace typecheck,
+  test-impact, and diff checks passed.
+- Commit status: prepared on `codex/unified-text-binding`.

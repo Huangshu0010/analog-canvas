@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import { normalizeRichText } from "@icm/model";
+import { flattenRichText, normalizeRichText } from "@icm/model";
 import type { RichTextDocument, RichTextRun } from "@icm/model";
 
 export interface RichTextEditorProps {
@@ -9,7 +9,12 @@ export interface RichTextEditorProps {
   disabled?: boolean;
   sizeScale: number;
   alignment: "start" | "middle" | "end";
-  formattingDisabled?: boolean;
+  /**
+   * A semantic display (for example an instance reference) edits its source
+   * field. It is deliberately a plain, single-line input rather than a fake
+   * RichText document with disabled formatting controls.
+   */
+  sourceOnly?: boolean;
   multiline?: boolean;
   onChange(content: RichTextDocument): void;
   onSizeChange(sizeScale: number): void;
@@ -112,7 +117,7 @@ export function RichTextEditor({
   disabled = false,
   sizeScale,
   alignment,
-  formattingDisabled = false,
+  sourceOnly = false,
   multiline = true,
   onChange,
   onSizeChange,
@@ -122,14 +127,20 @@ export function RichTextEditor({
   onReverseCurrentArrow,
 }: RichTextEditorProps) {
   const editableRef = useRef<HTMLDivElement>(null);
+  const sourceInputRef = useRef<HTMLInputElement>(null);
   const selectionRangeRef = useRef<Range | null>(null);
 
   useEffect(() => {
+    if (sourceOnly && sourceInputRef.current) {
+      sourceInputRef.current.focus();
+      sourceInputRef.current.select();
+      return;
+    }
     if (editableRef.current) {
       editableRef.current.innerHTML = toEditableHtml(content);
       editableRef.current.focus();
     }
-  }, [targetKey]);
+  }, [sourceOnly, targetKey]);
 
   const sync = (): void => {
     if (editableRef.current) onChange(editableDocument(editableRef.current));
@@ -191,7 +202,18 @@ export function RichTextEditor({
     if (disabled || !editableRef.current) return;
     editableRef.current.focus();
     restoreSelection();
-    document.execCommand("insertLineBreak");
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (!range || !editableRef.current.contains(range.commonAncestorContainer))
+      return;
+    range.deleteContents();
+    const lineBreak = globalThis.document.createElement("br");
+    range.insertNode(lineBreak);
+    const next = globalThis.document.createRange();
+    next.setStartAfter(lineBreak);
+    next.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(next);
     rememberSelection();
     sync();
   };
@@ -215,52 +237,56 @@ export function RichTextEditor({
         role="toolbar"
         aria-label="Text formatting"
       >
-        <button
-          type="button"
-          aria-label="Bold"
-          disabled={disabled || formattingDisabled}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => command("bold")}
-        >
-          <strong>B</strong>
-        </button>
-        <button
-          type="button"
-          aria-label="Italic"
-          disabled={disabled || formattingDisabled}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => command("italic")}
-        >
-          <em>I</em>
-        </button>
-        <button
-          type="button"
-          aria-label="Subscript"
-          disabled={disabled || formattingDisabled}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => command("subscript")}
-        >
-          x<sub>2</sub>
-        </button>
-        <button
-          type="button"
-          aria-label="Superscript"
-          disabled={disabled || formattingDisabled}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => command("superscript")}
-        >
-          x<sup>2</sup>
-        </button>
-        <button
-          type="button"
-          aria-label="Overbar"
-          disabled={disabled || formattingDisabled}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => command("overbar")}
-        >
-          <span className="rich-text-overbar-button">x</span>
-        </button>
-        <span className="rich-text-toolbar-separator" />
+        {!sourceOnly ? (
+          <>
+            <button
+              type="button"
+              aria-label="Bold"
+              disabled={disabled}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => command("bold")}
+            >
+              <strong>B</strong>
+            </button>
+            <button
+              type="button"
+              aria-label="Italic"
+              disabled={disabled}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => command("italic")}
+            >
+              <em>I</em>
+            </button>
+            <button
+              type="button"
+              aria-label="Subscript"
+              disabled={disabled}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => command("subscript")}
+            >
+              x<sub>2</sub>
+            </button>
+            <button
+              type="button"
+              aria-label="Superscript"
+              disabled={disabled}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => command("superscript")}
+            >
+              x<sup>2</sup>
+            </button>
+            <button
+              type="button"
+              aria-label="Overbar"
+              disabled={disabled}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => command("overbar")}
+            >
+              <span className="rich-text-overbar-button">x</span>
+            </button>
+            <span className="rich-text-toolbar-separator" />
+          </>
+        ) : null}
         {(
           [
             ["start", "Align left"],
@@ -294,46 +320,50 @@ export function RichTextEditor({
             </svg>
           </button>
         ))}
-        <details className="rich-text-symbol-menu">
-          <summary aria-label="Insert circuit symbol">Ω</summary>
-          <div role="menu" aria-label="Circuit symbols">
-            {[
-              "α",
-              "β",
-              "γ",
-              "δ",
-              "θ",
-              "λ",
-              "μ",
-              "π",
-              "φ",
-              "ω",
-              "Δ",
-              "Ω",
-              "±",
-              "≈",
-              "≤",
-              "≥",
-              "∞",
-              "°",
-              "·",
-              "→",
-            ].map((symbol) => (
-              <button
-                key={symbol}
-                type="button"
-                role="menuitem"
-                aria-label={`Insert ${symbol}`}
-                disabled={disabled || formattingDisabled}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => insertSymbol(symbol)}
-              >
-                {symbol}
-              </button>
-            ))}
-          </div>
-        </details>
-        <span className="rich-text-toolbar-separator" />
+        {!sourceOnly ? (
+          <>
+            <details className="rich-text-symbol-menu">
+              <summary aria-label="Insert circuit symbol">Ω</summary>
+              <div role="menu" aria-label="Circuit symbols">
+                {[
+                  "α",
+                  "β",
+                  "γ",
+                  "δ",
+                  "θ",
+                  "λ",
+                  "μ",
+                  "π",
+                  "φ",
+                  "ω",
+                  "Δ",
+                  "Ω",
+                  "±",
+                  "≈",
+                  "≤",
+                  "≥",
+                  "∞",
+                  "°",
+                  "·",
+                  "→",
+                ].map((symbol) => (
+                  <button
+                    key={symbol}
+                    type="button"
+                    role="menuitem"
+                    aria-label={`Insert ${symbol}`}
+                    disabled={disabled}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => insertSymbol(symbol)}
+                  >
+                    {symbol}
+                  </button>
+                ))}
+              </div>
+            </details>
+            <span className="rich-text-toolbar-separator" />
+          </>
+        ) : null}
         <button
           type="button"
           aria-label="Decrease text size"
@@ -386,42 +416,64 @@ export function RichTextEditor({
           </button>
         ) : null}
       </div>
-      <div
-        ref={editableRef}
-        className="rich-text-editable"
-        contentEditable={!disabled}
-        suppressContentEditableWarning
-        role="textbox"
-        aria-label="Canvas text editor"
-        aria-multiline="true"
-        style={{ fontSize: `${15.116 * sizeScale}px` }}
-        onInput={sync}
-        onSelect={rememberSelection}
-        onKeyUp={rememberSelection}
-        onPointerUp={rememberSelection}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            // Escape saves the session, matching click-away and Ctrl+Enter.
-            onCommit();
-          } else if (event.key === "Enter" && event.ctrlKey) {
-            event.preventDefault();
-            onCommit();
-          } else if (event.key === "Enter" && multiline) {
-            event.preventDefault();
-            insertLineBreak();
-          } else if (event.key === "Enter") {
-            event.preventDefault();
-            onCommit();
-          } else if (event.ctrlKey && event.key.toLowerCase() === "b") {
-            event.preventDefault();
-            command("bold");
-          } else if (event.ctrlKey && event.key.toLowerCase() === "i") {
-            event.preventDefault();
-            command("italic");
+      {sourceOnly ? (
+        <input
+          ref={sourceInputRef}
+          className="rich-text-editable rich-text-source-input"
+          type="text"
+          value={flattenRichText(content)}
+          disabled={disabled}
+          aria-label="Canvas text editor"
+          aria-description="Rename the bound schematic label"
+          style={{ fontSize: `${15.116 * sizeScale}px` }}
+          onChange={(event) =>
+            onChange({ runs: [{ kind: "text", value: event.target.value }] })
           }
-        }}
-      />
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === "Escape") {
+              event.preventDefault();
+              onCommit();
+            }
+          }}
+        />
+      ) : (
+        <div
+          ref={editableRef}
+          className="rich-text-editable"
+          contentEditable={!disabled}
+          suppressContentEditableWarning
+          role="textbox"
+          aria-label="Canvas text editor"
+          aria-multiline="true"
+          style={{ fontSize: `${15.116 * sizeScale}px` }}
+          onInput={sync}
+          onSelect={rememberSelection}
+          onKeyUp={rememberSelection}
+          onPointerUp={rememberSelection}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              // Escape saves the session, matching click-away and Ctrl+Enter.
+              onCommit();
+            } else if (event.key === "Enter" && event.ctrlKey) {
+              event.preventDefault();
+              onCommit();
+            } else if (event.key === "Enter" && multiline) {
+              event.preventDefault();
+              insertLineBreak();
+            } else if (event.key === "Enter") {
+              event.preventDefault();
+              onCommit();
+            } else if (event.ctrlKey && event.key.toLowerCase() === "b") {
+              event.preventDefault();
+              command("bold");
+            } else if (event.ctrlKey && event.key.toLowerCase() === "i") {
+              event.preventDefault();
+              command("italic");
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

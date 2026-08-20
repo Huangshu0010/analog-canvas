@@ -2342,6 +2342,17 @@ body {
   box-shadow: 0 0 0 2px rgb(var(--icm-accent-rgb) / 25%);
 }
 
+.rich-text-editable[data-rich-text-style="overbar"],
+.rich-text-editable [data-rich-text-style="overbar"] {
+  text-decoration-line: overline;
+  text-decoration-thickness: 1px;
+}
+
+.rich-text-source-input {
+  display: block;
+  width: 100%;
+}
+
 .smart-snap-guide {
   stroke: rgb(var(--icm-accent-rgb) / 90%);
   stroke-width: 1;
