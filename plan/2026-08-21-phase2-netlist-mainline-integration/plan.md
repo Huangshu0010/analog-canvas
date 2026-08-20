@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -72,5 +72,7 @@ Local `main` fast-forwarded from `14fe2d54` to `e11de334`, incorporating
 `88a997df`, `8d62fe21`, and `e11de334` without a merge conflict. The required
 candidate mainline CI check passed: static contracts, 159 unit-test files / 956
 tests, workspace builds, release and production smoke checks, and 162 browser
-E2E tests. Remote review-branch checks and the authorized `origin/main` push
-remain pending.
+E2E tests. PR #134 then passed GitHub Actions (change scope, static, unit,
+release, and both browser shards) and merged to `origin/main` as `51075420`.
+Local `main` is synchronized to that remote merge. This closing record is
+documentation only.

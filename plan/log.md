@@ -3726,5 +3726,5 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: `pnpm install --frozen-lockfile` and complete `pnpm ci:check`
   passed: static contracts, 159 unit-test files / 956 tests, workspace build,
   release and production smoke checks, and 162 browser E2E tests.
-- Commit status: local `main` is now at `d4cdbce8`; remote review-branch
-  checks and the authorized `origin/main` integration are pending.
+- Commit status: merged to `origin/main` through PR #134 as `51075420` after
+  all GitHub Actions checks passed; local `main` is synchronized.
