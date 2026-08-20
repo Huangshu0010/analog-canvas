@@ -3630,5 +3630,6 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   published asset.
 - Validation: focused integrity contract (5 tests); MCP package; static
   contracts; test-impact; and full `pnpm ci:check` (including browser and
-  release verification) passed locally. Linux workflow validation is pending.
-- Commit status: pending commit and PR checks on `codex/mcp-release-sha-gate`.
+  release verification) passed locally. GitHub Actions also passed static
+  (26s), unit (41s), release (55s), and browser shards (3m 18s / 3m 54s).
+- Commit status: PR #131 merged to `main` as `701465ef`.
