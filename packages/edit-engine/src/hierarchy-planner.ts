@@ -6,7 +6,7 @@ import type {
   ExternalSubcircuitDefinition,
   SchematicDocument,
 } from "@icm/model";
-import { hierarchicalSymbolId } from "@icm/symbols";
+import { externalSubcircuitSymbolId, hierarchicalSymbolId } from "@icm/symbols";
 
 import type { ProjectStructureEdit } from "./project-transaction.js";
 
@@ -112,6 +112,25 @@ export function createHierarchyInstance(
   };
 }
 
+/** Build an `X` call to a project-local external interface, without a fake Cell body. */
+export function createExternalSubcircuitInstance(
+  id: string,
+  definition: ExternalSubcircuitDefinition,
+  placement: NonNullable<SchematicDocument["instances"][number]["placement"]>,
+  reference = id,
+): SchematicDocument["instances"][number] {
+  return {
+    id,
+    symbolId: externalSubcircuitSymbolId(definition.id),
+    placement,
+    netlist: {
+      reference,
+      parameters: {},
+      binding: { kind: "external-subcircuit", definitionId: definition.id },
+    },
+  };
+}
+
 export function planCreateCell(
   document: SchematicDocument,
 ): ProjectStructureEdit[] {
@@ -176,6 +195,38 @@ export function planPlaceCellInstance(
     throw new Error(`Instance is not bound to a Cell: ${instance.id}`);
   }
   requireDocument(project, binding.childDocumentId);
+  return [
+    transactDocument(project, parentDocumentId, [
+      { kind: "add_instance", instance },
+      ...annotations.map((annotation) => ({
+        kind: "upsert_schematic_annotation" as const,
+        annotation,
+      })),
+    ]),
+  ];
+}
+
+export function planPlaceExternalSubcircuitInstance(
+  project: CircuitProject,
+  parentDocumentId: string,
+  instance: SchematicDocument["instances"][number],
+  annotations: readonly Annotation[] = [],
+): ProjectStructureEdit[] {
+  const binding = instance.netlist?.binding;
+  if (binding?.kind !== "external-subcircuit") {
+    throw new Error(
+      `Instance is not bound to an external subcircuit: ${instance.id}`,
+    );
+  }
+  if (
+    !project.externalSubcircuitDefinitions.some(
+      (definition) => definition.id === binding.definitionId,
+    )
+  ) {
+    throw new Error(
+      `External subcircuit does not exist: ${binding.definitionId}`,
+    );
+  }
   return [
     transactDocument(project, parentDocumentId, [
       { kind: "add_instance", instance },
@@ -340,6 +391,131 @@ export function proposeUpsertExternalSubcircuitDefinition(
     ],
     diagnostics,
   );
+}
+
+/**
+ * Rename one external terminal while retaining its stable identity and every
+ * connected caller projection. Reordering is separately safe because callers
+ * connect by terminal identity/name while netlist extraction observes array order.
+ */
+export function planRenameExternalSubcircuitTerminal(
+  project: CircuitProject,
+  definitionId: string,
+  terminalId: string,
+  newName: string,
+): ProjectStructureEdit[] {
+  const definition = project.externalSubcircuitDefinitions.find(
+    (candidate) => candidate.id === definitionId,
+  );
+  const terminal = definition?.terminals.find(
+    (candidate) => candidate.id === terminalId,
+  );
+  if (!definition || !terminal) {
+    throw new Error(
+      `External terminal does not exist: ${definitionId}.${terminalId}`,
+    );
+  }
+  if (
+    definition.terminals.some(
+      (candidate) =>
+        candidate.id !== terminalId &&
+        candidate.name.toLowerCase() === newName.toLowerCase(),
+    )
+  ) {
+    throw new Error(`External terminal name already exists: ${newName}`);
+  }
+  if (terminal.name === newName) return [];
+  const nextDefinition: ExternalSubcircuitDefinition = {
+    ...definition,
+    terminals: definition.terminals.map((candidate) =>
+      candidate.id === terminalId ? { ...candidate, name: newName } : candidate,
+    ),
+  };
+  const edits: ProjectStructureEdit[] = [
+    {
+      kind: "upsert_external_subcircuit_definition",
+      definition: nextDefinition,
+    },
+  ];
+  for (const document of project.documents) {
+    const callerEdits: DocumentEdits = [];
+    for (const instance of document.instances) {
+      const binding = instance.netlist?.binding;
+      if (
+        binding?.kind !== "external-subcircuit" ||
+        binding.definitionId !== definitionId
+      ) {
+        continue;
+      }
+      const referenced =
+        document.nets.some((net) =>
+          net.terminals.some(
+            (reference) =>
+              reference.instanceId === instance.id &&
+              reference.pinName === terminal.name,
+          ),
+        ) ||
+        document.routes.some((route) =>
+          [route.from, route.to].some(
+            (endpoint) =>
+              endpoint.kind === "terminal" &&
+              endpoint.instanceId === instance.id &&
+              endpoint.pinName === terminal.name,
+          ),
+        ) ||
+        document.noConnects.some(
+          (noConnect) =>
+            noConnect.endpoint.instanceId === instance.id &&
+            noConnect.endpoint.pinName === terminal.name,
+        ) ||
+        (instance.importProvenance?.terminalMapping ?? []).some(
+          (reference) => reference.pinName === terminal.name,
+        );
+      if (!referenced) continue;
+      callerEdits.push({
+        kind: "set_instance_symbol",
+        instanceId: instance.id,
+        symbolId: externalSubcircuitSymbolId(definitionId),
+        pinMap: { [terminal.name]: newName },
+      });
+    }
+    if (callerEdits.length > 0)
+      edits.push(transactDocument(project, document.id, callerEdits));
+  }
+  return edits;
+}
+
+export function planReorderExternalSubcircuitTerminal(
+  project: CircuitProject,
+  definitionId: string,
+  terminalId: string,
+  delta: -1 | 1,
+): ProjectStructureEdit[] {
+  const definition = project.externalSubcircuitDefinitions.find(
+    (candidate) => candidate.id === definitionId,
+  );
+  if (!definition)
+    throw new Error(`External subcircuit does not exist: ${definitionId}`);
+  const index = definition.terminals.findIndex(
+    (terminal) => terminal.id === terminalId,
+  );
+  const nextIndex = index + delta;
+  if (index < 0)
+    throw new Error(
+      `External terminal does not exist: ${definitionId}.${terminalId}`,
+    );
+  if (nextIndex < 0 || nextIndex >= definition.terminals.length) return [];
+  const terminals = [...definition.terminals];
+  [terminals[index], terminals[nextIndex]] = [
+    terminals[nextIndex]!,
+    terminals[index]!,
+  ];
+  return [
+    {
+      kind: "upsert_external_subcircuit_definition",
+      definition: { ...definition, terminals },
+    },
+  ];
 }
 
 export function planSetCellTerminalPlacement(

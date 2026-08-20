@@ -3372,6 +3372,19 @@ body {
   scrollbar-width: thin;
 }
 
+.netlist-preview {
+  min-height: 10rem;
+  margin: 0;
+  padding: 0.65rem;
+  overflow: auto;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-md);
+  color: var(--icm-text);
+  background: var(--icm-surface);
+  font: 0.74rem/1.45 var(--icm-font-mono, ui-monospace, monospace);
+  white-space: pre;
+}
+
 .insert-component-picker,
 .insert-control-section {
   padding: 0.65rem;

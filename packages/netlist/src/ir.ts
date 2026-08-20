@@ -46,7 +46,11 @@ export interface DesignNetlistCell {
 export interface DesignNetlistExternalMaster {
   id: StableId;
   name: string;
-  terminals: Array<{ id: StableId; name: string; direction: "passive" }>;
+  terminals: Array<{
+    id: StableId;
+    name: string;
+    direction: "input" | "output" | "inout" | "passive";
+  }>;
   formalParameters: DesignNetlistFormalParameter[];
 }
 

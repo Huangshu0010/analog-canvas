@@ -25,6 +25,10 @@ export const CircuitInstanceTargetIRSchema = z.discriminatedUnion("kind", [
     kind: z.literal("subcircuit"),
     cellName: z.string().min(1),
   }),
+  z.strictObject({
+    kind: z.literal("external-subcircuit"),
+    masterName: z.string().min(1),
+  }),
   z.strictObject({ kind: z.literal("opaque"), sourceName: z.string().min(1) }),
 ]);
 export const CircuitParameterIRSchema = z.strictObject({

@@ -44,8 +44,12 @@ describe("CircuitProject schema", () => {
     project.externalSubcircuitDefinitions.push({
       id: "external-opamp",
       name: "OPA",
-      terminals: [{ name: "IN" }, { name: "OUT" }],
+      terminals: [
+        { id: "external-opamp-in", name: "IN", direction: "passive" },
+        { id: "external-opamp-out", name: "OUT", direction: "passive" },
+      ],
       formalParameters: [],
+      interfaceStatus: "declared",
     });
     document.instances.push({
       id: "X1",

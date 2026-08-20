@@ -48,8 +48,8 @@ import {
   exportFormalArtifactsInBrowser,
   rasterizeFormalSvgInBrowser,
 } from "@icm/exporters/browser";
-import { analyzeDesignNetlist } from "@icm/netlist";
-import type { NetlistDiagnostic } from "@icm/netlist";
+import { analyzeDesignNetlist, printDesignNetlist } from "@icm/netlist";
+import type { NetlistDiagnostic, NetlistFormat } from "@icm/netlist";
 import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
@@ -113,6 +113,7 @@ import { renderCrashRequested, sceneCrashRequested } from "./crash-test-hooks";
 import { buildSceneSafely } from "./scene-safety";
 import {
   builtInSymbols,
+  externalSubcircuitSymbolId,
   findUnsupportedProjectSymbolIds,
   hierarchicalSymbolId,
 } from "@icm/symbols";
@@ -1354,6 +1355,24 @@ export function App({
           : [];
       }),
     [document.id, project.documents, resolver],
+  );
+  const externalSubcircuitInsertCandidates = useMemo(
+    () =>
+      project.externalSubcircuitDefinitions.flatMap((definition) => {
+        const symbol = resolver.resolve(
+          externalSubcircuitSymbolId(definition.id),
+        )?.definition;
+        return symbol
+          ? [
+              {
+                definitionId: definition.id,
+                masterName: definition.name,
+                symbol,
+              },
+            ]
+          : [];
+      }),
+    [project.externalSubcircuitDefinitions, resolver],
   );
   const pendingPlacementSymbol = pendingSymbolId
     ? resolver.resolve(pendingSymbolId)?.definition
@@ -5291,6 +5310,27 @@ export function App({
     setStatus(`Exported revision ${document.revision}`);
   }
 
+  function exportDesignNetlist(
+    format: NetlistFormat,
+    warningsReviewed = false,
+  ): void {
+    if (!netlistAnalysis.ir) {
+      setNetlistPreflightOpen(true);
+      setStatus("Resolve Netlist Preflight findings before export");
+      return;
+    }
+    if (netlistAnalysis.diagnostics.length > 0 && !warningsReviewed) {
+      setNetlistPreflightOpen(true);
+      setStatus("Review Netlist Preflight warnings before export");
+      return;
+    }
+    const artifact = printDesignNetlist(format, netlistAnalysis.ir);
+    download(artifact.text, artifact.mediaType, artifact.extension.slice(1));
+    setStatus(
+      `Download requested: ${safeExportBaseName(project.name)}${artifact.extension}`,
+    );
+  }
+
   async function exportRaster(format: "png" | "pdf"): Promise<void> {
     setStatus(`Preparing ${format.toUpperCase()} export`);
     try {
@@ -5371,7 +5411,7 @@ export function App({
         setImportReviewOpen(true);
         setSelectionOpen(true);
         setStatus(
-          `Imported ${result.project!.documents.length} Documents and ${instanceCount} Razavi-supported instances`,
+          `Imported ${result.project!.documents.length} Documents and ${instanceCount} structural instances`,
         );
       });
     } catch (error) {
@@ -6511,6 +6551,20 @@ export function App({
                   >
                     PDF
                   </button>
+                  <button
+                    type="button"
+                    aria-label="Export SPICE netlist"
+                    onClick={() => exportDesignNetlist("spice")}
+                  >
+                    SPICE netlist
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Export Spectre netlist"
+                    onClick={() => exportDesignNetlist("spectre")}
+                  >
+                    Spectre netlist
+                  </button>
                   {recoverySessions.length > 0 ? (
                     <button type="button" onClick={openRecoveryDialog}>
                       Recover recent work…
@@ -6914,6 +6968,7 @@ export function App({
         styleProfileId={document.presentation.styleProfileId}
         recentSymbolIds={recentSymbolIds}
         cells={cellInsertCandidates}
+        externalDefinitions={externalSubcircuitInsertCandidates}
         cellOnly={cellInsertOnly}
         onApply={beginInsertedComponentPlacementFromHook}
         onCancel={cancelComponentInsertFromHook}
@@ -6970,6 +7025,7 @@ export function App({
         result={netlistAnalysis}
         onClose={() => setNetlistPreflightOpen(false)}
         onNavigate={navigateToNetlistDiagnostic}
+        onExport={(format) => exportDesignNetlist(format, true)}
       />
       {publicAgentUiEnabled ? (
         <ConnectAgentPanel

@@ -1,5 +1,17 @@
 # Maintenance Log
 
+## 2026-08-20 - External subcircuit definition authoring
+
+- Changed areas: schema-15 project external interfaces and migration; stable
+  external block symbols; caller-safe terminal rename/reorder and `X` placement;
+  SPICE preservation of unknown external calls including SKY130 generic
+  fallbacks; current fixtures, persistence contracts and ADR/spec updates.
+- Validation: focused unit/UI contracts (12 files / 91 tests); focused
+  Playwright project-file workflow (8 tests); `pnpm typecheck`; `pnpm build`;
+  `pnpm format:check`; `pnpm docs:check`;
+  `pnpm test:impact -- --base origin/main`; `git diff --check`.
+- Commit status: committed locally on `codex/external-subcircuit-definition`.
+
 ## 2026-08-20 - S2 Component Properties workbench
 
 - Changed areas: typed Identity/target/source-evidence projections, editable
@@ -3664,3 +3676,55 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: 49 focused unit/protocol tests, 3 focused browser tests,
   workspace typecheck, test-impact, and diff checks passed.
 - Commit status: prepared on `codex/unified-text-binding`.
+
+## 2026-08-20 - Phase 2 structural netlist closure
+
+- Changed areas: completed editor delivery of the existing structural SPICE
+  import/export loop with File-menu downloads and preflight preview for SPICE
+  and Spectre; retained external master terminal identity/direction and open
+  raw library parameters; added Project -> SPICE -> Project hierarchy/external
+  call semantic round-trip coverage; clarified the no-PDK/no-simulation-deck
+  boundary in user and export-contract documentation.
+- Validation: focused unit contracts (4 files / 28 tests), workspace
+  typecheck/build, focused Playwright preflight/preview/download flow (3
+  tests), format, Markdown-link (117 docs), test-impact, and diff checks
+  passed.
+- Commit status: prepared on `codex/phase2-netlist-closure`.
+
+## 2026-08-21 - Phase 2 structural netlist hardening
+
+- Changed areas: preserved defaulted Cell formal parameters across SPICE
+  import and SPICE/Spectre export; made formal terminal names authoritative in
+  emitted Cell headers; represented explicit NoConnects with stable floating
+  nodes and warning acknowledgement; normalized DC sources; upgraded the
+  round-trip proof to a real Project semantic comparison; and added successful
+  browser import-to-export coverage.
+- Validation: focused changed contracts (6 files / 40 tests), complete SPICE
+  and netlist package suites (10 files / 42 tests), workspace typecheck/build,
+  focused browser flows (5 tests), format, docs, test-impact, and diff checks
+  passed. Branch verification also reproduced two unrelated schema-15 baseline
+  failures on the parent branch.
+- Commit status: prepared on `codex/phase2-netlist-hardening`.
+
+## 2026-08-21 - Schema 15 baseline reconciliation
+
+- Changed areas: aligned ADR 0026 and the user compatibility guide with the
+  accepted schema-15/schema-14 window, and moved the browser recovery
+  compatibility regression from retired schema 13 to active schema 14.
+- Validation: focused documentation/recovery tests (2 files / 25 tests), docs,
+  test-impact and diff checks; complete branch verification passed (159 files /
+  956 tests, workspace build, and production preview smoke).
+- Commit status: prepared on `codex/phase2-netlist-hardening` as a separate
+  baseline-reconciliation commit.
+
+## 2026-08-21 - Phase 2 netlist mainline integration
+
+- Changed areas: fast-forwarded local `main` from `14fe2d54` through the
+  Phase 2 structural closure (`88a997df`), netlist hardening (`8d62fe21`), and
+  schema-15 baseline reconciliation (`e11de334`); recorded the local
+  integration boundary.
+- Validation: `pnpm install --frozen-lockfile` and complete `pnpm ci:check`
+  passed: static contracts, 159 unit-test files / 956 tests, workspace build,
+  release and production smoke checks, and 162 browser E2E tests.
+- Commit status: local `main` is now at `d4cdbce8`; remote review-branch
+  checks and the authorized `origin/main` integration are pending.

@@ -5,6 +5,26 @@ import { createSourceBundle } from "./source.js";
 const encoder = new TextEncoder();
 
 describe("SPICE statement profile", () => {
+  it("normalizes explicit and bare independent-source DC values", async () => {
+    const bundle = await createSourceBundle(
+      [
+        {
+          path: "sources.spi",
+          bytes: encoder.encode("* sources\nV1 out 0 DC 1.2\nI1 out 0 10u\n"),
+        },
+      ],
+      "sources.spi",
+    );
+    expect(
+      bundle.syntaxFiles[0]!.statements.filter(
+        (statement) => statement.kind === "instance",
+      ).map((statement) => statement.parameters),
+    ).toEqual([
+      [expect.objectContaining({ name: "dc", rawText: "1.2" })],
+      [expect.objectContaining({ name: "dc", rawText: "10u" })],
+    ]);
+  });
+
   it("projects every supported element family and recognizes baseline directives", async () => {
     const text = [
       ".param BASE=1k SCALE={2*BASE}",

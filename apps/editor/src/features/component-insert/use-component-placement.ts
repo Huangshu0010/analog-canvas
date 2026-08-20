@@ -8,7 +8,9 @@ import type {
 } from "@icm/edit-engine";
 import {
   createHierarchyInstance,
+  createExternalSubcircuitInstance,
   planCreateCellPort,
+  planPlaceExternalSubcircuitInstance,
   planPlaceCellInstance,
 } from "@icm/edit-engine";
 import type { SchematicStyleProfile } from "@icm/derived";
@@ -341,6 +343,60 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     );
   };
 
+  const placeNewExternalSubcircuit = (
+    symbolId: string,
+    position: Point,
+    placementRequest: PendingComponentPlacement,
+  ): void => {
+    if (
+      placementRequest.kind !== "external-subcircuit" ||
+      !placementRequest.definitionId
+    )
+      return;
+    const definition = options.project.externalSubcircuitDefinitions.find(
+      (candidate) => candidate.id === placementRequest.definitionId,
+    );
+    if (!definition) {
+      options.setStatus("The selected external master no longer exists");
+      return;
+    }
+    const id = nextInstanceDesignator(options.document, symbolId);
+    const reference = nextReference(
+      createReferenceIndex(options.document),
+      hierarchyReferencePolicy,
+    );
+    if (!reference) {
+      options.setStatus("Cannot allocate an external-subcircuit reference");
+      return;
+    }
+    const instance = createExternalSubcircuitInstance(
+      id,
+      definition,
+      {
+        position,
+        rotation: options.componentPlacementRotation,
+        mirror: options.componentPlacementMirror,
+      },
+      reference,
+    );
+    if (
+      !options.transactProject(
+        "place-external-subcircuit-instance",
+        planPlaceExternalSubcircuitInstance(
+          options.project,
+          options.document.id,
+          instance,
+        ),
+      )
+    )
+      return;
+    options.selectOnly("instance", [id]);
+    options.setComponentPreviewPoint(position);
+    options.setStatus(
+      `Placed ${definition.name} as ${reference} · click to place another · Esc exits`,
+    );
+  };
+
   const placeNewCellPort = (
     symbolId: "port" | "port-filled",
     position: Point,
@@ -598,6 +654,14 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       );
     } else if (options.pendingComponentPlacement.kind === "cell") {
       placeNewCell(
+        options.pendingSymbolId,
+        point,
+        options.pendingComponentPlacement,
+      );
+    } else if (
+      options.pendingComponentPlacement.kind === "external-subcircuit"
+    ) {
+      placeNewExternalSubcircuit(
         options.pendingSymbolId,
         point,
         options.pendingComponentPlacement,

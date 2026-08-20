@@ -3,10 +3,14 @@ import { z } from "zod";
 import { CURRENT_PROJECT_SCHEMA_VERSION, StableIdSchema } from "./common.js";
 import { SourceManifestSchema, SymbolLibraryLockSchema } from "./source.js";
 import { SchematicDocumentSchema } from "./document.js";
+import { CellSymbolPresentationSchema } from "./presentation.js";
 import { reportDuplicateIds } from "./validation.js";
 
 export const ExternalSubcircuitTerminalSchema = z.strictObject({
+  /** Stable interface identity. Name and presentation may change independently. */
+  id: StableIdSchema,
   name: z.string().min(1).max(128),
+  direction: z.enum(["input", "output", "inout", "passive"]),
 });
 export const ExternalSubcircuitFormalParameterSchema = z.strictObject({
   name: z.string().min(1).max(128),
@@ -17,6 +21,9 @@ export const ExternalSubcircuitDefinitionSchema = z.strictObject({
   name: z.string().min(1).max(128),
   terminals: z.array(ExternalSubcircuitTerminalSchema).max(128),
   formalParameters: z.array(ExternalSubcircuitFormalParameterSchema).max(128),
+  /** Imported positional interfaces are valid, but remain visibly provisional. */
+  interfaceStatus: z.enum(["declared", "inferred-positional"]),
+  presentation: CellSymbolPresentationSchema.optional(),
 });
 
 export const CircuitProjectSchema = z
@@ -65,6 +72,11 @@ export const CircuitProjectSchema = z
       definition,
     ] of externalSubcircuitDefinitions.entries()) {
       externalDefinitionsById.set(definition.id, definition);
+      reportDuplicateIds(
+        definition.terminals,
+        `externalSubcircuitDefinitions.${definitionIndex}.terminals`,
+        context,
+      );
       const normalizedName = definition.name.toLowerCase();
       if (externalDefinitionNames.has(normalizedName)) {
         context.addIssue({

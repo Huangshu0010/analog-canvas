@@ -29,14 +29,14 @@ function parameterValues(
     if (!["value", "w", "l", "m", "dc"].includes(key)) {
       throw new ProjectMigrationError(
         [...path, key],
-        `Schema-13 legacy property ${key} has no schema-14 netlist authority`,
+        `Schema-14 legacy property ${key} has no schema-15 netlist authority`,
       );
     }
     const normalized = String(value);
     if (parameters[key] !== undefined && parameters[key] !== normalized) {
       throw new ProjectMigrationError(
         [...path, key],
-        `Schema-13 legacy property ${key} conflicts with netlist.parameters.${key}`,
+        `Schema-14 legacy property ${key} conflicts with netlist.parameters.${key}`,
       );
     }
     parameters[key] = normalized;
@@ -44,7 +44,7 @@ function parameterValues(
   return parameters;
 }
 
-/** The only active migration: schema 13 becomes the schema-14 netlist model. */
+/** The rolling migration: schema 14 gains stable external-terminal identities. */
 export function upgradePreviousProject(
   raw: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -195,7 +195,48 @@ export function upgradePreviousProject(
       delete instance.properties;
     }
   }
+  const existingDefinitions = Array.isArray(
+    project.externalSubcircuitDefinitions,
+  )
+    ? project.externalSubcircuitDefinitions
+    : [...definitions.values()];
   project.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;
-  project.externalSubcircuitDefinitions = [...definitions.values()];
+  project.externalSubcircuitDefinitions = existingDefinitions.map(
+    (rawDefinition, definitionIndex) => {
+      if (!isRecord(rawDefinition)) return rawDefinition;
+      const definitionId =
+        typeof rawDefinition.id === "string"
+          ? rawDefinition.id
+          : `external-subcircuit-${definitionIndex + 1}`;
+      const terminals = Array.isArray(rawDefinition.terminals)
+        ? rawDefinition.terminals
+        : [];
+      return {
+        ...rawDefinition,
+        id: definitionId,
+        terminals: terminals.map((rawTerminal, terminalIndex) => {
+          const terminal = isRecord(rawTerminal) ? rawTerminal : {};
+          return {
+            ...terminal,
+            id:
+              typeof terminal.id === "string"
+                ? terminal.id
+                : `external-terminal-${definitionId}-${terminalIndex + 1}`,
+            direction:
+              terminal.direction === "input" ||
+              terminal.direction === "output" ||
+              terminal.direction === "inout" ||
+              terminal.direction === "passive"
+                ? terminal.direction
+                : "passive",
+          };
+        }),
+        interfaceStatus:
+          rawDefinition.interfaceStatus === "inferred-positional"
+            ? "inferred-positional"
+            : "declared",
+      };
+    },
+  );
   return project;
 }

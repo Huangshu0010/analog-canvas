@@ -444,7 +444,7 @@ function targetFor(
       };
     }
     return {
-      target: { kind: "opaque", sourceName: master },
+      target: { kind: "external-subcircuit", masterName: master },
       pinNames: statement.nodes.map((_, index) => `P${index + 1}`),
     };
   }

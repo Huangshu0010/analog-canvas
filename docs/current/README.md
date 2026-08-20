@@ -11,9 +11,10 @@ repository search, completed roadmaps, target plans, or `docs/archive/`.
    [`../adr/0023-rolling-previous-project-compatibility.md`](../adr/0023-rolling-previous-project-compatibility.md),
    [`../adr/0024-device-protocol-and-compatibility-boundaries.md`](../adr/0024-device-protocol-and-compatibility-boundaries.md),
    [`../adr/0026-definition-level-cell-symbol-presentation.md`](../adr/0026-definition-level-cell-symbol-presentation.md),
-   and [`../adr/0027-stage-1-netlist-authoring-protocol.md`](../adr/0027-stage-1-netlist-authoring-protocol.md)
+   [`../adr/0027-stage-1-netlist-authoring-protocol.md`](../adr/0027-stage-1-netlist-authoring-protocol.md),
+   and [`../adr/0029-external-subcircuit-definition-protocol.md`](../adr/0029-external-subcircuit-definition-protocol.md)
    — current Project shape, rolling previous-version read policy, independent
-   device and compatibility boundaries, Port-symbol, edit-union, schema-14
+   device and compatibility boundaries, Port-symbol, edit-union, schema-15
    implementation target, and Agent credential contract; identify superseded
    clauses in older ADRs.
 3. [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)

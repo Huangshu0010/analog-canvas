@@ -29,7 +29,7 @@ test("downloads the canonical Project when File System Access is unavailable", a
   const parsed = JSON.parse(bytes.toString("utf8")) as {
     schemaVersion: number;
   };
-  expect(parsed.schemaVersion).toBe(14);
+  expect(parsed.schemaVersion).toBe(15);
   await expect(page.getByTestId("status")).toContainText("Download requested");
   // A download never clears the browser recovery copies.
   await expect
@@ -37,7 +37,7 @@ test("downloads the canonical Project when File System Access is unavailable", a
     .toContain('"revision": 1');
 });
 
-test("upgrades a schema-13 Project and saves it as schema 14", async ({
+test("upgrades a schema-14 Project and saves it as schema 15", async ({
   page,
 }) => {
   const source = JSON.parse(
@@ -46,25 +46,25 @@ test("upgrades a schema-13 Project and saves it as schema 14", async ({
       "utf8",
     ),
   ) as Record<string, unknown>;
-  source.schemaVersion = 13;
+  source.schemaVersion = 14;
 
   await page.goto("/");
   await page.getByTestId("project-file").setInputFiles({
-    name: "minimal-v13.icproj.json",
+    name: "minimal-v14.icproj.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(source)),
   });
   await expect(page.getByTestId("status")).toContainText(
-    "upgraded minimal-v13.icproj.json from schema 13 to schema 14",
+    "upgraded minimal-v14.icproj.json from schema 14 to schema 15",
   );
   await expect
     .poll(() => recoveryProjectTexts(page))
-    .toContain('"schemaVersion": 14');
+    .toContain('"schemaVersion": 15');
 
   const saved = JSON.parse(
     (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
   ) as { schemaVersion: number };
-  expect(saved.schemaVersion).toBe(14);
+  expect(saved.schemaVersion).toBe(15);
 });
 
 test("reports a confirmed File System Access save", async ({ page }) => {
@@ -95,7 +95,7 @@ test("reports a confirmed File System Access save", async ({ page }) => {
         .__fsaWrites[0] ?? null,
   );
   expect(write).not.toBeNull();
-  expect(JSON.parse(write!.text).schemaVersion).toBe(14);
+  expect(JSON.parse(write!.text).schemaVersion).toBe(15);
 });
 
 test("falls back to download when the save location is denied", async ({
@@ -109,7 +109,7 @@ test("falls back to download when the save location is denied", async ({
   });
   await page.goto("/");
   const bytes = await downloadBytes(page, "File", "Save Project");
-  expect(JSON.parse(bytes.toString("utf8")).schemaVersion).toBe(14);
+  expect(JSON.parse(bytes.toString("utf8")).schemaVersion).toBe(15);
   await expect(page.getByTestId("status")).toContainText("Download requested");
 });
 

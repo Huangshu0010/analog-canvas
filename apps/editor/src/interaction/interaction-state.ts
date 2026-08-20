@@ -28,7 +28,7 @@ export type DrawingTool = Extract<
 export type InteractionMode = InteractionState<unknown>["kind"];
 
 export interface PendingComponentPlacement {
-  kind: "symbol" | "cell" | "cell-port";
+  kind: "symbol" | "cell" | "external-subcircuit" | "cell-port";
   symbolId: string;
   parameters: Record<string, string>;
   initialRotation: 0 | 90 | 180 | 270;
@@ -37,6 +37,8 @@ export interface PendingComponentPlacement {
   showValue: boolean;
   childDocumentId?: string;
   cellName?: string;
+  definitionId?: string;
+  masterName?: string;
   formalName?: string;
   direction?: "input" | "output" | "inout" | "passive";
 }
@@ -175,6 +177,8 @@ function sameComponentPlacement(
     left.showValue !== right.showValue ||
     left.childDocumentId !== right.childDocumentId ||
     left.cellName !== right.cellName ||
+    left.definitionId !== right.definitionId ||
+    left.masterName !== right.masterName ||
     left.formalName !== right.formalName ||
     left.direction !== right.direction
   ) {

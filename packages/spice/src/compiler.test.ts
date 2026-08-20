@@ -6,6 +6,30 @@ import { importCompileResult } from "./importer.js";
 import { loadSourceBundleFromFile } from "./node-source.js";
 
 describe("SPICE elaboration and Project import", () => {
+  it("imports ordered Cell formal parameter defaults", async () => {
+    const imported = importCompileResult(
+      await compileSpiceSources(
+        [
+          {
+            path: "parameterized.spi",
+            bytes: Buffer.from(`
+.subckt gain_cell IN OUT params: gain=10 bias={gain/2}
+R1 IN OUT 1k
+.ends gain_cell
+`),
+          },
+        ],
+        "parameterized.spi",
+      ),
+    );
+
+    expect(imported.successful).toBe(true);
+    expect(imported.project?.documents[0]?.netlist?.formalParameters).toEqual([
+      { name: "gain", defaultValue: "10" },
+      { name: "bias", defaultValue: "{gain/2}" },
+    ]);
+  });
+
   it("imports reviewed diode and BJT contracts", async () => {
     const source = Buffer.from(`
 .model DREF D
@@ -167,7 +191,7 @@ Q2 collector base emitter QPREF
     ).toEqual(["L1", "L2"]);
   });
 
-  it("normalizes reviewed SKY130 MOS models without losing source facts", async () => {
+  it("preserves SKY130 X calls as external interfaces without losing source facts", async () => {
     const entry = resolve(
       process.cwd(),
       "netlists/sky130-ota-5t-gain40-pm60-noise50uv-pvt/circuit.spi",
@@ -190,15 +214,16 @@ Q2 collector base emitter QPREF
     expect(
       document.instances
         .filter((instance) => !interfaceInstanceIds.has(instance.id))
-        .map((instance) => instance.symbolId),
-    ).toEqual(["nmos", "nmos", "pmos", "pmos", "nmos", "nmos"]);
+        .every(
+          (instance) =>
+            instance.netlist?.binding?.kind === "external-subcircuit",
+        ),
+    ).toBe(true);
     expect(document.instances[0]!.importProvenance).toMatchObject({
-      // SKY130 uses an external PDK model name: the compiler preserves it as
-      // opaque IR and the reviewed registry supplies the successful mapping.
       kind: "opaque",
       name: "sky130_fd_pr__nfet_01v8",
-      status: "resolved",
-      sourceTarget: "model:sky130_fd_pr__nfet_01v8",
+      status: "missing",
+      sourceTarget: "external-subcircuit:sky130_fd_pr__nfet_01v8",
       symbolMappingRegistryId: "sky130-nfet-four-terminal",
       terminalMapping: [
         { sourcePosition: 0, pinName: "D" },
@@ -209,11 +234,7 @@ Q2 collector base emitter QPREF
     });
     expect(document.instances[0]!.netlist).toEqual({
       reference: "XM1",
-      binding: {
-        kind: "model",
-        deviceClass: "mos",
-        name: "sky130_fd_pr__nfet_01v8",
-      },
+      binding: expect.objectContaining({ kind: "external-subcircuit" }),
       parameters: { l: "1.0", w: "96", nf: "12" },
     });
     expect(
@@ -248,7 +269,9 @@ Q2 collector base emitter QPREF
       (candidate) => candidate.netlist?.reference === "XM1",
     )!;
     expect(instance).toMatchObject({
-      symbolId: "nmos",
+      netlist: expect.objectContaining({
+        binding: expect.objectContaining({ kind: "external-subcircuit" }),
+      }),
       importProvenance: expect.objectContaining({
         symbolMappingRegistryId: "sky130-nfet-four-terminal",
         terminalMapping: [
@@ -258,12 +281,44 @@ Q2 collector base emitter QPREF
           { sourcePosition: 3, pinName: "B" },
         ],
       }),
-      netlist: expect.objectContaining({}),
     });
     expect(
       imported.diagnostics.filter(
         (diagnostic) => diagnostic.code === "SPICE_IMPORT_UNSUPPORTED_SYMBOL",
       ),
     ).toEqual([]);
+  });
+
+  it("imports the SKY130 thermometer resistor with generic external masters", async () => {
+    const entry = resolve(
+      process.cwd(),
+      "netlists/sky130-thermometer-trim-resistor/circuit.spi",
+    );
+    const imported = importCompileResult(
+      compileSourceBundle(await loadSourceBundleFromFile(entry)),
+    );
+
+    expect(imported.successful).toBe(true);
+    expect(
+      imported.project?.externalSubcircuitDefinitions.map((definition) => [
+        definition.name,
+        definition.interfaceStatus,
+      ]),
+    ).toEqual(
+      expect.arrayContaining([
+        ["sky130_fd_pr__nfet_01v8", "inferred-positional"],
+        ["sky130_fd_pr__pfet_01v8", "inferred-positional"],
+        ["sky130_fd_pr__res_high_po", "inferred-positional"],
+      ]),
+    );
+    expect(
+      imported.project?.documents
+        .flatMap((document) => document.instances)
+        .filter(
+          (instance) =>
+            instance.netlist?.binding?.kind === "external-subcircuit",
+        )
+        .every((instance) => instance.netlist?.reference?.startsWith("X")),
+    ).toBe(true);
   });
 });
