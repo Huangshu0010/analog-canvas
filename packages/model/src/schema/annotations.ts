@@ -30,6 +30,26 @@ export const AnnotationKindSchema = z.enum([
   "power-label",
   "route-marker",
 ]);
+/**
+ * A bound Annotation is a display of one electrical/domain fact, never a
+ * second copy of that fact's text. Literal content is reserved for drawing
+ * annotations such as current and voltage markers.
+ */
+export const AnnotationTextBindingSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("instance-reference"),
+    instanceId: StableIdSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("instance-value"),
+    instanceId: StableIdSchema,
+  }),
+  z.strictObject({ kind: z.literal("net-name"), netId: StableIdSchema }),
+  z.strictObject({
+    kind: z.literal("cell-terminal-name"),
+    terminalId: StableIdSchema,
+  }),
+]);
 export const RouteMarkerKindSchema = z.enum(["current", "voltage"]);
 export const RouteAnnotationAttachmentSchema = z.strictObject({
   routeId: StableIdSchema,
@@ -42,7 +62,11 @@ export const AnnotationSchema = z
   .strictObject({
     id: StableIdSchema,
     kind: AnnotationKindSchema,
-    content: RichTextDocumentSchema,
+    // Exactly one of content/binding is required. `content` remains accepted
+    // only for literal annotations already constructed by fixtures and route
+    // marker authoring; all semantic annotation producers write `binding`.
+    content: RichTextDocumentSchema.optional(),
+    binding: AnnotationTextBindingSchema.optional(),
     anchor: VisualAnchorSchema,
     netId: StableIdSchema.optional(),
     alignment: z.enum(["start", "middle", "end"]),
@@ -53,6 +77,14 @@ export const AnnotationSchema = z
     visible: z.boolean().optional(),
   })
   .superRefine((annotation, context) => {
+    if (Boolean(annotation.content) === Boolean(annotation.binding)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["binding"],
+        message:
+          "Annotations require exactly one literal content or text binding",
+      });
+    }
     if (annotation.markerKind && annotation.kind !== "route-marker") {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -80,5 +112,24 @@ export const AnnotationSchema = z
         path: ["netId"],
         message: "netId is only valid on net and power labels",
       });
+    }
+    if (annotation.binding?.kind === "net-name") {
+      if (
+        annotation.kind !== "net-label" &&
+        annotation.kind !== "power-label"
+      ) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["binding"],
+          message: "Net-name binding is only valid on Net and power labels",
+        });
+      }
+      if (annotation.netId && annotation.netId !== annotation.binding.netId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["netId"],
+          message: "netId must agree with the net-name binding",
+        });
+      }
     }
   });

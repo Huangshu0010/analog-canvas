@@ -56,7 +56,7 @@ for readability; these groups do not create separate mutation endpoints:
 - control/history: `noop`, `clear_document`, `undo`, `redo`;
 - Instance: `add_instance`, `remove_instance`, `set_instance_symbol`,
   `place_instance`, `move_instance`, `rotate_instance`, `mirror_instance`,
-  `set_instance_reference`, `set_instance_binding`,
+  `set_instance_reference`, `set_instance_schematic_name`, `set_instance_binding`,
   `patch_instance_netlist_parameters`, `bulk_patch_instance_netlist`,
   `set_instance_netlist`;
 - Cell interface: `add_cell_terminal`, `update_cell_terminal`,
@@ -88,10 +88,13 @@ is not another `SchematicEdit` member.
 
 `set_instance_reference`, `set_instance_binding`, and
 `patch_instance_netlist_parameters` are the ordinary field writers for an
-existing netlist record. `bulk_patch_instance_netlist` is their bounded,
-atomic multi-instance form. `set_instance_netlist` remains the whole-record
-operation for object initialization, import, and bounded migrations; product
-editing must not rebuild unrelated netlist facts through it.
+existing netlist record. `set_instance_schematic_name` instead changes the
+user-owned RichText alias shown on a schematic and never changes the instance's
+SPICE reference or stable identity. `bulk_patch_instance_netlist` is the
+bounded, atomic multi-instance netlist form. `set_instance_netlist` remains
+the whole-record operation for object initialization, import, and bounded
+migrations; product editing must not rebuild unrelated netlist facts through
+it.
 Parameter patches construct one final record before commit: an unset followed
 by a set permits a case-only rename, while a final case-folded duplicate is
 rejected atomically. This is the shared contract for descriptor fields and the

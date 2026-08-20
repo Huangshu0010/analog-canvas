@@ -14,6 +14,7 @@ import {
 import { resolveSchematicStyleProfile } from "./style-profile.js";
 import { deriveDocumentContactEvidence } from "./contact.js";
 import { resolveAnnotationPresentation } from "./annotation-presentation.js";
+import { resolveAnnotationText } from "./annotation-text.js";
 import { pointOnSegment } from "./segment-geometry.js";
 
 export interface VisualDiagnostic {
@@ -631,7 +632,9 @@ export function diagnoseVisualQuality(
   );
   const annotationBounds = document.annotations
     .filter(
-      (annotation) => flattenRichText(annotation.content).trim().length > 0,
+      (annotation) =>
+        flattenRichText(resolveAnnotationText(document, annotation)).trim()
+          .length > 0,
     )
     .map((annotation) => {
       return {

@@ -139,7 +139,7 @@ describe("Agent golden request contract", () => {
         "edits",
         0,
         "annotation",
-        "content",
+        "anchor",
       ]);
     }
 

@@ -7,6 +7,7 @@ import {
   StableIdSchema,
 } from "./common.js";
 import { SourceSpanSchema } from "./source.js";
+import { RichTextDocumentSchema } from "./rich-text.js";
 export const TerminalRefSchema = z.strictObject({
   instanceId: StableIdSchema,
   pinName: z.string().min(1),
@@ -104,6 +105,12 @@ export const InstanceSchema = z
     mosBulkBinding: MosBulkBindingSchema.optional(),
     placement: PlacementSchema.nullable(),
     netlist: InstanceNetlistDataSchema.optional(),
+    /**
+     * User-owned schematic alias. Unlike `netlist.reference`, this RichText
+     * source is presentation-only: it may be repeated, formatted, and changed
+     * without modifying the electrical/export identity.
+     */
+    schematicName: RichTextDocumentSchema.optional(),
   })
   .superRefine((instance, context) => {
     const terminals = instance.importProvenance?.terminalMapping;

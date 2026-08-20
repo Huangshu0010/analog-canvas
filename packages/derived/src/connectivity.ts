@@ -10,6 +10,7 @@ import {
 } from "./endpoint.js";
 import { deriveDocumentContactEvidence } from "./contact.js";
 import { resolveNetLabelBindings } from "./net-label.js";
+import { resolveAnnotationText } from "./annotation-text.js";
 
 export interface VisibleConnectivityNode {
   key: string;
@@ -113,7 +114,9 @@ export function deriveNetConnectivity(
     const annotation = document.annotations.find(
       (candidate) => candidate.id === binding.annotationId,
     )!;
-    const label = flattenRichText(annotation.content).trim();
+    const label = flattenRichText(
+      resolveAnnotationText(document, annotation),
+    ).trim();
     const key = endpointKey(binding.endpoint);
     if (label.length === 0 || !nodes.has(key)) continue;
     const group = labeledEndpoints.get(label) ?? [];
@@ -130,7 +133,9 @@ export function deriveNetConnectivity(
     if (!binding) continue;
     const key = endpointKey(binding.endpoint);
     if (!nodes.has(key)) continue;
-    const label = flattenRichText(annotation.content).trim();
+    const label = flattenRichText(
+      resolveAnnotationText(document, annotation),
+    ).trim();
     if (label.length === 0) continue;
     const group = labeledEndpoints.get(label) ?? [];
     group.push(key);

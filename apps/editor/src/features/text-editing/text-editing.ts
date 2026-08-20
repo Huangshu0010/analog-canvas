@@ -1,7 +1,9 @@
 import type { SchematicEdit } from "@icm/edit-engine";
 import { flattenRichText } from "@icm/model";
+import { resolveAnnotationText } from "@icm/derived";
 import type {
   Annotation,
+  AnnotationTextBinding,
   DraftingObject,
   RichTextDocument,
   SchematicDocument,
@@ -18,6 +20,10 @@ export interface TextEditingSession {
   id: string;
   content: RichTextDocument;
   sizeScale: number;
+  alignment: "start" | "middle" | "end";
+  /** Semantic displays edit their source field, not a copied RichText AST. */
+  bound: boolean;
+  bindingKind?: AnnotationTextBinding["kind"];
 }
 
 export type TextEditingCommitProposal =
@@ -28,14 +34,20 @@ export type TextEditingCommitProposal =
 
 export function createTextEditingSession(
   target: EditableTextTarget,
+  document?: SchematicDocument,
 ): TextEditingSession {
   if (target.owner === "annotation") {
     const annotation = target.object;
     return {
       owner: "annotation",
       id: annotation.id,
-      content: annotation.content,
+      content: document
+        ? resolveAnnotationText(document, annotation)
+        : (annotation.content ?? { runs: [] }),
       sizeScale: annotation.sizeScale ?? 1,
+      alignment: annotation.alignment,
+      bound: annotation.binding !== undefined,
+      ...(annotation.binding ? { bindingKind: annotation.binding.kind } : {}),
     };
   }
   return {
@@ -43,12 +55,16 @@ export function createTextEditingSession(
     id: target.object.id,
     content: target.object.content,
     sizeScale: target.object.styleOverride?.sizeScale ?? 1,
+    alignment: target.object.alignment,
+    bound: false,
   };
 }
 
 export function updateTextEditingSession(
   session: TextEditingSession,
-  change: Partial<Pick<TextEditingSession, "content" | "sizeScale">>,
+  change: Partial<
+    Pick<TextEditingSession, "content" | "sizeScale" | "alignment">
+  >,
 ): TextEditingSession {
   return { ...session, ...change };
 }
@@ -103,14 +119,19 @@ export function proposeTextEditingCommit(
 
   if (target.owner === "annotation") {
     const annotation = target.object;
+    // A binding is an electrical/domain fact, never a second editable text
+    // payload. The editor dispatches source edits before reaching this guard.
+    if (annotation.binding) return { kind: "blocked" };
     const next = {
       ...annotation,
       content: session.content,
       sizeScale: session.sizeScale,
+      alignment: session.alignment,
     };
     if (
       (annotation.sizeScale ?? 1) === next.sizeScale &&
-      richTextEqual(annotation.content, next.content)
+      annotation.alignment === next.alignment &&
+      richTextEqual(annotation.content ?? { runs: [] }, next.content)
     ) {
       return { kind: "unchanged" };
     }
@@ -125,6 +146,7 @@ export function proposeTextEditingCommit(
   const next = {
     ...object,
     content: session.content,
+    alignment: session.alignment,
     styleOverride: {
       ...object.styleOverride,
       sizeScale: session.sizeScale,
@@ -134,6 +156,7 @@ export function proposeTextEditingCommit(
   // untouched session stays revision-free.
   if (
     (object.styleOverride?.sizeScale ?? 1) === next.styleOverride.sizeScale &&
+    object.alignment === next.alignment &&
     richTextEqual(object.content, next.content)
   ) {
     return { kind: "unchanged" };

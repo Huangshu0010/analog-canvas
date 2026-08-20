@@ -415,14 +415,14 @@ test("carries a manual Value through placement and Q property editing", async ({
     page.getByRole("button", { name: "Discard changes" }),
   ).toHaveCount(0);
   await expect(page.getByLabel("Component identity")).toContainText(
-    "ReferenceSymbolresistorDevice classresistor",
+    "Schematic nameSymbolresistorDevice classresistor",
   );
-  const reference = page.getByLabel("Component reference");
-  await expect(reference).toHaveValue("R1");
-  await reference.fill("R7");
-  await reference.press("Tab");
+  const schematicName = page.getByLabel("Component schematic name");
+  await expect(schematicName).toHaveValue("R1");
+  await schematicName.fill("R7");
+  await schematicName.press("Tab");
   await expect(page.getByTestId("revision")).toHaveText("4");
-  await expect(reference).toHaveValue("R7");
+  await expect(schematicName).toHaveValue("R7");
   await page
     .locator("summary")
     .filter({ hasText: "Advanced parameters" })

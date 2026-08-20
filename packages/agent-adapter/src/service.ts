@@ -155,6 +155,7 @@ export function agentEditCategory(
       return "geometry";
     case "patch_instance_netlist_parameters":
     case "set_instance_reference":
+    case "set_instance_schematic_name":
       return "presentation";
     case "set_instance_netlist":
     case "set_instance_binding":

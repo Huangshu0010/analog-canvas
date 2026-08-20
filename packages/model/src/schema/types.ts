@@ -57,6 +57,9 @@ export type RouteMarkerKind = z.infer<typeof Schema.RouteMarkerKindSchema>;
 export type RouteAnnotationAttachment = z.infer<
   typeof Schema.RouteAnnotationAttachmentSchema
 >;
+export type AnnotationTextBinding = z.infer<
+  typeof Schema.AnnotationTextBindingSchema
+>;
 export type Annotation = z.infer<typeof Schema.AnnotationSchema>;
 export type VisualAnchor = z.infer<typeof Schema.VisualAnchorSchema>;
 export type DraftText = z.infer<typeof Schema.DraftTextSchema>;

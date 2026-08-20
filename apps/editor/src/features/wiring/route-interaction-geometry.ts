@@ -4,6 +4,7 @@ import {
   measureRichTextDocument,
   richTextMetrics,
   resolveAnnotationPresentation,
+  resolveAnnotationText,
   resolveRouteAttachment,
 } from "@icm/derived";
 import type {
@@ -351,6 +352,7 @@ export function annotationAnchor(
 }
 
 export function annotationHitBox(
+  document: SchematicDocument,
   annotation: Annotation,
   anchor: Point,
   routeGeometryRecords: readonly RouteGeometryRecord[],
@@ -360,7 +362,7 @@ export function annotationHitBox(
   const fontSize =
     schematicTextFontSize(annotation.kind, styleProfile) * sizeScale;
   const textLayout = measureRichTextDocument(
-    annotation.content,
+    resolveAnnotationText(document, annotation),
     richTextMetrics(styleProfile, "label", sizeScale),
   );
   let labelPosition = anchor;
@@ -496,21 +498,7 @@ export function defaultInstanceLabel(
   return {
     id: `instance-label-${instance.id}`,
     kind: "instance-label",
-    content: {
-      runs: [
-        {
-          kind: "span",
-          style: "italic",
-          children: [
-            {
-              kind: "span",
-              style: "bold",
-              children: [{ kind: "text", value: instance.id }],
-            },
-          ],
-        },
-      ],
-    },
+    binding: { kind: "instance-reference", instanceId: instance.id },
     anchor: {
       kind: "object",
       objectId: instance.id,
@@ -553,8 +541,7 @@ export function defaultInstanceValue(
 ): Annotation | null {
   if (!instance.placement) return null;
   if (instanceValueAnnotation(document, instance.id)) return null;
-  const display = displayableInstanceValue(instance);
-  if (display.kind !== "displayable") return null;
+  if (displayableInstanceValue(instance).kind !== "displayable") return null;
   const resolved = resolver.resolve(
     instance.symbolId,
     instance.symbolVariantId,
@@ -572,7 +559,7 @@ export function defaultInstanceValue(
   return {
     id: `instance-value-${instance.id}`,
     kind: "instance-value",
-    content: structuredClone(display.content),
+    binding: { kind: "instance-value", instanceId: instance.id },
     anchor: {
       kind: "object",
       objectId: instance.id,

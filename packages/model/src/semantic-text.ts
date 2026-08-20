@@ -53,31 +53,19 @@ export function semanticTextDocument(
   kind: SemanticTextKind,
 ): RichTextDocument {
   if (value.length === 0) return { runs: [{ kind: "line-break" }] };
+  // `_suffix` and `_{suffix}` are the one explicit identifier notation the
+  // product accepts. Parse it before role-specific shorthand so Cell Ports,
+  // ordinary labels, and hierarchy pin names never diverge on V_in.
+  const explicitSubscript = /^(.+?)_(?:\{(.+)\}|(.+))$/u.exec(value);
+  if (explicitSubscript) {
+    return {
+      runs: [
+        mathBase(explicitSubscript[1]!),
+        mathSubscript(explicitSubscript[2] ?? explicitSubscript[3]!),
+      ],
+    };
+  }
   if (/[\\{}^]/u.test(value)) return { runs: [{ kind: "text", value }] };
-
-  if (kind === "formal-port") {
-    const conventional = /^([VI])(.+?)([+-])?$/u.exec(value);
-    if (!conventional) return { runs: [mathBase(value)] };
-    return {
-      runs: [
-        mathBase(conventional[1]!),
-        mathSubscript(conventional[2]!),
-        ...(conventional[3]
-          ? [{ kind: "text" as const, value: conventional[3] }]
-          : []),
-      ],
-    };
-  }
-
-  const underscore = value.indexOf("_");
-  if (underscore > 0 && underscore < value.length - 1) {
-    return {
-      runs: [
-        mathBase(value.slice(0, underscore)),
-        mathSubscript(value.slice(underscore + 1)),
-      ],
-    };
-  }
 
   if (kind === "default-instance" || kind === "instance-label") {
     const match = /^([A-Za-z]+)(.+)$/u.exec(value);

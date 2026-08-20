@@ -21,4 +21,17 @@ describe("semantic formal-Port text", () => {
       children: [{ children: [{ value: "out" }] }],
     });
   });
+
+  it("uses the same explicit multi-character subscript grammar for Ports and Net Labels", () => {
+    const port = semanticTextDocument("V_{in,cm}", "formal-port");
+    const net = semanticTextDocument("V_{in,cm}", "net-label");
+
+    expect(port).toEqual(net);
+    expect(flattenRichText(port)).toBe("Vin,cm");
+    expect(port.runs[1]).toMatchObject({
+      kind: "span",
+      style: "subscript",
+      children: [{ children: [{ value: "in,cm" }] }],
+    });
+  });
 });

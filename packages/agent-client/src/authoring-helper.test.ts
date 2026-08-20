@@ -468,7 +468,7 @@ describe("authoring helper compilation", () => {
     expect(annotationEdit?.kind).toBe("upsert_schematic_annotation");
     if (annotationEdit?.kind === "upsert_schematic_annotation") {
       expect(annotationEdit.annotation.id).toBe("label-1");
-      expect(annotationEdit.annotation.content.runs[0]).toEqual({
+      expect(annotationEdit.annotation.content!.runs[0]).toEqual({
         kind: "text",
         value: "Vout node",
       });

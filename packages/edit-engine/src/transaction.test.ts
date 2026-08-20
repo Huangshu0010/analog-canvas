@@ -59,6 +59,41 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
+  it("updates a RichText schematic name without changing the SPICE reference", () => {
+    const document = documentWithInstance();
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "set_instance_schematic_name",
+          instanceId: "M1",
+          content: {
+            runs: [
+              {
+                kind: "span",
+                style: "overbar",
+                children: [{ kind: "text", value: "M1" }],
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.document.instances[0]!.netlist!.reference).toBe("M1");
+    expect(result.document.instances[0]!.schematicName).toEqual({
+      runs: [
+        {
+          kind: "span",
+          style: "overbar",
+          children: [{ kind: "text", value: "M1" }],
+        },
+      ],
+    });
+  });
+
   it("rejects the retired ambiguous annotation edit names", () => {
     expect(
       SchematicEditSchema.safeParse({
@@ -798,7 +833,7 @@ describe("Edit Transaction envelope", () => {
     expect(renamed).toMatchObject({ ok: true });
     if (!renamed.ok) return;
     expect(renamed.document.instances[0]?.netlist?.reference).toBe("M3");
-    expect(flattenRichText(renamed.document.annotations[0]!.content)).toBe(
+    expect(flattenRichText(renamed.document.annotations[0]!.content!)).toBe(
       "M3",
     );
   });

@@ -849,6 +849,41 @@ export function executeTransaction(
         changedObjectIds.add(edit.instanceId);
         break;
       }
+      case "set_instance_schematic_name": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
+          );
+        }
+        if (
+          JSON.stringify(instance.schematicName ?? null) ===
+          JSON.stringify(edit.content)
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Schematic name edit does not change the instance",
+            [],
+            [edit.instanceId],
+          );
+        }
+        instance.schematicName = structuredClone(edit.content);
+        changedObjectIds.add(edit.instanceId);
+        for (const annotation of draft.annotations) {
+          if (
+            annotation.binding?.kind === "instance-reference" &&
+            annotation.binding.instanceId === instance.id
+          ) {
+            changedObjectIds.add(annotation.id);
+          }
+        }
+        break;
+      }
       case "set_instance_binding": {
         const instance = draft.instances.find(
           (candidate) => candidate.id === edit.instanceId,
@@ -2028,6 +2063,13 @@ export function executeTransaction(
         for (const annotation of draft.annotations) {
           if (annotation.netId === source.id) {
             annotation.netId = target.id;
+            changedObjectIds.add(annotation.id);
+          }
+          if (
+            annotation.binding?.kind === "net-name" &&
+            annotation.binding.netId === source.id
+          ) {
+            annotation.binding = { kind: "net-name", netId: target.id };
             changedObjectIds.add(annotation.id);
           }
         }

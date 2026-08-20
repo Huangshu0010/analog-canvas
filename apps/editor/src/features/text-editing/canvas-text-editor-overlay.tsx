@@ -4,7 +4,7 @@ import { RichTextEditor } from "./rich-text-editor";
 import type { TextEditingSession } from "./text-editing";
 
 type TextEditingUpdate = Partial<
-  Pick<TextEditingSession, "content" | "sizeScale">
+  Pick<TextEditingSession, "content" | "sizeScale" | "alignment">
 >;
 
 export interface CanvasTextEditorOverlayProps {
@@ -81,8 +81,14 @@ export function CanvasTextEditorOverlay({
         content={session.content}
         disabled={disabled}
         sizeScale={session.sizeScale}
+        alignment={session.alignment}
+        sourceOnly={
+          session.bound && session.bindingKind !== "instance-reference"
+        }
+        multiline={!session.bound}
         onChange={(content) => onUpdate({ content })}
         onSizeChange={(sizeScale) => onUpdate({ sizeScale })}
+        onAlignmentChange={(alignment) => onUpdate({ alignment })}
         onCommit={onCommit}
         onDelete={onDelete}
         {...(onReverseCurrentArrow ? { onReverseCurrentArrow } : {})}

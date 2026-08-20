@@ -1,4 +1,3 @@
-import { semanticTextDocument } from "@icm/model";
 import type {
   Annotation,
   CellSymbolPresentation,
@@ -420,7 +419,6 @@ export function planRenameCellTerminal(
     throw new Error(`Cell terminal name already exists: ${newName}`);
   }
 
-  const canonicalAnnotation = semanticTextDocument(newName, "formal-port");
   const annotationEdits = child.annotations
     .filter(
       (annotation) =>
@@ -428,16 +426,15 @@ export function planRenameCellTerminal(
         annotation.anchor.kind === "object" &&
         annotation.anchor.objectId === terminal.interfaceInstanceId,
     )
-    .filter(
-      (annotation) =>
-        JSON.stringify(annotation.content) !==
-        JSON.stringify(canonicalAnnotation),
-    )
+    .filter((annotation) => annotation.binding?.kind !== "cell-terminal-name")
     .map((annotation) => ({
       kind: "upsert_schematic_annotation" as const,
       annotation: {
-        ...annotation,
-        content: canonicalAnnotation,
+        ...(() => {
+          const { content: _content, ...rest } = annotation;
+          return rest;
+        })(),
+        binding: { kind: "cell-terminal-name" as const, terminalId },
       },
     }));
   const terminalRename = terminal.name !== newName;

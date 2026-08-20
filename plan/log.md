@@ -3633,3 +3633,34 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   release verification) passed locally. GitHub Actions also passed static
   (26s), unit (41s), release (55s), and browser shards (3m 18s / 3m 54s).
 - Commit status: PR #131 merged to `main` as `701465ef`.
+
+## 2026-08-20 - Unified bound text system
+
+- Changed areas: single-source bindings for instance, Net/power, and Cell Port
+  displays; shared annotation text resolution in render, bounds, hit testing,
+  diagnostics, connectivity, copy/paste, hierarchy, and editing; compact
+  RichText toolbar additions; and semantic Net-label rename preservation.
+- Validation: focused unit contracts (12 files / 87 tests); focused browser
+  contracts for semantic edits, movable Net labels, and Cell Ports;
+  test-impact; and `pnpm verify:branch` (158 files / 945 tests, build, and
+  production smoke) passed.
+- Commit status: committed as `d4a22fbc` on `codex/unified-text-binding`.
+
+## 2026-08-20 - Bound text editor repair
+
+- Changed areas: semantic labels now use a direct single-line source editor;
+  literal RichText uses deterministic line-break insertion and renders overbars
+  inside its editing surface.
+- Validation: focused browser regression (2 tests), workspace typecheck,
+  test-impact, and diff checks passed.
+- Commit status: prepared on `codex/unified-text-binding`.
+
+## 2026-08-20 - Schematic reference text
+
+- Changed areas: added the user-owned RichText `Instance.schematicName` and
+  typed edit; instance labels and Properties now edit that source rather than
+  the SPICE reference; restored label formatting; and made multi-character
+  overbar application reversible.
+- Validation: 49 focused unit/protocol tests, 3 focused browser tests,
+  workspace typecheck, test-impact, and diff checks passed.
+- Commit status: prepared on `codex/unified-text-binding`.
