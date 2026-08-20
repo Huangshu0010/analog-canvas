@@ -1,4 +1,5 @@
 import type { Point, RouteBranch } from "@icm/model";
+import { areCollinear, polylineSatisfiesConstraint } from "@icm/derived";
 
 export type SegmentMode = RouteBranch["segmentModes"][number];
 
@@ -23,13 +24,12 @@ function samePoint(left: Point, right: Point): boolean {
 }
 
 export function isOrthogonal(points: readonly Point[]): boolean {
-  return points.slice(1).every((point, index) => {
-    const previous = points[index]!;
-    return (
-      !samePoint(previous, point) &&
-      (previous.x === point.x || previous.y === point.y)
-    );
-  });
+  return polylineSatisfiesConstraint(points, "orthogonal");
+}
+
+/** Valid persisted interactive geometry.  Authoring policy stays in planner. */
+export function isOctilinear(points: readonly Point[]): boolean {
+  return polylineSatisfiesConstraint(points, "octilinear");
 }
 
 const MODE_PRIORITY: Record<SegmentMode, number> = {
@@ -71,7 +71,7 @@ export function normalizeRouteGeometry(
       const a = normalizedPoints.at(-3)!;
       const b = normalizedPoints.at(-2)!;
       const c = normalizedPoints.at(-1)!;
-      if (!((a.x === b.x && b.x === c.x) || (a.y === b.y && b.y === c.y))) {
+      if (!areCollinear(a, b, c)) {
         break;
       }
       const mergedMode = strongerMode(
@@ -221,7 +221,39 @@ export function moveRouteSegment(
   const from = points[segmentIndex]!;
   const to = points[segmentIndex + 1]!;
   const horizontal = from.y === to.y;
+  const vertical = from.x === to.x;
+  const diagonal =
+    !horizontal &&
+    !vertical &&
+    Math.abs(to.x - from.x) === Math.abs(to.y - from.y);
+  if (!horizontal && !vertical && !diagonal) {
+    throw new Error("Route segment move requires octilinear geometry");
+  }
   const lastSegmentIndex = points.length - 2;
+
+  // A diagonal segment has one perpendicular degree of freedom.  Express its
+  // translated centreline as y - slope*x = constant, then use vertical jogs
+  // at its existing endpoints.  This keeps both the original endpoints and
+  // their adjacent topology intact, including for a two-point Route.
+  if (diagonal) {
+    const slope = Math.sign((to.y - from.y) / (to.x - from.x));
+    const offset = target.y - slope * target.x - (from.y - slope * from.x);
+    const shiftedFrom = { x: from.x, y: from.y + offset };
+    const shiftedTo = { x: to.x, y: to.y + offset };
+    const mode = modes[segmentIndex] ?? "manual";
+    points.splice(segmentIndex + 1, 0, shiftedFrom, shiftedTo);
+    modes.splice(segmentIndex, 1, mode, mode, mode);
+    const normalized = normalizeRouteGeometry(points, modes);
+    if (!isOctilinear(normalized.points)) {
+      throw new Error(
+        "Diagonal segment move would make geometry non-octilinear",
+      );
+    }
+    return {
+      waypoints: normalized.points.slice(1, -1),
+      segmentModes: normalized.segmentModes,
+    };
+  }
 
   if (points.length === 2) {
     const moved = horizontal

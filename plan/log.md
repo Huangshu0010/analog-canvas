@@ -3589,3 +3589,35 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   verification passed; the protected remote replacement gate is pending.
 - Commit status: prepared for commit on
   `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-20 - Octilinear Route protocol
+
+- Changed areas: shared generic segment geometry; octilinear Route validation,
+  planning, route taps/crossings, stretch and 45-degree segment movement;
+  Wire draft-step interaction with MMB/F3 controls; Agent wire/RouteGraph
+  constraints; generated API/MCP resources; and current routing/Agent docs.
+- Validation: focused unit/component set (19 files / 166 tests); focused
+  Playwright Wire flow (2 tests); direct type checks; workspace build;
+  production smoke; generated API/MCP, Markdown-link, test-impact, and diff
+  checks passed.
+- Commit status: committed locally on `codex/octilinear-route-protocol`;
+  push/PR was not requested.
+
+## 2026-08-20 - Octilinear Route release-golden reconciliation
+
+- Changed areas: refreshed the Phase 7 SVG, PNG, PDF, and manifest goldens for
+  terminal miter bridges on existing diagonal routes; the new bridges use the
+  shared unit-direction geometry rather than an axis-biased approximation.
+- Validation: `export-golden --check`, complete `pnpm release:verify`, diff
+  check, and the preceding focused protocol tests passed.
+- Commit status: pending push of this release-gate correction on
+  `codex/octilinear-route-protocol`.
+
+## 2026-08-20 - Octilinear Linux MCP checksum refresh
+
+- Changed areas: replaced the canonical Linux MCP package checksum with the
+  digest emitted by PR #130's Release contracts job.
+- Validation: `pnpm mcp:distribution:check`, complete `pnpm release:verify`,
+  and diff check passed locally.
+- Commit status: pending push and replacement remote checks on
+  `codex/octilinear-route-protocol`.

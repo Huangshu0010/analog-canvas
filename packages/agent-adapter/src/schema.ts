@@ -95,6 +95,10 @@ export const AgentWireIntentSchema = z.strictObject({
   from: AgentWireIntentAnchorSchema,
   to: AgentWireIntentAnchorSchema,
   waypoints: z.array(PointSchema).max(256).optional(),
+  routingMode: z.enum(["orthogonal", "octilinear"]).optional(),
+  cornerOrder: z
+    .enum(["auto", "diagonal-first", "orthogonal-first"])
+    .optional(),
 });
 
 /** Public subset of the canonical derived `ObjectLocator` runtime schema. */

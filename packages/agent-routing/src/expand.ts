@@ -1,12 +1,13 @@
 // Route-graph geometry helper.
 //
 // The Agent supplies the complete local graph. This helper snaps coordinates,
-// validates straight orthogonal segments, folds explicit degree-two bend nodes
+// validates straight octilinear segments, folds explicit degree-two bend nodes
 // into Route waypoints, and emits typed edits. It never invents topology,
 // chooses a bend, switches a shape, or calls route_orthogonal.
 
 import type { Point, RouteEndpoint } from "@icm/model";
 import type { SchematicEdit } from "@icm/edit-engine";
+import { isSegmentAllowed, segmentLength } from "@icm/derived";
 import type {
   ExpansionConflict,
   ResolvedEndpoint,
@@ -51,14 +52,6 @@ export function hydrateExpansionInput(
 
 function snap(value: number): number {
   return Math.round(value / GRID) * GRID;
-}
-
-function manhattan(left: Point, right: Point): number {
-  return Math.abs(left.x - right.x) + Math.abs(left.y - right.y);
-}
-
-function isAxisAligned(left: Point, right: Point): boolean {
-  return left.x === right.x || left.y === right.y;
 }
 
 function samePoint(left: Point, right: Point): boolean {
@@ -238,10 +231,14 @@ export function expandRouteGraph(
       continue;
     }
 
-    if (!isAxisAligned(from, to)) {
+    // A terminal escape must remain cardinal so it visibly leaves the pin in
+    // its declared outward direction.  Every other RouteGraph edge uses the
+    // same octilinear constraint as the interactive and Agent wire planner.
+    const constraint = edge.role === "escape" ? "orthogonal" : "octilinear";
+    if (!isSegmentAllowed(from, to, constraint)) {
       conflicts.push({
         code: "MISALIGNED_EDGE",
-        message: `${edge.role} edge ${edge.id}: (${from.x},${from.y}) to (${to.x},${to.y}) is not axis-aligned; add a bend node`,
+        message: `${edge.role} edge ${edge.id}: (${from.x},${from.y}) to (${to.x},${to.y}) is not ${constraint}; add a bend node`,
         objectIds: [edge.id],
       });
       continue;
@@ -494,7 +491,7 @@ function computeMetrics(
   let bendCount = 0;
   for (const route of resolvedGeometry) {
     for (let index = 1; index < route.points.length; index += 1) {
-      totalRouteLength += manhattan(
+      totalRouteLength += segmentLength(
         route.points[index - 1]!,
         route.points[index]!,
       );

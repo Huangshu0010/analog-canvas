@@ -14,6 +14,12 @@ editable centerline is endpoint, zero or more waypoints, endpoint;
 branch/route anchors. Geometric crossing or overlap does not create electrical
 contact.
 
+Route centerlines are one geometry protocol. Normal interactive Routes may use
+horizontal, vertical, or ±45-degree segments; orthogonal is the default
+authoring constraint, not a second persisted Route shape. `power-rail` is the
+single exception and remains horizontal-only. A future arbitrary-angle policy
+must use the same segment-geometry kernel and Route transaction.
+
 ## Authoring rules
 
 - Starting and ending a wire on terminals or explicit Junctions creates or
@@ -57,7 +63,7 @@ marker attachment, diagnostics, export, and Agent Snapshot.
 consumers do not infer contact independently from pixels or bounds.
 
 Route queries (tap, nearest segment, crossings) and attachment placement are
-read-only derived modules. Route normalization, escape authoring, segment
+read-only derived modules. Route normalization, constraint-aware authoring, segment
 movement, stretch, and the `RouteEditPlan` preview/commit boundary belong to
 `@icm/edit-engine`; no compatibility `RoutePolyline` protocol exists.
 

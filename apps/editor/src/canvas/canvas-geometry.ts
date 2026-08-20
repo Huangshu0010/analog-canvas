@@ -4,21 +4,24 @@ export function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-/** Closest point on an orthogonal canvas segment. */
+/** Closest point on any canvas segment. */
 export function closestPointOnSegment(
   point: Point,
   from: Point,
   to: Point,
 ): Point {
-  if (from.x === to.x) {
-    return {
-      x: from.x,
-      y: clamp(point.y, Math.min(from.y, to.y), Math.max(from.y, to.y)),
-    };
-  }
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const lengthSquared = dx ** 2 + dy ** 2;
+  if (lengthSquared === 0) return { ...from };
+  const t = clamp(
+    ((point.x - from.x) * dx + (point.y - from.y) * dy) / lengthSquared,
+    0,
+    1,
+  );
   return {
-    x: clamp(point.x, Math.min(from.x, to.x), Math.max(from.x, to.x)),
-    y: from.y,
+    x: from.x + dx * t,
+    y: from.y + dy * t,
   };
 }
 

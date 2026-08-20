@@ -47,7 +47,7 @@ describe("route queries", () => {
     });
   });
 
-  it("projects to orthogonal segments, clamps endpoints, and rejects diagonals", () => {
+  it("projects to every Route segment, clamps endpoints, and includes diagonals", () => {
     expect(
       resolveRouteTap(
         geometry([
@@ -77,7 +77,7 @@ describe("route queries", () => {
         { x: 50, y: 50 },
         10,
       ),
-    ).toBeNull();
+    ).toMatchObject({ point: { x: 50, y: 50 }, distanceSquared: 0 });
   });
 
   it("breaks equal-distance route hits by the lower segment index", () => {

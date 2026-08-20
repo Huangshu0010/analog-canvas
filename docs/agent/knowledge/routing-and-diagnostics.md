@@ -12,8 +12,10 @@ simplify routing.
 
 - Start from placed Instance-terminal or Junction endpoints and keep explicit
   endpoint identity. A `port` symbol participates through its ordinary pin `P`.
-- Prefer short orthogonal segments, few bends, shared trunks for genuinely shared
-  Nets, and consistent escape directions from dense devices.
+- Prefer short orthogonal segments by default; use a deliberate 45-degree
+  segment only where it makes a diagonal relationship clearer. Keep few bends,
+  shared trunks for genuinely shared Nets, and consistent cardinal escape
+  directions from dense devices.
 - Allow a wire to end at any intended waypoint or Junction supported by the edit
   contract; do not snap it to an unrelated electrical object.
 - A crossing without a Junction remains disconnected. Add a Junction only when

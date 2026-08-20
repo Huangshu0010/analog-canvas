@@ -104,8 +104,9 @@ Agent decides this graph from the circuit; no helper may infer it.
 
 When using `@icm/agent-routing`, provide a complete transient RouteGraph:
 electrical endpoints, real branch nodes, dot-free bend nodes, label anchors,
-and axis-aligned edges. Use the helper only to snap, validate, fold bends into
-waypoints, and produce typed edits.
+and octilinear edges. Keep terminal escape edges axis-aligned with their
+declared outward direction. Use the helper only to snap, validate, fold bends
+into waypoints, and produce typed edits.
 
 ### 5. Expand, dry-run, and commit atomically
 

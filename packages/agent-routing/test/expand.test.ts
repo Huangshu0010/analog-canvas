@@ -153,7 +153,23 @@ describe("expandRouteGraph", () => {
     expect(route.to).toEqual({ kind: "junction", junctionId: "tap1" });
   });
 
-  it("returns MISALIGNED_EDGE for a diagonal trunk edge", () => {
+  it("accepts a 45-degree trunk edge through the shared octilinear contract", () => {
+    const graph = baseGraph({
+      nodes: [
+        { id: "tap0", role: "tap", at: { x: 100, y: 100 } },
+        { id: "tap1", role: "tap", at: { x: 200, y: 200 } },
+      ],
+      edges: [{ id: "trunk0", from: "tap0", to: "tap1", role: "trunk" }],
+    });
+    const result = expandRouteGraph(graph, input([]));
+    expect(result.conflicts).toEqual([]);
+    expect(result.resolvedGeometry[0]?.points).toEqual([
+      { x: 100, y: 100 },
+      { x: 200, y: 200 },
+    ]);
+  });
+
+  it("returns MISALIGNED_EDGE for a non-octilinear trunk edge", () => {
     const graph = baseGraph({
       nodes: [
         { id: "tap0", role: "tap", at: { x: 100, y: 100 } },
@@ -174,7 +190,7 @@ describe("expandRouteGraph", () => {
       nodes: [
         { id: "tap0", role: "tap", at: { x: 100, y: 100 } },
         { id: "tap1", role: "tap", at: { x: 200, y: 100 } },
-        { id: "tap2", role: "tap", at: { x: 300, y: 200 } },
+        { id: "tap2", role: "tap", at: { x: 300, y: 300 } },
       ],
       edges: [
         { id: "valid", from: "tap0", to: "tap1", role: "trunk" },

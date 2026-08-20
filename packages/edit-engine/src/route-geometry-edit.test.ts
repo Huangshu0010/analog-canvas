@@ -30,6 +30,28 @@ describe("direct route segment movement", () => {
     });
   });
 
+  it("moves a direct 45-degree segment with an octilinear dogleg", () => {
+    expect(
+      moveRouteSegment(
+        {
+          points: [
+            { x: 0, y: 0 },
+            { x: 100, y: 100 },
+          ],
+          segmentModes: ["manual"],
+        },
+        0,
+        { x: 50, y: 20 },
+      ),
+    ).toEqual({
+      waypoints: [
+        { x: 0, y: -30 },
+        { x: 100, y: 70 },
+      ],
+      segmentModes: ["manual", "manual", "manual"],
+    });
+  });
+
   it("adds and removes a selected explicit jog without changing connectivity", () => {
     const polyline: RouteEditPath = {
       points: [

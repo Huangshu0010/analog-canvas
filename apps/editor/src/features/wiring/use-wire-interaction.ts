@@ -5,7 +5,7 @@ import type {
 } from "react";
 
 import {
-  buildManualWirePath,
+  type WireDraftStep,
   createConnectivityProposal,
   createFreeWireAnchor,
   gateConnectivityProposal,
@@ -40,6 +40,7 @@ import {
   type CanvasDragSession,
 } from "../../canvas/canvas-drag-session";
 import { startCanvasDragVisual } from "../../canvas/canvas-drag-visual";
+import { closestPointOnSegment } from "../../canvas/canvas-geometry";
 import {
   endpointNetId,
   looseRouteAnchorIds,
@@ -64,6 +65,24 @@ type TransactionResult = {
   revision: number;
 };
 
+function snapRouteTapPoint(
+  point: Point,
+  from: Point,
+  to: Point,
+  grid: number,
+): Point {
+  const projected = closestPointOnSegment(point, from, to);
+  if (from.y === to.y)
+    return { x: snapCoordinate(projected.x, grid), y: from.y };
+  if (from.x === to.x)
+    return { x: from.x, y: snapCoordinate(projected.y, grid) };
+  const slope = Math.sign(to.y - from.y) * Math.sign(to.x - from.x);
+  const minX = Math.min(from.x, to.x);
+  const maxX = Math.max(from.x, to.x);
+  const x = Math.min(maxX, Math.max(minX, snapCoordinate(projected.x, grid)));
+  return { x, y: from.y + slope * (x - from.x) };
+}
+
 export interface UseWireInteractionOptions {
   document: SchematicDocument;
   resolver: SymbolResolver;
@@ -75,6 +94,9 @@ export interface UseWireInteractionOptions {
   wireSource: WireSource | null;
   wireSourceRevision: number | null;
   wireWaypoints: readonly Point[];
+  wireDraftSteps: readonly WireDraftStep[];
+  wireRoutingMode: "orthogonal" | "octilinear";
+  wireCornerOrder: "auto" | "diagonal-first" | "orthogonal-first";
   nextRoutingSuffix: () => number;
   transact: (
     edits: SchematicEdit[],
@@ -84,7 +106,7 @@ export interface UseWireInteractionOptions {
   setTool: (tool: "wire") => void;
   setWireSource: (source: WireSource | null, revision: number | null) => void;
   setWirePreviewPoint: (point: Point | null) => void;
-  setWireWaypoints: (waypoints: Point[]) => void;
+  setWireDraftSteps: (steps: WireDraftStep[]) => void;
   completeWire: () => void;
   clearTransientCanvasState: () => void;
   cancelInteraction: () => void;
@@ -162,6 +184,11 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
         (endpoint) => endpoint.endpoint.kind === "terminal",
       ),
       options.nextRoutingSuffix(),
+      {
+        steps: options.wireDraftSteps,
+        routingMode: options.wireRoutingMode,
+        cornerOrder: options.wireCornerOrder,
+      },
     );
     const bulkEndpoint = [options.wireSource.endpoint, candidate.endpoint].find(
       (endpoint) => endpoint.kind === "terminal" && endpoint.pinName === "B",
@@ -221,7 +248,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     if (!options.wireSource) {
       options.setWireSource(candidate, options.document.revision);
       options.setWirePreviewPoint(candidate.point);
-      options.setWireWaypoints([]);
+      options.setWireDraftSteps([]);
       options.setStatus(`Wire source: ${endpointKey(candidate.endpoint)}`);
       return;
     }
@@ -274,7 +301,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     }
     options.setWireSource(from, options.document.revision);
     options.setWirePreviewPoint(to.point);
-    options.setWireWaypoints([]);
+    options.setWireDraftSteps([]);
     options.setStatus(`Wire source: flightline on ${flightline.netId}`);
   };
 
@@ -320,7 +347,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     options.setTool("wire");
     options.setWireSource(source, options.document.revision);
     options.setWirePreviewPoint(source.point);
-    options.setWireWaypoints([]);
+    options.setWireDraftSteps([]);
     options.setStatus(`Drawing ${instance.id}.B bulk connection`);
   };
 
@@ -658,6 +685,14 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
       options.setStatus("Wire must start or end inside a route segment");
       return;
     }
+    const segment = record.geometry.segments[tap.address.segmentIndex];
+    if (!segment) return;
+    const tapPoint = snapRouteTapPoint(
+      tap.point,
+      segment.from,
+      segment.to,
+      options.document.presentation.grid,
+    );
     const overlappingTargets = options.routeGeometryRecords.flatMap(
       (candidate) => {
         const candidateTap = resolveRouteTap(
@@ -694,13 +729,13 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     }
     const anchor = options.createRouteAnchor(
       routeId,
-      tap.point,
+      tapPoint,
       tap.address.segmentIndex,
     );
     if (!options.wireSource) {
       options.setWireSource(anchor, options.document.revision);
-      options.setWirePreviewPoint(tap.point);
-      options.setWireWaypoints([]);
+      options.setWirePreviewPoint(tapPoint);
+      options.setWireDraftSteps([]);
       options.setStatus(`Wire source: route ${routeId}`);
       return;
     }
@@ -716,20 +751,20 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
       );
       options.setWireSource(source, options.document.revision);
       options.setWirePreviewPoint(point);
-      options.setWireWaypoints([]);
+      options.setWireDraftSteps([]);
       options.setStatus("Wire source: free grid point");
       return;
     }
-    const fixed = buildManualWirePath(
-      options.wireSource,
-      { point },
-      options.wireWaypoints,
-    );
-    options.setWireWaypoints(fixed.points.slice(1));
+    options.setWireDraftSteps([
+      ...options.wireDraftSteps,
+      {
+        point,
+        routingMode: options.wireRoutingMode,
+        cornerOrder: options.wireCornerOrder,
+      },
+    ]);
     options.setWirePreviewPoint(point);
-    options.setStatus(
-      `Wire bend ${fixed.points.length - 1}; double-click or Enter to finish`,
-    );
+    options.setStatus("Wire step fixed; double-click or Enter to finish");
   };
 
   const finishWireAtPoint = (point: Point): void => {

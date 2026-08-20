@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildManualWirePath } from "./routing-planner.js";
+import { buildManualWirePath, compileWireDraft } from "./routing-planner.js";
 
 describe("buildManualWirePath", () => {
   it("keeps a direct terminal right-angle at the exact electrical endpoint", () => {
@@ -55,5 +55,34 @@ describe("buildManualWirePath", () => {
       waypoints: [],
       segmentModes: [],
     });
+  });
+
+  it("compiles 45-degree authored legs through the same Route payload", () => {
+    expect(
+      compileWireDraft(
+        { point: { x: 100, y: 100 } },
+        { point: { x: 200, y: 160 } },
+        [],
+        "octilinear",
+      ).points,
+    ).toEqual([
+      { x: 100, y: 100 },
+      { x: 160, y: 160 },
+      { x: 200, y: 160 },
+    ]);
+  });
+
+  it("does not reinterpret earlier authored steps when mode changes", () => {
+    const path = compileWireDraft(
+      { point: { x: 0, y: 0 } },
+      { point: { x: 200, y: 100 } },
+      [{ point: { x: 100, y: 0 }, routingMode: "orthogonal" }],
+      "octilinear",
+    );
+    expect(path.points).toEqual([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 200, y: 100 },
+    ]);
   });
 });

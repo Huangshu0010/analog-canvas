@@ -196,8 +196,9 @@ Phase 8 topology operations have these preconditions:
   edits for every incident Route whose geometry changes in the same
   transaction. GUI movement planners always author those Route edits; Routes
   protected by locked geometry reject the move.
-- `move_instance` stretches unprotected connected Routes to keep them
-  orthogonal (ADR 0009). A Route with a locked/trunk adjacent segment is
+- `move_instance` stretches unprotected connected Routes under their existing
+  geometry constraint (orthogonal or octilinear; ADR 0009 and ADR 0028). A
+  Route with a locked/trunk adjacent segment is
   skipped; if the caller does not re-point it in the same transaction, the
   post-loop validation rejects with `INVALID_RESULT` naming the Route. The
   touched Routes appear in the transact `resolvedRoutes` response field.
