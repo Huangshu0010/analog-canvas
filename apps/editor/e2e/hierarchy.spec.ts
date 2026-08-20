@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 async function runCellCommand(
   page: import("@playwright/test").Page,
-  name: "Manage Cells…" | "Place Cell",
+  name: "Manage Cells…" | "Place Cell" | "Edit Cell Interface…",
 ): Promise<void> {
   await page
     .getByTestId("cell-command-menu")
@@ -248,6 +248,35 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
       .poll(async () => (await instanceHit.boundingBox())?.x ?? 0)
       .toBeGreaterThan(beforeMove.x + 10);
   }
+});
+
+test("authors formal Cell parameters without entering Cell Symbol Layout", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await createCell(page, "ReusableStage");
+  await page.getByTestId("shapes-chip-port").click();
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 300, y: 180 } });
+  await page.keyboard.press("Escape");
+
+  await runCellCommand(page, "Edit Cell Interface…");
+  const dialog = page.getByRole("dialog", { name: /Cell Interface/u });
+  await expect(dialog.getByLabel("Formal terminal 1 name")).toHaveValue("P1");
+  await expect(
+    dialog.getByText("Cell symbol layout", { exact: false }),
+  ).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Add formal parameter" }).click();
+  await dialog.getByLabel("Formal parameter 1 name").fill("gain");
+  await dialog.getByLabel("Formal parameter gain default").fill("10");
+  await dialog.getByRole("button", { name: "Apply formal parameters" }).click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Updated Cell formal parameters",
+  );
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await page.keyboard.press("Control+z");
+  await expect(page.getByTestId("status")).toContainText("Committed revision");
 });
 
 test("deletes a wired child Cell Port through the ordinary instance path", async ({

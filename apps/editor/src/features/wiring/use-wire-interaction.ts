@@ -6,14 +6,20 @@ import type {
 
 import {
   buildManualWirePath,
+  createConnectivityProposal,
   createFreeWireAnchor,
+  gateConnectivityProposal,
+  insertRouteSegmentJog,
   proposeVisualRouteDeletion,
   proposeLooseRouteTranslation,
   proposePowerRailEndpointResize,
   proposePowerRailTranslation,
   proposeWireSegmentMove,
+  removeRouteSegmentJog,
   proposeWireCommitThroughContacts,
   type SchematicEdit,
+  type ConnectivityIntent,
+  type ConnectivityProposal,
   type WireSource,
 } from "@icm/edit-engine";
 import {
@@ -63,6 +69,7 @@ export interface UseWireInteractionOptions {
   resolver: SymbolResolver;
   selectedInstance: SchematicDocument["instances"][number] | undefined;
   selectedRouteId: string | null;
+  selectedRouteSegmentIndex: number | null;
   visibleEndpoints: readonly WireSource[];
   routeGeometryRecords: readonly RouteGeometryRecord[];
   wireSource: WireSource | null;
@@ -108,6 +115,29 @@ export interface UseWireInteractionOptions {
  * cross-domain canvas pointer arbiter.
  */
 export function useWireInteraction(options: UseWireInteractionOptions) {
+  const transactProposal = (
+    proposal: ConnectivityProposal,
+    transactionOptions?: { completesWireSession?: boolean },
+  ): TransactionResult => {
+    const gate = gateConnectivityProposal(options.document, proposal);
+    if (!gate.ok) {
+      options.setStatus(gate.message);
+      return { ok: false, revision: options.document.revision };
+    }
+    return options.transact([...gate.edits], transactionOptions);
+  };
+  const proposalFor = (
+    intent: ConnectivityIntent,
+    edits: readonly SchematicEdit[],
+    preview?: unknown,
+  ): ConnectivityProposal =>
+    createConnectivityProposal(options.document, {
+      intent,
+      diagnostics: [],
+      edits,
+      ...(preview === undefined ? {} : { preview }),
+    });
+
   const freeWireAnchor = (
     point: Point,
     netId: string,
@@ -166,7 +196,9 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
           }),
         ]
       : proposal.edits;
-    const result = options.transact(edits, { completesWireSession: true });
+    const result = transactProposal(proposalFor("draw_wire", edits, proposal), {
+      completesWireSession: true,
+    });
     if (result.ok) {
       options.completeWire();
       options.setBulkDrawInstanceId(null);
@@ -298,12 +330,86 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
       (candidate) => candidate.id === options.selectedRouteId,
     );
     if (!route) return;
-    const result = options.transact(
-      proposeVisualRouteDeletion(options.document, [route.id], []).edits,
+    const deletion = proposeVisualRouteDeletion(
+      options.document,
+      [route.id],
+      [],
+    );
+    const result = transactProposal(
+      proposalFor(
+        route.presentation === "bulk-dashed"
+          ? "remove_bulk_override"
+          : "remove_wire_geometry",
+        deletion.edits,
+        deletion,
+      ),
     );
     if (result.ok) {
       options.replaceRouteSelection([]);
       options.setStatus(`Deleted wire ${route.id}`);
+    }
+  };
+
+  const editSelectedRouteJog = (action: "insert" | "remove"): void => {
+    if (!options.selectedRouteId) return;
+    const route = options.document.routes.find(
+      (candidate) => candidate.id === options.selectedRouteId,
+    );
+    const record = options.routeGeometryRecords.find(
+      (candidate) => candidate.route.id === options.selectedRouteId,
+    );
+    if (!route || !record) return;
+    const segmentIndex = Math.min(
+      options.selectedRouteSegmentIndex ?? 0,
+      route.segmentModes.length - 1,
+    );
+    try {
+      const geometry = {
+        points: record.geometry.centerline,
+        segmentModes: route.segmentModes,
+      };
+      const next =
+        action === "insert"
+          ? insertRouteSegmentJog(
+              geometry,
+              segmentIndex,
+              options.document.presentation.grid,
+            )
+          : removeRouteSegmentJog(geometry, segmentIndex);
+      const result = transactProposal(
+        proposalFor(
+          "edit_route_geometry",
+          [
+            {
+              kind: "set_route_points",
+              routeId: route.id,
+              netId: route.netId,
+              from: route.from,
+              to: route.to,
+              waypoints: next.waypoints,
+              segmentModes: next.segmentModes,
+              ...(route.presentation
+                ? { presentation: route.presentation }
+                : {}),
+            },
+          ],
+          { action, routeId: route.id, segmentIndex },
+        ),
+      );
+      if (result.ok) {
+        options.setSelectedRouteSegmentIndex(
+          action === "insert" ? segmentIndex + 1 : segmentIndex - 1,
+        );
+        options.setStatus(
+          action === "insert"
+            ? "Added orthogonal wire jog"
+            : "Straightened orthogonal wire jog",
+        );
+      }
+    } catch (error) {
+      options.setStatus(
+        error instanceof Error ? error.message : "Route geometry edit failed",
+      );
     }
   };
 
@@ -340,12 +446,13 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
           ),
         };
         if (delta.x !== 0 || delta.y !== 0) {
-          const result = options.transact(
-            proposeLooseRouteTranslation(
-              options.document,
-              record.route.id,
-              delta,
-            ).edits,
+          const proposal = proposeLooseRouteTranslation(
+            options.document,
+            record.route.id,
+            delta,
+          );
+          const result = transactProposal(
+            proposalFor("edit_route_geometry", proposal.edits, proposal),
           );
           if (result.ok)
             options.setStatus(`Moved loose route ${record.route.id}`);
@@ -362,13 +469,14 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
           ),
         };
         if (delta.x !== 0 || delta.y !== 0) {
-          const result = options.transact(
-            proposePowerRailTranslation(
-              options.document,
-              options.resolver,
-              record.route.id,
-              delta,
-            ).edits,
+          const proposal = proposePowerRailTranslation(
+            options.document,
+            options.resolver,
+            record.route.id,
+            delta,
+          );
+          const result = transactProposal(
+            proposalFor("edit_route_geometry", proposal.edits, proposal),
           );
           if (result.ok) options.setStatus(`Moved VDD rail ${record.route.id}`);
         }
@@ -376,28 +484,30 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
         preview.intent === "resize-power-rail-start" ||
         preview.intent === "resize-power-rail-end"
       ) {
-        const result = options.transact(
-          proposePowerRailEndpointResize(
-            options.document,
-            options.resolver,
-            record.route.id,
-            preview.intent === "resize-power-rail-start" ? "start" : "end",
-            snapCoordinate(point.x, options.document.presentation.grid),
-          ).edits,
+        const proposal = proposePowerRailEndpointResize(
+          options.document,
+          options.resolver,
+          record.route.id,
+          preview.intent === "resize-power-rail-start" ? "start" : "end",
+          snapCoordinate(point.x, options.document.presentation.grid),
+        );
+        const result = transactProposal(
+          proposalFor("edit_route_geometry", proposal.edits, proposal),
         );
         if (result.ok) options.setStatus(`Resized VDD rail ${record.route.id}`);
       } else {
-        const result = options.transact(
-          proposeWireSegmentMove(
-            options.document,
-            options.resolver,
-            record.route.id,
-            preview.segmentIndex,
-            {
-              x: snapCoordinate(point.x, options.document.presentation.grid),
-              y: snapCoordinate(point.y, options.document.presentation.grid),
-            },
-          ).edits,
+        const proposal = proposeWireSegmentMove(
+          options.document,
+          options.resolver,
+          record.route.id,
+          preview.segmentIndex,
+          {
+            x: snapCoordinate(point.x, options.document.presentation.grid),
+            y: snapCoordinate(point.y, options.document.presentation.grid),
+          },
+        );
+        const result = transactProposal(
+          proposalFor("edit_route_geometry", proposal.edits, proposal.preview),
         );
         if (result.ok)
           options.setStatus(`Moved route segment ${record.route.id}`);
@@ -637,6 +747,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     commitWire,
     completeRouteStretch,
     deleteSelectedRouteConnection,
+    editSelectedRouteJog,
     drawSelectedMosBulk,
     fixWirePoint,
     finishWireAtPoint,

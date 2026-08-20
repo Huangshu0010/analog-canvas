@@ -163,6 +163,7 @@ export function agentEditCategory(
     case "update_cell_terminal":
     case "remove_cell_terminal":
     case "reorder_cell_terminals":
+    case "set_cell_formal_parameters":
       return "connectivity";
     case "set_route_points":
     case "route_orthogonal":

@@ -3520,3 +3520,39 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   Table and existing Properties Playwright paths; test-impact against
   `origin/main`; docs links; and diff check passed.
 - Commit status: committed locally on `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-20 - S5 Connectivity Proposal and Wire/Net closure
+
+- Changed areas: added the revision-bound connectivity proposal contract and
+  migrated human Wire, named-Net, selection/move/delete, NoConnect,
+  component-contact, VDD rail, endpoint-disconnect, and copy producers while
+  retaining the typed low-level edit protocol; added reversible route jog
+  editing with browser coverage.
+- Validation: TypeScript typecheck; 66 focused unit/component tests; five
+  focused Playwright gesture contracts; test-impact against `origin/main`;
+  docs links; and diff check passed.
+- Commit status: pending because the current environment cannot create the
+  worktree Git `index.lock`; implementation and validation remain present.
+
+## 2026-08-20 - S6 Cell and Subcircuit Interface Authoring
+
+- Changed areas: one internal/external formal interface protocol, typed
+  formal-parameter/external-definition transactions and planners, generic
+  external symbols, deterministic external-master IR, and the separate Cell
+  Interface editor with terminal order controls.
+- Validation: formatting; typecheck; focused model/edit-engine/netlist/symbol
+  and editor tests; focused Cell Interface browser workflow; workspace build;
+  docs links; test-impact; and diff check passed.
+- Commit status: pending because the environment cannot create the worktree
+  Git `index.lock`; implementation and validation remain present.
+
+## 2026-08-20 - S7 Design-netlist analysis and Preflight
+
+- Changed areas: the single public `analyzeDesignNetlist` API, locator-backed
+  diagnostics, lossless formal default IR, editor preflight UI/navigation, and
+  workspace dependency declarations.
+- Validation: formatting; typecheck; focused 109-test unit/component set;
+  focused preflight browser workflow; workspace build; docs links;
+  test-impact; and diff check passed.
+- Commit status: pending because the environment cannot create the worktree
+  Git `index.lock`; implementation and validation remain present.

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyProject } from "@icm/model";
 
-import { hierarchicalSymbolId } from "./hierarchical-block.js";
+import {
+  externalSubcircuitSymbolId,
+  hierarchicalSymbolId,
+} from "./hierarchical-block.js";
 import {
   createProjectSymbolResolver,
   findUnsupportedProjectSymbolIds,
@@ -95,5 +98,33 @@ describe("Symbol Resolver boundary", () => {
     const resolver = createProjectSymbolResolver(project, [resistor]);
 
     expect(resolver.resolve("resistor")?.definition.name).toBe("Resistor");
+  });
+
+  it("derives a passive black-box symbol from a shared external interface", () => {
+    const project = createEmptyProject("coverage", "Coverage");
+    project.externalSubcircuitDefinitions.push({
+      id: "external-ota",
+      name: "OTA",
+      terminals: [{ name: "INP" }, { name: "OUT" }],
+      formalParameters: [],
+    });
+    project.documents[0]!.instances.push({
+      id: "X1",
+      symbolId: externalSubcircuitSymbolId("OTA"),
+      placement: null,
+      netlist: {
+        reference: "X1",
+        binding: { kind: "external-subcircuit", definitionId: "external-ota" },
+        parameters: {},
+      },
+    });
+
+    const resolver = createProjectSymbolResolver(project, [resistor]);
+
+    expect(
+      resolver
+        .resolve(externalSubcircuitSymbolId("OTA"))
+        ?.definition.pins.map((pin) => pin.name),
+    ).toEqual(["INP", "OUT"]);
   });
 });

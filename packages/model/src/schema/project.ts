@@ -55,13 +55,16 @@ export const CircuitProjectSchema = z
       "externalSubcircuitDefinitions",
       context,
     );
-    const externalDefinitionIds = new Set<string>();
+    const externalDefinitionsById = new Map<
+      string,
+      z.infer<typeof ExternalSubcircuitDefinitionSchema>
+    >();
     const externalDefinitionNames = new Set<string>();
     for (const [
       definitionIndex,
       definition,
     ] of externalSubcircuitDefinitions.entries()) {
-      externalDefinitionIds.add(definition.id);
+      externalDefinitionsById.set(definition.id, definition);
       const normalizedName = definition.name.toLowerCase();
       if (externalDefinitionNames.has(normalizedName)) {
         context.addIssue({
@@ -225,20 +228,94 @@ export const CircuitProjectSchema = z
       for (const [instanceIndex, instance] of document.instances.entries()) {
         const binding = instance.netlist?.binding;
         if (binding?.kind !== "external-subcircuit") continue;
-        if (externalDefinitionIds.has(binding.definitionId)) continue;
-        context.addIssue({
-          code: "custom",
-          message: `External subcircuit binding references unknown definition: ${binding.definitionId}`,
-          path: [
-            "documents",
-            documentIndex,
-            "instances",
-            instanceIndex,
-            "netlist",
-            "binding",
-            "definitionId",
-          ],
-        });
+        const definition = externalDefinitionsById.get(binding.definitionId);
+        if (!definition) {
+          context.addIssue({
+            code: "custom",
+            message: `External subcircuit binding references unknown definition: ${binding.definitionId}`,
+            path: [
+              "documents",
+              documentIndex,
+              "instances",
+              instanceIndex,
+              "netlist",
+              "binding",
+              "definitionId",
+            ],
+          });
+          continue;
+        }
+        const terminalNames = new Set(
+          definition.terminals.map((terminal) => terminal.name.toLowerCase()),
+        );
+        const references: Array<{
+          pinName: string;
+          path: Array<string | number>;
+        }> = [];
+        for (const [netIndex, net] of document.nets.entries()) {
+          for (const [terminalIndex, terminal] of net.terminals.entries()) {
+            if (terminal.instanceId !== instance.id) continue;
+            references.push({
+              pinName: terminal.pinName,
+              path: [
+                "documents",
+                documentIndex,
+                "nets",
+                netIndex,
+                "terminals",
+                terminalIndex,
+                "pinName",
+              ],
+            });
+          }
+        }
+        for (const [routeIndex, route] of document.routes.entries()) {
+          for (const endpointName of ["from", "to"] as const) {
+            const endpoint = route[endpointName];
+            if (
+              endpoint.kind !== "terminal" ||
+              endpoint.instanceId !== instance.id
+            ) {
+              continue;
+            }
+            references.push({
+              pinName: endpoint.pinName,
+              path: [
+                "documents",
+                documentIndex,
+                "routes",
+                routeIndex,
+                endpointName,
+                "pinName",
+              ],
+            });
+          }
+        }
+        for (const [
+          noConnectIndex,
+          noConnect,
+        ] of document.noConnects.entries()) {
+          if (noConnect.endpoint.instanceId !== instance.id) continue;
+          references.push({
+            pinName: noConnect.endpoint.pinName,
+            path: [
+              "documents",
+              documentIndex,
+              "noConnects",
+              noConnectIndex,
+              "endpoint",
+              "pinName",
+            ],
+          });
+        }
+        for (const reference of references) {
+          if (terminalNames.has(reference.pinName.toLowerCase())) continue;
+          context.addIssue({
+            code: "custom",
+            message: `External subcircuit Instance ${instance.id} references unknown terminal ${reference.pinName}`,
+            path: reference.path,
+          });
+        }
       }
       childrenByDocument.set(document.id, children);
     }

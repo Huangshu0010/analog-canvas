@@ -9,6 +9,10 @@ export function hierarchicalSymbolId(cellName: string): string {
   return deriveStableId("hierarchical-symbol", cellName.toLowerCase());
 }
 
+export function externalSubcircuitSymbolId(targetName: string): string {
+  return deriveStableId("external-subcircuit-symbol", targetName.toLowerCase());
+}
+
 export function createHierarchicalBlockSymbol(
   document: Pick<SchematicDocument, "name" | "sourceBinding" | "netlist"> & {
     readonly presentation?: SchematicDocument["presentation"];
@@ -32,7 +36,8 @@ export function createHierarchicalBlockSymbol(
 }
 
 export function createProjectHierarchicalSymbols(
-  project: Pick<CircuitProject, "documents" | "topDocumentId">,
+  project: Pick<CircuitProject, "documents" | "topDocumentId"> &
+    Partial<Pick<CircuitProject, "externalSubcircuitDefinitions">>,
 ): SymbolDefinition[] {
   const referencedChildIds = new Set(
     project.documents.flatMap((document) =>
@@ -42,7 +47,7 @@ export function createProjectHierarchicalSymbols(
       }),
     ),
   );
-  return project.documents.flatMap((document) => {
+  const internal = project.documents.flatMap((document) => {
     if (
       document.id === project.topDocumentId &&
       !document.sourceBinding &&
@@ -53,4 +58,37 @@ export function createProjectHierarchicalSymbols(
     const definition = createHierarchicalBlockSymbol(document);
     return definition ? [definition] : [];
   });
+  const referencedExternalIds = new Set(
+    project.documents.flatMap((document) =>
+      document.instances.flatMap((instance) => {
+        const binding = instance.netlist?.binding;
+        return binding?.kind === "external-subcircuit"
+          ? [binding.definitionId]
+          : [];
+      }),
+    ),
+  );
+  const external = (project.externalSubcircuitDefinitions ?? []).flatMap(
+    (definition) => {
+      if (!referencedExternalIds.has(definition.id)) return [];
+      const positional = createHierarchicalBlockGeometry(
+        definition.terminals.map((terminal, index) => ({
+          id: `${definition.id}:terminal:${index}`,
+          name: terminal.name,
+          direction: "passive" as const,
+        })),
+      );
+      return [
+        SymbolDefinitionSchema.parse({
+          ...positional,
+          id: externalSubcircuitSymbolId(definition.name),
+          name: definition.name,
+          hierarchicalBlock: true,
+          pins: positional.pins,
+          variants: [],
+        }),
+      ];
+    },
+  );
+  return [...internal, ...external];
 }

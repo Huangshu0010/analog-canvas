@@ -133,6 +133,18 @@ export const ReorderCellTerminalsEditSchema = z.strictObject({
   kind: z.literal("reorder_cell_terminals"),
   terminalIds: z.array(StableIdSchema).max(128),
 });
+/** Replaces one ordered formal parameter definition list atomically. */
+export const SetCellFormalParametersEditSchema = z.strictObject({
+  kind: z.literal("set_cell_formal_parameters"),
+  formalParameters: z
+    .array(
+      z.strictObject({
+        name: z.string().min(1).max(128),
+        defaultValue: z.string().min(1).max(1024).optional(),
+      }),
+    )
+    .max(128),
+});
 export const SetRoutePointsEditSchema = z.strictObject({
   kind: z.literal("set_route_points"),
   routeId: StableIdSchema,
@@ -328,6 +340,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   UpdateCellTerminalEditSchema,
   RemoveCellTerminalEditSchema,
   ReorderCellTerminalsEditSchema,
+  SetCellFormalParametersEditSchema,
   SetRoutePointsEditSchema,
   RouteOrthogonalEditSchema,
   AddJunctionEditSchema,

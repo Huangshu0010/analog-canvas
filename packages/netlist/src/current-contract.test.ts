@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyProject } from "@icm/model";
 
-import { extractDesignNetlist } from "./extract.js";
+import { analyzeDesignNetlist } from "./index.js";
 
 function resistorProject(parameters: Record<string, string>) {
   const project = createEmptyProject("project", "Project");
@@ -76,7 +76,7 @@ describe("current formal cell interface", () => {
       },
     );
 
-    const result = extractDesignNetlist(project);
+    const result = analyzeDesignNetlist(project);
     expect(result.diagnostics).toEqual([]);
     expect(result.ir?.cells[0]?.ports).toEqual([
       { id: "net-in", name: "VIN", netName: "VIN" },
@@ -85,7 +85,7 @@ describe("current formal cell interface", () => {
   });
 
   it("uses the same case-folded parameter identity as the deterministic printers", () => {
-    const result = extractDesignNetlist(resistorProject({ Value: "10k" }));
+    const result = analyzeDesignNetlist(resistorProject({ Value: "10k" }));
     expect(result.diagnostics).toEqual([]);
     expect(result.ir?.cells[0]?.instances).toEqual([
       {
@@ -102,8 +102,20 @@ describe("current formal cell interface", () => {
     ]);
   });
 
+  it("returns stable analysis across repeated and serialized Project reads", () => {
+    const project = resistorProject({ Value: "10k" });
+    const first = analyzeDesignNetlist(project);
+    const repeated = analyzeDesignNetlist(project);
+    const reopened = analyzeDesignNetlist(
+      JSON.parse(JSON.stringify(project)) as typeof project,
+    );
+
+    expect(repeated).toEqual(first);
+    expect(reopened).toEqual(first);
+  });
+
   it("rejects parameters that would become ambiguous under case folding", () => {
-    const result = extractDesignNetlist(
+    const result = analyzeDesignNetlist(
       resistorProject({ value: "10k", Value: "20k" }),
     );
     expect(result.ir).toBeNull();
@@ -114,6 +126,10 @@ describe("current formal cell interface", () => {
         message: expect.stringContaining("parameter value"),
       }),
     ]);
+    expect(result.diagnostics[0]?.primary).toMatchObject({
+      documentId: result.diagnostics[0]?.documentId,
+      objectId: "R1",
+    });
   });
 
   it("reports the shared global-name contract violation", () => {
@@ -124,7 +140,7 @@ describe("current formal cell interface", () => {
       terminals: [],
     });
 
-    const result = extractDesignNetlist(project);
+    const result = analyzeDesignNetlist(project);
 
     expect(result.ir).toBeNull();
     expect(result.diagnostics).toContainEqual(
@@ -150,10 +166,108 @@ describe("current formal cell interface", () => {
       terminals: [{ instanceId: "GND", pinName: "0" }],
     });
 
-    const result = extractDesignNetlist(project);
+    const result = analyzeDesignNetlist(project);
 
     expect(result.diagnostics).toEqual([]);
     expect(result.ir?.cells[0]?.instances).toEqual([]);
     expect(result.ir?.globals).toEqual(["0"]);
+  });
+
+  it("emits a resolved shared external interface without inventing an empty Cell", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    project.externalSubcircuitDefinitions.push({
+      id: "external-ota",
+      name: "OTA",
+      terminals: [{ name: "INP" }, { name: "INN" }, { name: "OUT" }],
+      formalParameters: [{ name: "gain", defaultValue: "10" }],
+    });
+    document.instances.push({
+      id: "X1",
+      symbolId: "external-ota-symbol",
+      placement: null,
+      netlist: {
+        reference: "X1",
+        binding: { kind: "external-subcircuit", definitionId: "external-ota" },
+        parameters: {},
+      },
+    });
+    for (const [id, name, pinName] of [
+      ["net-inp", "INP", "INP"],
+      ["net-inn", "INN", "INN"],
+      ["net-out", "OUT", "OUT"],
+    ] as const) {
+      document.nets.push({
+        id,
+        name,
+        scope: "local",
+        terminals: [{ instanceId: "X1", pinName }],
+      });
+    }
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.cells).toHaveLength(1);
+    expect(result.ir?.cells[0]?.instances).toEqual([
+      expect.objectContaining({
+        reference: "X1",
+        target: "OTA",
+        nodes: [
+          { pinName: "INP", netName: "INP" },
+          { pinName: "INN", netName: "INN" },
+          { pinName: "OUT", netName: "OUT" },
+        ],
+      }),
+    ]);
+    expect(result.ir?.externalMasters).toEqual([
+      expect.objectContaining({
+        id: "external-ota",
+        name: "OTA",
+        terminals: [
+          expect.objectContaining({ name: "INP" }),
+          expect.objectContaining({ name: "INN" }),
+          expect.objectContaining({ name: "OUT" }),
+        ],
+        formalParameters: [{ name: "gain", defaultValue: "10" }],
+      }),
+    ]);
+  });
+
+  it("requires an override only for formals without a definition default", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    project.externalSubcircuitDefinitions.push({
+      id: "external-gain",
+      name: "GAIN",
+      terminals: [{ name: "IN" }],
+      formalParameters: [{ name: "gain" }],
+    });
+    document.instances.push({
+      id: "X1",
+      symbolId: "external-gain-symbol",
+      placement: null,
+      netlist: {
+        reference: "X1",
+        binding: { kind: "external-subcircuit", definitionId: "external-gain" },
+        parameters: {},
+      },
+    });
+    document.nets.push({
+      id: "net-in",
+      name: "IN",
+      scope: "local",
+      terminals: [{ instanceId: "X1", pinName: "IN" }],
+    });
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.ir).toBeNull();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "MISSING_REQUIRED_SUBCIRCUIT_PARAMETER",
+        objectIds: ["X1"],
+      }),
+    );
   });
 });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type {
+  ConnectivityIntent,
   ProjectStructureEdit,
   SchematicEdit,
   WireSource,
@@ -62,6 +63,12 @@ export interface UseComponentPlacementOptions {
     edits: SchematicEdit[],
     options?: { preserveInteraction?: boolean },
   ) => TransactionResult;
+  transactConnectivity: (
+    intent: ConnectivityIntent,
+    edits: readonly SchematicEdit[],
+    preview?: unknown,
+    options?: { preserveInteraction?: boolean },
+  ) => TransactionResult | null;
   transactProject: (
     transactionId: string,
     edits: ProjectStructureEdit[],
@@ -208,7 +215,8 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           ),
       });
     }
-    const result = options.transact(
+    const result = options.transactConnectivity(
+      "connect_without_wire",
       [
         { kind: "add_instance", instance },
         ...contact.edits,
@@ -242,9 +250,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
             ]
           : []),
       ],
+      { contact, standalonePower },
       { preserveInteraction: true },
     );
-    if (!result.ok) return;
+    if (!result?.ok) return;
     options.selectOnly("instance", [id]);
     options.setComponentPreviewPoint(position);
     options.setStatus(
@@ -466,8 +475,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.setStatus(`Cannot add VDD rail: ${railPlan.message}`);
       return;
     }
-    const result = options.transact([...railPlan.edits]);
-    if (!result.ok) return;
+    const result = options.transactConnectivity(
+      "draw_wire",
+      [...railPlan.edits],
+      { start, end, railPlan },
+    );
+    if (!result?.ok) return;
     options.selectOnly("route", [routeId]);
     options.completeVddRailPlacement();
     options.setStatus(`Added VDD rail ${instanceId}`);

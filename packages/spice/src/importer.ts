@@ -3,7 +3,11 @@ import {
   CircuitProjectSchema,
   deriveStableId,
 } from "@icm/model";
-import { isRazaviProductSymbolId, resolvePdkSymbolMapping } from "@icm/symbols";
+import {
+  externalSubcircuitSymbolId,
+  isRazaviProductSymbolId,
+  resolvePdkSymbolMapping,
+} from "@icm/symbols";
 import type { PdkSymbolMappingOverride } from "@icm/symbols";
 import type {
   CircuitProject,
@@ -409,6 +413,9 @@ function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
         : undefined;
       return {
         ...instance,
+        ...(externalDefinition
+          ? { symbolId: externalSubcircuitSymbolId(externalDefinition.name) }
+          : {}),
         importProvenance: {
           ...instance.importProvenance,
           status: childDocumentId

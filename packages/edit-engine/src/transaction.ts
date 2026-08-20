@@ -971,9 +971,7 @@ export function executeTransaction(
           }
           const set = assignment.set ?? {};
           const unset = assignment.unset ?? [];
-          const unsetNames = new Set(
-            unset.map((name) => name.toLowerCase()),
-          );
+          const unsetNames = new Set(unset.map((name) => name.toLowerCase()));
           if (unsetNames.size !== unset.length) {
             return rejectAt(
               "EDIT_PRECONDITION",
@@ -1165,6 +1163,28 @@ export function executeTransaction(
         );
         for (const id of edit.terminalIds) changedObjectIds.add(id);
         connectivityChanged = true;
+        break;
+      }
+      case "set_cell_formal_parameters": {
+        if (!draft.netlist) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Document has no formal Cell interface",
+          );
+        }
+        const seen = new Set<string>();
+        for (const parameter of edit.formalParameters) {
+          const folded = parameter.name.toLowerCase();
+          if (seen.has(folded)) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Cell formal parameter ${parameter.name} is duplicated under case folding`,
+            );
+          }
+          seen.add(folded);
+        }
+        draft.netlist.formalParameters = structuredClone(edit.formalParameters);
+        changedObjectIds.add(draft.id);
         break;
       }
       case "set_route_points": {

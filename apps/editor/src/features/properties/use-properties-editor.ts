@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 
-import type { SchematicEdit } from "@icm/edit-engine";
+import {
+  createConnectivityProposal,
+  gateConnectivityProposal,
+  type SchematicEdit,
+} from "@icm/edit-engine";
 import { flattenRichText } from "@icm/model";
 import type { Annotation, DraftingObject, SchematicDocument } from "@icm/model";
 
@@ -139,6 +143,22 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   >([]);
   const additionalParameterSerialRef = useRef(0);
 
+  const transactNamedNet = (edits: readonly SchematicEdit[]): boolean => {
+    const gate = gateConnectivityProposal(
+      options.document,
+      createConnectivityProposal(options.document, {
+        intent: "rename_or_merge_named_net",
+        diagnostics: [],
+        edits,
+      }),
+    );
+    if (!gate.ok) {
+      options.setStatus(gate.message);
+      return false;
+    }
+    return options.transact([...gate.edits]).ok;
+  };
+
   const draftForInstance = (instance: Instance): InstancePropertyDraft => ({
     instanceId: instance.id,
     parameters: Object.fromEntries(
@@ -169,7 +189,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     if (existing ? draftName === currentName : draftName === "") return;
     const edits = options.netLabelEditsForRoute(route, netLabelDraft);
     if (!edits) return;
-    if (options.transact(edits).ok) {
+    if (transactNamedNet(edits)) {
       options.setStatus(
         draftName ? `Saved Net Label ${draftName}` : "Removed Net Label",
       );
@@ -299,7 +319,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       return;
     }
     const edits = options.netLabelEditsForRoute(route, netLabelDraft);
-    if (!edits || !options.transact(edits).ok) return;
+    if (!edits || !transactNamedNet(edits)) return;
     netLabelDraftRouteRef.current = null;
     if (!name) {
       options.replaceSelectionKind("annotation", []);
@@ -329,7 +349,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       : "";
     if (nextName === currentName || (!nextName && !existing)) return;
     const edits = options.netLabelEditsForRoute(route, draft);
-    if (!edits || !options.transact(edits).ok) return;
+    if (!edits || !transactNamedNet(edits)) return;
     options.setStatus(
       nextName ? `Saved Net Label ${nextName}` : "Removed Net Label",
     );
@@ -346,9 +366,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       return;
     }
     if (
-      options.transact([
+      transactNamedNet([
         { kind: "remove_schematic_annotation", annotationId: label.id },
-      ]).ok
+      ])
     ) {
       options.replaceSelectionKind("annotation", []);
       setNetLabelDraft("");

@@ -144,6 +144,7 @@ export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
       edit.kind === "update_cell_terminal" ||
       edit.kind === "remove_cell_terminal" ||
       edit.kind === "reorder_cell_terminals" ||
+      edit.kind === "set_cell_formal_parameters" ||
       edit.kind === "set_cell_symbol_presentation"
     ) {
       context.addIssue({

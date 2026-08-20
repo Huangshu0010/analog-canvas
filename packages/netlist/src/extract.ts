@@ -1,6 +1,8 @@
 import { foldNetName, validateNetContract } from "@icm/model";
+import { directObjectLocator } from "@icm/derived";
 import type {
   CircuitProject,
+  ExternalSubcircuitDefinition,
   Instance,
   Net,
   SchematicDocument,
@@ -14,7 +16,7 @@ import {
 
 import type {
   DesignNetlistCell,
-  DesignNetlistExtractionResult,
+  DesignNetlistAnalysisResult,
   DesignNetlistInstance,
   NetlistDiagnostic,
 } from "./ir.js";
@@ -40,7 +42,42 @@ function diagnostic(
   objectIds: StableId[] = [],
   severity: "error" | "warning" = "error",
 ): void {
-  diagnostics.push({ code, severity, documentId, objectIds, message });
+  diagnostics.push({
+    code,
+    severity,
+    documentId,
+    objectIds,
+    primary: directObjectLocator(documentId, "document", documentId),
+    message,
+  });
+}
+
+function attachDiagnosticLocators(
+  project: CircuitProject,
+  diagnostics: NetlistDiagnostic[],
+): void {
+  for (const item of diagnostics) {
+    const document = project.documents.find(
+      (candidate) => candidate.id === item.documentId,
+    );
+    if (!document) continue;
+    const objectId = item.objectIds[0];
+    if (!objectId) continue;
+    const kind = document.instances.some((item) => item.id === objectId)
+      ? "instance"
+      : document.nets.some((item) => item.id === objectId)
+        ? "net"
+        : document.routes.some((item) => item.id === objectId)
+          ? "route"
+          : document.junctions.some((item) => item.id === objectId)
+            ? "junction"
+            : document.annotations.some((item) => item.id === objectId)
+              ? "annotation"
+              : document.noConnects.some((item) => item.id === objectId)
+                ? "no-connect"
+                : null;
+    if (kind) item.primary = directObjectLocator(document.id, kind, objectId);
+  }
 }
 
 function reachableDocuments(
@@ -316,6 +353,12 @@ function extractHierarchyInstance(
     );
     return null;
   }
+  validateFormalParameterOverrides(
+    document,
+    instance,
+    child.netlist.formalParameters,
+    diagnostics,
+  );
   const nodes = child.netlist.terminals.flatMap((terminal) => {
     const netName = terminalNetName(
       document,
@@ -331,6 +374,134 @@ function extractHierarchyInstance(
     reference: netlist.reference,
     deviceClass: "hierarchical",
     target: child.netlist.name,
+    nodes,
+    parameters: Object.entries(netlist.parameters)
+      .sort(([a], [b]) => compareText(a, b))
+      .map(([name, rawValue]) => ({ name, rawValue })),
+  };
+}
+
+function validateFormalParameterOverrides(
+  document: SchematicDocument,
+  instance: Instance,
+  formalParameters: readonly {
+    name: string;
+    defaultValue?: string | undefined;
+  }[],
+  diagnostics: NetlistDiagnostic[],
+): void {
+  const parameters = instance.netlist?.parameters ?? {};
+  const formalByFoldedName = new Map(
+    formalParameters.map((parameter) => [
+      parameter.name.toLowerCase(),
+      parameter,
+    ]),
+  );
+  for (const name of Object.keys(parameters)) {
+    if (formalByFoldedName.has(name.toLowerCase())) continue;
+    diagnostic(
+      diagnostics,
+      document.id,
+      "UNKNOWN_SUBCIRCUIT_PARAMETER",
+      `Instance ${instance.netlist?.reference ?? instance.id} sets unknown formal parameter ${name}`,
+      [instance.id],
+    );
+  }
+  for (const formal of formalParameters) {
+    if (
+      formal.defaultValue !== undefined ||
+      Object.keys(parameters).some(
+        (name) => name.toLowerCase() === formal.name.toLowerCase(),
+      )
+    ) {
+      continue;
+    }
+    diagnostic(
+      diagnostics,
+      document.id,
+      "MISSING_REQUIRED_SUBCIRCUIT_PARAMETER",
+      `Instance ${instance.netlist?.reference ?? instance.id} must override formal parameter ${formal.name}`,
+      [instance.id],
+    );
+  }
+}
+
+function extractExternalSubcircuitInstance(
+  document: SchematicDocument,
+  instance: Instance,
+  definition: ExternalSubcircuitDefinition | undefined,
+  context: CellNetContext,
+  diagnostics: NetlistDiagnostic[],
+): DesignNetlistInstance | null {
+  const netlist = instance.netlist;
+  if (!netlist || netlist.binding?.kind !== "external-subcircuit") return null;
+  if (!definition) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "MISSING_EXTERNAL_SUBCIRCUIT_INTERFACE",
+      `External subcircuit definition ${netlist.binding.definitionId} is unavailable`,
+      [instance.id, netlist.binding.definitionId],
+    );
+    return null;
+  }
+  if (!isIdentifier(netlist.reference) || !isIdentifier(definition.name)) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "INVALID_SUBCIRCUIT_IDENTIFIER",
+      `External subcircuit ${netlist.reference} or target ${definition.name} is outside the portable identifier subset`,
+      [instance.id, definition.id],
+    );
+  }
+  validateFormalParameterOverrides(
+    document,
+    instance,
+    definition.formalParameters,
+    diagnostics,
+  );
+  const allowedPins = new Set(
+    definition.terminals.map((terminal) => terminal.name.toLowerCase()),
+  );
+  const referencedPins = new Set<string>();
+  for (const net of document.nets) {
+    for (const terminal of net.terminals) {
+      if (terminal.instanceId === instance.id)
+        referencedPins.add(terminal.pinName);
+    }
+  }
+  for (const route of document.routes) {
+    for (const endpoint of [route.from, route.to]) {
+      if (endpoint.kind === "terminal" && endpoint.instanceId === instance.id) {
+        referencedPins.add(endpoint.pinName);
+      }
+    }
+  }
+  for (const pinName of referencedPins) {
+    if (allowedPins.has(pinName.toLowerCase())) continue;
+    diagnostic(
+      diagnostics,
+      document.id,
+      "UNKNOWN_EXTERNAL_SUBCIRCUIT_PIN",
+      `External subcircuit ${netlist.reference} references unknown formal terminal ${pinName}`,
+      [instance.id, definition.id],
+    );
+  }
+  const nodes = definition.terminals.flatMap((terminal) => {
+    const netName = terminalNetName(
+      document,
+      instance,
+      terminal.name,
+      context,
+      diagnostics,
+    );
+    return netName ? [{ pinName: terminal.name, netName }] : [];
+  });
+  return {
+    id: instance.id,
+    reference: netlist.reference,
+    deviceClass: "hierarchical",
+    target: definition.name,
     nodes,
     parameters: Object.entries(netlist.parameters)
       .sort(([a], [b]) => compareText(a, b))
@@ -504,6 +675,7 @@ function extractDeviceInstance(
 }
 
 function extractCell(
+  project: CircuitProject,
   document: SchematicDocument,
   documentsById: Map<string, SchematicDocument>,
   diagnostics: NetlistDiagnostic[],
@@ -629,16 +801,6 @@ function extractCell(
   })) {
     if (interfaceInstanceIds.has(instance.id)) continue;
     const binding = instance.netlist?.binding;
-    if (binding?.kind === "external-subcircuit") {
-      diagnostic(
-        diagnostics,
-        document.id,
-        "EXTERNAL_SUBCIRCUIT_INTERFACE_UNAVAILABLE",
-        `External subcircuit definition ${binding.definitionId} has no persisted ordered interface`,
-        [instance.id],
-      );
-      continue;
-    }
     const extracted =
       binding?.kind === "subcircuit"
         ? extractHierarchyInstance(
@@ -648,7 +810,17 @@ function extractCell(
             context,
             diagnostics,
           )
-        : extractDeviceInstance(document, instance, context, diagnostics);
+        : binding?.kind === "external-subcircuit"
+          ? extractExternalSubcircuitInstance(
+              document,
+              instance,
+              project.externalSubcircuitDefinitions.find(
+                (definition) => definition.id === binding.definitionId,
+              ),
+              context,
+              diagnostics,
+            )
+          : extractDeviceInstance(document, instance, context, diagnostics);
     if (extracted) instances.push(extracted);
   }
   return {
@@ -657,12 +829,18 @@ function extractCell(
     ports,
     nets: context.nets,
     instances,
+    formalParameters: document.netlist.formalParameters.map((parameter) => ({
+      name: parameter.name,
+      ...(parameter.defaultValue === undefined
+        ? {}
+        : { defaultValue: parameter.defaultValue }),
+    })),
   };
 }
 
-export function extractDesignNetlist(
+export function analyzeDesignNetlist(
   project: CircuitProject,
-): DesignNetlistExtractionResult {
+): DesignNetlistAnalysisResult {
   const diagnostics: NetlistDiagnostic[] = [];
   const documents = reachableDocuments(project, diagnostics);
   const documentsById = new Map(
@@ -687,7 +865,7 @@ export function extractDesignNetlist(
         cellNames.set(folded, document.id);
       }
     }
-    const cell = extractCell(document, documentsById, diagnostics);
+    const cell = extractCell(project, document, documentsById, diagnostics);
     if (cell) cells.push(cell);
   }
   diagnostics.sort(
@@ -698,6 +876,7 @@ export function extractDesignNetlist(
         .join("\u0000")
         .localeCompare(right.objectIds.join("\u0000")),
   );
+  attachDiagnosticLocators(project, diagnostics);
   if (diagnostics.some((item) => item.severity === "error")) {
     return { ir: null, diagnostics };
   }
@@ -711,7 +890,41 @@ export function extractDesignNetlist(
     ),
   ].sort(compareText);
   return {
-    ir: { topCellId: project.topDocumentId, cells, globals },
+    ir: {
+      topCellId: project.topDocumentId,
+      cells,
+      globals,
+      externalMasters: [
+        ...new Map(
+          documents
+            .flatMap((document) => document.instances)
+            .flatMap((instance) => {
+              const binding = instance.netlist?.binding;
+              if (binding?.kind !== "external-subcircuit") return [];
+              const definition = project.externalSubcircuitDefinitions.find(
+                (item) => item.id === binding.definitionId,
+              );
+              return definition ? [[definition.id, definition] as const] : [];
+            }),
+        ).values(),
+      ]
+        .sort((left, right) => compareText(left.name, right.name))
+        .map((definition) => ({
+          id: definition.id,
+          name: definition.name,
+          terminals: definition.terminals.map((terminal, index) => ({
+            id: `${definition.id}:terminal:${index}`,
+            name: terminal.name,
+            direction: "passive" as const,
+          })),
+          formalParameters: definition.formalParameters.map((parameter) => ({
+            name: parameter.name,
+            ...(parameter.defaultValue === undefined
+              ? {}
+              : { defaultValue: parameter.defaultValue }),
+          })),
+        })),
+    },
     diagnostics,
   };
 }

@@ -145,8 +145,8 @@ multi-row arbitrary-parameter editing may use an explicit Apply/Cancel
 transaction. A future change to old gestures requires a separate accepted UX
 target with its before/after evidence and rollback path.
 
-`extractDesignNetlist` is evolved in place into the sole
-`analyzeDesignNetlist(Project)` authority, retaining its `{ ir | null,
+`analyzeDesignNetlist(Project)` is the sole authority, evolved in place from
+the original extraction implementation and retaining its `{ ir | null,
 diagnostics }` result shape. Preflight and later printers consume that analyzer;
 they do not create a second extraction implementation. The analyzer consumes
 only typed facts and derived descriptor/interface authority, never annotations,

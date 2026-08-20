@@ -12,7 +12,9 @@ import { deviceDescriptor, referencePolicyForInstance } from "@icm/devices";
 
 import {
   buildManualWirePath,
+  createConnectivityProposal,
   createFreeWireAnchor,
+  gateConnectivityProposal,
   createRouteWireAnchor,
   proposeEndpointRouteAttachment,
   proposeGroupMoveEdits,
@@ -28,13 +30,17 @@ import {
   planRemoveCellTerminal,
   planRemoveCellTerminals,
   planRenameCellTerminal,
+  planReorderCellTerminal,
   planSetInstanceReference,
   planSetCellSymbolPresentation,
   planSetCellTerminalPlacement,
   planUpdateCellTerminalDirection,
+  proposeSetCellFormalParameters,
+  proposeUpsertExternalSubcircuitDefinition,
   findCellTerminalCaller,
   type ProjectStructureEdit,
   type EditTransactionResult,
+  type ConnectivityIntent,
   type SchematicEdit,
   type WireSource,
 } from "@icm/edit-engine";
@@ -43,6 +49,8 @@ import {
   exportFormalArtifactsInBrowser,
   rasterizeFormalSvgInBrowser,
 } from "@icm/exporters/browser";
+import { analyzeDesignNetlist } from "@icm/netlist";
+import type { NetlistDiagnostic } from "@icm/netlist";
 import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
@@ -92,6 +100,7 @@ import type {
   Annotation,
   CircuitProject,
   DerivedPoint,
+  ExternalSubcircuitDefinition,
   DraftingObject,
   GridRect,
   Point,
@@ -182,6 +191,8 @@ import {
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
+import { CellInterfaceDialog } from "../features/hierarchy/cell-interface-dialog";
+import { NetlistPreflightDialog } from "../features/netlist-export/netlist-preflight-dialog";
 import {
   proposeConnectedInstanceDeletion,
   proposeVisualSelectionDeletion,
@@ -546,6 +557,8 @@ export function App({
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
+  const [cellInterfaceOpen, setCellInterfaceOpen] = useState(false);
+  const [netlistPreflightOpen, setNetlistPreflightOpen] = useState(false);
   const [instanceTableOpen, setInstanceTableOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
     useState<AgentFileCandidateSummary | null>(null);
@@ -747,6 +760,10 @@ export function App({
   const projectConnectivityIndex = useMemo(
     () => buildProjectConnectivityIndex(project, resolver),
     [project, resolver],
+  );
+  const netlistAnalysis = useMemo(
+    () => analyzeDesignNetlist(project),
+    [project],
   );
   const highlightedTrace = useMemo(
     () =>
@@ -1248,6 +1265,7 @@ export function App({
     beginRouteStretch,
     drawSelectedMosBulk,
     deleteSelectedRouteConnection,
+    editSelectedRouteJog,
     fixWirePoint,
     finishWireAtPoint,
     handleFlightline,
@@ -1260,6 +1278,7 @@ export function App({
     resolver,
     selectedInstance,
     selectedRouteId,
+    selectedRouteSegmentIndex,
     visibleEndpoints,
     routeGeometryRecords,
     wireSource,
@@ -1329,6 +1348,7 @@ export function App({
     styleProfile,
     visibleEndpoints,
     transact,
+    transactConnectivity,
     transactProject: (transactionId, edits) =>
       commitStructure(transactionId, edits),
     selectOnly,
@@ -1750,6 +1770,99 @@ export function App({
       )
     ) {
       setStatus("Updated Cell port direction");
+    }
+  }
+
+  function renameCellTerminal(terminalId: string, name: string): void {
+    const nextName = name.trim();
+    const terminal = document.netlist?.terminals.find(
+      (candidate) => candidate.id === terminalId,
+    );
+    if (!terminal || !nextName || terminal.name === nextName) return;
+    try {
+      if (
+        commitStructure(
+          "rename-cell-interface-terminal",
+          planRenameCellTerminal(project, document.id, terminalId, nextName),
+        )
+      ) {
+        setStatus(`Renamed formal port to ${nextName}`);
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not rename port",
+      );
+    }
+  }
+
+  function moveCellTerminal(terminalId: string, delta: -1 | 1): void {
+    const edits = planReorderCellTerminal(
+      project,
+      document.id,
+      terminalId,
+      delta,
+    );
+    if (edits.length === 0) return;
+    if (commitStructure("reorder-cell-interface-terminal", edits)) {
+      setStatus("Reordered formal terminal interface");
+    }
+  }
+
+  function setCellFormalParameters(
+    formalParameters: NonNullable<
+      SchematicDocument["netlist"]
+    >["formalParameters"],
+  ): void {
+    try {
+      const proposal = proposeSetCellFormalParameters(
+        project,
+        document.id,
+        formalParameters.map((parameter) => ({
+          name: parameter.name.trim(),
+          ...(parameter.defaultValue?.trim()
+            ? { defaultValue: parameter.defaultValue.trim() }
+            : {}),
+        })),
+      );
+      if (commitStructure("set-cell-formal-parameters", [...proposal.edits])) {
+        setStatus("Updated Cell formal parameters");
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not update Cell formal parameters",
+      );
+    }
+  }
+
+  function setExternalSubcircuitDefinition(
+    definition: ExternalSubcircuitDefinition,
+  ): void {
+    try {
+      const proposal = proposeUpsertExternalSubcircuitDefinition(
+        project,
+        definition,
+      );
+      if (proposal.diagnostics.length > 0) {
+        setStatus(
+          `Cannot update external interface: ${proposal.diagnostics[0]}`,
+        );
+        return;
+      }
+      if (
+        commitStructure("upsert-external-subcircuit-interface", [
+          ...proposal.edits,
+        ])
+      ) {
+        setStatus(`Updated external subcircuit ${definition.name}`);
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not update external subcircuit interface",
+      );
     }
   }
 
@@ -2183,6 +2296,22 @@ export function App({
     setStatus(statusMessage);
   }
 
+  function navigateToNetlistDiagnostic(diagnostic: NetlistDiagnostic): void {
+    navigateToLocator(diagnostic.primary, `Preflight: ${diagnostic.message}`);
+    if (diagnostic.primary.kind !== "document") return;
+    const target = project.documents.find(
+      (candidate) => candidate.id === diagnostic.primary.documentId,
+    );
+    if (!target) return;
+    setViewBox(
+      fitCameraToBounds(
+        buildSvgScene(target, resolver).viewBox,
+        target.presentation.grid,
+      ),
+      target.presentation.grid,
+    );
+  }
+
   function applyAgentSemanticIntent(
     request: AgentHostSemanticIntentRequest,
   ): AgentHostSemanticIntentResult {
@@ -2593,6 +2722,34 @@ export function App({
       );
     }
     return result;
+  }
+
+  /**
+   * Connectivity edits are still persisted as the established typed edits.
+   * This fence gives every GUI producer the same Cell/revision contract before
+   * it reaches that mutation boundary.
+   */
+  function transactConnectivity(
+    intent: ConnectivityIntent,
+    edits: readonly SchematicEdit[],
+    preview?: unknown,
+    options: {
+      completesWireSession?: boolean;
+      preserveInteraction?: boolean;
+    } = {},
+  ): EditTransactionResult | null {
+    const proposal = createConnectivityProposal(document, {
+      intent,
+      edits,
+      diagnostics: [],
+      ...(preview === undefined ? {} : { preview }),
+    });
+    const gate = gateConnectivityProposal(document, proposal);
+    if (!gate.ok) {
+      setStatus(gate.message);
+      return null;
+    }
+    return transact([...gate.edits], options);
   }
 
   const clearableObjectCount =
@@ -3510,11 +3667,12 @@ export function App({
     const looseRouteEdits = movePlan.looseRouteIds.flatMap(
       (routeId) => proposeLooseRouteTranslation(document, routeId, delta).edits,
     );
-    const result = transact([
-      ...looseRouteEdits,
-      ...selectionVisualMoveEdits(movePlan, delta),
-    ]);
-    if (result.ok && movePlan.fixedObjectIds.length > 0) {
+    const result = transactConnectivity(
+      "move_connected_selection",
+      [...looseRouteEdits, ...selectionVisualMoveEdits(movePlan, delta)],
+      { delta, looseRouteIds: movePlan.looseRouteIds },
+    );
+    if (result?.ok && movePlan.fixedObjectIds.length > 0) {
       setStatus(
         `Moved selection; ${movePlan.fixedObjectIds.length} attached object(s) remained fixed`,
       );
@@ -3757,13 +3915,21 @@ export function App({
                   },
                 ]
               : [];
-        const result = transact([
-          ...groupMove.edits,
-          ...looseRouteEdits,
-          ...visualEdits,
-          ...contactEdits,
-        ]);
-        if (result.ok && electricalMatch) {
+        const result = transactConnectivity(
+          targetElectrical?.kind === "route"
+            ? "attach_endpoint_to_wire"
+            : targetElectrical?.kind === "endpoint"
+              ? "connect_without_wire"
+              : "move_connected_selection",
+          [
+            ...groupMove.edits,
+            ...looseRouteEdits,
+            ...visualEdits,
+            ...contactEdits,
+          ],
+          { moves, electricalMatch },
+        );
+        if (result?.ok && electricalMatch) {
           setStatus("Snapped pin endpoints and connected them without a wire");
         }
       } catch (error) {
@@ -4540,7 +4706,7 @@ export function App({
         object: { ...object, locked: !object.locked },
       },
     ]);
-    if (result.ok) {
+    if (result?.ok) {
       setStatus(
         object.locked
           ? "Drawing unlocked; it can now be edited or deleted"
@@ -5767,11 +5933,15 @@ export function App({
             routeId: route.id,
           }))
       : [];
-    const result = transact([
-      ...routeEdits,
-      { kind: "disconnect_endpoint", endpoint: selectedEndpoint.endpoint },
-    ]);
-    if (result.ok) {
+    const result = transactConnectivity(
+      "disconnect_endpoint",
+      [
+        ...routeEdits,
+        { kind: "disconnect_endpoint", endpoint: selectedEndpoint.endpoint },
+      ],
+      { removeRoutes },
+    );
+    if (result?.ok) {
       setSelectedEndpoint(null);
       setStatus(
         removeRoutes ? "Deleted endpoint connection" : "Disconnected endpoint",
@@ -6527,6 +6697,21 @@ export function App({
               </button>
               <button
                 type="button"
+                onClick={() => setCellInterfaceOpen(true)}
+                disabled={!document.netlist}
+              >
+                Edit Cell Interface…
+              </button>
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={netlistPreflightOpen}
+                onClick={() => setNetlistPreflightOpen(true)}
+              >
+                Run Netlist Preflight
+              </button>
+              <button
+                type="button"
                 onClick={placeCellInstance}
                 disabled={project.documents.length < 2}
               >
@@ -6683,6 +6868,27 @@ export function App({
           }
         }}
         onJumpToCaller={jumpToCaller}
+      />
+      <CellInterfaceDialog
+        open={cellInterfaceOpen}
+        cell={document.netlist ? document : null}
+        callerCount={
+          cellManagerEntries.find((candidate) => candidate.id === document.id)
+            ?.callers.length ?? 0
+        }
+        onClose={() => setCellInterfaceOpen(false)}
+        onRenameTerminal={renameCellTerminal}
+        onSetTerminalDirection={updateCellPortDirection}
+        onMoveTerminal={moveCellTerminal}
+        onSetFormalParameters={setCellFormalParameters}
+        externalDefinitions={project.externalSubcircuitDefinitions}
+        onSetExternalDefinition={setExternalSubcircuitDefinition}
+      />
+      <NetlistPreflightDialog
+        open={netlistPreflightOpen}
+        result={netlistAnalysis}
+        onClose={() => setNetlistPreflightOpen(false)}
+        onNavigate={navigateToNetlistDiagnostic}
       />
       {publicAgentUiEnabled ? (
         <ConnectAgentPanel
@@ -7834,6 +8040,18 @@ export function App({
                   </button>
                   <button type="button" onClick={addCurrentArrow}>
                     Add current arrow
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => editSelectedRouteJog("insert")}
+                  >
+                    Add wire jog
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => editSelectedRouteJog("remove")}
+                  >
+                    Straighten selected jog
                   </button>
                   <button type="button" onClick={toggleHighlightedNet}>
                     {selectedHighlightIsActive

@@ -38,7 +38,7 @@ source preservation 和文本 round-trip 属于阶段二；阶段一只对其交
 - 单对象 Properties 中的 Reference/Value 展示与有限常用参数编辑。
 - 当前 Properties 的 W/L/M/value、位置与旋转随输入即时生效，Reference/Value toggle 立即
   更新，Discard 恢复选择该对象时的基线；这些是已有 GUI 行为，不是旧数据协议的理由；
-- 当前 `extractDesignNetlist(Project)` 已返回 `{ ir: DesignNetlistIR | null, diagnostics }`，
+- 当前 `analyzeDesignNetlist(Project)` 返回 `{ ir: DesignNetlistIR | null, diagnostics }`，
   是 S7 唯一 analyzer 的现有实现基础，不需要并行重建。
 
 阶段一是对这些基础的产品化收口，不是第二次数据模型重写。
@@ -703,9 +703,9 @@ Preflight UI、IR extraction 与阶段二 printer 各自实现一套可导出性
 analyzeDesignNetlist(Project) -> { ir, diagnostics }
 ```
 
-它不是新建第二套实现：把当前已经返回 `DesignNetlistExtractionResult { ir|null,
-diagnostics }` 的 `extractDesignNetlist` 原地升级/重命名为该入口，并迁移现有 callers/tests；
-迁移完成后不保留两个可供 producer 选择的公共分析函数。
+它不是新建第二套实现：原有 extraction 在同一实现位置升级为
+`DesignNetlistAnalysisResult { ir|null, diagnostics }` 的此入口，并迁移所有 callers/tests；
+不保留两个可供 producer 选择的公共分析函数。
 
 Preflight UI 展示同一次分析的 diagnostics，阶段出口与后续 exporter 消费同一次分析的 IR；
 存在 blocking diagnostics 时不交付可导出 IR。printer 仍做边界防御校验，但不得维护第二份

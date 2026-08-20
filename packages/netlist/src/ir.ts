@@ -1,4 +1,5 @@
 import type { NetlistDeviceClass, StableId } from "@icm/model";
+import type { ObjectLocator } from "@icm/derived";
 
 export type DesignNetlistDeviceClass = NetlistDeviceClass | "hierarchical";
 
@@ -10,6 +11,12 @@ export interface DesignNetlistNode {
 export interface DesignNetlistParameter {
   name: string;
   rawValue: string;
+}
+
+/** Definition-owned defaults; absence means the caller must supply a value. */
+export interface DesignNetlistFormalParameter {
+  name: string;
+  defaultValue?: string;
 }
 
 export interface DesignNetlistInstance {
@@ -31,11 +38,22 @@ export interface DesignNetlistCell {
     scope: "local" | "global";
   }>;
   instances: DesignNetlistInstance[];
+  /** Ordered definition defaults retained without conflating absence and "". */
+  formalParameters?: DesignNetlistFormalParameter[];
+}
+
+/** Referenced external interfaces deliberately do not produce an empty body. */
+export interface DesignNetlistExternalMaster {
+  id: StableId;
+  name: string;
+  terminals: Array<{ id: StableId; name: string; direction: "passive" }>;
+  formalParameters: DesignNetlistFormalParameter[];
 }
 
 export interface DesignNetlistIR {
   topCellId: StableId;
   cells: DesignNetlistCell[];
+  externalMasters?: DesignNetlistExternalMaster[];
   globals: string[];
 }
 
@@ -46,10 +64,12 @@ export interface NetlistDiagnostic {
   severity: NetlistDiagnosticSeverity;
   documentId: StableId;
   objectIds: StableId[];
+  /** Canonical evidence for the preflight and other consumers to navigate. */
+  primary: ObjectLocator;
   message: string;
 }
 
-export interface DesignNetlistExtractionResult {
+export interface DesignNetlistAnalysisResult {
   ir: DesignNetlistIR | null;
   diagnostics: NetlistDiagnostic[];
 }
