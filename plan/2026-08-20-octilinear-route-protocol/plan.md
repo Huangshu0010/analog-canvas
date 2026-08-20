@@ -43,6 +43,8 @@ Owned paths include:
 - `packages/model/` and `packages/project-protocol/` are read-only unless the
   implementation proves a Project schema boundary is required; fixtures and
   docs record that compatibility decision
+- `fixtures/exports/phase-7-dense-analog/` is now owned only to reconcile the
+  release golden after verifying the formal renderer change is intentional
 - `docs/adr/`, `docs/specs/`, `docs/user/`, `plan/log.md`, and this plan
 
 Read-only shared dependencies:
@@ -145,3 +147,20 @@ individual deterministic static/build/test components completed successfully.
 
 Commit status: committed locally on `codex/octilinear-route-protocol`;
 push/PR was not requested.
+
+## Release-gate follow-up
+
+The first PR release-contract job and a local `pnpm release:verify` both found
+that `fixtures/exports/phase-7-dense-analog/schematic.svg` no longer matches
+the formal export. This target is reopened solely to inspect and deliberately
+refresh the export golden if its delta follows from the accepted route geometry
+protocol. The other golden artifacts and unrelated release outputs remain
+read-only. Re-run the complete release verification and remote required checks
+before merging.
+
+Follow-up outcome: the only formal SVG source delta is the terminal miter
+bridge on the dense fixture's three diagonal terminal segments. It changes the
+old axis-biased bridge into the correct unit-direction bridge; PNG and PDF
+hashes change only because they are derived from that SVG. The refreshed
+goldens pass `node scripts/export-golden.mjs --check` and the complete local
+`pnpm release:verify` gate.

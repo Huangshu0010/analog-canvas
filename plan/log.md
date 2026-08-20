@@ -3602,3 +3602,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   checks passed.
 - Commit status: committed locally on `codex/octilinear-route-protocol`;
   push/PR was not requested.
+
+## 2026-08-20 - Octilinear Route release-golden reconciliation
+
+- Changed areas: refreshed the Phase 7 SVG, PNG, PDF, and manifest goldens for
+  terminal miter bridges on existing diagonal routes; the new bridges use the
+  shared unit-direction geometry rather than an axis-biased approximation.
+- Validation: `export-golden --check`, complete `pnpm release:verify`, diff
+  check, and the preceding focused protocol tests passed.
+- Commit status: pending push of this release-gate correction on
+  `codex/octilinear-route-protocol`.

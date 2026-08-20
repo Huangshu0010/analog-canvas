@@ -14,16 +14,16 @@
   },
   "files": {
     "schematic.svg": {
-      "byteLength": 6766,
-      "sha256": "eb2a17dc2f492350ab87deb59c200e993c29fa6c16973c9bfe4975ef79696b42"
+      "byteLength": 7513,
+      "sha256": "b66fc6e513cf04e5b6645d6ee0f73bddf20138ffd831bcc84e0278b2c2d18a6c"
     },
     "schematic.png": {
-      "byteLength": 16668,
-      "sha256": "a60f8b8d48b9e6d9969edf299cf2f4181e090285ff72d1c063b8c7f10c3ccda9"
+      "byteLength": 16840,
+      "sha256": "8163aae6c97ef73099cb9a0032c351ad5efddaf481cf93f80294f4f305b4f9cb"
     },
     "schematic.pdf": {
-      "byteLength": 10410,
-      "sha256": "5e20e6b7ebe2e217371d3cc550018950efa75e65b3e9a4acf18fea4007bd5929"
+      "byteLength": 10518,
+      "sha256": "e68fdb0cb455254863e292a0eb3901f059508316f9e6b02d0d537317a8badacc"
     }
   }
 }
