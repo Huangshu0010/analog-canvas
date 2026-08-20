@@ -16,6 +16,7 @@ import {
 import { endpointKey, isVisibleEndpoint, netEndpoints } from "./endpoint.js";
 import { directObjectLocator, type ObjectLocator } from "./object-locator.js";
 import { resolveNetLabelBindings } from "./net-label.js";
+import { resolveAnnotationText } from "./annotation-text.js";
 import {
   resolveDocumentRoutingGeometry,
   type ResolvedDocumentRoutingGeometry,
@@ -272,7 +273,9 @@ function deriveLabelVirtualEdges(
     const annotation = document.annotations.find(
       (candidate) => candidate.id === binding.annotationId,
     )!;
-    const label = flattenRichText(annotation.content).trim();
+    const label = flattenRichText(
+      resolveAnnotationText(document, annotation),
+    ).trim();
     if (label.length === 0) continue;
     const group = groups.get(label) ?? {
       kind: "net-label",
@@ -289,7 +292,9 @@ function deriveLabelVirtualEdges(
       (candidate) => candidate.annotationId === annotation.id,
     );
     if (!binding) continue;
-    const label = flattenRichText(annotation.content).trim();
+    const label = flattenRichText(
+      resolveAnnotationText(document, annotation),
+    ).trim();
     if (label.length === 0) continue;
     const group = groups.get(label) ?? {
       kind: annotation.kind,

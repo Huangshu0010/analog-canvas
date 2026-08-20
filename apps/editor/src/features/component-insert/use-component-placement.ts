@@ -149,12 +149,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       placementRequest.showReference && defaultLabel
         ? {
             ...defaultLabel,
-            content: semanticTextDocument(
-              placementRequest.referenceText ??
-                netlist?.reference ??
-                instance.id,
-              "instance-label",
-            ),
+            binding: {
+              kind: "instance-reference" as const,
+              instanceId: instance.id,
+            },
           }
         : null;
     const instanceValue = placementRequest.showValue
@@ -310,12 +308,18 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.styleProfile,
     );
     const instanceValue = defaultLabel
-      ? {
-          ...defaultLabel,
-          id: `instance-value-${instance.id}`,
-          kind: "instance-value" as const,
-          content: defaultDraftTextDocument(placementRequest.cellName),
-        }
+      ? (() => {
+          // The Cell display name is literal presentation text. It is not an
+          // electrical component value and must not inherit the reference
+          // binding from the label template.
+          const { binding: _binding, ...literalLabel } = defaultLabel;
+          return {
+            ...literalLabel,
+            id: `instance-value-${instance.id}`,
+            kind: "instance-value" as const,
+            content: defaultDraftTextDocument(placementRequest.cellName),
+          };
+        })()
       : null;
     const committed = options.transactProject(
       "place-cell-instance",
@@ -428,7 +432,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           ? {
               annotation: {
                 ...annotation,
-                content: semanticTextDocument(formalName, "formal-port"),
+                binding: {
+                  kind: "cell-terminal-name" as const,
+                  terminalId: `terminal-${id.toLowerCase()}`,
+                },
               },
             }
           : {}),

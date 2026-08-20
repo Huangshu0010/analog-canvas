@@ -1488,6 +1488,7 @@ export function App({
       : undefined;
   const textEditingBounds = editingAnnotation
     ? annotationHitBox(
+        document,
         editingAnnotation,
         annotationAnchor(
           document,
@@ -4938,6 +4939,10 @@ export function App({
   function netLabelEditsForRoute(
     route: SchematicDocument["routes"][number],
     rawName: string,
+    presentation?: {
+      alignment: "start" | "middle" | "end";
+      sizeScale: number;
+    },
   ): SchematicEdit[] | null {
     const net = document.nets.find((candidate) => candidate.id === route.netId);
     if (!net) return null;
@@ -4991,7 +4996,7 @@ export function App({
       annotation: {
         id: existingLabel?.id ?? `net-label-${route.id}`,
         kind: "net-label",
-        content: semanticTextDocument(namedNetPlan.name, "net-label"),
+        binding: { kind: "net-name", netId: targetNetId },
         netId: targetNetId,
         // A dragged route anchor survives a name edit; new labels start at
         // the middle segment with the default normal offset.
@@ -5007,9 +5012,15 @@ export function App({
               orientation: "follow",
               fallbackPosition: position,
             },
-        alignment: "middle",
+        alignment:
+          presentation?.alignment ?? existingLabel?.alignment ?? "middle",
         rotation: 0,
         locked: false,
+        ...(presentation?.sizeScale !== undefined
+          ? { sizeScale: presentation.sizeScale }
+          : existingLabel?.sizeScale !== undefined
+            ? { sizeScale: existingLabel.sizeScale }
+            : {}),
       },
     });
     return edits;
@@ -5063,17 +5074,9 @@ export function App({
       if (value) {
         const { visible: _currentVisibility, ...rest } = value;
         if (visible) {
-          // Showing re-projects the parameter text (the Value toggle's whole
-          // purpose) while preserving any user-dragged anchor. A visible,
-          // hand-edited Value is only rewritten by this explicit toggle.
-          const display = displayableInstanceValue(instance);
-          if (display.kind !== "displayable") continue;
           edits.push({
             kind: "upsert_schematic_annotation",
-            annotation: {
-              ...rest,
-              content: structuredClone(display.content),
-            },
+            annotation: rest,
           });
         } else {
           edits.push({
@@ -5671,6 +5674,7 @@ export function App({
                 annotation.visible !== false &&
                 rectsIntersect(
                   annotationHitBox(
+                    document,
                     annotation,
                     annotationAnchor(
                       document,
@@ -9166,6 +9170,7 @@ export function App({
                     styleProfile,
                   );
                   const hitBox = annotationHitBox(
+                    document,
                     annotation,
                     anchor,
                     routeGeometryRecords,

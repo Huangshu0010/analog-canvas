@@ -107,13 +107,19 @@ function renderSpan(
   node: Extract<RichTextRun, { kind: "span" }>,
   ctx: RenderContext,
 ): string {
-  if (node.style === "italic" || node.style === "bold") {
+  if (
+    node.style === "italic" ||
+    node.style === "bold" ||
+    node.style === "overbar"
+  ) {
     const childCtx: RenderContext = {
       ...ctx,
       italic: ctx.italic || node.style === "italic",
       bold: ctx.bold || node.style === "bold",
     };
-    return `<tspan data-text-run="span" style="${styleAttribute(childCtx)}">${renderRuns(node.children, childCtx)}</tspan>`;
+    const decoration =
+      node.style === "overbar" ? ";text-decoration:overline" : "";
+    return `<tspan data-text-run="${node.style === "overbar" ? "overbar" : "span"}" style="${styleAttribute(childCtx)}${decoration}">${renderRuns(node.children, childCtx)}</tspan>`;
   }
 
   const typography = ctx.profile.typography;

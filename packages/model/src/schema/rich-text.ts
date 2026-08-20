@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-export type RichTextStyle = "italic" | "bold" | "subscript" | "superscript";
+export type RichTextStyle =
+  "italic" | "bold" | "subscript" | "superscript" | "overbar";
 
 export type RichTextRun =
   | { kind: "text"; value: string }
@@ -32,7 +33,7 @@ function richTextRunSchema(depth: number): z.ZodTypeAny {
     lineBreak,
     z.strictObject({
       kind: z.literal("span"),
-      style: z.enum(["italic", "bold", "subscript", "superscript"]),
+      style: z.enum(["italic", "bold", "subscript", "superscript", "overbar"]),
       children: z
         .array(richTextRunSchema(depth + 1))
         .min(1)

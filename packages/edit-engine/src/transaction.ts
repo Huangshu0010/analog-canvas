@@ -2030,6 +2030,13 @@ export function executeTransaction(
             annotation.netId = target.id;
             changedObjectIds.add(annotation.id);
           }
+          if (
+            annotation.binding?.kind === "net-name" &&
+            annotation.binding.netId === source.id
+          ) {
+            annotation.binding = { kind: "net-name", netId: target.id };
+            changedObjectIds.add(annotation.id);
+          }
         }
         for (const group of draft.layoutGroups) {
           const replaced = group.objectIds.includes(source.id);

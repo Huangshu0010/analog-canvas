@@ -2264,6 +2264,64 @@ body {
   background: var(--icm-border-strong);
 }
 
+.rich-text-overbar-button {
+  text-decoration: overline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.rich-text-align-icon {
+  display: block;
+  width: 0.95rem;
+  height: 0.95rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-width: 1.45;
+}
+
+.rich-text-floating-toolbar button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--icm-accent);
+}
+
+.rich-text-symbol-menu {
+  position: relative;
+}
+
+.rich-text-symbol-menu > summary {
+  display: grid;
+  width: 1.8rem;
+  min-height: 1.8rem;
+  place-items: center;
+  list-style: none;
+  cursor: pointer;
+}
+
+.rich-text-symbol-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rich-text-symbol-menu > div {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(5, 1.8rem);
+  gap: 0.1rem;
+  width: max-content;
+  padding: 0.25rem;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: var(--icm-radius-sm);
+  background: #fff;
+  box-shadow: var(--icm-shadow-md);
+}
+
+.rich-text-symbol-menu > div button {
+  width: 1.8rem;
+  min-width: 1.8rem;
+  padding: 0;
+}
+
 .rich-text-editable {
   box-sizing: border-box;
   max-width: 100%;

@@ -358,12 +358,10 @@ describe("Project structural transaction", () => {
       },
     });
     if (!result.ok) throw new Error("Expected formatting-only Port update");
-    expect(
-      flattenRichText(result.project.documents[1]!.annotations[0]!.content),
-    ).toBe("Vout");
-    expect(
-      JSON.stringify(result.project.documents[1]!.annotations[0]!.content),
-    ).toContain('"subscript"');
+    expect(result.project.documents[1]!.annotations[0]!.binding).toEqual({
+      kind: "cell-terminal-name",
+      terminalId: "terminal-vout",
+    });
   });
 
   it("removes an unused formal port and reconciles caller source order", () => {

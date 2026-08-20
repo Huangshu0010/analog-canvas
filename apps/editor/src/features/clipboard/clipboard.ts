@@ -259,6 +259,11 @@ function rewriteInstanceLabelText(
   ) {
     return;
   }
+  if (annotation.binding?.kind === "instance-reference") {
+    annotation.binding = { kind: "instance-reference", instanceId: nextId };
+    return;
+  }
+  if (!annotation.content) return;
   const plain = flattenRichText(annotation.content);
   if (
     plain !== source.id &&
@@ -538,6 +543,23 @@ export function proposePaste(
         annotation: {
           ...clone,
           id: uniqueCopyId(annotation.id, sequence, occupied),
+          ...(clone.binding?.kind === "net-name"
+            ? {
+                binding: {
+                  kind: "net-name" as const,
+                  netId: netIds.get(clone.binding.netId) ?? clone.binding.netId,
+                },
+              }
+            : clone.binding?.kind === "instance-value"
+              ? {
+                  binding: {
+                    kind: "instance-value" as const,
+                    instanceId:
+                      objectIds.get(clone.binding.instanceId) ??
+                      clone.binding.instanceId,
+                  },
+                }
+              : {}),
           ...(annotation.netId
             ? { netId: netIds.get(annotation.netId) ?? annotation.netId }
             : {}),

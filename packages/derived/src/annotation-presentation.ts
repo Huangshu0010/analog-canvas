@@ -7,6 +7,7 @@ import type {
 import type { SymbolResolver } from "@icm/symbols";
 
 import { resolveVisualAnchor, type ResolvedAnchor } from "./anchor.js";
+import { resolveAnnotationText } from "./annotation-text.js";
 import {
   resolveDocumentRoutingGeometry,
   type ResolvedDocumentRoutingGeometry,
@@ -48,14 +49,15 @@ export function resolveAnnotationPresentation(
   );
   const sizeScale = annotation.sizeScale ?? 1;
   const fontSize = annotationFontSize(annotation, styleProfile) * sizeScale;
-  const textLayout = measureRichTextDocument(annotation.content, {
+  const text = resolveAnnotationText(document, annotation);
+  const textLayout = measureRichTextDocument(text, {
     ...richTextMetrics(styleProfile, "label", sizeScale),
     fontSize,
   });
   // A stacked fraction raises its numerator past the plain first-line
   // ascent heuristic; extend the shared bounds so hits and export cover it.
   // The extra ascent is in em of the part font, so it tracks the part scale.
-  const fractionExtraAscent = containsFractionRun(annotation.content)
+  const fractionExtraAscent = containsFractionRun(text)
     ? fontSize *
       fractionPartScale(styleProfile.typography.subscriptScale) *
       fractionGeometry.extraAscentEm

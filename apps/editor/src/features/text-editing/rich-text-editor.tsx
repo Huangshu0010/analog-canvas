@@ -8,8 +8,12 @@ export interface RichTextEditorProps {
   content: RichTextDocument;
   disabled?: boolean;
   sizeScale: number;
+  alignment: "start" | "middle" | "end";
+  formattingDisabled?: boolean;
+  multiline?: boolean;
   onChange(content: RichTextDocument): void;
   onSizeChange(sizeScale: number): void;
+  onAlignmentChange(alignment: "start" | "middle" | "end"): void;
   onCommit(): void;
   onDelete(): void;
   onReverseCurrentArrow?(): void;
@@ -37,6 +41,9 @@ function toEditableHtml(document: RichTextDocument): string {
         return `${run.numerator.runs.map(render).join("")}/${run.denominator.runs.map(render).join("")}`;
       case "span": {
         const children = run.children.map(render).join("");
+        if (run.style === "overbar") {
+          return `<span data-rich-text-style="overbar">${children}</span>`;
+        }
         const tag =
           run.style === "italic"
             ? "em"
@@ -82,6 +89,9 @@ function readNode(node: Node): RichTextRun[] {
   if (tag === "sup") {
     return [{ kind: "span", style: "superscript", children }];
   }
+  if (node.getAttribute("data-rich-text-style") === "overbar") {
+    return [{ kind: "span", style: "overbar", children }];
+  }
   if (tag === "div" || tag === "p") {
     return [...children, { kind: "line-break" }];
   }
@@ -101,8 +111,12 @@ export function RichTextEditor({
   content,
   disabled = false,
   sizeScale,
+  alignment,
+  formattingDisabled = false,
+  multiline = true,
   onChange,
   onSizeChange,
+  onAlignmentChange,
   onCommit,
   onDelete,
   onReverseCurrentArrow,
@@ -144,11 +158,49 @@ export function RichTextEditor({
     selection.addRange(range);
   };
 
-  const command = (name: "bold" | "italic" | "subscript" | "superscript") => {
+  const command = (
+    name: "bold" | "italic" | "subscript" | "superscript" | "overbar",
+  ) => {
     if (disabled || !editableRef.current) return;
     editableRef.current.focus();
     restoreSelection();
-    document.execCommand(name);
+    if (name === "overbar") {
+      const selection = window.getSelection();
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+      if (!range || range.collapsed) return;
+      const wrapper = globalThis.document.createElement("span");
+      wrapper.dataset.richTextStyle = "overbar";
+      try {
+        range.surroundContents(wrapper);
+      } catch {
+        wrapper.append(range.extractContents());
+        range.insertNode(wrapper);
+      }
+      const next = globalThis.document.createRange();
+      next.selectNodeContents(wrapper);
+      selection?.removeAllRanges();
+      selection?.addRange(next);
+    } else {
+      document.execCommand(name);
+    }
+    rememberSelection();
+    sync();
+  };
+
+  const insertLineBreak = (): void => {
+    if (disabled || !editableRef.current) return;
+    editableRef.current.focus();
+    restoreSelection();
+    document.execCommand("insertLineBreak");
+    rememberSelection();
+    sync();
+  };
+
+  const insertSymbol = (symbol: string): void => {
+    if (disabled || !editableRef.current) return;
+    editableRef.current.focus();
+    restoreSelection();
+    document.execCommand("insertText", false, symbol);
     rememberSelection();
     sync();
   };
@@ -166,7 +218,7 @@ export function RichTextEditor({
         <button
           type="button"
           aria-label="Bold"
-          disabled={disabled}
+          disabled={disabled || formattingDisabled}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => command("bold")}
         >
@@ -175,7 +227,7 @@ export function RichTextEditor({
         <button
           type="button"
           aria-label="Italic"
-          disabled={disabled}
+          disabled={disabled || formattingDisabled}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => command("italic")}
         >
@@ -184,7 +236,7 @@ export function RichTextEditor({
         <button
           type="button"
           aria-label="Subscript"
-          disabled={disabled}
+          disabled={disabled || formattingDisabled}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => command("subscript")}
         >
@@ -193,12 +245,94 @@ export function RichTextEditor({
         <button
           type="button"
           aria-label="Superscript"
-          disabled={disabled}
+          disabled={disabled || formattingDisabled}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => command("superscript")}
         >
           x<sup>2</sup>
         </button>
+        <button
+          type="button"
+          aria-label="Overbar"
+          disabled={disabled || formattingDisabled}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => command("overbar")}
+        >
+          <span className="rich-text-overbar-button">x</span>
+        </button>
+        <span className="rich-text-toolbar-separator" />
+        {(
+          [
+            ["start", "Align left"],
+            ["middle", "Align center"],
+            ["end", "Align right"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            aria-label={label}
+            aria-pressed={alignment === value}
+            disabled={disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => onAlignmentChange(value)}
+          >
+            <svg
+              className="rich-text-align-icon"
+              viewBox="0 0 16 16"
+              aria-hidden="true"
+            >
+              <path
+                d={
+                  value === "start"
+                    ? "M1 3h14M1 6h9M1 9h14M1 12h7"
+                    : value === "middle"
+                      ? "M1 3h14M3.5 6h9M1 9h14M4.5 12h7"
+                      : "M1 3h14M6 6h9M1 9h14M8 12h7"
+                }
+              />
+            </svg>
+          </button>
+        ))}
+        <details className="rich-text-symbol-menu">
+          <summary aria-label="Insert circuit symbol">Ω</summary>
+          <div role="menu" aria-label="Circuit symbols">
+            {[
+              "α",
+              "β",
+              "γ",
+              "δ",
+              "θ",
+              "λ",
+              "μ",
+              "π",
+              "φ",
+              "ω",
+              "Δ",
+              "Ω",
+              "±",
+              "≈",
+              "≤",
+              "≥",
+              "∞",
+              "°",
+              "·",
+              "→",
+            ].map((symbol) => (
+              <button
+                key={symbol}
+                type="button"
+                role="menuitem"
+                aria-label={`Insert ${symbol}`}
+                disabled={disabled || formattingDisabled}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => insertSymbol(symbol)}
+              >
+                {symbol}
+              </button>
+            ))}
+          </div>
+        </details>
         <span className="rich-text-toolbar-separator" />
         <button
           type="button"
@@ -271,6 +405,12 @@ export function RichTextEditor({
             // Escape saves the session, matching click-away and Ctrl+Enter.
             onCommit();
           } else if (event.key === "Enter" && event.ctrlKey) {
+            event.preventDefault();
+            onCommit();
+          } else if (event.key === "Enter" && multiline) {
+            event.preventDefault();
+            insertLineBreak();
+          } else if (event.key === "Enter") {
             event.preventDefault();
             onCommit();
           } else if (event.ctrlKey && event.key.toLowerCase() === "b") {

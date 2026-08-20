@@ -217,7 +217,7 @@ describe("schematic clipboard", () => {
     expect(
       result.document.annotations
         .filter((annotation) => annotation.kind === "instance-label")
-        .map((annotation) => flattenRichText(annotation.content)),
+        .map((annotation) => flattenRichText(annotation.content!)),
     ).toEqual(["R1", "R2"]);
   });
 
@@ -281,7 +281,7 @@ describe("schematic clipboard", () => {
         { kind: "upsert_schematic_annotation" }
       > => edit.kind === "upsert_schematic_annotation",
     );
-    expect(flattenRichText(pastedLabel!.annotation.content)).toBe("Rload");
+    expect(flattenRichText(pastedLabel!.annotation.content!)).toBe("Rload");
     expect(proposal.instanceIds).toEqual(["R2"]);
   });
 
@@ -310,7 +310,7 @@ describe("schematic clipboard", () => {
         { kind: "upsert_schematic_annotation" }
       > => edit.kind === "upsert_schematic_annotation",
     );
-    expect(flattenRichText(pastedLabel!.annotation.content)).toBe("R2");
+    expect(flattenRichText(pastedLabel!.annotation.content!)).toBe("R2");
   });
 
   it("remaps an internal NoConnect to the copied instance", () => {

@@ -798,7 +798,7 @@ describe("Edit Transaction envelope", () => {
     expect(renamed).toMatchObject({ ok: true });
     if (!renamed.ok) return;
     expect(renamed.document.instances[0]?.netlist?.reference).toBe("M3");
-    expect(flattenRichText(renamed.document.annotations[0]!.content)).toBe(
+    expect(flattenRichText(renamed.document.annotations[0]!.content!)).toBe(
       "M3",
     );
   });

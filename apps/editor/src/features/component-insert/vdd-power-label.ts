@@ -15,28 +15,7 @@ export function vddPowerLabelAnnotation(options: {
   return {
     id: `power-label-${options.instanceId.toLowerCase()}`,
     kind: "power-label",
-    content: {
-      runs: [
-        {
-          kind: "span",
-          style: "italic",
-          children: [
-            {
-              kind: "span",
-              style: "bold",
-              children: [
-                { kind: "text", value: "V" },
-                {
-                  kind: "span",
-                  style: "subscript",
-                  children: [{ kind: "text", value: "DD" }],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
+    binding: { kind: "net-name", netId: options.netId },
     netId: options.netId,
     anchor: {
       kind: "object",

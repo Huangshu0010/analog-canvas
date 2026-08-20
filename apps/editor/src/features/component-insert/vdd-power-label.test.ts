@@ -27,9 +27,10 @@ describe("vdd power label annotation", () => {
         fallbackPosition: { x: 130, y: 90 },
       },
     });
-    expect(JSON.stringify(annotation.content)).toContain('"value":"V"');
-    expect(JSON.stringify(annotation.content)).toContain('"value":"DD"');
-    expect(JSON.stringify(annotation.content)).toContain('"subscript"');
+    expect(annotation.binding).toEqual({
+      kind: "net-name",
+      netId: "net-power-vdd3",
+    });
   });
 
   it("never collides with the drawn rail label id namespace", () => {

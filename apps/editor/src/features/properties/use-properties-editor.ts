@@ -7,6 +7,7 @@ import {
   type SchematicEdit,
 } from "@icm/edit-engine";
 import { flattenRichText } from "@icm/model";
+import { resolveAnnotationText } from "@icm/derived";
 import type { Annotation, DraftingObject, SchematicDocument } from "@icm/model";
 
 import {
@@ -100,6 +101,10 @@ export interface UsePropertiesEditorOptions {
   netLabelEditsForRoute: (
     route: Route,
     draft: string,
+    presentation?: {
+      alignment: "start" | "middle" | "end";
+      sizeScale: number;
+    },
   ) => SchematicEdit[] | null;
   instancePropertyEdits: (draft: InstancePropertyDraft) => {
     edits: SchematicEdit[];
@@ -184,7 +189,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     const existing = options.netLabelForRoute(route);
     const draftName = netLabelDraft.trim();
     const currentName = existing
-      ? flattenRichText(existing.content).trim()
+      ? flattenRichText(
+          resolveAnnotationText(options.document, existing),
+        ).trim()
       : "";
     if (existing ? draftName === currentName : draftName === "") return;
     const edits = options.netLabelEditsForRoute(route, netLabelDraft);
@@ -205,7 +212,12 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     }
     setNetLabelDraft(
       options.selectedRouteNetLabel
-        ? flattenRichText(options.selectedRouteNetLabel.content)
+        ? flattenRichText(
+            resolveAnnotationText(
+              options.document,
+              options.selectedRouteNetLabel,
+            ),
+          )
         : "",
     );
     netLabelDraftRouteRef.current = options.selectedRoute.id;
@@ -324,7 +336,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     if (!name) {
       options.replaceSelectionKind("annotation", []);
       options.setStatus(
-        `Deleted Net Label ${flattenRichText(existingLabel!.content)}`,
+        `Deleted Net Label ${flattenRichText(resolveAnnotationText(options.document, existingLabel!))}`,
       );
       return;
     }
@@ -345,7 +357,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     const existing = options.netLabelForRoute(route);
     const nextName = draft.trim();
     const currentName = existing
-      ? flattenRichText(existing.content).trim()
+      ? flattenRichText(
+          resolveAnnotationText(options.document, existing),
+        ).trim()
       : "";
     if (nextName === currentName || (!nextName && !existing)) return;
     const edits = options.netLabelEditsForRoute(route, draft);
@@ -372,7 +386,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     ) {
       options.replaceSelectionKind("annotation", []);
       setNetLabelDraft("");
-      options.setStatus(`Deleted Net Label ${flattenRichText(label.content)}`);
+      options.setStatus(
+        `Deleted Net Label ${flattenRichText(resolveAnnotationText(options.document, label))}`,
+      );
     }
   };
 
@@ -502,7 +518,10 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   const beginAnnotationTextEditing = (annotation: Annotation): void => {
     options.selectOnly("annotation", [annotation.id]);
     setTextEditing(
-      createTextEditingSession({ owner: "annotation", object: annotation }),
+      createTextEditingSession(
+        { owner: "annotation", object: annotation },
+        options.document,
+      ),
     );
   };
 
@@ -514,7 +533,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   };
 
   const updateTextEditing = (
-    change: Partial<Pick<TextEditingSession, "content" | "sizeScale">>,
+    change: Partial<
+      Pick<TextEditingSession, "content" | "sizeScale" | "alignment">
+    >,
   ): void => {
     setTextEditing((current) =>
       current ? updateTextEditingSession(current, change) : null,
@@ -544,6 +565,101 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
 
   const commitTextEditing = (): void => {
     if (!textEditing) return;
+    const boundAnnotation =
+      textEditing.owner === "annotation"
+        ? options.document.annotations.find(
+            (annotation) => annotation.id === textEditing.id,
+          )
+        : undefined;
+    if (boundAnnotation?.binding) {
+      const name = flattenRichText(textEditing.content).trim();
+      const currentName = flattenRichText(
+        resolveAnnotationText(options.document, boundAnnotation),
+      ).trim();
+      const presentationChanged =
+        (boundAnnotation.sizeScale ?? 1) !== textEditing.sizeScale ||
+        boundAnnotation.alignment !== textEditing.alignment;
+      const presentationEdit: SchematicEdit = {
+        kind: "upsert_schematic_annotation",
+        annotation: {
+          ...boundAnnotation,
+          sizeScale: textEditing.sizeScale,
+          alignment: textEditing.alignment,
+        },
+      };
+      if (!name) {
+        options.setStatus("Bound electrical names cannot be empty");
+        return;
+      }
+      if (name === currentName) {
+        if (boundAnnotation.binding.kind === "cell-terminal-name") {
+          if (!options.commitCellPortAnnotation?.(boundAnnotation, name))
+            return;
+        }
+        if (presentationChanged && !options.transact([presentationEdit]).ok) {
+          return;
+        }
+        setTextEditing(null);
+        return;
+      }
+      switch (boundAnnotation.binding.kind) {
+        case "net-name":
+          const routeAnchor = boundAnnotation.anchor;
+          const boundRoute =
+            routeAnchor.kind === "route"
+              ? options.document.routes.find(
+                  (route) => route.id === routeAnchor.routeId,
+                )
+              : undefined;
+          const netLabelEdits = boundRoute
+            ? options.netLabelEditsForRoute(
+                boundRoute,
+                name,
+                presentationChanged
+                  ? {
+                      alignment: textEditing.alignment,
+                      sizeScale: textEditing.sizeScale,
+                    }
+                  : undefined,
+              )
+            : [
+                {
+                  kind: "set_net_name" as const,
+                  netId: boundAnnotation.binding.netId,
+                  name,
+                },
+                ...(presentationChanged ? [presentationEdit] : []),
+              ];
+          if (netLabelEdits && transactNamedNet(netLabelEdits)) {
+            setTextEditing(null);
+          }
+          return;
+        case "cell-terminal-name":
+          if (options.commitCellPortAnnotation?.(boundAnnotation, name)) {
+            if (presentationChanged && !options.transact([presentationEdit]).ok)
+              return;
+            setTextEditing(null);
+          }
+          return;
+        case "instance-reference":
+          if (
+            options.transact([
+              {
+                kind: "set_instance_reference",
+                instanceId: boundAnnotation.binding.instanceId,
+                reference: name,
+              },
+              ...(presentationChanged ? [presentationEdit] : []),
+            ]).ok
+          ) {
+            setTextEditing(null);
+          }
+          return;
+        case "instance-value":
+          options.setStatus("Edit component values in Properties");
+          return;
+      }
+    }
     const proposal = proposeTextEditingCommit(options.document, textEditing);
     if (proposal.kind === "blocked") return;
     if (proposal.kind === "delete" && textEditing.owner === "annotation") {
@@ -567,7 +683,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       proposal.edit.annotation.kind === "instance-label" &&
       proposal.edit.annotation.anchor.kind === "object"
     ) {
-      const name = flattenRichText(proposal.edit.annotation.content).trim();
+      const name = flattenRichText(
+        proposal.edit.annotation.content ?? { runs: [] },
+      ).trim();
       if (
         !name ||
         !options.commitCellPortAnnotation(proposal.edit.annotation, name)

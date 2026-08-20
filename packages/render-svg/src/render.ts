@@ -15,6 +15,7 @@ import {
   resolveEndpointPoint,
   resolveDocumentRoutingGeometry,
   resolveAnnotationPresentation,
+  resolveAnnotationText,
   resolveSchematicStyleProfile,
   resolveRouteAttachment,
   textbookMonochromeProfile,
@@ -61,10 +62,14 @@ export interface SvgScene {
 }
 
 function renderAnnotationText(
+  document: SchematicDocument,
   annotation: SchematicDocument["annotations"][number],
   profile: SchematicStyleProfile,
 ): string {
-  return renderRichTextDocument(annotation.content, profile);
+  return renderRichTextDocument(
+    resolveAnnotationText(document, annotation),
+    profile,
+  );
 }
 
 /**
@@ -463,7 +468,7 @@ function deriveBounds(
     const textPosition = routePlacement.labelPosition;
     bounds.push(
       estimatedTextBounds(
-        flattenRichText(annotation.content),
+        flattenRichText(resolveAnnotationText(document, annotation)),
         textPosition.x,
         textPosition.y,
         "middle",
@@ -643,6 +648,7 @@ export function buildSvgScene(
     .filter((annotation) => annotation.visible !== false)
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map((annotation) => {
+      const content = resolveAnnotationText(document, annotation);
       const attachment = ` data-anchor-kind="${annotation.anchor.kind}"`;
       const presentation = resolveAnnotationPresentation(
         document,
@@ -705,9 +711,9 @@ export function buildSvgScene(
             : vertical
               ? y + 4
               : y - arrow.currentLabelGap;
-          return `<g ${attributes}><g transform="${transform}"><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
+          return `<g ${attributes}><g transform="${transform}"><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(document, annotation, profile)}</text></g>`;
         }
-        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
+        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(document, annotation, profile)}</text></g>`;
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&
@@ -716,7 +722,7 @@ export function buildSvgScene(
         // The power-rail Route is the complete supply bar. Drawing a second,
         // thinner annotation-owned bar at its endpoint creates the visible
         // terminal stub and makes hit geometry disagree with presentation.
-        return `<g ${attributes}><text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
+        return `<g ${attributes}><text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderAnnotationText(document, annotation, profile)}</text></g>`;
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&
@@ -733,7 +739,7 @@ export function buildSvgScene(
           rotation,
         );
         const polarityStyle = `font-style:normal;font-weight:${profile.typography.plainWeight}`;
-        return `<g ${attributes}><text data-role="polarity-positive" x="${position.x + positiveOffset.x}" y="${position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${position.x + negativeOffset.x}" y="${position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
+        return `<g ${attributes}><text data-role="polarity-positive" x="${position.x + positiveOffset.x}" y="${position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${position.x + negativeOffset.x}" y="${position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(document, annotation, profile)}</text></g>`;
       }
       const emphasis =
         profile.id === "textbook-monochrome-v1" &&
@@ -742,12 +748,9 @@ export function buildSvgScene(
           : "";
       const fractionRun =
         annotation.rotation === 0 &&
-        annotation.content.runs.length === 1 &&
-        annotation.content.runs[0]!.kind === "fraction"
-          ? (annotation.content.runs[0] as Extract<
-              RichTextRun,
-              { kind: "fraction" }
-            >)
+        content.runs.length === 1 &&
+        content.runs[0]!.kind === "fraction"
+          ? (content.runs[0] as Extract<RichTextRun, { kind: "fraction" }>)
           : null;
       if (fractionRun) {
         return renderStackedFractionAnnotation(fractionRun, {
@@ -761,7 +764,7 @@ export function buildSvgScene(
           profile,
         });
       }
-      return `<text ${attributes} x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text>`;
+      return `<text ${attributes} x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile, annotation.sizeScale)}>${renderAnnotationText(document, annotation, profile)}</text>`;
     })
     .join("");
 

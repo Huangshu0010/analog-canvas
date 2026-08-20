@@ -54,6 +54,8 @@ describe("unified text editing", () => {
       id: "drafting-1",
       content: { runs: [{ kind: "text", value: "Design note" }] },
       sizeScale: 1,
+      alignment: "middle",
+      bound: false,
     });
   });
 

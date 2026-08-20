@@ -151,7 +151,7 @@ describe("Project persistence", () => {
     const reopened = parseProject(serializeProject(project));
     expect(reopened.schemaVersion).toBe(14);
     expect(
-      reopened.documents[0]!.annotations[0]?.content.runs[0],
+      reopened.documents[0]!.annotations[0]?.content!.runs[0],
     ).toMatchObject({
       kind: "fraction",
       numerator: { runs: [{ value: "10um" }] },

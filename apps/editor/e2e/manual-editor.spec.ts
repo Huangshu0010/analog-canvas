@@ -1517,9 +1517,10 @@ test("edits instance, electrical Net, and free text with bounded label handles",
     .getByRole("textbox", { name: "Canvas text editor" })
     .fill("R_LOAD");
   await page.getByRole("button", { name: "Apply text changes" }).click();
-  // Canvas text editing preserves the exact user-authored instance label.
+  // Bound instance labels update their reference source and render the
+  // underscore suffix as Razavi upright subscript text.
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
-    "R_LOAD",
+    "RLOAD",
   );
 
   await clickRoute(page, "route-ui-1", 0.5, 0);
@@ -1539,7 +1540,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   });
   await annotationEditor.fill("Vref");
   await annotationEditor.press("Control+a");
-  await page.getByRole("button", { name: "Italic" }).click();
+  await expect(page.getByRole("button", { name: "Italic" })).toBeDisabled();
   await page.getByRole("button", { name: "Increase text size" }).click();
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
@@ -1558,9 +1559,9 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await openSelectionShelf(page);
   await page
     .getByRole("textbox", { name: "Electrical Net label" })
-    .fill("SIGNAL");
+    .fill("Vref");
   await expect(page.getByTestId("net-count")).toHaveText("1");
-  await expect(page.getByTestId("status")).toHaveText("Saved Net Label SIGNAL");
+  await expect(page.getByTestId("status")).toHaveText("Saved Net Label Vref");
 
   await clickCommand(page, "Draw", "Text");
   const textInput = page.getByRole("textbox", {

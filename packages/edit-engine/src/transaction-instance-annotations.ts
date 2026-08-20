@@ -75,6 +75,14 @@ export function refreshInstanceValueAnnotation(
     ) {
       continue;
     }
+    if (annotation.binding?.kind === "instance-value") {
+      if (displayableInstanceValue(instance).kind !== "displayable") {
+        annotation.visible = false;
+      }
+      changedObjectIds.add(annotation.id);
+      continue;
+    }
+    if (!annotation.content) continue;
     if (
       JSON.stringify(annotation.content) !== JSON.stringify(previous.content)
     ) {
@@ -113,15 +121,24 @@ export function refreshInstanceReferenceAnnotation(
   ) {
     return;
   }
-  const previousContent = semanticTextDocument(
-    previousReference,
-    "instance-label",
-  );
   for (const annotation of draft.annotations) {
     if (
       annotation.kind !== "instance-label" ||
       annotation.anchor.kind !== "object" ||
-      annotation.anchor.objectId !== instanceId ||
+      annotation.anchor.objectId !== instanceId
+    ) {
+      continue;
+    }
+    if (annotation.binding?.kind === "instance-reference") {
+      changedObjectIds.add(annotation.id);
+      continue;
+    }
+    if (!annotation.content) continue;
+    const previousContent = semanticTextDocument(
+      previousReference,
+      "instance-label",
+    );
+    if (
       JSON.stringify(annotation.content) !== JSON.stringify(previousContent)
     ) {
       continue;
