@@ -3,6 +3,7 @@ import { flattenRichText } from "@icm/model";
 import { resolveAnnotationText } from "@icm/derived";
 import type {
   Annotation,
+  AnnotationTextBinding,
   DraftingObject,
   RichTextDocument,
   SchematicDocument,
@@ -22,6 +23,7 @@ export interface TextEditingSession {
   alignment: "start" | "middle" | "end";
   /** Semantic displays edit their source field, not a copied RichText AST. */
   bound: boolean;
+  bindingKind?: AnnotationTextBinding["kind"];
 }
 
 export type TextEditingCommitProposal =
@@ -45,6 +47,7 @@ export function createTextEditingSession(
       sizeScale: annotation.sizeScale ?? 1,
       alignment: annotation.alignment,
       bound: annotation.binding !== undefined,
+      ...(annotation.binding ? { bindingKind: annotation.binding.kind } : {}),
     };
   }
   return {

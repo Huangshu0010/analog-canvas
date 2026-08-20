@@ -25,6 +25,7 @@ export function resolveAnnotationText(
       const instance = document.instances.find(
         (candidate) => candidate.id === binding.instanceId,
       );
+      if (instance?.schematicName) return instance.schematicName;
       return semanticTextDocument(
         instance?.netlist?.reference ?? instance?.id ?? "",
         "instance-label",

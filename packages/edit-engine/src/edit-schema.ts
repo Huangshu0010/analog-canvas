@@ -13,6 +13,7 @@ import {
   NoConnectSchema,
   PlacementSchema,
   PointSchema,
+  RichTextDocumentSchema,
   RouteEndpointSchema,
   RoutePresentationSchema,
   RotationSchema,
@@ -82,6 +83,12 @@ export const SetInstanceReferenceEditSchema = z.strictObject({
   kind: z.literal("set_instance_reference"),
   instanceId: StableIdSchema,
   reference: z.string().min(1).max(128),
+});
+/** Update only the user-visible, RichText schematic alias. */
+export const SetInstanceSchematicNameEditSchema = z.strictObject({
+  kind: z.literal("set_instance_schematic_name"),
+  instanceId: StableIdSchema,
+  content: RichTextDocumentSchema,
 });
 export const SetInstanceBindingEditSchema = z.strictObject({
   kind: z.literal("set_instance_binding"),
@@ -333,6 +340,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MirrorInstanceEditSchema,
   PatchInstanceNetlistParametersEditSchema,
   SetInstanceReferenceEditSchema,
+  SetInstanceSchematicNameEditSchema,
   SetInstanceBindingEditSchema,
   SetInstanceNetlistEditSchema,
   BulkPatchInstanceNetlistEditSchema,

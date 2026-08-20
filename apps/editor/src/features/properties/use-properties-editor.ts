@@ -587,11 +587,26 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
           alignment: textEditing.alignment,
         },
       };
+      const instanceReferenceBinding =
+        boundAnnotation.binding.kind === "instance-reference"
+          ? boundAnnotation.binding
+          : undefined;
+      const schematicNameInstance = instanceReferenceBinding
+        ? options.document.instances.find(
+            (candidate) => candidate.id === instanceReferenceBinding.instanceId,
+          )
+        : undefined;
+      const schematicNameSourceChanged =
+        instanceReferenceBinding !== undefined &&
+        JSON.stringify(
+          schematicNameInstance?.schematicName ??
+            resolveAnnotationText(options.document, boundAnnotation),
+        ) !== JSON.stringify(textEditing.content);
       if (!name) {
         options.setStatus("Bound electrical names cannot be empty");
         return;
       }
-      if (name === currentName) {
+      if (name === currentName && !schematicNameSourceChanged) {
         if (boundAnnotation.binding.kind === "cell-terminal-name") {
           if (!options.commitCellPortAnnotation?.(boundAnnotation, name))
             return;
@@ -642,13 +657,21 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
           }
           return;
         case "instance-reference":
+          if (!schematicNameSourceChanged && !presentationChanged) {
+            setTextEditing(null);
+            return;
+          }
           if (
             options.transact([
-              {
-                kind: "set_instance_reference",
-                instanceId: boundAnnotation.binding.instanceId,
-                reference: name,
-              },
+              ...(schematicNameSourceChanged
+                ? [
+                    {
+                      kind: "set_instance_schematic_name" as const,
+                      instanceId: boundAnnotation.binding.instanceId,
+                      content: textEditing.content,
+                    },
+                  ]
+                : []),
               ...(presentationChanged ? [presentationEdit] : []),
             ]).ok
           ) {

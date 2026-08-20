@@ -82,7 +82,9 @@ export function CanvasTextEditorOverlay({
         disabled={disabled}
         sizeScale={session.sizeScale}
         alignment={session.alignment}
-        sourceOnly={session.bound}
+        sourceOnly={
+          session.bound && session.bindingKind !== "instance-reference"
+        }
         multiline={!session.bound}
         onChange={(content) => onUpdate({ content })}
         onSizeChange={(sizeScale) => onUpdate({ sizeScale })}

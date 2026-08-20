@@ -3654,3 +3654,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: focused browser regression (2 tests), workspace typecheck,
   test-impact, and diff checks passed.
 - Commit status: prepared on `codex/unified-text-binding`.
+
+## 2026-08-20 - Schematic reference text
+
+- Changed areas: added the user-owned RichText `Instance.schematicName` and
+  typed edit; instance labels and Properties now edit that source rather than
+  the SPICE reference; restored label formatting; and made multi-character
+  overbar application reversible.
+- Validation: 49 focused unit/protocol tests, 3 focused browser tests,
+  workspace typecheck, test-impact, and diff checks passed.
+- Commit status: prepared on `codex/unified-text-binding`.

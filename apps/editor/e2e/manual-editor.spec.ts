@@ -1516,13 +1516,13 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   const referenceEditor = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
-  await expect(referenceEditor).toHaveAttribute("type", "text");
+  await expect(referenceEditor).toHaveAttribute("contenteditable", "true");
   await referenceEditor.fill("R_LOAD");
   await page.getByRole("button", { name: "Apply text changes" }).click();
-  // Bound instance labels update their reference source and render the
-  // underscore suffix as Razavi upright subscript text.
+  // The user-owned schematic name changes without touching the hidden SPICE
+  // reference, so its RichText spelling is displayed exactly as authored.
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
-    "RLOAD",
+    "R_LOAD",
   );
 
   await clickRoute(page, "route-ui-1", 0.5, 0);
@@ -1599,6 +1599,12 @@ test("keeps literal text line breaks and overbars visible while editing", async 
     "text-decoration-line",
     "overline",
   );
+  await page.getByRole("button", { name: "Overbar" }).click();
+  await expect(editor.locator('[data-rich-text-style="overbar"]')).toHaveCount(
+    0,
+  );
+  await editor.press("Control+a");
+  await page.getByRole("button", { name: "Overbar" }).click();
   await editor.press("End");
   await editor.press("Enter");
   await editor.type("bias");

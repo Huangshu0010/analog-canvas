@@ -68,6 +68,14 @@ function isElement(node: Node): node is HTMLElement {
   return node.nodeType === Node.ELEMENT_NODE;
 }
 
+function enclosingOverbar(node: Node): HTMLElement | null {
+  const element = isElement(node) ? node : node.parentElement;
+  const overbar = element?.closest<HTMLElement>(
+    '[data-rich-text-style="overbar"]',
+  );
+  return overbar ?? null;
+}
+
 function readChildren(element: Element): RichTextRun[] {
   const runs: RichTextRun[] = [];
   for (const child of element.childNodes) runs.push(...readNode(child));
@@ -179,6 +187,26 @@ export function RichTextEditor({
       const selection = window.getSelection();
       const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
       if (!range || range.collapsed) return;
+      const startOverbar = enclosingOverbar(range.startContainer);
+      const endOverbar = enclosingOverbar(range.endContainer);
+      if (
+        startOverbar &&
+        startOverbar === endOverbar &&
+        editableRef.current.contains(startOverbar)
+      ) {
+        // The canonical editor writes an overbar as one span. A second action
+        // on any selected part of that span removes the same decoration from
+        // the whole selected formatting run, including a multi-character name.
+        const parent = startOverbar.parentNode;
+        if (!parent) return;
+        const contents = globalThis.document.createDocumentFragment();
+        while (startOverbar.firstChild)
+          contents.append(startOverbar.firstChild);
+        parent.replaceChild(contents, startOverbar);
+        rememberSelection();
+        sync();
+        return;
+      }
       const wrapper = globalThis.document.createElement("span");
       wrapper.dataset.richTextStyle = "overbar";
       try {
