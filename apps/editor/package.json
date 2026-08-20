@@ -15,6 +15,7 @@
     "@icm/edit-engine": "workspace:*",
     "@icm/exporters": "workspace:*",
     "@icm/model": "workspace:*",
+    "@icm/netlist": "workspace:*",
     "@icm/project-protocol": "workspace:*",
     "@icm/render-svg": "workspace:*",
     "@icm/spice": "workspace:*",

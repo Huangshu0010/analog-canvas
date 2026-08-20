@@ -7,7 +7,7 @@ export const pnpDevice = {
   referencePrefix: "Q",
   pinOrder: ["C", "B", "E"],
   targetPolicy: "required-model",
-  requiredParameters: [],
+  parameters: [],
   dialects: ["spice", "spectre"],
   capabilities: {
     supportsModel: true,

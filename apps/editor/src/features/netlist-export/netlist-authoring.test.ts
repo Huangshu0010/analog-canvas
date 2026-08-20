@@ -18,14 +18,12 @@ describe("netlist authoring", () => {
         id: "a",
         symbolId: "resistor",
         placement: null,
-        properties: {},
         netlist: { reference: "R1", parameters: {} },
       },
       {
         id: "b",
         symbolId: "resistor",
         placement: null,
-        properties: {},
         netlist: { reference: "R3", parameters: {} },
       },
     );
@@ -40,21 +38,18 @@ describe("netlist authoring", () => {
         id: "R1",
         symbolId: "resistor",
         placement: null,
-        properties: {},
         netlist: { reference: "R1", parameters: {} },
       },
       {
         id: "M1",
         symbolId: "nmos",
         placement: null,
-        properties: {},
         netlist: { reference: "M1", parameters: {} },
       },
       {
         id: "R3",
         symbolId: "resistor",
         placement: null,
-        properties: {},
         netlist: { reference: "R3", parameters: {} },
       },
     );
@@ -99,6 +94,7 @@ describe("netlist authoring", () => {
       reference: "M1",
       parameters: { w: "2u", l: "60n" },
     });
+    expect(initialInstanceNetlist(document, "ground", {})).toBeUndefined();
   });
 
   it("creates a model binding only from explicit edited text", () => {

@@ -4,7 +4,7 @@ import {
   CellNetlistTerminalSchema,
   DraftingObjectSchema,
   InstanceNetlistDataSchema,
-  InstancePropertyValueSchema,
+  InstanceNetlistBindingSchema,
   InstanceSchema,
   JunctionRoleSchema,
   LayoutConstraintSchema,
@@ -72,28 +72,47 @@ export const MirrorInstanceEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   mirror: MirrorSchema,
 });
-export const PatchInstancePropertiesEditSchema = z
-  .strictObject({
-    kind: z.literal("patch_instance_properties"),
-    instanceId: StableIdSchema,
-    set: z.record(z.string().min(1), InstancePropertyValueSchema).optional(),
-    unset: z.array(z.string().min(1)).max(64).optional(),
-  })
-  .superRefine((edit, context) => {
-    for (const key of [...Object.keys(edit.set ?? {}), ...(edit.unset ?? [])]) {
-      if (!key.startsWith("spice.")) continue;
-      context.addIssue({
-        code: "custom",
-        path: [edit.set && key in edit.set ? "set" : "unset", key],
-        message:
-          "Legacy spice.* properties are migration-only; use typed netlist facts or import provenance",
-      });
-    }
-  });
+export const PatchInstanceNetlistParametersEditSchema = z.strictObject({
+  kind: z.literal("patch_instance_netlist_parameters"),
+  instanceId: StableIdSchema,
+  set: z.record(z.string().min(1), z.string().min(1).max(1024)).optional(),
+  unset: z.array(z.string().min(1)).max(64).optional(),
+});
+export const SetInstanceReferenceEditSchema = z.strictObject({
+  kind: z.literal("set_instance_reference"),
+  instanceId: StableIdSchema,
+  reference: z.string().min(1).max(128),
+});
+export const SetInstanceBindingEditSchema = z.strictObject({
+  kind: z.literal("set_instance_binding"),
+  instanceId: StableIdSchema,
+  binding: InstanceNetlistBindingSchema.nullable(),
+});
 export const SetInstanceNetlistEditSchema = z.strictObject({
   kind: z.literal("set_instance_netlist"),
   instanceId: StableIdSchema,
   netlist: InstanceNetlistDataSchema,
+});
+export const BulkInstanceNetlistAssignmentSchema = z
+  .strictObject({
+    instanceId: StableIdSchema,
+    reference: z.string().min(1).max(128).optional(),
+    binding: InstanceNetlistBindingSchema.nullable().optional(),
+    set: z.record(z.string().min(1), z.string().min(1).max(1024)).optional(),
+    unset: z.array(z.string().min(1)).max(64).optional(),
+  })
+  .refine(
+    (assignment) =>
+      assignment.reference !== undefined ||
+      assignment.binding !== undefined ||
+      Object.keys(assignment.set ?? {}).length > 0 ||
+      (assignment.unset?.length ?? 0) > 0,
+    "Bulk assignment must change a typed netlist field",
+  );
+/** Bounded atomic alternative to expanding a bulk request into 256 edits. */
+export const BulkPatchInstanceNetlistEditSchema = z.strictObject({
+  kind: z.literal("bulk_patch_instance_netlist"),
+  assignments: z.array(BulkInstanceNetlistAssignmentSchema).min(1).max(5000),
 });
 export const AddCellTerminalEditSchema = z.strictObject({
   kind: z.literal("add_cell_terminal"),
@@ -113,6 +132,18 @@ export const RemoveCellTerminalEditSchema = z.strictObject({
 export const ReorderCellTerminalsEditSchema = z.strictObject({
   kind: z.literal("reorder_cell_terminals"),
   terminalIds: z.array(StableIdSchema).max(128),
+});
+/** Replaces one ordered formal parameter definition list atomically. */
+export const SetCellFormalParametersEditSchema = z.strictObject({
+  kind: z.literal("set_cell_formal_parameters"),
+  formalParameters: z
+    .array(
+      z.strictObject({
+        name: z.string().min(1).max(128),
+        defaultValue: z.string().min(1).max(1024).optional(),
+      }),
+    )
+    .max(128),
 });
 export const SetRoutePointsEditSchema = z.strictObject({
   kind: z.literal("set_route_points"),
@@ -300,12 +331,16 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MoveInstanceEditSchema,
   RotateInstanceEditSchema,
   MirrorInstanceEditSchema,
-  PatchInstancePropertiesEditSchema,
+  PatchInstanceNetlistParametersEditSchema,
+  SetInstanceReferenceEditSchema,
+  SetInstanceBindingEditSchema,
   SetInstanceNetlistEditSchema,
+  BulkPatchInstanceNetlistEditSchema,
   AddCellTerminalEditSchema,
   UpdateCellTerminalEditSchema,
   RemoveCellTerminalEditSchema,
   ReorderCellTerminalsEditSchema,
+  SetCellFormalParametersEditSchema,
   SetRoutePointsEditSchema,
   RouteOrthogonalEditSchema,
   AddJunctionEditSchema,

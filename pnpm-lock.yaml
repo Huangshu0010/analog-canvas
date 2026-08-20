@@ -56,6 +56,9 @@ importers:
       "@icm/model":
         specifier: workspace:*
         version: link:../../packages/model
+      "@icm/netlist":
+        specifier: workspace:*
+        version: link:../../packages/netlist
       "@icm/project-protocol":
         specifier: workspace:*
         version: link:../../packages/project-protocol
@@ -185,6 +188,9 @@ importers:
       "@icm/derived":
         specifier: workspace:*
         version: link:../derived
+      "@icm/devices":
+        specifier: workspace:*
+        version: link:../devices
       "@icm/model":
         specifier: workspace:*
         version: link:../model
@@ -230,6 +236,9 @@ importers:
 
   packages/netlist:
     dependencies:
+      "@icm/derived":
+        specifier: workspace:*
+        version: link:../derived
       "@icm/devices":
         specifier: workspace:*
         version: link:../devices

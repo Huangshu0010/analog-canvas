@@ -7,7 +7,18 @@ export const currentSourceDevice = {
   referencePrefix: "I",
   pinOrder: ["+", "-"],
   targetPolicy: "builtin",
-  requiredParameters: ["dc"],
+  parameters: [
+    {
+      name: "dc",
+      label: "Value",
+      required: true,
+      editor: "text",
+      unitHint: "A",
+      placeholder: "1m",
+      help: "DC current",
+      displayRole: "value",
+    },
+  ],
   dialects: ["spice", "spectre"],
   capabilities: {
     supportsModel: false,

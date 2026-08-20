@@ -1,1 +1,4 @@
-export { upgradePreviousProject } from "./transforms/project.js";
+export {
+  ProjectMigrationError,
+  upgradePreviousProject,
+} from "./transforms/project.js";

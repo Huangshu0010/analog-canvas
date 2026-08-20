@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 
-import type { SchematicEdit } from "@icm/edit-engine";
+import {
+  createConnectivityProposal,
+  gateConnectivityProposal,
+  type SchematicEdit,
+} from "@icm/edit-engine";
 import { flattenRichText } from "@icm/model";
 import type { Annotation, DraftingObject, SchematicDocument } from "@icm/model";
 
@@ -9,6 +13,11 @@ import {
   componentParameters,
   effectiveComponentParameterValue,
 } from "../component-insert/component-parameters";
+import {
+  additionalParameterDrafts,
+  planAdditionalParameterPatch,
+} from "./additional-parameters";
+import type { AdditionalParameterDraft } from "./additional-parameters";
 import {
   createTextEditingSession,
   proposeTextEditingCommit,
@@ -51,6 +60,21 @@ function sameInstancePropertyDraft(
   ]);
   return [...keys].every(
     (key) => left.parameters[key] === right.parameters[key],
+  );
+}
+
+function sameAdditionalParameterDrafts(
+  left: readonly AdditionalParameterDraft[],
+  right: readonly AdditionalParameterDraft[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (entry, index) =>
+        entry.originalName === right[index]?.originalName &&
+        entry.name === right[index]?.name &&
+        entry.value === right[index]?.value,
+    )
   );
 }
 
@@ -100,6 +124,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   const [netLabelEditorOpen, setNetLabelEditorOpen] = useState(false);
   const [instancePropertyDraft, setInstancePropertyDraft] =
     useState<InstancePropertyDraft>(EMPTY_INSTANCE_PROPERTY_DRAFT);
+  const [additionalParameterDraft, setAdditionalParameterDraft] = useState<
+    readonly AdditionalParameterDraft[]
+  >([]);
   const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
     null,
   );
@@ -111,6 +138,26 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   const instancePropertyBaselineRef = useRef<InstancePropertyDraft>(
     EMPTY_INSTANCE_PROPERTY_DRAFT,
   );
+  const additionalParameterBaselineRef = useRef<
+    readonly AdditionalParameterDraft[]
+  >([]);
+  const additionalParameterSerialRef = useRef(0);
+
+  const transactNamedNet = (edits: readonly SchematicEdit[]): boolean => {
+    const gate = gateConnectivityProposal(
+      options.document,
+      createConnectivityProposal(options.document, {
+        intent: "rename_or_merge_named_net",
+        diagnostics: [],
+        edits,
+      }),
+    );
+    if (!gate.ok) {
+      options.setStatus(gate.message);
+      return false;
+    }
+    return options.transact([...gate.edits]).ok;
+  };
 
   const draftForInstance = (instance: Instance): InstancePropertyDraft => ({
     instanceId: instance.id,
@@ -142,7 +189,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     if (existing ? draftName === currentName : draftName === "") return;
     const edits = options.netLabelEditsForRoute(route, netLabelDraft);
     if (!edits) return;
-    if (options.transact(edits).ok) {
+    if (transactNamedNet(edits)) {
       options.setStatus(
         draftName ? `Saved Net Label ${draftName}` : "Removed Net Label",
       );
@@ -174,6 +221,11 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     instancePropertyDraftRef.current = nextDraft;
     instancePropertyBaselineRef.current = nextDraft;
     setInstancePropertyDraft(nextDraft);
+    const nextAdditionalDraft = options.selectedInstance
+      ? additionalParameterDrafts(options.selectedInstance)
+      : [];
+    additionalParameterBaselineRef.current = nextAdditionalDraft;
+    setAdditionalParameterDraft(nextAdditionalDraft);
   }, [options.selectedInstance]);
 
   const updateInstancePropertyDraft = (
@@ -192,6 +244,71 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     if (!invalidPosition && edits.length > 0) options.transact(edits);
   };
 
+  const addAdditionalParameter = (): void => {
+    const instance = options.selectedInstance;
+    if (!instance?.netlist) {
+      options.setStatus("This component has no netlist parameters to edit");
+      return;
+    }
+    additionalParameterSerialRef.current += 1;
+    setAdditionalParameterDraft((current) => [
+      ...current,
+      {
+        id: `${instance.id}:additional:new:${additionalParameterSerialRef.current}`,
+        originalName: null,
+        name: "",
+        value: "",
+      },
+    ]);
+  };
+
+  const updateAdditionalParameter = (
+    id: string,
+    change: Partial<Pick<AdditionalParameterDraft, "name" | "value">>,
+  ): void => {
+    setAdditionalParameterDraft((current) =>
+      current.map((entry) =>
+        entry.id === id ? { ...entry, ...change } : entry,
+      ),
+    );
+  };
+
+  const removeAdditionalParameter = (id: string): void => {
+    setAdditionalParameterDraft((current) =>
+      current.filter((entry) => entry.id !== id),
+    );
+  };
+
+  const applyAdditionalParameters = (): void => {
+    const instance = options.selectedInstance;
+    if (!instance) return;
+    const plan = planAdditionalParameterPatch(
+      instance,
+      additionalParameterDraft,
+    );
+    if (plan.kind === "invalid") {
+      options.setStatus(plan.message);
+      return;
+    }
+    if (plan.kind === "unchanged") return;
+    if (!options.transact([plan.edit]).ok) return;
+    const baseline = additionalParameterDraft
+      .filter((entry) => entry.name.trim() && entry.value.trim())
+      .map((entry) => ({
+        ...entry,
+        originalName: entry.name.trim(),
+        name: entry.name.trim(),
+        value: entry.value.trim(),
+      }));
+    additionalParameterBaselineRef.current = baseline;
+    setAdditionalParameterDraft(baseline);
+    options.setStatus(`Updated additional parameters for ${instance.id}`);
+  };
+
+  const cancelAdditionalParameters = (): void => {
+    setAdditionalParameterDraft(additionalParameterBaselineRef.current);
+  };
+
   const applyNetLabel = (): void => {
     const route = options.selectedRoute;
     if (!route) return;
@@ -202,7 +319,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       return;
     }
     const edits = options.netLabelEditsForRoute(route, netLabelDraft);
-    if (!edits || !options.transact(edits).ok) return;
+    if (!edits || !transactNamedNet(edits)) return;
     netLabelDraftRouteRef.current = null;
     if (!name) {
       options.replaceSelectionKind("annotation", []);
@@ -232,7 +349,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       : "";
     if (nextName === currentName || (!nextName && !existing)) return;
     const edits = options.netLabelEditsForRoute(route, draft);
-    if (!edits || !options.transact(edits).ok) return;
+    if (!edits || !transactNamedNet(edits)) return;
     options.setStatus(
       nextName ? `Saved Net Label ${nextName}` : "Removed Net Label",
     );
@@ -249,9 +366,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       return;
     }
     if (
-      options.transact([
+      transactNamedNet([
         { kind: "remove_schematic_annotation", annotationId: label.id },
-      ]).ok
+      ])
     ) {
       options.replaceSelectionKind("annotation", []);
       setNetLabelDraft("");
@@ -328,15 +445,29 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       instancePropertyDraft.instanceId === instance.id
         ? options
             .instancePropertyEdits(instancePropertyDraft)
-            .edits.filter((edit) => edit.kind === "set_instance_netlist")
+            .edits.filter(
+              (edit) =>
+                edit.kind === "set_instance_netlist" ||
+                edit.kind === "patch_instance_netlist_parameters",
+            )
         : [];
     const projected = structuredClone(options.document);
     for (const edit of propertyEdits) {
-      if (edit.kind !== "set_instance_netlist") continue;
       const target = projected.instances.find(
         (item) => item.id === edit.instanceId,
       );
-      if (target) target.netlist = structuredClone(edit.netlist);
+      if (!target) continue;
+      if (edit.kind === "set_instance_netlist") {
+        target.netlist = structuredClone(edit.netlist);
+      } else if (edit.kind === "patch_instance_netlist_parameters") {
+        if (!target.netlist) continue;
+        for (const [name, value] of Object.entries(edit.set ?? {})) {
+          target.netlist.parameters[name] = value;
+        }
+        for (const name of edit.unset ?? []) {
+          delete target.netlist.parameters[name];
+        }
+      }
     }
     const valueEdits = options.valueVisibilityEdits(
       projected,
@@ -456,7 +587,14 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   };
 
   return {
+    additionalParameterDraft,
+    additionalParameterDraftChanges: !sameAdditionalParameterDrafts(
+      additionalParameterDraft,
+      additionalParameterBaselineRef.current,
+    ),
+    addAdditionalParameter,
     applyNetLabel,
+    applyAdditionalParameters,
     beginAnnotationTextEditing,
     beginDraftingTextEditing,
     beginNetLabelEditing,
@@ -464,6 +602,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     commitNetLabelEditing,
     commitPendingNetLabelDraft,
     commitTextEditing,
+    cancelAdditionalParameters,
     clearTextEditing: () => setTextEditing(null),
     deleteSelectedRouteNetLabel,
     deleteTextEditing,
@@ -475,7 +614,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     ),
     netLabelDraft,
     netLabelEditorOpen,
+    removeAdditionalParameter,
     updateInstancePropertyDraft,
+    updateAdditionalParameter,
     updateNetLabelDraft,
     setNetLabelEditorOpen,
     setReferenceLabelsVisible,

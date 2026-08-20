@@ -119,7 +119,9 @@ function collectCandidates(
           value: reference.toLowerCase(),
         });
       }
-      for (const [key, rawValue] of Object.entries(instance.properties)) {
+      for (const [key, rawValue] of Object.entries(
+        instance.netlist?.parameters ?? {},
+      )) {
         candidates.push({
           locator,
           label: `${key}=${String(rawValue)}`,

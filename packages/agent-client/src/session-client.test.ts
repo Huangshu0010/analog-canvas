@@ -301,7 +301,7 @@ describe("agent session client", () => {
             after.document.instances = after.document.instances.map(
               (instance) =>
                 instance.id === "instance-2"
-                  ? { ...instance, properties: { moved: true } }
+                  ? { ...instance, parameters: { moved: "true" } }
                   : instance,
             );
             return snapshotResponse(request.requestId, after, 9);

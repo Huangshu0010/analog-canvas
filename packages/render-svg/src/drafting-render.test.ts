@@ -289,7 +289,6 @@ describe("instance value fraction rendering", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     });
     document.annotations.push({
       id: "instance-value-M1",

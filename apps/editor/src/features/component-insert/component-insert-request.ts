@@ -2,7 +2,7 @@ export interface SymbolInsertRequest {
   kind: "symbol";
   symbolId: string;
   symbolName: string;
-  properties: Record<string, string>;
+  parameters: Record<string, string>;
   initialRotation: 0 | 90 | 180 | 270;
   showReference: boolean;
   referenceText: string | null;
@@ -21,7 +21,7 @@ export interface CellInsertRequest {
   symbolName: string;
   childDocumentId: string;
   cellName: string;
-  properties: Record<string, string>;
+  parameters: Record<string, string>;
   initialRotation: 0 | 90 | 180 | 270;
   showReference: boolean;
   referenceText: string | null;

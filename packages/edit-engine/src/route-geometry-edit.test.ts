@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { moveRouteSegment } from "./route-geometry-edit.js";
+import {
+  insertRouteSegmentJog,
+  moveRouteSegment,
+  removeRouteSegmentJog,
+} from "./route-geometry-edit.js";
 import type { RouteEditPath } from "./route-geometry-edit.js";
 
 describe("direct route segment movement", () => {
@@ -24,6 +28,37 @@ describe("direct route segment movement", () => {
       ],
       segmentModes: ["manual", "manual", "manual"],
     });
+  });
+
+  it("adds and removes a selected explicit jog without changing connectivity", () => {
+    const polyline: RouteEditPath = {
+      points: [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+      ],
+      segmentModes: ["manual"],
+    };
+    const added = insertRouteSegmentJog(polyline, 0, 20);
+    expect(added).toEqual({
+      waypoints: [
+        { x: 0, y: 20 },
+        { x: 100, y: 20 },
+      ],
+      segmentModes: ["manual", "manual", "manual"],
+    });
+    expect(
+      removeRouteSegmentJog(
+        {
+          points: [
+            polyline.points[0]!,
+            ...added.waypoints,
+            polyline.points[1]!,
+          ],
+          segmentModes: added.segmentModes,
+        },
+        1,
+      ),
+    ).toEqual({ waypoints: [], segmentModes: ["manual"] });
   });
 
   it("moves only an interior segment and rejects protected neighbors", () => {

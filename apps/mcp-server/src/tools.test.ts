@@ -107,7 +107,7 @@ describe("mcp tool surface", () => {
     const { session, http } = await toolSession();
     await callTool("connect", { claimCode: "session-1.code" }, session);
     const after = testSnapshot();
-    after.document.instances[0]!.properties = { w: "4u", humanEdit: true };
+    after.document.instances[0]!.parameters = { w: "4u", l: "1u" };
     http.circuitHandler = async ({ request }) =>
       request.operation === "snapshot"
         ? snapshotResponse(request.requestId, after)
@@ -123,7 +123,7 @@ describe("mcp tool surface", () => {
       id: "instance-1",
       name: "M1",
       symbolId: "nmos",
-      properties: { humanEdit: true },
+      parameters: { w: "4u", l: "1u" },
     });
     const hits = parseText(
       await callTool("search", { query: "vout", limit: 5 }, session),

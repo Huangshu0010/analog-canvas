@@ -20,7 +20,11 @@ describe("built-in device/Symbol parity", () => {
       referencePrefix: "M",
       pinOrder: ["D", "G", "S", "B"],
       targetPolicy: "required-model",
-      requiredParameters: ["w", "l"],
+      parameters: [
+        { name: "w", required: true },
+        { name: "l", required: true },
+        { name: "m", required: false },
+      ],
     });
   });
 

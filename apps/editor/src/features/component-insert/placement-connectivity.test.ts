@@ -33,7 +33,6 @@ describe("component placement electrical contacts", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     const proposal = proposePlacementContact(document, resolver, vdd, []);
     expect(proposal).toEqual({ edits: [], matched: false, ambiguous: false });
@@ -53,7 +52,6 @@ describe("component placement electrical contacts", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     const document = createEmptyDocument("main", "Main");
     const proposal = proposedStandalonePowerConnection(document, ground);
@@ -109,7 +107,6 @@ describe("component placement electrical contacts", () => {
         netId: "net-global-0",
       },
       placement: null,
-      properties: {},
     });
     const ground = {
       id: "GND2",
@@ -119,7 +116,6 @@ describe("component placement electrical contacts", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     const proposal = proposedStandalonePowerConnection(document, ground);
 
@@ -158,7 +154,6 @@ describe("component placement electrical contacts", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     const document = createEmptyDocument("main", "Main");
     const proposal = proposedStandalonePowerConnection(document, vddPort);
@@ -219,7 +214,6 @@ describe("component placement electrical contacts", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
     const proposal = proposedStandalonePowerConnection(document, vddPort);
 
@@ -264,7 +258,6 @@ describe("component placement electrical contacts", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     };
 
     const proposal = proposedStandalonePowerConnection(document, vddPort);
@@ -297,7 +290,6 @@ describe("component placement electrical contacts", () => {
           rotation: 0 as const,
           mirror: "none" as const,
         },
-        properties: {},
       };
       const proposal = proposedStandalonePowerConnection(document, ground);
       const result = executeTransaction(
@@ -356,7 +348,6 @@ describe("component placement electrical contacts", () => {
           rotation: 0 as const,
           mirror: "none" as const,
         },
-        properties: {},
       };
       const proposal = proposedStandalonePowerConnection(document, vdd);
       const result = executeTransaction(

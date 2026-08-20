@@ -14,7 +14,6 @@ describe("annotation presentation", () => {
       id: "R1",
       symbolId: "resistor",
       placement: { position: { x: 100, y: 100 }, rotation: 0, mirror: "none" },
-      properties: {},
     });
     const annotation = {
       id: "instance-label-R1",

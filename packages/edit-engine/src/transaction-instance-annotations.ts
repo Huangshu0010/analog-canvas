@@ -1,4 +1,8 @@
-import { inverseTransformPoint, transformPoint } from "@icm/model";
+import {
+  inverseTransformPoint,
+  semanticTextDocument,
+  transformPoint,
+} from "@icm/model";
 import type {
   Annotation,
   Orientation,
@@ -82,6 +86,47 @@ export function refreshInstanceValueAnnotation(
     } else {
       annotation.visible = false;
     }
+    changedObjectIds.add(annotation.id);
+  }
+}
+
+/**
+ * Keep only the machine-managed reference label aligned with a renamed
+ * netlist reference. Hand-authored label content remains an intentional
+ * presentation override.
+ */
+export function refreshInstanceReferenceAnnotation(
+  draft: SchematicDocument,
+  before: SchematicDocument["instances"][number],
+  instanceId: string,
+  changedObjectIds: Set<string>,
+): void {
+  const previousReference = before.netlist?.reference;
+  const instance = draft.instances.find(
+    (candidate) => candidate.id === instanceId,
+  );
+  const nextReference = instance?.netlist?.reference;
+  if (
+    !previousReference ||
+    !nextReference ||
+    previousReference === nextReference
+  ) {
+    return;
+  }
+  const previousContent = semanticTextDocument(
+    previousReference,
+    "instance-label",
+  );
+  for (const annotation of draft.annotations) {
+    if (
+      annotation.kind !== "instance-label" ||
+      annotation.anchor.kind !== "object" ||
+      annotation.anchor.objectId !== instanceId ||
+      JSON.stringify(annotation.content) !== JSON.stringify(previousContent)
+    ) {
+      continue;
+    }
+    annotation.content = semanticTextDocument(nextReference, "instance-label");
     changedObjectIds.add(annotation.id);
   }
 }

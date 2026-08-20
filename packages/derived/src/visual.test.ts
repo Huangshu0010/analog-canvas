@@ -22,7 +22,6 @@ describe("visual quality diagnostics", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
       {
         id: "R2",
@@ -32,9 +31,8 @@ describe("visual quality diagnostics", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
-      { id: "R3", symbolId: "resistor", placement: null, properties: {} },
+      { id: "R3", symbolId: "resistor", placement: null },
     ];
     document.constraints.push({
       id: "align-r",
@@ -72,7 +70,6 @@ describe("visual quality diagnostics", () => {
       id: "X1",
       symbolId: "missing",
       placement: { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
-      properties: {},
     });
     const diagnostics = diagnoseVisualQuality(document, resolver);
     expect(hasBlockingVisualDiagnostics(diagnostics)).toBe(true);
@@ -104,7 +101,6 @@ describe("visual quality diagnostics", () => {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     }));
     expect(
       diagnoseVisualQuality(document, resolver).filter(
@@ -133,7 +129,6 @@ describe("visual quality diagnostics", () => {
           rotation: 0,
           mirror: "none",
         },
-        properties: {},
       },
       {
         id: "P2",
@@ -143,7 +138,6 @@ describe("visual quality diagnostics", () => {
           rotation: 180,
           mirror: "none",
         },
-        properties: {},
       },
     );
     document.nets.push({

@@ -40,7 +40,6 @@ describe("hierarchy navigation", () => {
       id,
       symbolId: "dual",
       placement: null,
-      properties: {},
       netlist: {
         reference: id,
         parameters: {},
@@ -70,17 +69,16 @@ describe("hierarchy navigation", () => {
         id: "P1",
         symbolId: "port",
         placement: null,
-        properties: {},
       },
       {
         id: "P2",
         symbolId: "port",
         placement: null,
-        properties: {},
       },
     );
     child.netlist = {
       name: "Child",
+      formalParameters: [],
       terminals: [
         {
           id: "cell-terminal-l",

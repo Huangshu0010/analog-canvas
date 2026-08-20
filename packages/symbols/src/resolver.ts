@@ -40,7 +40,8 @@ export class InMemorySymbolResolver implements SymbolResolver {
 }
 
 export function createProjectSymbolResolver(
-  project: Pick<CircuitProject, "documents" | "topDocumentId">,
+  project: Pick<CircuitProject, "documents" | "topDocumentId"> &
+    Partial<Pick<CircuitProject, "externalSubcircuitDefinitions">>,
   baseDefinitions: readonly SymbolDefinition[],
 ): InMemorySymbolResolver {
   return new InMemorySymbolResolver([
@@ -50,7 +51,8 @@ export function createProjectSymbolResolver(
 }
 
 export function findUnsupportedProjectSymbolIds(
-  project: Pick<CircuitProject, "documents" | "topDocumentId">,
+  project: Pick<CircuitProject, "documents" | "topDocumentId"> &
+    Partial<Pick<CircuitProject, "externalSubcircuitDefinitions">>,
   baseDefinitions: readonly SymbolDefinition[],
 ): string[] {
   const resolver = createProjectSymbolResolver(project, baseDefinitions);

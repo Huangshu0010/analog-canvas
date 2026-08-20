@@ -1,5 +1,27 @@
 # Maintenance Log
 
+## 2026-08-20 - S2 Component Properties workbench
+
+- Changed areas: typed Identity/target/source-evidence projections, editable
+  model target, atomic Additional Parameters Apply/Cancel table, and the
+  case-folded parameter patch contract.
+- Validation: `pnpm typecheck`; focused unit/UI contracts; focused Component
+  Properties Playwright workflow; `pnpm docs:check`;
+  `pnpm test:impact -- --base origin/main`; `git diff --check`.
+- Commit status: committed locally on
+  `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-19 - S1 descriptor-backed property protocol
+
+- Changed areas: descriptor-owned ordered parameter metadata; editor Insert,
+  Properties, and Value projection adapters; typed instance reference/binding
+  writers; export required-parameter derivation; shared Agent schema artifacts.
+- Validation: `pnpm typecheck`; focused unit contracts (10 files / 105 tests);
+  `pnpm agent-api:artifacts:check`; `pnpm docs:check`;
+  `pnpm test:impact -- --base origin/main`; `git diff --check`.
+- Commit status: committed locally as `c6fbe6f` on
+  `codex/phase1-schematic-foundation-plan`.
+
 ## 2026-08-18 - Deliver schematic hierarchy protocol v12
 
 - Changed areas: schema-12 Cell hierarchy authoring, editor navigation,
@@ -3391,4 +3413,179 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   timeouts; all GitHub Actions jobs passed in the prebuilt Linux environment
   (static 30s, unit 49s, release 1m 03s, browser shards 3m 16s and 3m 45s).
 - Commit status: PR #127 merged to `main` as `92e63ea`.
+- Commit status: merged to `main` through PR #126 as `0948d83`.
+
+## 2026-08-19 - Stage 1 schematic foundation roadmap
+
+- Changed areas: proposed Stage 1 authority boundary, instance netlist
+  properties, reference planning, bulk editing, Wire/Net closure, Cell and
+  external-subcircuit authoring, Preflight/DesignNetlistIR exit gate, roadmap
+  index, and target records.
+- Validation: documentation links, test-impact against `main`, diff check,
+  and final branch-status review passed.
+- Commit status: committed and pushed on
+  `codex/phase1-schematic-foundation-plan` as `04b0d80`.
+
+## 2026-08-19 - Stage 1 S1/S2 roadmap refinement
+
+- Changed areas: refined the Stage 1 authority/property protocol, removal path
+  for the electrical `Instance.properties` branch, Descriptor parameter
+  definitions, user-visible References, strict display projections, typed
+  field edits, and the descriptor-driven Component Properties work package.
+- Validation: documentation links, test-impact against `main`, diff check,
+  and final branch-status review passed.
+- Commit status: committed and pushed on
+  `codex/phase1-schematic-foundation-plan` as `931dda2`.
+
+## 2026-08-19 - Stage 1 S3-S5 protocol refinement
+
+- Changed areas: refined the Reference Policy/Index/Planner, definition-level
+  Project Instance Index and Batch Property Planner, and Connectivity Intent /
+  Proposal protocols, with existing GUI gestures and results recorded as the
+  migration compatibility boundary.
+- Validation: documentation links, test-impact against `main`, diff check,
+  and final branch-status review passed.
+- Commit status: committed and pushed on
+  `codex/phase1-schematic-foundation-plan` as `f173e5d`.
+
+## 2026-08-19 - Stage 1 S6 hierarchy netlist refinement
+
+- Changed areas: reframed S6 around hierarchy netlist completeness; separated
+  formal terminal order from visual Cell Symbol Layout; defined shared
+  internal/external interface and formal-parameter semantics, explicit
+  unresolved targets, caller-impact proposals, Property/Connectivity protocol
+  composition, and the IR/Preflight closure.
+- Validation: documentation links, test-impact against `main`, diff check, and
+  final branch-status review passed.
+- Commit status: committed and pushed on
+  `codex/phase1-schematic-foundation-plan` as `911577f`.
+
+## 2026-08-19 - Stage 1 architecture review corrections
+
+- Changed areas: added the GUI default-freeze gate; reconciled managed and
+  hand-edited instance annotations; corrected atomic transaction, revision,
+  bulk-limit, parameter-limit, analyzer, model, provenance, search, external
+  Symbol, hierarchy interface, IR, performance, and acceptance assumptions;
+  and reduced S5/S6 to focused planners and Stage 1-essential behavior.
+- Validation: documentation links, test-impact against `main`, and diff check
+  passed.
+- Commit status: committed and pushed on
+  `codex/phase1-schematic-foundation-plan` as `e344933`.
+
+## 2026-08-19 - Stage 1 accepted data and GUI contracts
+
+- Changed areas: separated removal of persisted electrical properties from
+  current Properties GUI compatibility; made canvas instance text
+  presentation-only with a derived canonical classifier; selected the minimal
+  non-emitting shape, bounded bulk edit, hierarchy binding/external-definition
+  shapes, and existing-extraction analyzer path; and added the S0 implementation
+  preparation gate.
+- Validation: documentation links, test-impact against `main`, and diff check
+  passed.
+- Commit status: committed on
+  `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-19 - S0 schema-14 netlist protocol decision
+
+- Changed areas: accepted ADR 0027, ADR/current-document indexes, and the
+  implementation decision record for one schema-14 netlist-authoring contract.
+- Validation: `pnpm docs:check`, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
+- Commit status: committed and pushed with force-with-lease on
+  `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-19 - Schema-14 model and protocol foundation
+
+- Changed areas: current-only typed Instance netlist/provenance model,
+  direct schema-13 migration, external subcircuit definitions, Cell formal
+  parameters, hierarchy consumer contracts, GUI transient parameter naming,
+  fixtures, generated Agent/MCP contracts, and current-version documentation.
+- Validation: full unit suite (146 files / 894 tests), typecheck, workspace
+  build, generated-contract refresh, docs links, test-impact against
+  `origin/main`, diff check, and schema-13 property audit passed.
+- Commit status: committed locally on
+  `codex/phase1-schematic-foundation-plan`; push/PR not requested.
+## 2026-08-20 - S3 shared Reference Policy and Index
+
+- Changed areas: centralized per-Cell reference allocation, validation, hierarchy X policy, clipboard/insertion authoring, typed rename planning, Properties Reference editing, canonical label refresh, and netlist extraction diagnostics/marker behavior.
+- Validation: typecheck; focused unit contracts (58 tests); focused Properties/hierarchy browser contracts (8 tests); test-impact against `origin/main`; docs links; and diff check passed.
+- Commit status: committed locally on `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-20 - S4 Project Instance Index and batch authoring
+
+- Changed areas: definition-level project instance index and caller context,
+  bounded atomic typed bulk netlist edit, batch property and Reference
+  renumber planners, explicit Instance Table UI, and editor regression tests.
+- Validation: TypeScript typecheck; 50 focused unit/component tests; Instance
+  Table and existing Properties Playwright paths; test-impact against
+  `origin/main`; docs links; and diff check passed.
+- Commit status: committed locally on `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-20 - S5 Connectivity Proposal and Wire/Net closure
+
+- Changed areas: added the revision-bound connectivity proposal contract and
+  migrated human Wire, named-Net, selection/move/delete, NoConnect,
+  component-contact, VDD rail, endpoint-disconnect, and copy producers while
+  retaining the typed low-level edit protocol; added reversible route jog
+  editing with browser coverage.
+- Validation: TypeScript typecheck; 66 focused unit/component tests; five
+  focused Playwright gesture contracts; test-impact against `origin/main`;
+  docs links; and diff check passed.
+- Commit status: committed as `50b6c28` on
+  `codex/phase1-schematic-foundation-plan`, then rebased onto `origin/main`.
+
+## 2026-08-20 - S6 Cell and Subcircuit Interface Authoring
+
+- Changed areas: one internal/external formal interface protocol, typed
+  formal-parameter/external-definition transactions and planners, generic
+  external symbols, deterministic external-master IR, and the separate Cell
+  Interface editor with terminal order controls.
+- Validation: formatting; typecheck; focused model/edit-engine/netlist/symbol
+  and editor tests; focused Cell Interface browser workflow; workspace build;
+  docs links; test-impact; and diff check passed.
+- Commit status: committed as `50b6c28` on
+  `codex/phase1-schematic-foundation-plan`, then rebased onto `origin/main`.
+
+## 2026-08-20 - S7 Design-netlist analysis and Preflight
+
+- Changed areas: the single public `analyzeDesignNetlist` API, locator-backed
+  diagnostics, lossless formal default IR, editor preflight UI/navigation, and
+  workspace dependency declarations.
+- Validation: formatting; typecheck; focused 109-test unit/component set;
+  focused preflight browser workflow; workspace build; docs links;
+  test-impact; and diff check passed.
+- Commit status: committed as `50b6c28` on
+  `codex/phase1-schematic-foundation-plan`, then rebased onto `origin/main`.
+
+## 2026-08-20 - Editor information architecture polish
+
+- Changed areas: merged Cell Interface into a master-detail Cell Manager,
+  moved Instance Table and Preflight into a first-level Netlist menu, regrouped
+  component Properties, and subordinated non-blocking live Issues.
+- Validation: typecheck; 37 focused unit/component tests; 14 focused browser
+  contracts; test-impact against `origin/main`; fresh-browser visual and
+  console inspection; and diff check passed.
+- Commit status: prepared on
+  `codex/phase1-schematic-foundation-plan` as one editor presentation target.
+
+## 2026-08-20 - Schema-14 performance baseline mainline gate
+
+- Changed areas: migrated the synthetic 500-resistor release fixture to the
+  current Instance netlist contract and aligned browser contracts with
+  schema-13-to-14 persistence, canonical internal-Cell bindings, and the
+  compact Properties authoring layout.
+- Validation: direct performance baseline; focused repaired browser test; and
+  full CI gate (155 unit files / 928 tests, production build, release
+  verification, and 158 E2E tests) passed.
+- Commit status: committed on
+  `codex/phase1-schematic-foundation-plan`.
 ```
+
+## 2026-08-20 - Linux MCP release checksum refresh
+
+- Changed areas: updated the canonical Linux MCP tarball SHA-256 pin from the
+  required PR Release contracts job after the schema-14 bundle changed.
+- Validation: distribution metadata check and local complete release
+  verification passed; the protected remote replacement gate is pending.
+- Commit status: prepared for commit on
+  `codex/phase1-schematic-foundation-plan`.

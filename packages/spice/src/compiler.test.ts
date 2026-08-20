@@ -192,9 +192,6 @@ Q2 collector base emitter QPREF
         .filter((instance) => !interfaceInstanceIds.has(instance.id))
         .map((instance) => instance.symbolId),
     ).toEqual(["nmos", "nmos", "pmos", "pmos", "nmos", "nmos"]);
-    expect(document.instances[0]!.properties).toEqual({
-      "symbol.mapping.registry": "sky130-nfet-four-terminal",
-    });
     expect(document.instances[0]!.importProvenance).toMatchObject({
       // SKY130 uses an external PDK model name: the compiler preserves it as
       // opaque IR and the reviewed registry supplies the successful mapping.
@@ -202,6 +199,13 @@ Q2 collector base emitter QPREF
       name: "sky130_fd_pr__nfet_01v8",
       status: "resolved",
       sourceTarget: "model:sky130_fd_pr__nfet_01v8",
+      symbolMappingRegistryId: "sky130-nfet-four-terminal",
+      terminalMapping: [
+        { sourcePosition: 0, pinName: "D" },
+        { sourcePosition: 1, pinName: "G" },
+        { sourcePosition: 2, pinName: "S" },
+        { sourcePosition: 3, pinName: "B" },
+      ],
     });
     expect(document.instances[0]!.netlist).toEqual({
       reference: "XM1",
@@ -211,12 +215,6 @@ Q2 collector base emitter QPREF
         name: "sky130_fd_pr__nfet_01v8",
       },
       parameters: { l: "1.0", w: "96", nf: "12" },
-      terminals: [
-        { sourcePosition: 0, pinName: "D" },
-        { sourcePosition: 1, pinName: "G" },
-        { sourcePosition: 2, pinName: "S" },
-        { sourcePosition: 3, pinName: "B" },
-      ],
     });
     expect(
       document.nets
@@ -251,17 +249,16 @@ Q2 collector base emitter QPREF
     )!;
     expect(instance).toMatchObject({
       symbolId: "nmos",
-      properties: {
-        "symbol.mapping.registry": "sky130-nfet-four-terminal",
-      },
-      netlist: expect.objectContaining({
-        terminals: [
+      importProvenance: expect.objectContaining({
+        symbolMappingRegistryId: "sky130-nfet-four-terminal",
+        terminalMapping: [
           { sourcePosition: 0, pinName: "D" },
           { sourcePosition: 1, pinName: "G" },
           { sourcePosition: 2, pinName: "S" },
           { sourcePosition: 3, pinName: "B" },
         ],
       }),
+      netlist: expect.objectContaining({}),
     });
     expect(
       imported.diagnostics.filter(

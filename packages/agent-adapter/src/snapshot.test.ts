@@ -77,7 +77,9 @@ describe("Agent Document Snapshot", () => {
         parameters: modelM1.netlist.parameters,
       });
       expect(m1.netlist?.binding).toEqual(modelM1.netlist.binding);
-      expect(m1.netlist?.terminals).toEqual(modelM1.netlist.terminals);
+      expect(m1.netlist?.terminalMapping).toEqual(
+        modelM1.importProvenance?.terminalMapping,
+      );
     }
 
     for (const instance of snapshot.document.instances) {
@@ -138,7 +140,6 @@ describe("Agent Document Snapshot", () => {
         netId: "net-global-0",
       },
       placement: null,
-      properties: {},
     });
     document.nets.push({
       id: "net-global-0",
@@ -168,7 +169,6 @@ describe("Agent Document Snapshot", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     });
     project.documents = [document];
     project.topDocumentId = document.id;

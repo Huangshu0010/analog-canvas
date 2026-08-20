@@ -27,7 +27,6 @@ function addInstance(id: string, symbolId: string, x: number) {
         rotation: 0 as const,
         mirror: "none" as const,
       },
-      properties: {},
     },
   };
 }
@@ -103,7 +102,6 @@ describe("semantic authoring", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
       netlist: {
         reference: "XM1",
         parameters: {},
@@ -112,7 +110,12 @@ describe("semantic authoring", () => {
           deviceClass: "mos",
           name: "sky130_fd_pr__nfet_01v8",
         },
-        terminals: [
+      },
+      importProvenance: {
+        kind: "model",
+        name: "sky130_fd_pr__nfet_01v8",
+        sourceTarget: "model:sky130_fd_pr__nfet_01v8",
+        terminalMapping: [
           { sourcePosition: 0, pinName: "P1" },
           { sourcePosition: 1, pinName: "P2" },
           { sourcePosition: 2, pinName: "P3" },
@@ -186,7 +189,6 @@ describe("semantic authoring", () => {
           {
             id: "XM1",
             symbolId: "nmos",
-            properties: {},
             netlist: {
               reference: "XM1",
               parameters: {},
@@ -195,7 +197,9 @@ describe("semantic authoring", () => {
                 deviceClass: "mos",
                 name: "sky130_fd_pr__nfet_01v8",
               },
-              terminals: [
+            },
+            importProvenance: {
+              terminalMapping: [
                 { sourcePosition: 0, pinName: "D" },
                 { sourcePosition: 1, pinName: "G" },
                 { sourcePosition: 2, pinName: "S" },
@@ -233,7 +237,6 @@ describe("semantic authoring", () => {
       id: "X1",
       symbolId: "generic-block-4",
       placement: null,
-      properties: {},
     });
     document.nets.push({
       id: "net-a",
@@ -310,8 +313,8 @@ describe("semantic authoring", () => {
   it("retargets formal cell-interface Nets when merging", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push(
-      { id: "P1", symbolId: "port", placement: null, properties: {} },
-      { id: "P2", symbolId: "port", placement: null, properties: {} },
+      { id: "P1", symbolId: "port", placement: null },
+      { id: "P2", symbolId: "port", placement: null },
     );
     document.nets.push(
       {

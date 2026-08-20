@@ -14,6 +14,7 @@ import {
   netContractIssueKey,
   validateNetContract,
 } from "@icm/model";
+import { createReferenceIndex, referenceIssuesForInstance } from "@icm/devices";
 import type {
   Annotation,
   Point,
@@ -54,6 +55,7 @@ import {
 } from "./transaction-route-follow.js";
 import {
   followAttachedAnnotations,
+  refreshInstanceReferenceAnnotation,
   refreshInstanceValueAnnotation,
   translateObjectAnchoredAnnotation,
 } from "./transaction-instance-annotations.js";
@@ -90,6 +92,27 @@ import {
 
 export * from "./edit-schema.js";
 export * from "./transaction-result.js";
+
+function referencePolicyFailure(
+  draft: SchematicDocument,
+  instanceId: string,
+): string | null {
+  const issue = referenceIssuesForInstance(
+    createReferenceIndex(draft),
+    instanceId,
+  )[0];
+  if (!issue) return null;
+  switch (issue.code) {
+    case "MISSING_REFERENCE":
+      return "This component requires a netlist reference";
+    case "UNEXPECTED_REFERENCE":
+      return "This symbol does not emit a netlist reference";
+    case "WRONG_REFERENCE_PREFIX":
+      return `Reference ${issue.reference} does not match this component prefix`;
+    case "DUPLICATE_REFERENCE":
+      return `Reference ${issue.reference} is already used by ${issue.otherInstanceId}`;
+  }
+}
 
 /**
  * Ensure the ADR 0010 drafting layer exists on a draft Document. It is
@@ -435,7 +458,8 @@ export function executeTransaction(
             currentPins.add(noConnect.endpoint.pinName);
           }
         }
-        for (const terminal of instance.netlist?.terminals ?? []) {
+        for (const terminal of instance.importProvenance?.terminalMapping ??
+          []) {
           currentPins.add(terminal.pinName);
         }
         const pinMap = edit.pinMap ?? {};
@@ -493,13 +517,12 @@ export function executeTransaction(
             pinMap[noConnect.endpoint.pinName] ?? noConnect.endpoint.pinName;
           changedObjectIds.add(noConnect.id);
         }
-        if (instance.netlist?.terminals) {
-          instance.netlist.terminals = instance.netlist.terminals.map(
-            (terminal) => ({
+        if (instance.importProvenance?.terminalMapping) {
+          instance.importProvenance.terminalMapping =
+            instance.importProvenance.terminalMapping.map((terminal) => ({
               ...terminal,
               pinName: pinMap[terminal.pinName] ?? terminal.pinName,
-            }),
-          );
+            }));
         }
         instance.symbolId = edit.symbolId;
         if (symbolVariantId === undefined) delete instance.symbolVariantId;
@@ -690,7 +713,7 @@ export function executeTransaction(
         changedObjectIds.add(edit.instanceId);
         break;
       }
-      case "patch_instance_properties": {
+      case "patch_instance_netlist_parameters": {
         const instance = draft.instances.find(
           (candidate) => candidate.id === edit.instanceId,
         );
@@ -707,7 +730,7 @@ export function executeTransaction(
         if (Object.keys(set).length === 0 && unset.length === 0) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            "Property patch must set or unset at least one property",
+            "Netlist parameter patch must set or unset at least one parameter",
             [],
             [edit.instanceId],
           );
@@ -716,7 +739,7 @@ export function executeTransaction(
         if (duplicateUnset.size !== unset.length) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            "Property patch cannot unset the same property more than once",
+            "Netlist parameter patch cannot unset the same parameter more than once",
             [],
             [edit.instanceId],
           );
@@ -727,34 +750,60 @@ export function executeTransaction(
         if (conflictingKey) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            `Property patch cannot set and unset ${conflictingKey}`,
+            `Netlist parameter patch cannot set and unset ${conflictingKey}`,
             [],
             [edit.instanceId],
           );
         }
-        let changed = false;
         const before: SchematicDocument["instances"][number] =
           structuredClone(instance);
-        for (const [key, value] of Object.entries(set)) {
-          if (instance.properties[key] !== value) {
-            instance.properties[key] = value;
-            changed = true;
-          }
+        const netlist = instance.netlist;
+        if (!netlist) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Netlist parameter patch requires an instance netlist record",
+            [],
+            [edit.instanceId],
+          );
         }
+        const nextParameters = { ...netlist.parameters };
+        // Delete first so a case-only rename (for example `w` to `W`) is one
+        // valid atomic field change instead of a transient duplicate.
         for (const key of unset) {
-          if (key in instance.properties) {
-            delete instance.properties[key];
-            changed = true;
-          }
+          delete nextParameters[key];
         }
+        for (const [key, value] of Object.entries(set)) {
+          nextParameters[key] = value;
+        }
+        const namesByFoldedName = new Map<string, string>();
+        for (const name of Object.keys(nextParameters)) {
+          const foldedName = name.toLowerCase();
+          const prior = namesByFoldedName.get(foldedName);
+          if (prior && prior !== name) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Netlist parameter ${name} duplicates ${prior} under case folding`,
+              [],
+              [edit.instanceId],
+            );
+          }
+          namesByFoldedName.set(foldedName, name);
+        }
+        const changed =
+          Object.keys(nextParameters).length !==
+            Object.keys(netlist.parameters).length ||
+          Object.entries(nextParameters).some(
+            ([key, value]) => netlist.parameters[key] !== value,
+          );
         if (!changed) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            "Property patch does not change the instance",
+            "Netlist parameter patch does not change the instance",
             [],
             [edit.instanceId],
           );
         }
+        netlist.parameters = nextParameters;
         refreshInstanceValueAnnotation(
           draft,
           before,
@@ -762,6 +811,74 @@ export function executeTransaction(
           changedObjectIds,
         );
         changedObjectIds.add(edit.instanceId);
+        break;
+      }
+      case "set_instance_reference": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance?.netlist) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Reference edit requires an instance netlist record",
+            [],
+            [edit.instanceId],
+          );
+        }
+        if (instance.netlist.reference === edit.reference) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Reference edit does not change the instance",
+            [],
+            [edit.instanceId],
+          );
+        }
+        const before: SchematicDocument["instances"][number] =
+          structuredClone(instance);
+        instance.netlist.reference = edit.reference;
+        const failure = referencePolicyFailure(draft, instance.id);
+        if (failure) {
+          return rejectAt("EDIT_PRECONDITION", failure, [], [instance.id]);
+        }
+        refreshInstanceReferenceAnnotation(
+          draft,
+          before,
+          edit.instanceId,
+          changedObjectIds,
+        );
+        changedObjectIds.add(edit.instanceId);
+        break;
+      }
+      case "set_instance_binding": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance?.netlist) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Binding edit requires an instance netlist record",
+            [],
+            [edit.instanceId],
+          );
+        }
+        const current = instance.netlist.binding ?? null;
+        if (JSON.stringify(current) === JSON.stringify(edit.binding)) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Binding edit does not change the instance",
+            [],
+            [edit.instanceId],
+          );
+        }
+        if (edit.binding)
+          instance.netlist.binding = structuredClone(edit.binding);
+        else delete instance.netlist.binding;
+        const failure = referencePolicyFailure(draft, instance.id);
+        if (failure) {
+          return rejectAt("EDIT_PRECONDITION", failure, [], [instance.id]);
+        }
+        changedObjectIds.add(edit.instanceId);
+        connectivityChanged = true;
         break;
       }
       case "set_instance_netlist": {
@@ -790,6 +907,10 @@ export function executeTransaction(
         const before: SchematicDocument["instances"][number] =
           structuredClone(instance);
         instance.netlist = structuredClone(edit.netlist);
+        const failure = referencePolicyFailure(draft, instance.id);
+        if (failure) {
+          return rejectAt("EDIT_PRECONDITION", failure, [], [instance.id]);
+        }
         refreshInstanceValueAnnotation(
           draft,
           before,
@@ -798,6 +919,141 @@ export function executeTransaction(
         );
         changedObjectIds.add(edit.instanceId);
         connectivityChanged = true;
+        break;
+      }
+      case "bulk_patch_instance_netlist": {
+        const assignedIds = new Set<string>();
+        for (const assignment of edit.assignments) {
+          if (assignedIds.has(assignment.instanceId)) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Bulk netlist patch repeats instance ${assignment.instanceId}`,
+              [],
+              [assignment.instanceId],
+            );
+          }
+          assignedIds.add(assignment.instanceId);
+          const instance = draft.instances.find(
+            (candidate) => candidate.id === assignment.instanceId,
+          );
+          if (!instance?.netlist) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Bulk netlist patch requires a netlist record: ${assignment.instanceId}`,
+              [],
+              [assignment.instanceId],
+            );
+          }
+          const before: SchematicDocument["instances"][number] =
+            structuredClone(instance);
+          let changed = false;
+          let parametersChanged = false;
+          if (
+            assignment.reference !== undefined &&
+            instance.netlist.reference !== assignment.reference
+          ) {
+            instance.netlist.reference = assignment.reference;
+            changed = true;
+          }
+          if (assignment.binding !== undefined) {
+            const current = instance.netlist.binding ?? null;
+            if (
+              JSON.stringify(current) !== JSON.stringify(assignment.binding)
+            ) {
+              if (assignment.binding) {
+                instance.netlist.binding = structuredClone(assignment.binding);
+              } else {
+                delete instance.netlist.binding;
+              }
+              changed = true;
+              connectivityChanged = true;
+            }
+          }
+          const set = assignment.set ?? {};
+          const unset = assignment.unset ?? [];
+          const unsetNames = new Set(unset.map((name) => name.toLowerCase()));
+          if (unsetNames.size !== unset.length) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Bulk netlist patch repeats an unset parameter on ${instance.id}`,
+              [],
+              [instance.id],
+            );
+          }
+          const conflictingKey = Object.keys(set).find((key) =>
+            unsetNames.has(key.toLowerCase()),
+          );
+          if (conflictingKey) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Bulk netlist patch cannot set and unset ${conflictingKey}`,
+              [],
+              [instance.id],
+            );
+          }
+          if (Object.keys(set).length > 0 || unset.length > 0) {
+            const nextParameters = { ...instance.netlist.parameters };
+            for (const key of unset) delete nextParameters[key];
+            for (const [key, value] of Object.entries(set)) {
+              nextParameters[key] = value;
+            }
+            const namesByFoldedName = new Map<string, string>();
+            for (const name of Object.keys(nextParameters)) {
+              const folded = name.toLowerCase();
+              const prior = namesByFoldedName.get(folded);
+              if (prior && prior !== name) {
+                return rejectAt(
+                  "EDIT_PRECONDITION",
+                  `Netlist parameter ${name} duplicates ${prior} under case folding`,
+                  [],
+                  [instance.id],
+                );
+              }
+              namesByFoldedName.set(folded, name);
+            }
+            parametersChanged =
+              Object.keys(nextParameters).length !==
+                Object.keys(instance.netlist.parameters).length ||
+              Object.entries(nextParameters).some(
+                ([key, value]) => instance.netlist!.parameters[key] !== value,
+              );
+            if (parametersChanged) {
+              instance.netlist.parameters = nextParameters;
+              changed = true;
+            }
+          }
+          if (!changed) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Bulk netlist patch does not change ${instance.id}`,
+              [],
+              [instance.id],
+            );
+          }
+          if (assignment.reference !== undefined) {
+            refreshInstanceReferenceAnnotation(
+              draft,
+              before,
+              instance.id,
+              changedObjectIds,
+            );
+          }
+          if (parametersChanged) {
+            refreshInstanceValueAnnotation(
+              draft,
+              before,
+              instance.id,
+              changedObjectIds,
+            );
+          }
+          changedObjectIds.add(instance.id);
+        }
+        for (const instanceId of assignedIds) {
+          const failure = referencePolicyFailure(draft, instanceId);
+          if (failure) {
+            return rejectAt("EDIT_PRECONDITION", failure, [], [instanceId]);
+          }
+        }
         break;
       }
       case "add_cell_terminal": {
@@ -907,6 +1163,28 @@ export function executeTransaction(
         );
         for (const id of edit.terminalIds) changedObjectIds.add(id);
         connectivityChanged = true;
+        break;
+      }
+      case "set_cell_formal_parameters": {
+        if (!draft.netlist) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Document has no formal Cell interface",
+          );
+        }
+        const seen = new Set<string>();
+        for (const parameter of edit.formalParameters) {
+          const folded = parameter.name.toLowerCase();
+          if (seen.has(folded)) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Cell formal parameter ${parameter.name} is duplicated under case folding`,
+            );
+          }
+          seen.add(folded);
+        }
+        draft.netlist.formalParameters = structuredClone(edit.formalParameters);
+        changedObjectIds.add(draft.id);
         break;
       }
       case "set_route_points": {

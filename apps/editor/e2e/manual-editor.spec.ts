@@ -19,6 +19,23 @@ test.beforeEach(async ({ page }) => {
   await emulateDownloadOnlyBrowser(page);
 });
 
+test("opens netlist preflight and navigates its canonical finding", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 360, y: 240 });
+  await clickCommand(page, "Netlist", "Run Preflight…");
+  const dialog = page.getByRole("dialog", { name: "Netlist Preflight" });
+  await expect(dialog).toContainText("blocking issue");
+  await dialog
+    .getByRole("button", { name: /MISSING_PIN_NET/u })
+    .first()
+    .click();
+  await expect(page.getByTestId("active-document-name")).toHaveText("Main");
+  await expect(page.getByTestId("status")).toContainText("Preflight:");
+  await expect(dialog).toBeVisible();
+});
+
 async function placeComponent(
   page: Page,
   symbolId: string,
@@ -653,6 +670,36 @@ test("deletes a wire without exposing Unroute", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Unroute (keep electrical connection)" }),
   ).toHaveCount(0);
+});
+
+test("adds and straightens an explicit jog on the selected wire segment", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "Draw", "Wire (W)");
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 300, y: 240 } });
+  await canvas.dblclick({ position: { x: 600, y: 240 } });
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await page.keyboard.press("Escape");
+
+  const routeHit = page.locator('[data-testid^="route-hit-"]').first();
+  const routeTestId = await routeHit.getAttribute("data-testid");
+  if (!routeTestId) throw new Error("Drawn route has no hit target");
+  const routeId = routeTestId.slice("route-hit-".length);
+  await clickRoute(page, routeId);
+  const before = await readRoutePoints(page, routeId);
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Add wire jog" }).click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Added orthogonal wire jog",
+  );
+  expect((await readRoutePoints(page, routeId)).length).toBe(before.length + 2);
+  await page.getByRole("button", { name: "Straighten selected jog" }).click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Straightened orthogonal wire jog",
+  );
+  expect(await readRoutePoints(page, routeId)).toEqual(before);
 });
 
 test("keeps Wire active for consecutive independent routes until Escape", async ({
@@ -1605,6 +1652,19 @@ test("Properties toggles reference label visibility for one or many components",
 
   await page.getByTestId("hit-R1").click();
   await openSelectionShelf(page);
+  const properties = page.getByRole("complementary", { name: "Properties" });
+  for (const sectionName of [
+    "Identity",
+    "Netlist target",
+    "Parameters",
+    "Display",
+    "Advanced parameters",
+    "Placement",
+  ]) {
+    await expect(
+      properties.getByText(sectionName, { exact: true }),
+    ).toBeVisible();
+  }
   const singleToggle = page.getByRole("checkbox", {
     name: "Reference",
     exact: true,
@@ -2410,7 +2470,6 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     },
     {
       id: "R1",
@@ -2420,7 +2479,6 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     },
     {
       id: "GND1",
@@ -2430,7 +2488,6 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     },
   );
   document.nets.push({
@@ -2537,7 +2594,7 @@ test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({
   expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
 });
 
-test("does not expose netlist export or authoring semantics", async ({
+test("keeps netlist export unavailable while exposing instance authoring", async ({
   page,
 }) => {
   await page.goto("/");
@@ -2556,8 +2613,8 @@ test("does not expose netlist export or authoring semantics", async ({
   const properties = page.getByRole("complementary", { name: "Properties" });
   await expect(properties.getByLabel("Cell netlist name")).toHaveCount(0);
   await expect(properties.getByLabel("Cell netlist port order")).toHaveCount(0);
-  await expect(properties.getByLabel("Component reference")).toHaveCount(0);
-  await expect(properties.getByLabel("Component model")).toHaveCount(0);
+  await expect(properties.getByLabel("Component reference")).toBeVisible();
+  await expect(properties.getByLabel("Component model target")).toBeVisible();
   await expect(properties.getByText(/^Model:/u)).toHaveCount(0);
 });
 
@@ -3054,6 +3111,10 @@ test("surfaces and locates current-document ERC diagnostics", async ({
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 380, y: 260 });
   await openSelectionShelf(page);
+  await page
+    .getByRole("region", { name: "Project diagnostics" })
+    .locator("summary")
+    .click();
 
   await expect(page.getByTestId("project-diagnostics")).toContainText(
     "ERC_UNCONNECTED_PIN",
@@ -3080,6 +3141,10 @@ test("removes resolved live diagnostics and restores them through undo", async (
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 380, y: 260 });
   await openSelectionShelf(page);
+  await page
+    .getByRole("region", { name: "Project diagnostics" })
+    .locator("summary")
+    .click();
   const diagnostics = page.getByTestId("project-diagnostics");
   await expect(diagnostics).toContainText("ERC_UNCONNECTED_PIN");
 
@@ -3104,6 +3169,10 @@ test("filters and navigates locator-backed visual diagnostics", async ({
   await placeComponent(page, "resistor", { x: 420, y: 300 });
   await placeComponent(page, "resistor", { x: 420, y: 300 });
   await openSelectionShelf(page);
+  await page
+    .getByRole("region", { name: "Project diagnostics" })
+    .locator("summary")
+    .click();
 
   await page.getByTestId("diagnostic-observations-toggle").click();
   const diagnostics = page.getByTestId("project-diagnostics");

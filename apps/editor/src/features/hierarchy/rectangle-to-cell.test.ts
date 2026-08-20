@@ -63,7 +63,6 @@ describe("rectangle to hierarchical Cell conversion", () => {
           reference: "X1",
           binding: {
             kind: "subcircuit",
-            name: "Cell1",
             childDocumentId: "document-cell-1",
           },
         }),
@@ -85,7 +84,6 @@ describe("rectangle to hierarchical Cell conversion", () => {
       id: "X1",
       symbolId: "resistor",
       placement: null,
-      properties: {},
       netlist: { reference: "X1", parameters: {} },
     });
     source.documents[0]!.drafting!.objects.push(rectangle());

@@ -697,7 +697,6 @@ test("E converts a rectangle into a navigable hierarchical Cell", async ({
     netlist: {
       binding: {
         kind: "subcircuit",
-        name: "Cell1",
         childDocumentId: "document-cell-1",
       },
     },

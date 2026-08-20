@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.11`
+Version: `1.12`
 
 Owning phase: `Phase 0/1/8`
 
@@ -56,9 +56,12 @@ for readability; these groups do not create separate mutation endpoints:
 - control/history: `noop`, `clear_document`, `undo`, `redo`;
 - Instance: `add_instance`, `remove_instance`, `set_instance_symbol`,
   `place_instance`, `move_instance`, `rotate_instance`, `mirror_instance`,
-  `patch_instance_properties`, `set_instance_netlist`;
+  `set_instance_reference`, `set_instance_binding`,
+  `patch_instance_netlist_parameters`, `bulk_patch_instance_netlist`,
+  `set_instance_netlist`;
 - Cell interface: `add_cell_terminal`, `update_cell_terminal`,
-  `remove_cell_terminal`, `reorder_cell_terminals`;
+  `remove_cell_terminal`, `reorder_cell_terminals`,
+  `set_cell_formal_parameters`;
 - Route/Junction/connectivity: `set_route_points`, `route_orthogonal`,
   `add_junction`, `attach_endpoint_to_route`, `remove_junction`,
   `move_junction`, `make_flightline`, `cut_connection`, `connect_endpoints`,
@@ -82,6 +85,17 @@ add/remove Document operations under one Project `structureRevision`. Agent
 capability `wire`
 advertises the mutually exclusive high-level `wireIntent` transaction form; it
 is not another `SchematicEdit` member.
+
+`set_instance_reference`, `set_instance_binding`, and
+`patch_instance_netlist_parameters` are the ordinary field writers for an
+existing netlist record. `bulk_patch_instance_netlist` is their bounded,
+atomic multi-instance form. `set_instance_netlist` remains the whole-record
+operation for object initialization, import, and bounded migrations; product
+editing must not rebuild unrelated netlist facts through it.
+Parameter patches construct one final record before commit: an unset followed
+by a set permits a case-only rename, while a final case-folded duplicate is
+rejected atomically. This is the shared contract for descriptor fields and the
+Additional Parameters table.
 
 `upsert_schematic_annotation` / `remove_schematic_annotation` replace the
 narrowed SchematicAnnotation set (`instance-label | instance-value |

@@ -2,6 +2,9 @@
 
 Status: `accepted`
 
+Current-version note: ADR 0027 supersedes this ADR's schema-version and active
+migration statements. Readers now operate on the sole **schema-14 in-memory Project shape**.
+
 Date: `2026-08-18`
 
 Owners: `packages/model`, `packages/project-protocol`, `packages/symbols`,

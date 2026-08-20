@@ -1,5 +1,6 @@
 import {
   CircuitProjectSchema,
+  ExternalSubcircuitDefinitionSchema,
   SchematicDocumentSchema,
   type CircuitProject,
   type SchematicDocument,
@@ -7,6 +8,7 @@ import {
 import {
   builtInSymbols,
   createProjectSymbolResolver,
+  externalSubcircuitSymbolId,
   hierarchicalSymbolId,
 } from "@icm/symbols";
 import { z } from "zod";
@@ -32,6 +34,14 @@ export const ProjectStructureEditSchema = z.discriminatedUnion("kind", [
     kind: z.literal("rename_document"),
     documentId: z.string().min(1),
     name: z.string().min(1).max(128),
+  }),
+  z.strictObject({
+    kind: z.literal("upsert_external_subcircuit_definition"),
+    definition: ExternalSubcircuitDefinitionSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("remove_external_subcircuit_definition"),
+    definitionId: z.string().min(1),
   }),
   z.strictObject({
     kind: z.literal("transact_document"),
@@ -274,7 +284,6 @@ export function executeProjectTransaction(
           )
             continue;
           instance.symbolId = hierarchicalSymbolId(edit.name);
-          binding.name = edit.name;
           changed = true;
         }
         if (changed) {
@@ -282,6 +291,74 @@ export function executeProjectTransaction(
           changedDocumentIds.add(parent.id);
         }
       }
+      structuralChange = true;
+      continue;
+    }
+
+    if (edit.kind === "upsert_external_subcircuit_definition") {
+      const index = candidate.externalSubcircuitDefinitions.findIndex(
+        (definition) => definition.id === edit.definition.id,
+      );
+      if (index < 0) {
+        candidate.externalSubcircuitDefinitions.push(
+          structuredClone(edit.definition),
+        );
+      } else {
+        candidate.externalSubcircuitDefinitions[index] = structuredClone(
+          edit.definition,
+        );
+      }
+      for (const document of candidate.documents) {
+        let changed = false;
+        for (const instance of document.instances) {
+          const binding = instance.netlist?.binding;
+          if (
+            binding?.kind !== "external-subcircuit" ||
+            binding.definitionId !== edit.definition.id ||
+            instance.symbolId ===
+              externalSubcircuitSymbolId(edit.definition.name)
+          ) {
+            continue;
+          }
+          instance.symbolId = externalSubcircuitSymbolId(edit.definition.name);
+          changed = true;
+        }
+        if (changed) {
+          document.revision += 1;
+          changedDocumentIds.add(document.id);
+        }
+      }
+      structuralChange = true;
+      continue;
+    }
+
+    if (edit.kind === "remove_external_subcircuit_definition") {
+      const index = candidate.externalSubcircuitDefinitions.findIndex(
+        (definition) => definition.id === edit.definitionId,
+      );
+      if (index < 0) {
+        return rejectProjectTransaction(
+          project,
+          "OBJECT_NOT_FOUND",
+          `External subcircuit definition does not exist: ${edit.definitionId}`,
+        );
+      }
+      const caller = candidate.documents.flatMap((document) =>
+        document.instances.flatMap((instance) =>
+          instance.netlist?.binding?.kind === "external-subcircuit" &&
+          instance.netlist.binding.definitionId === edit.definitionId
+            ? [{ documentId: document.id, instanceId: instance.id }]
+            : [],
+        ),
+      )[0];
+      if (caller) {
+        return rejectProjectTransaction(
+          project,
+          "EDIT_PRECONDITION",
+          `External subcircuit ${edit.definitionId} is still referenced by ${caller.documentId}.${caller.instanceId}`,
+        );
+      }
+      candidate.externalSubcircuitDefinitions.splice(index, 1);
       structuralChange = true;
       continue;
     }

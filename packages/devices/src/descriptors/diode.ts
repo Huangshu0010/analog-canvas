@@ -7,7 +7,7 @@ export const diodeDevice = {
   referencePrefix: "D",
   pinOrder: ["A", "K"],
   targetPolicy: "required-model",
-  requiredParameters: [],
+  parameters: [],
   dialects: ["spice", "spectre"],
   capabilities: {
     supportsModel: true,

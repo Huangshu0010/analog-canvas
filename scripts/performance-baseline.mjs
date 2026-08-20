@@ -54,7 +54,11 @@ const generated = await measure(() => {
             rotation: index % 2 === 0 ? 0 : 90,
             mirror: "none",
           },
-          properties: { value: `${index + 1}k` },
+          netlist: {
+            reference: `R${index + 1}`,
+            binding: { kind: "primitive", deviceClass: "resistor" },
+            parameters: { value: `${index + 1}k` },
+          },
         })),
       },
     ],

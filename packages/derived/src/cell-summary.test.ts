@@ -22,13 +22,11 @@ describe("Cell summary", () => {
         id,
         symbolId: hierarchicalSymbolId("Stage"),
         placement: null,
-        properties: {},
         netlist: {
           reference: id,
           parameters: {},
           binding: {
             kind: "subcircuit",
-            name: "Stage",
             childDocumentId: child.id,
           },
         },

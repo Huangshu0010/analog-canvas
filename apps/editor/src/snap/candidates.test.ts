@@ -29,7 +29,6 @@ describe("snap candidate builder", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     });
 
     const targets = buildSceneSnapTargets(

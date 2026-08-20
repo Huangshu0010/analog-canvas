@@ -7,7 +7,7 @@ export const groundDevice = {
   referencePrefix: null,
   pinOrder: ["0"],
   targetPolicy: "none",
-  requiredParameters: [],
+  parameters: [],
   dialects: ["spice", "spectre"],
   capabilities: {
     supportsModel: false,

@@ -86,7 +86,6 @@ function instance(id: string, spiceName?: string) {
       rotation: 0 as const,
       mirror: "none" as const,
     },
-    properties: {},
     ...(spiceName ? { netlist: { reference: spiceName, parameters: {} } } : {}),
   };
 }
@@ -249,8 +248,8 @@ describe("ERC engine", () => {
     const project = emptyProject();
     const document = project.documents[0]!;
     document.instances = [
-      { id: "VDD1", symbolId: "vdd", placement: null, properties: {} },
-      { id: "GND1", symbolId: "ground", placement: null, properties: {} },
+      { id: "VDD1", symbolId: "vdd", placement: null },
+      { id: "GND1", symbolId: "ground", placement: null },
     ];
     document.nets = [
       {
@@ -350,19 +349,16 @@ describe("ERC engine", () => {
         id: "GND1",
         symbolId: "ground",
         placement: null,
-        properties: {},
       },
       {
         id: "GND2",
         symbolId: "ground",
         placement: null,
-        properties: {},
       },
       {
         id: "M1",
         symbolId: "nmos",
         placement: null,
-        properties: {},
       },
     ];
     project.documents[0]!.nets = [
@@ -441,8 +437,6 @@ describe("ERC engine", () => {
     document.instances = [
       {
         ...instance("I1"),
-        // Arbitrary properties alone must not create a model ERC.
-        properties: { "legacy.target": "model:legacy-text" },
         importProvenance: {
           kind: "model",
           name: "missing-model",
@@ -488,7 +482,12 @@ describe("ERC engine", () => {
         netlist: {
           reference: "I1",
           parameters: {},
-          terminals: [
+        },
+        importProvenance: {
+          kind: "opaque",
+          name: "fixture",
+          sourceTarget: "fixture:terminal-mapping",
+          terminalMapping: [
             { sourcePosition: 0, pinName: "L" },
             { sourcePosition: 1, pinName: "MISSING" },
             { sourcePosition: 2, pinName: "L" },
@@ -514,7 +513,7 @@ describe("ERC engine", () => {
       mappingDiagnostics.map((diagnostic) => diagnostic.parameters.position),
     ).toEqual([1, 2]);
 
-    document.instances[0] = { ...instance("I1"), properties: {} };
+    document.instances[0] = instance("I1");
     document.revision += 1;
     expect(codes(project)).not.toContain("ERC_ILLEGAL_PIN_NAME");
   });

@@ -144,6 +144,7 @@ export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
       edit.kind === "update_cell_terminal" ||
       edit.kind === "remove_cell_terminal" ||
       edit.kind === "reorder_cell_terminals" ||
+      edit.kind === "set_cell_formal_parameters" ||
       edit.kind === "set_cell_symbol_presentation"
     ) {
       context.addIssue({
@@ -369,16 +370,19 @@ const AgentNetlistFactsSchema = z.strictObject({
       z.strictObject({
         kind: z.literal("subcircuit"),
         childDocumentId: StableIdSchema,
-        name: z.string().min(1),
       }),
       z.strictObject({
         kind: z.literal("external-subcircuit"),
+        definitionId: StableIdSchema,
+      }),
+      z.strictObject({
+        kind: z.literal("unresolved-subcircuit"),
         name: z.string().min(1),
       }),
     ])
     .optional(),
   parameters: z.record(z.string(), z.string()),
-  terminals: z
+  terminalMapping: z
     .array(
       z.strictObject({
         sourcePosition: z.number().int().nonnegative(),
@@ -395,7 +399,6 @@ export const AgentSnapshotInstanceSchema = z.strictObject({
   symbolVariantId: StableIdSchema.nullable(),
   target: z.string().nullable(),
   model: z.string().nullable(),
-  properties: z.record(z.string(), SnapshotPrimitiveSchema),
   parameters: z.record(z.string(), SnapshotPrimitiveSchema),
   placement: PlacementSchema.nullable(),
   bounds: DerivedRectSchema.nullable(),

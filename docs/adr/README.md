@@ -51,6 +51,9 @@ schema-12 decision is
 [`0025-schematic-hierarchy-and-formal-ports.md`](0025-schematic-hierarchy-and-formal-ports.md).
 The schema-13 definition-level Cell symbol presentation decision is
 [`0026-definition-level-cell-symbol-presentation.md`](0026-definition-level-cell-symbol-presentation.md).
+The accepted Stage 1 schema-14 netlist-authoring contract, which preserves the
+current schematic GUI while unifying typed netlist facts, is
+[`0027-stage-1-netlist-authoring-protocol.md`](0027-stage-1-netlist-authoring-protocol.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

@@ -4,6 +4,7 @@ import type {
   CellSymbolPresentation,
   CellSymbolSide,
   CircuitProject,
+  ExternalSubcircuitDefinition,
   SchematicDocument,
 } from "@icm/model";
 import { hierarchicalSymbolId } from "@icm/symbols";
@@ -14,6 +15,58 @@ type DocumentEdits = Extract<
   ProjectStructureEdit,
   { kind: "transact_document" }
 >["edits"];
+
+export interface SubcircuitInterfaceProposal {
+  readonly source: {
+    readonly structureRevision: number;
+    readonly documentRevisions: Readonly<Record<string, number>>;
+  };
+  readonly target: {
+    readonly kind: "internal" | "external";
+    readonly id: string;
+  };
+  readonly callers: readonly {
+    documentId: string;
+    instanceId: string;
+  }[];
+  readonly diagnostics: readonly string[];
+  readonly edits: readonly ProjectStructureEdit[];
+}
+
+function interfaceProposal(
+  project: CircuitProject,
+  target: SubcircuitInterfaceProposal["target"],
+  edits: readonly ProjectStructureEdit[],
+  diagnostics: readonly string[] = [],
+): SubcircuitInterfaceProposal {
+  const callers = project.documents.flatMap((document) =>
+    document.instances.flatMap((instance) => {
+      const binding = instance.netlist?.binding;
+      const matches =
+        (target.kind === "internal" &&
+          binding?.kind === "subcircuit" &&
+          binding.childDocumentId === target.id) ||
+        (target.kind === "external" &&
+          binding?.kind === "external-subcircuit" &&
+          binding.definitionId === target.id);
+      return matches
+        ? [{ documentId: document.id, instanceId: instance.id }]
+        : [];
+    }),
+  );
+  return {
+    source: {
+      structureRevision: project.structureRevision,
+      documentRevisions: Object.fromEntries(
+        project.documents.map((document) => [document.id, document.revision]),
+      ),
+    },
+    target,
+    callers,
+    diagnostics,
+    edits,
+  };
+}
 
 function requireDocument(project: CircuitProject, documentId: string) {
   const document = project.documents.find((item) => item.id === documentId);
@@ -40,6 +93,7 @@ export function createHierarchyInstance(
   id: string,
   child: Pick<SchematicDocument, "id" | "netlist">,
   placement: NonNullable<SchematicDocument["instances"][number]["placement"]>,
+  reference = id,
 ): SchematicDocument["instances"][number] {
   if (!child.netlist) {
     throw new Error(`Cell has no formal interface: ${child.id}`);
@@ -48,18 +102,12 @@ export function createHierarchyInstance(
     id,
     symbolId: hierarchicalSymbolId(child.netlist.name),
     placement,
-    properties: {},
     netlist: {
-      reference: id,
+      reference,
       parameters: {},
-      terminals: child.netlist.terminals.map((terminal, sourcePosition) => ({
-        sourcePosition,
-        pinName: terminal.name,
-      })),
       binding: {
         kind: "subcircuit",
         childDocumentId: child.id,
-        name: child.netlist.name,
       },
     },
   };
@@ -224,6 +272,77 @@ export function planReorderCellTerminal(
   ];
 }
 
+export function proposeSetCellFormalParameters(
+  project: CircuitProject,
+  documentId: string,
+  formalParameters: NonNullable<
+    SchematicDocument["netlist"]
+  >["formalParameters"],
+): SubcircuitInterfaceProposal {
+  const document = requireDocument(project, documentId);
+  if (!document.netlist) {
+    throw new Error(`Cell has no formal interface: ${documentId}`);
+  }
+  return interfaceProposal(project, { kind: "internal", id: documentId }, [
+    transactDocument(project, documentId, [
+      { kind: "set_cell_formal_parameters", formalParameters },
+    ]),
+  ]);
+}
+
+export function proposeUpsertExternalSubcircuitDefinition(
+  project: CircuitProject,
+  definition: ExternalSubcircuitDefinition,
+): SubcircuitInterfaceProposal {
+  const allowedPins = new Set(
+    definition.terminals.map((terminal) => terminal.name.toLowerCase()),
+  );
+  const diagnostics = project.documents.flatMap((document) =>
+    document.instances.flatMap((instance) => {
+      const binding = instance.netlist?.binding;
+      if (
+        binding?.kind !== "external-subcircuit" ||
+        binding.definitionId !== definition.id
+      ) {
+        return [];
+      }
+      const pins = new Set<string>();
+      for (const net of document.nets) {
+        for (const terminal of net.terminals) {
+          if (terminal.instanceId === instance.id) pins.add(terminal.pinName);
+        }
+      }
+      for (const route of document.routes) {
+        for (const endpoint of [route.from, route.to]) {
+          if (
+            endpoint.kind === "terminal" &&
+            endpoint.instanceId === instance.id
+          ) {
+            pins.add(endpoint.pinName);
+          }
+        }
+      }
+      return [...pins]
+        .filter((pinName) => !allowedPins.has(pinName.toLowerCase()))
+        .map(
+          (pinName) =>
+            `${document.id}.${instance.id} references removed external terminal ${pinName}`,
+        );
+    }),
+  );
+  return interfaceProposal(
+    project,
+    { kind: "external", id: definition.id },
+    [
+      {
+        kind: "upsert_external_subcircuit_definition",
+        definition,
+      },
+    ],
+    diagnostics,
+  );
+}
+
 export function planSetCellTerminalPlacement(
   project: CircuitProject,
   documentId: string,
@@ -377,7 +496,7 @@ export function planRenameCellTerminal(
             noConnect.endpoint.instanceId === instance.id &&
             noConnect.endpoint.pinName === terminal.name,
         ) ||
-        (instance.netlist?.terminals ?? []).some(
+        (instance.importProvenance?.terminalMapping ?? []).some(
           (reference) => reference.pinName === terminal.name,
         );
       if (!referencesOldPin) continue;
@@ -559,26 +678,10 @@ export function planRemoveCellTerminals(
       const binding = instance.netlist?.binding;
       if (
         binding?.kind !== "subcircuit" ||
-        binding.childDocumentId !== documentId ||
-        !instance.netlist?.terminals?.some((reference) =>
-          terminalNames.has(reference.pinName),
-        )
+        binding.childDocumentId !== documentId
       ) {
         continue;
       }
-      callerEdits.push({
-        kind: "set_instance_netlist",
-        instanceId: instance.id,
-        netlist: {
-          ...structuredClone(instance.netlist),
-          terminals: instance.netlist.terminals
-            .filter((reference) => !terminalNames.has(reference.pinName))
-            .map((reference, sourcePosition) => ({
-              ...reference,
-              sourcePosition,
-            })),
-        },
-      });
     }
     if (callerEdits.length > 0) {
       structureEdits.push({

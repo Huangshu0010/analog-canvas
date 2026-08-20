@@ -6,6 +6,7 @@ import {
   effectiveComponentParameterValue,
   initialComponentParameterValues,
 } from "./component-parameters";
+import { deviceDescriptor } from "@icm/devices";
 
 describe("component parameter catalogue", () => {
   it("keeps R/L/C values as raw strings with their physical unit hints", () => {
@@ -34,17 +35,28 @@ describe("component parameter catalogue", () => {
     });
   });
 
+  it("projects the descriptor's ordered field metadata without local defaults", () => {
+    const descriptor = deviceDescriptor("voltage-source");
+    expect(componentParameters("voltage-source")).toEqual(
+      descriptor?.parameters.map((parameter) => ({
+        key: parameter.name,
+        label: parameter.label,
+        ...(parameter.unitHint ? { unit: parameter.unitHint } : {}),
+        placeholder: parameter.placeholder,
+        help: parameter.help,
+        inputMode: parameter.editor,
+      })),
+    );
+  });
+
   it("uses typed netlist parameters as the single component-value authority", () => {
     const parameter = componentParameters("nmos")[0]!;
     const instance: Instance = {
       id: "M1",
       symbolId: "nmos",
       placement: null,
-      properties: {},
       netlist: { reference: "M1", parameters: { w: "1u" } },
     };
-    expect(effectiveComponentParameterValue(instance, parameter)).toBe("1u");
-    instance.properties.w = "2u";
     expect(effectiveComponentParameterValue(instance, parameter)).toBe("1u");
     instance.netlist = { reference: "M1", parameters: { w: "3u" } };
     expect(effectiveComponentParameterValue(instance, parameter)).toBe("3u");

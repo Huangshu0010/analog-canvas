@@ -15,6 +15,59 @@ describe("CircuitProject schema", () => {
     expect(CircuitProjectJsonSchema).toMatchObject({ type: "object" });
   });
 
+  it("has no legacy Instance property authority and validates external definitions", () => {
+    const project = createEmptyProject("project-netlist", "Netlist");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: null,
+      netlist: {
+        reference: "R1",
+        binding: { kind: "primitive", deviceClass: "resistor" },
+        parameters: { value: "10k" },
+      },
+    });
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+    expect(
+      CircuitProjectSchema.safeParse({
+        ...project,
+        documents: [
+          {
+            ...document,
+            instances: [{ ...document.instances[0]!, properties: {} }],
+          },
+        ],
+      }).success,
+    ).toBe(false);
+
+    project.externalSubcircuitDefinitions.push({
+      id: "external-opamp",
+      name: "OPA",
+      terminals: [{ name: "IN" }, { name: "OUT" }],
+      formalParameters: [],
+    });
+    document.instances.push({
+      id: "X1",
+      symbolId: "generic-block-2",
+      placement: null,
+      netlist: {
+        reference: "X1",
+        binding: {
+          kind: "external-subcircuit",
+          definitionId: "external-opamp",
+        },
+        parameters: {},
+      },
+    });
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+    document.instances[1]!.netlist!.binding = {
+      kind: "external-subcircuit",
+      definitionId: "missing-definition",
+    };
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
+  });
+
   it("uses Razavi textbook presentation for a new Project", () => {
     const project = createEmptyProject("project-style", "Style");
 
@@ -65,13 +118,11 @@ describe("CircuitProject schema", () => {
       id: "X1",
       symbolId: "hierarchical-child",
       placement: null,
-      properties: {},
       netlist: {
         reference: "X1",
         parameters: {},
         binding: {
           kind: "subcircuit",
-          name: "Child",
           childDocumentId: child.id,
         },
       },
@@ -92,13 +143,11 @@ describe("CircuitProject schema", () => {
       id: "XBACK",
       symbolId: "hierarchical-main",
       placement: null,
-      properties: {},
       netlist: {
         reference: "XBACK",
         parameters: {},
         binding: {
           kind: "subcircuit",
-          name: "Main",
           childDocumentId: parent.id,
         },
       },
@@ -109,7 +158,6 @@ describe("CircuitProject schema", () => {
 
     child.instances[0]!.netlist!.binding = {
       kind: "subcircuit",
-      name: "Missing",
       childDocumentId: "document-missing",
     };
     expect(() => CircuitProjectSchema.parse(project)).toThrow(
@@ -124,7 +172,6 @@ describe("CircuitProject schema", () => {
       id: "P1",
       symbolId: "port",
       placement: { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
-      properties: {},
     });
     document.nets.push({
       id: "net-input",
@@ -218,7 +265,6 @@ describe("CircuitProject schema", () => {
       id: "R1",
       symbolId: "resistor",
       placement: null,
-      properties: {},
     });
     const value = {
       id: "instance-value-R1",
@@ -268,7 +314,6 @@ describe("CircuitProject schema", () => {
       id: "P1",
       symbolId: "port",
       placement: null,
-      properties: {},
     });
     document.nets.push({
       id: "net-input",

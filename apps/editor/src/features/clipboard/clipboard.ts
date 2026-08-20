@@ -1,4 +1,10 @@
 import { deriveInternalGroupSelection } from "@icm/derived";
+import {
+  createReferenceIndex,
+  nextReference,
+  referencePolicyForInstance,
+  referenceSuffixForPolicy,
+} from "@icm/devices";
 import type { SchematicEdit } from "@icm/edit-engine";
 import type {
   Annotation,
@@ -209,22 +215,6 @@ function uniqueCopyId(
   return candidate;
 }
 
-function uniqueCopyReference(
-  sourceReference: string,
-  occupied: Set<string>,
-): string {
-  const numbered = /^(.*?)(\d+)$/u.exec(sourceReference);
-  const base = numbered?.[1] || sourceReference;
-  let sequence = numbered ? Number(numbered[2]) + 1 : 1;
-  let candidate = numbered ? `${base}${sequence}` : `${base}_COPY${sequence}`;
-  while (occupied.has(candidate.toLowerCase())) {
-    sequence += 1;
-    candidate = numbered ? `${base}${sequence}` : `${base}_COPY${sequence}`;
-  }
-  occupied.add(candidate.toLowerCase());
-  return candidate;
-}
-
 /**
  * A pasted instance whose source id equals its source reference keeps the
  * designator convention: it adopts the freshly allocated reference (copy R1
@@ -329,23 +319,27 @@ export function proposePaste(
       ...document.constraints,
     ].map((object) => object.id),
   );
-  const occupiedReferences = new Set(
-    document.instances.flatMap((instance) =>
-      instance.netlist ? [instance.netlist.reference.toLowerCase()] : [],
-    ),
-  );
+  const referenceIndex = createReferenceIndex(document);
+  const reservedReferences = new Set<string>();
   const instanceReferences = new Map(
     clipboard.instances.flatMap((instance) =>
-      instance.netlist
-        ? [
-            [
-              instance.id,
-              uniqueCopyReference(
-                instance.netlist.reference,
-                occupiedReferences,
-              ),
-            ] as const,
-          ]
+      instance.netlist &&
+      referencePolicyForInstance(instance).kind === "required"
+        ? (() => {
+            const policy = referencePolicyForInstance(instance);
+            if (policy.kind === "none") return [];
+            const sourceSuffix = referenceSuffixForPolicy(
+              instance.netlist.reference,
+              policy,
+            );
+            const reference = nextReference(referenceIndex, policy, {
+              ...(sourceSuffix !== null ? { startAt: sourceSuffix + 1 } : {}),
+              reservedReferences,
+            });
+            if (!reference) return [];
+            reservedReferences.add(reference.toLowerCase());
+            return [[instance.id, reference] as const];
+          })()
         : [],
     ),
   );
@@ -405,7 +399,7 @@ export function proposePaste(
       instance: {
         ...structuredClone(instance),
         id: instanceIds.get(instance.id)!,
-        ...(instance.netlist
+        ...(instance.netlist && instanceReferences.has(instance.id)
           ? {
               netlist: {
                 ...structuredClone(instance.netlist),

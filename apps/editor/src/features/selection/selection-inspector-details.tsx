@@ -268,63 +268,73 @@ export function ProjectDiagnosticsSection({
       ),
     [availableDiagnostics, severityFilter],
   );
+  const hasBlockingIssue = availableDiagnostics.some(
+    (diagnostic) => diagnostic.severity === "error",
+  );
   return (
     <section
       aria-label="Project diagnostics"
       className="diagnostics erc-diagnostics"
     >
-      <h2>Issues ({availableDiagnostics.length})</h2>
-      {observationCount > 0 ? (
-        <button
-          type="button"
-          data-testid="diagnostic-observations-toggle"
-          aria-pressed={showObservations}
-          onClick={() => setShowObservations((current) => !current)}
-        >
-          {showObservations ? "Hide" : "Show"} non-blocking observations (
-          {observationCount})
-        </button>
-      ) : null}
-      <DiagnosticFilters
-        diagnostics={availableDiagnostics}
-        severityFilter={severityFilter}
-        onSeverityFilterChange={setSeverityFilter}
-      />
-      {availableDiagnostics.length === 0 ? (
-        <p data-testid="no-current-diagnostics">
-          No current actionable diagnostics
-        </p>
-      ) : visibleDiagnostics.length === 0 ? (
-        <p data-testid="no-matching-diagnostics">
-          No diagnostics match the current filters
-        </p>
-      ) : null}
-      <ul data-testid="project-diagnostics">
-        {visibleDiagnostics.map((diagnostic) => (
-          <li
-            key={diagnostic.id}
-            data-domain={diagnostic.domain}
-            data-document-id={diagnostic.primary.documentId}
-            data-severity={diagnostic.severity}
-            data-confidence={diagnostic.confidence}
-            data-presentation={diagnosticPresentationGroup(diagnostic)}
-          >
+      <details open={hasBlockingIssue || undefined}>
+        <summary>
+          <h2>Issues ({availableDiagnostics.length})</h2>
+          <span>{hasBlockingIssue ? "Action required" : "Review"}</span>
+        </summary>
+        <div className="diagnostics-body">
+          {observationCount > 0 ? (
             <button
               type="button"
-              data-testid={`project-diagnostic-${diagnostic.id}`}
-              onClick={() => onSelectDiagnostic(diagnostic)}
+              data-testid="diagnostic-observations-toggle"
+              aria-pressed={showObservations}
+              onClick={() => setShowObservations((current) => !current)}
             >
-              <strong>
-                {diagnostic.domain.toUpperCase()} / {diagnostic.code}
-              </strong>
-              : {diagnostic.message}
-              <small>
-                Cell: {documentLabel(diagnostic.primary.documentId)}
-              </small>
+              {showObservations ? "Hide" : "Show"} non-blocking observations (
+              {observationCount})
             </button>
-          </li>
-        ))}
-      </ul>
+          ) : null}
+          <DiagnosticFilters
+            diagnostics={availableDiagnostics}
+            severityFilter={severityFilter}
+            onSeverityFilterChange={setSeverityFilter}
+          />
+          {availableDiagnostics.length === 0 ? (
+            <p data-testid="no-current-diagnostics">
+              No current actionable diagnostics
+            </p>
+          ) : visibleDiagnostics.length === 0 ? (
+            <p data-testid="no-matching-diagnostics">
+              No diagnostics match the current filters
+            </p>
+          ) : null}
+          <ul data-testid="project-diagnostics">
+            {visibleDiagnostics.map((diagnostic) => (
+              <li
+                key={diagnostic.id}
+                data-domain={diagnostic.domain}
+                data-document-id={diagnostic.primary.documentId}
+                data-severity={diagnostic.severity}
+                data-confidence={diagnostic.confidence}
+                data-presentation={diagnosticPresentationGroup(diagnostic)}
+              >
+                <button
+                  type="button"
+                  data-testid={`project-diagnostic-${diagnostic.id}`}
+                  onClick={() => onSelectDiagnostic(diagnostic)}
+                >
+                  <strong>
+                    {diagnostic.domain.toUpperCase()} / {diagnostic.code}
+                  </strong>
+                  : {diagnostic.message}
+                  <small>
+                    Cell: {documentLabel(diagnostic.primary.documentId)}
+                  </small>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </details>
     </section>
   );
 }

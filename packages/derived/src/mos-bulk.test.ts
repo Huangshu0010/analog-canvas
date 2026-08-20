@@ -13,7 +13,6 @@ function mos(id: string, symbolId: "nmos" | "pmos") {
     symbolId,
     symbolVariantId: "textbook-3terminal",
     placement: null,
-    properties: {},
   };
 }
 
@@ -24,7 +23,6 @@ describe("MOS bulk resolution", () => {
       id: "Q1",
       symbolId: "npn",
       placement: null,
-      properties: {},
     });
 
     expect(

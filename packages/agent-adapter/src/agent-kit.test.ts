@@ -149,7 +149,6 @@ describe("Agent operating Kit", () => {
             rotation: 0,
             mirror: "none" as const,
           },
-          properties: {},
         },
       },
       {
@@ -162,7 +161,6 @@ describe("Agent operating Kit", () => {
             rotation: 0,
             mirror: "none" as const,
           },
-          properties: {},
         },
       },
       {
@@ -175,7 +173,6 @@ describe("Agent operating Kit", () => {
             rotation: 0,
             mirror: "none" as const,
           },
-          properties: {},
         },
       },
       ...["VIN", "VOUT"].map((id, index) => ({
@@ -188,7 +185,6 @@ describe("Agent operating Kit", () => {
             rotation: 0,
             mirror: "none" as const,
           },
-          properties: {},
         },
       })),
       {

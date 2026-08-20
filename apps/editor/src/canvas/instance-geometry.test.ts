@@ -36,7 +36,6 @@ describe("selection geometry", () => {
           rotation: 90,
           mirror: "none",
         },
-        properties: {},
       },
       resolved!,
     );

@@ -153,13 +153,17 @@ export function agentEditCategory(
     case "move_junction":
     case "align_instances":
       return "geometry";
-    case "patch_instance_properties":
+    case "patch_instance_netlist_parameters":
+    case "set_instance_reference":
       return "presentation";
     case "set_instance_netlist":
+    case "set_instance_binding":
+    case "bulk_patch_instance_netlist":
     case "add_cell_terminal":
     case "update_cell_terminal":
     case "remove_cell_terminal":
     case "reorder_cell_terminals":
+    case "set_cell_formal_parameters":
       return "connectivity";
     case "set_route_points":
     case "route_orthogonal":

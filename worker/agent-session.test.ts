@@ -864,7 +864,6 @@ describe("public Agent session routes", () => {
                   symbolId: "port",
                   symbolVariantId: "",
                   placement: null,
-                  properties: {},
                 },
               },
             ],
@@ -958,7 +957,7 @@ describe("public Agent session routes", () => {
             expectedRevision: 3,
             edits: [
               {
-                kind: "patch_instance_properties",
+                kind: "patch_instance_netlist_parameters",
                 instanceId: "M1",
                 set: { name: "changed" },
               },

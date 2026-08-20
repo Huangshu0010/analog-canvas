@@ -8,10 +8,13 @@ import type {
   AgentHostSemanticIntentRequest,
   AgentHostSemanticIntentResult,
 } from "@icm/agent-adapter";
+import { deviceDescriptor, referencePolicyForInstance } from "@icm/devices";
 
 import {
   buildManualWirePath,
+  createConnectivityProposal,
   createFreeWireAnchor,
+  gateConnectivityProposal,
   createRouteWireAnchor,
   proposeEndpointRouteAttachment,
   proposeGroupMoveEdits,
@@ -27,12 +30,17 @@ import {
   planRemoveCellTerminal,
   planRemoveCellTerminals,
   planRenameCellTerminal,
+  planReorderCellTerminal,
+  planSetInstanceReference,
   planSetCellSymbolPresentation,
   planSetCellTerminalPlacement,
   planUpdateCellTerminalDirection,
+  proposeSetCellFormalParameters,
+  proposeUpsertExternalSubcircuitDefinition,
   findCellTerminalCaller,
   type ProjectStructureEdit,
   type EditTransactionResult,
+  type ConnectivityIntent,
   type SchematicEdit,
   type WireSource,
 } from "@icm/edit-engine";
@@ -41,6 +49,8 @@ import {
   exportFormalArtifactsInBrowser,
   rasterizeFormalSvgInBrowser,
 } from "@icm/exporters/browser";
+import { analyzeDesignNetlist } from "@icm/netlist";
+import type { NetlistDiagnostic } from "@icm/netlist";
 import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
@@ -90,6 +100,7 @@ import type {
   Annotation,
   CircuitProject,
   DerivedPoint,
+  ExternalSubcircuitDefinition,
   DraftingObject,
   GridRect,
   Point,
@@ -167,6 +178,7 @@ import {
   RenderCrashProbe,
 } from "./editor-runtime-helpers";
 import {
+  bindingForEditedModel,
   initialInstanceNetlist,
   netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
@@ -179,6 +191,7 @@ import {
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
+import { NetlistPreflightDialog } from "../features/netlist-export/netlist-preflight-dialog";
 import {
   proposeConnectedInstanceDeletion,
   proposeVisualSelectionDeletion,
@@ -263,6 +276,7 @@ import type { BrowserRecoveryGeneration } from "../document/browser-recovery-con
 import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
+import { InstanceTableDialog } from "../features/properties/instance-table-dialog";
 import { useEditorPanels } from "../features/editor-shell/use-editor-panels";
 import {
   type InstanceMovePreview,
@@ -542,6 +556,8 @@ export function App({
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
+  const [netlistPreflightOpen, setNetlistPreflightOpen] = useState(false);
+  const [instanceTableOpen, setInstanceTableOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
     useState<AgentFileCandidateSummary | null>(null);
   const browserAgentFileHost = useMemo(
@@ -743,6 +759,10 @@ export function App({
     () => buildProjectConnectivityIndex(project, resolver),
     [project, resolver],
   );
+  const netlistAnalysis = useMemo(
+    () => analyzeDesignNetlist(project),
+    [project],
+  );
   const highlightedTrace = useMemo(
     () =>
       highlightedNetOrigin
@@ -794,6 +814,19 @@ export function App({
           candidate.id === referencedDocumentId(project, selectedInstance),
       )
     : undefined;
+  const selectedDevice = selectedInstance
+    ? deviceDescriptor(selectedInstance.symbolId)
+    : undefined;
+  const selectedReferencePolicy = selectedInstance
+    ? referencePolicyForInstance(selectedInstance)
+    : { kind: "none" as const };
+  const selectedBinding = selectedInstance?.netlist?.binding;
+  const selectedExternalSubcircuit =
+    selectedBinding?.kind === "external-subcircuit"
+      ? project.externalSubcircuitDefinitions.find(
+          (definition) => definition.id === selectedBinding.definitionId,
+        )
+      : undefined;
   const selectedCellSymbolLayout = useMemo(() => {
     if (
       !cellSymbolLayoutEnabled ||
@@ -872,6 +905,10 @@ export function App({
     selectedDrafting?.kind === "rectangle",
   );
   const {
+    addAdditionalParameter,
+    additionalParameterDraft,
+    additionalParameterDraftChanges,
+    applyAdditionalParameters,
     applyNetLabel,
     beginAnnotationTextEditing,
     beginDraftingTextEditing,
@@ -881,6 +918,7 @@ export function App({
     commitPendingNetLabelDraft,
     commitTextEditing,
     clearTextEditing,
+    cancelAdditionalParameters,
     deleteSelectedRouteNetLabel,
     deleteTextEditing,
     discardInstancePropertyDraft,
@@ -888,12 +926,14 @@ export function App({
     instancePropertyDraft,
     netLabelDraft,
     netLabelEditorOpen,
+    removeAdditionalParameter,
     setNetLabelEditorOpen,
     setReferenceLabelsVisible,
     setValueLabelsVisible,
     showSelectedInstanceValue,
     textEditing,
     updateInstancePropertyDraft,
+    updateAdditionalParameter,
     updateTextEditing,
     updateNetLabelDraft,
   } = usePropertiesEditor({
@@ -1223,6 +1263,7 @@ export function App({
     beginRouteStretch,
     drawSelectedMosBulk,
     deleteSelectedRouteConnection,
+    editSelectedRouteJog,
     fixWirePoint,
     finishWireAtPoint,
     handleFlightline,
@@ -1235,6 +1276,7 @@ export function App({
     resolver,
     selectedInstance,
     selectedRouteId,
+    selectedRouteSegmentIndex,
     visibleEndpoints,
     routeGeometryRecords,
     wireSource,
@@ -1304,6 +1346,7 @@ export function App({
     styleProfile,
     visibleEndpoints,
     transact,
+    transactConnectivity,
     transactProject: (transactionId, edits) =>
       commitStructure(transactionId, edits),
     selectOnly,
@@ -1609,6 +1652,25 @@ export function App({
     setStatus(`Opened Cell ${nextDocument.name}`);
   }
 
+  function openInstanceFromTable(documentId: string, instanceId: string): void {
+    const paths = findHierarchyPaths(
+      projectConnectivityIndex,
+      project.topDocumentId,
+      documentId,
+    );
+    // A reused definition remains a single table row. Navigation still needs
+    // one concrete caller context, so use the deterministic first valid path.
+    setDocumentStack(paths?.[0] ? [...paths[0]] : []);
+    switchDocument(documentId);
+    selectOnly("instance", [instanceId]);
+    setInstanceTableOpen(false);
+    setStatus(
+      paths && paths.length > 1
+        ? `Opened ${documentId}.${instanceId} via one of ${paths.length} caller paths`
+        : `Opened ${documentId}.${instanceId}`,
+    );
+  }
+
   function commitStructure(
     transactionId: string,
     edits: ProjectStructureEdit[],
@@ -1692,20 +1754,134 @@ export function App({
   function updateCellPortDirection(
     terminalId: string,
     direction: "input" | "output" | "inout" | "passive",
+    targetDocumentId = document.id,
   ): void {
-    if (!document.netlist) return;
+    const targetDocument = project.documents.find(
+      (candidate) => candidate.id === targetDocumentId,
+    );
+    if (!targetDocument?.netlist) return;
     if (
       commitStructure(
         "update-cell-port-direction",
         planUpdateCellTerminalDirection(
           project,
-          document.id,
+          targetDocumentId,
           terminalId,
           direction,
         ),
       )
     ) {
       setStatus("Updated Cell port direction");
+    }
+  }
+
+  function renameCellTerminal(
+    terminalId: string,
+    name: string,
+    targetDocumentId = document.id,
+  ): void {
+    const nextName = name.trim();
+    const targetDocument = project.documents.find(
+      (candidate) => candidate.id === targetDocumentId,
+    );
+    const terminal = targetDocument?.netlist?.terminals.find(
+      (candidate) => candidate.id === terminalId,
+    );
+    if (!terminal || !nextName || terminal.name === nextName) return;
+    try {
+      if (
+        commitStructure(
+          "rename-cell-interface-terminal",
+          planRenameCellTerminal(
+            project,
+            targetDocumentId,
+            terminalId,
+            nextName,
+          ),
+        )
+      ) {
+        setStatus(`Renamed formal port to ${nextName}`);
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not rename port",
+      );
+    }
+  }
+
+  function moveCellTerminal(
+    terminalId: string,
+    delta: -1 | 1,
+    targetDocumentId = document.id,
+  ): void {
+    const edits = planReorderCellTerminal(
+      project,
+      targetDocumentId,
+      terminalId,
+      delta,
+    );
+    if (edits.length === 0) return;
+    if (commitStructure("reorder-cell-interface-terminal", edits)) {
+      setStatus("Reordered formal terminal interface");
+    }
+  }
+
+  function setCellFormalParameters(
+    formalParameters: NonNullable<
+      SchematicDocument["netlist"]
+    >["formalParameters"],
+    targetDocumentId = document.id,
+  ): void {
+    try {
+      const proposal = proposeSetCellFormalParameters(
+        project,
+        targetDocumentId,
+        formalParameters.map((parameter) => ({
+          name: parameter.name.trim(),
+          ...(parameter.defaultValue?.trim()
+            ? { defaultValue: parameter.defaultValue.trim() }
+            : {}),
+        })),
+      );
+      if (commitStructure("set-cell-formal-parameters", [...proposal.edits])) {
+        setStatus("Updated Cell formal parameters");
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not update Cell formal parameters",
+      );
+    }
+  }
+
+  function setExternalSubcircuitDefinition(
+    definition: ExternalSubcircuitDefinition,
+  ): void {
+    try {
+      const proposal = proposeUpsertExternalSubcircuitDefinition(
+        project,
+        definition,
+      );
+      if (proposal.diagnostics.length > 0) {
+        setStatus(
+          `Cannot update external interface: ${proposal.diagnostics[0]}`,
+        );
+        return;
+      }
+      if (
+        commitStructure("upsert-external-subcircuit-interface", [
+          ...proposal.edits,
+        ])
+      ) {
+        setStatus(`Updated external subcircuit ${definition.name}`);
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not update external subcircuit interface",
+      );
     }
   }
 
@@ -2139,6 +2315,22 @@ export function App({
     setStatus(statusMessage);
   }
 
+  function navigateToNetlistDiagnostic(diagnostic: NetlistDiagnostic): void {
+    navigateToLocator(diagnostic.primary, `Preflight: ${diagnostic.message}`);
+    if (diagnostic.primary.kind !== "document") return;
+    const target = project.documents.find(
+      (candidate) => candidate.id === diagnostic.primary.documentId,
+    );
+    if (!target) return;
+    setViewBox(
+      fitCameraToBounds(
+        buildSvgScene(target, resolver).viewBox,
+        target.presentation.grid,
+      ),
+      target.presentation.grid,
+    );
+  }
+
   function applyAgentSemanticIntent(
     request: AgentHostSemanticIntentRequest,
   ): AgentHostSemanticIntentResult {
@@ -2549,6 +2741,34 @@ export function App({
       );
     }
     return result;
+  }
+
+  /**
+   * Connectivity edits are still persisted as the established typed edits.
+   * This fence gives every GUI producer the same Cell/revision contract before
+   * it reaches that mutation boundary.
+   */
+  function transactConnectivity(
+    intent: ConnectivityIntent,
+    edits: readonly SchematicEdit[],
+    preview?: unknown,
+    options: {
+      completesWireSession?: boolean;
+      preserveInteraction?: boolean;
+    } = {},
+  ): EditTransactionResult | null {
+    const proposal = createConnectivityProposal(document, {
+      intent,
+      edits,
+      diagnostics: [],
+      ...(preview === undefined ? {} : { preview }),
+    });
+    const gate = gateConnectivityProposal(document, proposal);
+    if (!gate.ok) {
+      setStatus(gate.message);
+      return null;
+    }
+    return transact([...gate.edits], options);
   }
 
   const clearableObjectCount =
@@ -3466,11 +3686,12 @@ export function App({
     const looseRouteEdits = movePlan.looseRouteIds.flatMap(
       (routeId) => proposeLooseRouteTranslation(document, routeId, delta).edits,
     );
-    const result = transact([
-      ...looseRouteEdits,
-      ...selectionVisualMoveEdits(movePlan, delta),
-    ]);
-    if (result.ok && movePlan.fixedObjectIds.length > 0) {
+    const result = transactConnectivity(
+      "move_connected_selection",
+      [...looseRouteEdits, ...selectionVisualMoveEdits(movePlan, delta)],
+      { delta, looseRouteIds: movePlan.looseRouteIds },
+    );
+    if (result?.ok && movePlan.fixedObjectIds.length > 0) {
       setStatus(
         `Moved selection; ${movePlan.fixedObjectIds.length} attached object(s) remained fixed`,
       );
@@ -3713,13 +3934,21 @@ export function App({
                   },
                 ]
               : [];
-        const result = transact([
-          ...groupMove.edits,
-          ...looseRouteEdits,
-          ...visualEdits,
-          ...contactEdits,
-        ]);
-        if (result.ok && electricalMatch) {
+        const result = transactConnectivity(
+          targetElectrical?.kind === "route"
+            ? "attach_endpoint_to_wire"
+            : targetElectrical?.kind === "endpoint"
+              ? "connect_without_wire"
+              : "move_connected_selection",
+          [
+            ...groupMove.edits,
+            ...looseRouteEdits,
+            ...visualEdits,
+            ...contactEdits,
+          ],
+          { moves, electricalMatch },
+        );
+        if (result?.ok && electricalMatch) {
           setStatus("Snapped pin endpoints and connected them without a wire");
         }
       } catch (error) {
@@ -4496,7 +4725,7 @@ export function App({
         object: { ...object, locked: !object.locked },
       },
     ]);
-    if (result.ok) {
+    if (result?.ok) {
       setStatus(
         object.locked
           ? "Drawing unlocked; it can now be edited or deleted"
@@ -4847,24 +5076,41 @@ export function App({
     const edits: SchematicEdit[] = [];
     const baseNetlist =
       instance.netlist ??
-      initialInstanceNetlist(document, instance.symbolId, instance.properties);
-    const netlistParameters = { ...baseNetlist.parameters };
-    for (const parameter of componentParameters(instance.symbolId)) {
-      const value = (draft.parameters[parameter.key] ?? "").trim();
-      if (value === "") delete netlistParameters[parameter.key];
-      else netlistParameters[parameter.key] = value;
-    }
+      initialInstanceNetlist(document, instance.symbolId, {});
+    if (baseNetlist) {
+      const netlistParameters = { ...baseNetlist.parameters };
+      const set: Record<string, string> = {};
+      const unset: string[] = [];
+      for (const parameter of componentParameters(instance.symbolId)) {
+        const value = (draft.parameters[parameter.key] ?? "").trim();
+        const current = netlistParameters[parameter.key];
+        if (value === "") {
+          delete netlistParameters[parameter.key];
+          if (current !== undefined) unset.push(parameter.key);
+        } else {
+          netlistParameters[parameter.key] = value;
+          if (current !== value) set[parameter.key] = value;
+        }
+      }
 
-    const nextNetlist = {
-      ...baseNetlist,
-      parameters: netlistParameters,
-    };
-    if (JSON.stringify(nextNetlist) !== JSON.stringify(instance.netlist)) {
-      edits.push({
-        kind: "set_instance_netlist",
-        instanceId: instance.id,
-        netlist: nextNetlist,
-      });
+      const nextNetlist = {
+        ...baseNetlist,
+        parameters: netlistParameters,
+      };
+      if (!instance.netlist) {
+        edits.push({
+          kind: "set_instance_netlist",
+          instanceId: instance.id,
+          netlist: nextNetlist,
+        });
+      } else if (Object.keys(set).length > 0 || unset.length > 0) {
+        edits.push({
+          kind: "patch_instance_netlist_parameters",
+          instanceId: instance.id,
+          ...(Object.keys(set).length > 0 ? { set } : {}),
+          ...(unset.length > 0 ? { unset } : {}),
+        });
+      }
     }
 
     let invalidPosition = false;
@@ -4899,6 +5145,45 @@ export function App({
       }
     }
     return { edits, invalidPosition };
+  }
+
+  function updateSelectedModelTarget(value: string): void {
+    if (!selectedInstance?.netlist) return;
+    const binding = bindingForEditedModel(selectedInstance.symbolId, value);
+    const nextBinding = binding ?? null;
+    const currentBinding = selectedInstance.netlist.binding ?? null;
+    if (JSON.stringify(nextBinding) === JSON.stringify(currentBinding)) return;
+    if (
+      transact([
+        {
+          kind: "set_instance_binding",
+          instanceId: selectedInstance.id,
+          binding: nextBinding,
+        },
+      ]).ok
+    ) {
+      setStatus(
+        nextBinding?.kind === "model"
+          ? `Set model target ${nextBinding.name}`
+          : `Cleared model target for ${selectedInstance.id}`,
+      );
+    }
+  }
+
+  function updateSelectedReference(value: string): void {
+    if (!selectedInstance) return;
+    const plan = planSetInstanceReference(document, {
+      instanceId: selectedInstance.id,
+      reference: value,
+    });
+    if (!plan.ok) {
+      setStatus(plan.message);
+      return;
+    }
+    if (plan.edits.length === 0) return;
+    if (transact([...plan.edits]).ok) {
+      setStatus(`Renamed reference to ${plan.reference}`);
+    }
   }
 
   /*
@@ -5667,11 +5952,15 @@ export function App({
             routeId: route.id,
           }))
       : [];
-    const result = transact([
-      ...routeEdits,
-      { kind: "disconnect_endpoint", endpoint: selectedEndpoint.endpoint },
-    ]);
-    if (result.ok) {
+    const result = transactConnectivity(
+      "disconnect_endpoint",
+      [
+        ...routeEdits,
+        { kind: "disconnect_endpoint", endpoint: selectedEndpoint.endpoint },
+      ],
+      { removeRoutes },
+    );
+    if (result?.ok) {
       setSelectedEndpoint(null);
       setStatus(
         removeRoutes ? "Deleted endpoint connection" : "Disconnected endpoint",
@@ -6230,6 +6519,29 @@ export function App({
                   ) : null}
                 </div>
               </details>
+              <details className="command-menu" name="editor-command-menu">
+                <summary>Netlist</summary>
+                <div className="command-popover">
+                  <span className="command-group-label">Authoring</span>
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded={instanceTableOpen}
+                    onClick={() => setInstanceTableOpen(true)}
+                  >
+                    Instance Table…
+                  </button>
+                  <span className="command-group-label">Validation</span>
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded={netlistPreflightOpen}
+                    onClick={() => setNetlistPreflightOpen(true)}
+                  >
+                    Run Preflight…
+                  </button>
+                </div>
+              </details>
               {publicAgentUiEnabled ? (
                 <details className="command-menu" name="editor-command-menu">
                   <summary>Agent</summary>
@@ -6519,6 +6831,23 @@ export function App({
         onSelect={selectSearchResult}
         onClose={closeSearch}
       />
+      <InstanceTableDialog
+        open={instanceTableOpen}
+        project={project}
+        connectivityIndex={projectConnectivityIndex}
+        activeDocumentId={document.id}
+        onClose={() => setInstanceTableOpen(false)}
+        onOpenInstance={openInstanceFromTable}
+        onApply={(transactionId, edits) => {
+          const committed = commitStructure(transactionId, edits);
+          if (committed) {
+            setStatus(
+              `Updated ${edits.length} Cell${edits.length === 1 ? "" : "s"}`,
+            );
+          }
+          return committed;
+        }}
+      />
       <InsertComponentDialog
         open={insertDialogOpen}
         styleProfileId={document.presentation.styleProfileId}
@@ -6531,6 +6860,8 @@ export function App({
       <CellManagerDialog
         open={cellManagerOpen}
         cells={cellManagerEntries}
+        documents={project.documents}
+        activeDocumentId={document.id}
         onClose={() => setCellManagerOpen(false)}
         onCreate={(name) => {
           createCell(name);
@@ -6558,6 +6889,26 @@ export function App({
           }
         }}
         onJumpToCaller={jumpToCaller}
+        onRenameTerminal={(documentId, terminalId, name) =>
+          renameCellTerminal(terminalId, name, documentId)
+        }
+        onSetTerminalDirection={(documentId, terminalId, direction) =>
+          updateCellPortDirection(terminalId, direction, documentId)
+        }
+        onMoveTerminal={(documentId, terminalId, delta) =>
+          moveCellTerminal(terminalId, delta, documentId)
+        }
+        onSetFormalParameters={(documentId, formalParameters) =>
+          setCellFormalParameters(formalParameters, documentId)
+        }
+        externalDefinitions={project.externalSubcircuitDefinitions}
+        onSetExternalDefinition={setExternalSubcircuitDefinition}
+      />
+      <NetlistPreflightDialog
+        open={netlistPreflightOpen}
+        result={netlistAnalysis}
+        onClose={() => setNetlistPreflightOpen(false)}
+        onNavigate={navigateToNetlistDiagnostic}
       />
       {publicAgentUiEnabled ? (
         <ConnectAgentPanel
@@ -6996,81 +7347,289 @@ export function App({
                       )}
                     </div>
                   ) : null}
-                  <div className="property-section-heading">Canvas labels</div>
                   <div
-                    className="display-toggle-row"
-                    aria-label="Component display toggles"
+                    className="property-card property-identity-card"
+                    aria-label="Component identity"
                   >
-                    <DisplayToggle
-                      label="Reference"
-                      checked={
-                        selectedInstanceLabel !== undefined &&
-                        selectedInstanceLabel.visible !== false
-                      }
-                      onChange={(checked) =>
-                        setReferenceLabelsVisible(
-                          [selectedInstance.id],
-                          checked,
-                        )
-                      }
-                    />
-                    <DisplayToggle
-                      label="Value"
-                      checked={
-                        selectedInstanceValue !== null &&
-                        selectedInstanceValue.visible !== false
-                      }
-                      disabled={!selectedInstanceValueAvailable}
-                      help={
-                        selectedInstanceValueAvailable
-                          ? undefined
-                          : "Set the device parameters first"
-                      }
-                      onChange={(checked) => {
-                        if (checked) {
-                          showSelectedInstanceValue();
-                        } else {
-                          setValueLabelsVisible([selectedInstance.id], false);
-                        }
-                      }}
-                    />
-                  </div>
-                  {componentParameters(selectedInstance.symbolId).map(
-                    (parameter, index) => (
-                      <label key={parameter.key} title={parameter.help}>
-                        <span className="property-parameter-name">
-                          {parameter.label}
-                          {parameter.unit ? ` / ${parameter.unit}` : ""}
-                          <em>({parameter.help})</em>
-                        </span>
-                        <input
-                          ref={index === 0 ? instanceValueInputRef : undefined}
-                          aria-label={`Component ${parameter.label.toLowerCase()}`}
-                          inputMode={parameter.inputMode}
-                          value={
-                            instancePropertyDraft.parameters[parameter.key] ??
-                            ""
-                          }
-                          placeholder={parameter.placeholder}
-                          onChange={(event) => {
-                            const value = event.currentTarget.value;
-                            updateInstancePropertyDraft((current) => ({
-                              ...current,
-                              parameters: {
-                                ...current.parameters,
-                                [parameter.key]: value,
-                              },
-                            }));
-                          }}
-                        />
-                      </label>
-                    ),
-                  )}
-                  {selectedInstance.placement ? (
-                    <>
-                      <div className="property-section-heading">
-                        Position &amp; orientation
+                    <div className="property-section-heading">Identity</div>
+                    <dl className="component-readonly-fields">
+                      <div>
+                        <dt>Reference</dt>
+                        <dd>
+                          {selectedInstance.netlist &&
+                          selectedReferencePolicy.kind === "required" ? (
+                            <input
+                              key={`${selectedInstance.id}-${document.revision}-reference`}
+                              aria-label="Component reference"
+                              defaultValue={selectedInstance.netlist.reference}
+                              onBlur={(event) =>
+                                updateSelectedReference(
+                                  event.currentTarget.value,
+                                )
+                              }
+                            />
+                          ) : (
+                            "Not exportable"
+                          )}
+                        </dd>
                       </div>
+                      <div>
+                        <dt>Symbol</dt>
+                        <dd>{selectedInstance.symbolId}</dd>
+                      </div>
+                      <div>
+                        <dt>Device class</dt>
+                        <dd>{selectedDevice?.deviceClass ?? "none"}</dd>
+                      </div>
+                      <div>
+                        <dt>Cell</dt>
+                        <dd>{document.netlist?.name ?? document.name}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                  {selectedInstance.netlist ? (
+                    <div
+                      className="property-card property-target-card"
+                      aria-label="Netlist target"
+                    >
+                      <div className="property-section-heading">
+                        Netlist target
+                      </div>
+                      {selectedInstance.netlist.binding?.kind === "model" ? (
+                        <label>
+                          Model
+                          <input
+                            key={`${selectedInstance.id}-${document.revision}-model-target`}
+                            aria-label="Component model target"
+                            defaultValue={selectedInstance.netlist.binding.name}
+                            onBlur={(event) =>
+                              updateSelectedModelTarget(
+                                event.currentTarget.value,
+                              )
+                            }
+                          />
+                        </label>
+                      ) : selectedDevice?.targetPolicy === "required-model" ? (
+                        <label>
+                          Model
+                          <input
+                            key={`${selectedInstance.id}-${document.revision}-model-target`}
+                            aria-label="Component model target"
+                            placeholder="Model name"
+                            onBlur={(event) =>
+                              updateSelectedModelTarget(
+                                event.currentTarget.value,
+                              )
+                            }
+                          />
+                        </label>
+                      ) : selectedInstance.netlist.binding?.kind ===
+                        "primitive" ? (
+                        <small>
+                          Built-in primitive:{" "}
+                          {selectedInstance.netlist.binding.deviceClass}
+                        </small>
+                      ) : selectedInstance.netlist.binding?.kind ===
+                        "subcircuit" ? (
+                        <small>
+                          Internal Cell:{" "}
+                          {selectedHierarchyCell?.netlist?.name ?? "unresolved"}
+                        </small>
+                      ) : selectedInstance.netlist.binding?.kind ===
+                        "external-subcircuit" ? (
+                        <small>
+                          External subcircuit:{" "}
+                          {selectedExternalSubcircuit?.name ?? "unresolved"}
+                        </small>
+                      ) : selectedInstance.netlist.binding?.kind ===
+                        "unresolved-subcircuit" ? (
+                        <small>
+                          Unresolved subcircuit:{" "}
+                          {selectedInstance.netlist.binding.name}
+                        </small>
+                      ) : (
+                        <small>No target is bound yet.</small>
+                      )}
+                    </div>
+                  ) : null}
+                  <div className="property-card property-parameters-card">
+                    <div className="property-section-heading">Parameters</div>
+                    <div className="component-parameter-grid">
+                      {componentParameters(selectedInstance.symbolId).map(
+                        (parameter, index) => (
+                          <label key={parameter.key} title={parameter.help}>
+                            <span className="property-parameter-name">
+                              {parameter.label}
+                              {parameter.unit ? ` / ${parameter.unit}` : ""}
+                              <em>({parameter.help})</em>
+                            </span>
+                            <input
+                              ref={
+                                index === 0 ? instanceValueInputRef : undefined
+                              }
+                              aria-label={`Component ${parameter.label.toLowerCase()}`}
+                              inputMode={parameter.inputMode}
+                              value={
+                                instancePropertyDraft.parameters[
+                                  parameter.key
+                                ] ?? ""
+                              }
+                              placeholder={parameter.placeholder}
+                              onChange={(event) => {
+                                const value = event.currentTarget.value;
+                                updateInstancePropertyDraft((current) => ({
+                                  ...current,
+                                  parameters: {
+                                    ...current.parameters,
+                                    [parameter.key]: value,
+                                  },
+                                }));
+                              }}
+                            />
+                          </label>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                  <div className="property-card property-display-card">
+                    <div className="property-section-heading">Display</div>
+                    <div
+                      className="display-toggle-row"
+                      aria-label="Component display toggles"
+                    >
+                      <DisplayToggle
+                        label="Reference"
+                        checked={
+                          selectedInstanceLabel !== undefined &&
+                          selectedInstanceLabel.visible !== false
+                        }
+                        onChange={(checked) =>
+                          setReferenceLabelsVisible(
+                            [selectedInstance.id],
+                            checked,
+                          )
+                        }
+                      />
+                      <DisplayToggle
+                        label="Value"
+                        checked={
+                          selectedInstanceValue !== null &&
+                          selectedInstanceValue.visible !== false
+                        }
+                        disabled={!selectedInstanceValueAvailable}
+                        help={
+                          selectedInstanceValueAvailable
+                            ? undefined
+                            : "Set the device parameters first"
+                        }
+                        onChange={(checked) => {
+                          if (checked) {
+                            showSelectedInstanceValue();
+                          } else {
+                            setValueLabelsVisible([selectedInstance.id], false);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {selectedInstance.netlist ? (
+                    <details className="property-details">
+                      <summary>
+                        <span>Advanced parameters</span>
+                        <small>{additionalParameterDraft.length}</small>
+                      </summary>
+                      <div
+                        className="additional-parameters"
+                        aria-label="Additional parameters"
+                      >
+                        <small>
+                          Model- or dialect-specific raw values. Apply commits
+                          all rows as one undoable edit.
+                        </small>
+                        {additionalParameterDraft.map((parameter, index) => (
+                          <div
+                            className="component-geometry-row"
+                            key={parameter.id}
+                          >
+                            <label>
+                              Name
+                              <input
+                                aria-label={`Additional parameter name ${index + 1}`}
+                                value={parameter.name}
+                                onChange={(event) =>
+                                  updateAdditionalParameter(parameter.id, {
+                                    name: event.currentTarget.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <label>
+                              Value
+                              <input
+                                aria-label={`Additional parameter value ${index + 1}`}
+                                value={parameter.value}
+                                onChange={(event) =>
+                                  updateAdditionalParameter(parameter.id, {
+                                    value: event.currentTarget.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              aria-label={`Remove additional parameter ${index + 1}`}
+                              onClick={() =>
+                                removeAdditionalParameter(parameter.id)
+                              }
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                        <div className="component-mirror-row">
+                          <button
+                            type="button"
+                            onClick={addAdditionalParameter}
+                          >
+                            Add parameter
+                          </button>
+                          {additionalParameterDraftChanges ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={applyAdditionalParameters}
+                              >
+                                Apply parameters
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelAdditionalParameters}
+                              >
+                                Cancel parameter edits
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                    </details>
+                  ) : null}
+                  {selectedInstance.importProvenance ? (
+                    <div
+                      className="property-card"
+                      aria-label="Imported source evidence"
+                    >
+                      <div className="property-section-heading">
+                        Imported source evidence
+                      </div>
+                      <small>
+                        {selectedInstance.importProvenance.kind}:{" "}
+                        {selectedInstance.importProvenance.sourceTarget}
+                      </small>
+                    </div>
+                  ) : null}
+                  {selectedInstance.placement ? (
+                    <div className="property-card property-placement-card">
+                      <div className="property-section-heading">Placement</div>
                       <div
                         className="component-geometry-row"
                         aria-label="Component geometry"
@@ -7126,9 +7685,6 @@ export function App({
                           </select>
                         </label>
                       </div>
-                      <div className="property-section-heading more-actions-heading">
-                        More actions
-                      </div>
                       <div
                         className="component-mirror-row"
                         aria-label="Mirror component"
@@ -7150,7 +7706,7 @@ export function App({
                           Mirror top/bottom
                         </button>
                       </div>
-                    </>
+                    </div>
                   ) : null}
                   {hasInstancePropertyDraftChanges ? (
                     <button
@@ -7511,6 +8067,18 @@ export function App({
                   </button>
                   <button type="button" onClick={addCurrentArrow}>
                     Add current arrow
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => editSelectedRouteJog("insert")}
+                  >
+                    Add wire jog
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => editSelectedRouteJog("remove")}
+                  >
+                    Straighten selected jog
                   </button>
                   <button type="button" onClick={toggleHighlightedNet}>
                     {selectedHighlightIsActive

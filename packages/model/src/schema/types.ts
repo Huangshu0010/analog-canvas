@@ -37,6 +37,9 @@ export type CellNetlistInterface = z.infer<
 export type CellNetlistTerminal = z.infer<
   typeof Schema.CellNetlistTerminalSchema
 >;
+export type ExternalSubcircuitDefinition = z.infer<
+  typeof Schema.ExternalSubcircuitDefinitionSchema
+>;
 export type MosBulkBinding = z.infer<typeof Schema.MosBulkBindingSchema>;
 export type TerminalRef = z.infer<typeof Schema.TerminalRefSchema>;
 export type Instance = z.infer<typeof Schema.InstanceSchema>;

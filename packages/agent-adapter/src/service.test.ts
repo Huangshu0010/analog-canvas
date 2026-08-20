@@ -130,7 +130,6 @@ describe("current Agent Circuit API service", () => {
             symbolId: "port",
             symbolVariantId: "",
             placement: null,
-            properties: {},
           },
         },
       ],
@@ -162,7 +161,7 @@ describe("current Agent Circuit API service", () => {
         operations: ["capabilities", "snapshot", "transact", "render"],
         editKinds: expect.arrayContaining([
           "add_instance",
-          "patch_instance_properties",
+          "patch_instance_netlist_parameters",
           "connect_endpoints",
           "cut_connection",
           "merge_nets",
@@ -369,7 +368,6 @@ describe("current Agent Circuit API service", () => {
               rotation: 0 as const,
               mirror: "none" as const,
             },
-            properties: {},
           },
         },
       ],
@@ -416,7 +414,6 @@ describe("current Agent Circuit API service", () => {
               rotation: 0,
               mirror: "none",
             },
-            properties: {},
           },
         },
       ],
@@ -495,8 +492,14 @@ describe("current Agent Circuit API service", () => {
     });
   });
 
-  it("applies an instance property patch through the same presentation boundary", () => {
+  it("applies an instance netlist-parameter patch through the same presentation boundary", () => {
     const fixture = serviceFixture();
+    fixture.getDocument().instances.find((item) => item.id === "M1")!.netlist =
+      {
+        reference: "M1",
+        binding: { kind: "primitive", deviceClass: "mos" },
+        parameters: {},
+      };
     const response = fixture.service.handle({
       apiVersion: "2.0",
       requestId: "property-patch",
@@ -506,7 +509,7 @@ describe("current Agent Circuit API service", () => {
       expectedRevision: 0,
       edits: [
         {
-          kind: "patch_instance_properties",
+          kind: "patch_instance_netlist_parameters",
           instanceId: "M1",
           set: { value: "12u" },
         },
@@ -517,13 +520,13 @@ describe("current Agent Circuit API service", () => {
       ok: true,
       revision: 1,
       diff: {
-        editKinds: ["patch_instance_properties"],
+        editKinds: ["patch_instance_netlist_parameters"],
         changedObjectIds: ["M1"],
       },
     });
     expect(
-      fixture.getDocument().instances.find((item) => item.id === "M1")
-        ?.properties,
+      fixture.getDocument().instances.find((item) => item.id === "M1")?.netlist
+        ?.parameters,
     ).toMatchObject({ value: "12u" });
   });
 

@@ -1,4 +1,5 @@
 import type { Instance } from "@icm/model";
+import { deviceDescriptor } from "@icm/devices";
 
 export interface ComponentParameter {
   key: string;
@@ -9,76 +10,17 @@ export interface ComponentParameter {
   inputMode?: "decimal" | "text";
 }
 
-const passiveValue = (unit: string, help: string, placeholder: string) =>
-  [
-    {
-      key: "value",
-      label: "Value",
-      unit,
-      placeholder,
-      help,
-      inputMode: "text" as const,
-    },
-  ] satisfies readonly ComponentParameter[];
-
-const MOS_PARAMETERS = [
-  {
-    key: "w",
-    label: "W",
-    unit: "m",
-    placeholder: "1u",
-    help: "Channel width",
-    inputMode: "text" as const,
-  },
-  {
-    key: "l",
-    label: "L",
-    unit: "m",
-    placeholder: "150n",
-    help: "Channel length",
-    inputMode: "text" as const,
-  },
-  {
-    key: "m",
-    label: "M",
-    placeholder: "1",
-    help: "Parallel multiplier",
-    inputMode: "decimal" as const,
-  },
-] satisfies readonly ComponentParameter[];
-
-const SOURCE_DC_PARAMETERS = (
-  unit: string,
-  help: string,
-  placeholder: string,
-) =>
-  [
-    {
-      key: "dc",
-      label: "Value",
-      unit,
-      placeholder,
-      help,
-      inputMode: "text" as const,
-    },
-  ] satisfies readonly ComponentParameter[];
-
-const PARAMETERS_BY_SYMBOL: Readonly<
-  Record<string, readonly ComponentParameter[]>
-> = {
-  resistor: passiveValue("Ohm", "Resistance", "10k"),
-  capacitor: passiveValue("F", "Capacitance", "2p"),
-  inductor: passiveValue("H", "Inductance", "3n"),
-  nmos: MOS_PARAMETERS,
-  pmos: MOS_PARAMETERS,
-  "voltage-source": SOURCE_DC_PARAMETERS("V", "DC voltage", "1.8"),
-  "current-source": SOURCE_DC_PARAMETERS("A", "DC current", "1m"),
-};
-
 export function componentParameters(
   symbolId: string,
 ): readonly ComponentParameter[] {
-  return PARAMETERS_BY_SYMBOL[symbolId] ?? [];
+  return (deviceDescriptor(symbolId)?.parameters ?? []).map((parameter) => ({
+    key: parameter.name,
+    label: parameter.label,
+    ...(parameter.unitHint ? { unit: parameter.unitHint } : {}),
+    placeholder: parameter.placeholder,
+    help: parameter.help,
+    inputMode: parameter.editor,
+  }));
 }
 
 export function initialComponentParameterValues(
@@ -95,9 +37,5 @@ export function effectiveComponentParameterValue(
 ): string {
   const netlist = instance.netlist?.parameters[parameter.key];
   if (netlist !== undefined) return netlist;
-  const explicit = instance.properties[parameter.key];
-  if (typeof explicit === "string" || typeof explicit === "number") {
-    return String(explicit);
-  }
   return "";
 }

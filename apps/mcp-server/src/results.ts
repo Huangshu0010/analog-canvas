@@ -121,7 +121,6 @@ export function inspectInstanceValue(
       netId: pin.netId,
       ...(pin.pagePosition ? { position: pin.pagePosition } : {}),
     })),
-    properties: instance.properties,
     ...(Object.keys(instance.parameters).length > 0
       ? { parameters: instance.parameters }
       : {}),
@@ -314,7 +313,7 @@ export function searchSnapshot(
         detail: `symbol ${instance.symbolId}`,
       });
     }
-    for (const [key, value] of Object.entries(instance.properties)) {
+    for (const [key, value] of Object.entries(instance.parameters)) {
       if (
         key.toLowerCase().includes(needle) ||
         String(value).toLowerCase().includes(needle)

@@ -7,7 +7,18 @@ export const capacitorDevice = {
   referencePrefix: "C",
   pinOrder: ["1", "2"],
   targetPolicy: "builtin",
-  requiredParameters: ["value"],
+  parameters: [
+    {
+      name: "value",
+      label: "Value",
+      required: true,
+      editor: "text",
+      unitHint: "F",
+      placeholder: "2p",
+      help: "Capacitance",
+      displayRole: "value",
+    },
+  ],
   dialects: ["spice", "spectre"],
   capabilities: {
     supportsModel: false,

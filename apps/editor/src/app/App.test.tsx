@@ -31,19 +31,16 @@ describe("editor shell", () => {
         id: "Mimplicit",
         symbolId: "nmos",
         placement: null,
-        properties: {},
       },
       {
         id: "Msupply",
         symbolId: "pmos",
         placement: null,
-        properties: {},
       },
       {
         id: "MbodyBias",
         symbolId: "nmos",
         placement: null,
-        properties: {},
       },
     );
     document.nets.push(
@@ -102,7 +99,10 @@ describe("editor shell", () => {
     expect(markup).toContain('data-testid="cell-navigation"');
     expect(markup).toContain('data-testid="cell-command-menu"');
     expect(markup).toContain("Manage Cells…");
-    expect(markup).not.toContain("Edit Interface…");
+    expect(markup).toContain("Instance Table…");
+    expect(markup).toContain("<summary>Netlist</summary>");
+    expect(markup).toContain("Run Preflight…");
+    expect(markup).not.toContain("Edit Cell Interface…");
   });
 
   it("shows a resolvable imported subcircuit in Cell navigation", () => {
@@ -112,7 +112,7 @@ describe("editor shell", () => {
       ...topDocument,
       id: "document-child",
       name: "child",
-      netlist: { name: "child", terminals: [] },
+      netlist: { name: "child", terminals: [], formalParameters: [] },
       instances: [],
       nets: [],
       routes: [],
@@ -123,13 +123,11 @@ describe("editor shell", () => {
       id: "X1",
       symbolId: "hierarchical-child",
       placement: null,
-      properties: {},
       netlist: {
         reference: "X1",
         parameters: {},
         binding: {
           kind: "subcircuit",
-          name: "child",
           childDocumentId: childDocument.id,
         },
       },
@@ -228,7 +226,6 @@ describe("editor shell", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     });
 
     const markup = renderToStaticMarkup(<App project={project} />);
@@ -245,7 +242,6 @@ describe("editor shell", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {},
     });
 
     const markup = renderToStaticMarkup(<App project={project} />);
@@ -269,7 +265,6 @@ describe("editor shell", () => {
               rotation: 0,
               mirror: "none",
             },
-            properties: {},
           },
         },
         {

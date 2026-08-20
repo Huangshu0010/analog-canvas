@@ -66,7 +66,7 @@ active, unresolved, or under human experience review.
 ## Test Impact
 
 - Decision: no-test-change
-- Evidence: this target changes only plan/document retention and historical
+- Reason: this target changes only plan/document retention and historical
   indexing; it neither changes product behavior nor any executable contract.
 - Primary checks: metadata inventory and Markdown-link audit; no unit or E2E
   test change is warranted.

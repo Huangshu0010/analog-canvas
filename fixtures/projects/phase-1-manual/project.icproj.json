@@ -11,23 +11,24 @@
         {
           "id": "M1",
           "placement": null,
-          "properties": {},
           "symbolId": "nmos",
           "symbolVariantId": "textbook-3terminal"
         },
         {
           "id": "M2",
           "placement": null,
-          "properties": {},
           "symbolId": "pmos",
           "symbolVariantId": "textbook-3terminal"
         },
         {
           "id": "R1",
-          "placement": null,
-          "properties": {
-            "value": "10k"
+          "netlist": {
+            "parameters": {
+              "value": "10k"
+            },
+            "reference": "R1"
           },
+          "placement": null,
           "symbolId": "resistor"
         }
       ],
@@ -35,6 +36,7 @@
       "layoutGroups": [],
       "name": "Manual Editor Demo",
       "netlist": {
+        "formalParameters": [],
         "name": "Manual_Editor_Demo",
         "terminals": []
       },
@@ -50,9 +52,10 @@
       "sourceStatus": "in-sync"
     }
   ],
+  "externalSubcircuitDefinitions": [],
   "id": "project-phase-1-manual",
   "name": "Phase 1 Manual Editor",
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "source": {
     "dialect": "none",
     "entry": null,

@@ -26,7 +26,6 @@ describe("current rendering contract", () => {
     top.instances.push({
       id: "X1",
       symbolId: hierarchicalSymbolId(child.netlist!.name),
-      properties: {},
       placement: {
         position: { x: 100, y: 100 },
         rotation: 0,
@@ -35,12 +34,16 @@ describe("current rendering contract", () => {
       netlist: {
         reference: "X1",
         parameters: {},
-        terminals: [{ sourcePosition: 0, pinName: "VGS1" }],
         binding: {
           kind: "subcircuit",
           childDocumentId: child.id,
-          name: child.netlist!.name,
         },
+      },
+      importProvenance: {
+        kind: "subcircuit",
+        name: child.netlist!.name,
+        sourceTarget: `cell:${child.id}`,
+        terminalMapping: [{ sourcePosition: 0, pinName: "VGS1" }],
       },
     });
     const project = createEmptyProject("project", "Hierarchy", top.id);
@@ -86,7 +89,6 @@ describe("current rendering contract", () => {
     top.instances.push({
       id: "X1",
       symbolId: hierarchicalSymbolId(child.netlist!.name),
-      properties: {},
       placement: {
         position: { x: 100, y: 100 },
         rotation: 0,
@@ -95,15 +97,19 @@ describe("current rendering contract", () => {
       netlist: {
         reference: "X1",
         parameters: {},
-        terminals: [
-          { sourcePosition: 0, pinName: "TOP" },
-          { sourcePosition: 1, pinName: "BOTTOM" },
-        ],
         binding: {
           kind: "subcircuit",
           childDocumentId: child.id,
-          name: child.netlist!.name,
         },
+      },
+      importProvenance: {
+        kind: "subcircuit",
+        name: child.netlist!.name,
+        sourceTarget: `cell:${child.id}`,
+        terminalMapping: [
+          { sourcePosition: 0, pinName: "TOP" },
+          { sourcePosition: 1, pinName: "BOTTOM" },
+        ],
       },
     });
     const project = createEmptyProject("project", "Hierarchy", top.id);
@@ -145,7 +151,6 @@ describe("current rendering contract", () => {
     document.instances.push({
       id: "U1",
       symbolId: namedPinSymbol.id,
-      properties: {},
       placement: {
         position: { x: 100, y: 100 },
         rotation: 0,
@@ -169,7 +174,6 @@ describe("current rendering contract", () => {
       {
         id: "VIN",
         symbolId: "port",
-        properties: {},
         placement: {
           position: { x: 40, y: 80 },
           rotation: 0,
@@ -179,7 +183,6 @@ describe("current rendering contract", () => {
       {
         id: "VOUT",
         symbolId: "port-filled",
-        properties: {},
         placement: {
           position: { x: 180, y: 80 },
           rotation: 180,
@@ -302,7 +305,6 @@ describe("current rendering contract", () => {
     document.instances.push({
       id: "Q1",
       symbolId: "npn",
-      properties: {},
       placement: {
         position: { x: 100, y: 100 },
         rotation: 0,

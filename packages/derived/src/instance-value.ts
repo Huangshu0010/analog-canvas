@@ -1,5 +1,5 @@
 import type { RichTextDocument } from "@icm/model";
-import { deviceDescriptor } from "@icm/devices";
+import { deviceDescriptor, type DeviceParameterDefinition } from "@icm/devices";
 
 export type InstanceValueDisplay =
   | { readonly kind: "displayable"; readonly content: RichTextDocument }
@@ -14,29 +14,22 @@ export interface InstanceValueSource {
   readonly symbolId: string;
   readonly netlist?:
     { readonly parameters: Record<string, string> } | undefined;
-  readonly properties: Record<string, string | number | boolean>;
 }
-
-/** Display unit per device class, appended to the raw parameter string. */
-const VALUE_UNIT_BY_DEVICE_CLASS: Partial<Record<string, string>> = {
-  mos: "m",
-  resistor: "Ω",
-  capacitor: "F",
-  inductor: "H",
-  "voltage-source": "V",
-  "current-source": "A",
-};
 
 function effectiveParameterValue(
   instance: InstanceValueSource,
-  key: string,
+  parameter: DeviceParameterDefinition,
 ): string {
-  const netlist = instance.netlist?.parameters[key];
+  const netlist = instance.netlist?.parameters[parameter.name];
   if (netlist !== undefined) return netlist.trim();
-  const explicit = instance.properties[key];
-  if (typeof explicit === "string") return explicit.trim();
-  if (typeof explicit === "number") return String(explicit);
   return "";
+}
+
+function displayUnit(parameter: DeviceParameterDefinition): string {
+  // `Ohm` remains the form's familiar text hint, while the existing Razavi
+  // value annotation uses its conventional glyph. This is a general display
+  // spelling rule, not a second device registry.
+  return parameter.unitHint === "Ohm" ? "Ω" : (parameter.unitHint ?? "");
 }
 
 function withUnit(raw: string, unit: string): string {
@@ -59,8 +52,8 @@ function boldDocument(value: string): RichTextDocument {
 
 /**
  * One pure authority for the optional Value annotation beside an instance.
- * Electrical truth stays in the typed netlist parameters (with the legacy
- * `properties` fallback); this only projects it to display text and never
+ * Electrical truth stays in the typed netlist parameters; this only projects
+ * it to display text and never
  * writes back. Display is Razavi textbook style: upright bold text with the
  * engineering unit, and a stacked fraction bar for MOS W/L.
  */
@@ -74,55 +67,57 @@ export function displayableInstanceValue(
       reason: `Symbol ${instance.symbolId} has no netlist device class`,
     };
   }
-  const unit = VALUE_UNIT_BY_DEVICE_CLASS[definition.deviceClass];
-  switch (definition.deviceClass) {
-    case "mos": {
-      const width = effectiveParameterValue(instance, "w");
-      const length = effectiveParameterValue(instance, "l");
-      if (!width || !length || !unit) {
-        return {
-          kind: "undisplayable",
-          reason: "MOS value needs both W and L",
-        };
-      }
-      return {
-        kind: "displayable",
-        content: {
-          runs: [
-            {
-              kind: "fraction",
-              numerator: boldDocument(withUnit(width, unit)),
-              denominator: boldDocument(withUnit(length, unit)),
-            },
-          ],
-        },
-      };
-    }
-    case "resistor":
-    case "capacitor":
-    case "inductor":
-    case "voltage-source":
-    case "current-source": {
-      const value = effectiveParameterValue(instance, "value");
-      const dc = effectiveParameterValue(instance, "dc");
-      // Passives carry `value`; independent sources carry `dc` (the netlist
-      // contract key). A source never has both.
-      const display = value || dc;
-      if (!display || !unit) {
-        return {
-          kind: "undisplayable",
-          reason: `${definition.deviceClass} value parameter is empty`,
-        };
-      }
-      return {
-        kind: "displayable",
-        content: boldDocument(withUnit(display, unit)),
-      };
-    }
-    default:
+  const width = definition.parameters.find(
+    (parameter) => parameter.displayRole === "width",
+  );
+  const length = definition.parameters.find(
+    (parameter) => parameter.displayRole === "length",
+  );
+  if (width || length) {
+    const widthValue = width ? effectiveParameterValue(instance, width) : "";
+    const lengthValue = length ? effectiveParameterValue(instance, length) : "";
+    if (!widthValue || !lengthValue || !width || !length) {
       return {
         kind: "undisplayable",
-        reason: `${definition.deviceClass} has no defined value display`,
+        reason:
+          definition.deviceClass === "mos"
+            ? "MOS value needs both W and L"
+            : `${definition.deviceClass} value needs both width and length`,
       };
+    }
+    return {
+      kind: "displayable",
+      content: {
+        runs: [
+          {
+            kind: "fraction",
+            numerator: boldDocument(withUnit(widthValue, displayUnit(width))),
+            denominator: boldDocument(
+              withUnit(lengthValue, displayUnit(length)),
+            ),
+          },
+        ],
+      },
+    };
   }
+  const value = definition.parameters.find(
+    (parameter) => parameter.displayRole === "value",
+  );
+  const valueText = value ? effectiveParameterValue(instance, value) : "";
+  if (!value) {
+    return {
+      kind: "undisplayable",
+      reason: `${definition.deviceClass} has no defined value display`,
+    };
+  }
+  if (!valueText) {
+    return {
+      kind: "undisplayable",
+      reason: `${definition.deviceClass} value parameter is empty`,
+    };
+  }
+  return {
+    kind: "displayable",
+    content: boldDocument(withUnit(valueText, displayUnit(value))),
+  };
 }

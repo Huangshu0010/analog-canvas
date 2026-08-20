@@ -17,6 +17,7 @@ export * from "./net-label.js";
 export * from "./mos-bulk.js";
 export * from "./object-locator.js";
 export * from "./project-search.js";
+export * from "./project-instance-index.js";
 export * from "./resolved-route-geometry.js";
 export * from "./route-query.js";
 export * from "./routing-components.js";

@@ -15,7 +15,7 @@ describe("editor session project helpers", () => {
       ...original,
       id: "child",
       name: "Child",
-      netlist: { name: "Child", terminals: [] },
+      netlist: { name: "Child", terminals: [], formalParameters: [] },
     };
     project.documents.push(child);
 
@@ -41,7 +41,7 @@ describe("editor session project helpers", () => {
       ...top,
       id: "child",
       name: "GainCell",
-      netlist: { name: "GainCell", terminals: [] },
+      netlist: { name: "GainCell", terminals: [], formalParameters: [] },
     };
     project.documents.push(child);
 
@@ -50,13 +50,11 @@ describe("editor session project helpers", () => {
         id: "Xstable",
         symbolId: "hierarchical-gain-cell",
         placement: null,
-        properties: {},
         netlist: {
           reference: "X1",
           parameters: {},
           binding: {
             kind: "subcircuit",
-            name: "child",
             childDocumentId: child.id,
           },
         },
@@ -67,7 +65,6 @@ describe("editor session project helpers", () => {
         id: "XwithoutStableLink",
         symbolId: "hierarchical-gain-cell",
         placement: null,
-        properties: { "spice.target": "subcircuit:gaincell" },
       }),
     ).toBeNull();
   });

@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { StableIdSchema } from "./common.js";
 import { SourceSpanSchema } from "./source.js";
-import { InstanceSchema, NetlistIdentifierSchema } from "./instance.js";
+import {
+  InstanceSchema,
+  NetlistIdentifierSchema,
+  NetlistParameterValueSchema,
+} from "./instance.js";
 import { NetSchema, NoConnectSchema } from "./connectivity.js";
 import { JunctionSchema, RouteBranchSchema } from "./routing.js";
 import { AnnotationSchema, VisualAnchorSchema } from "./annotations.js";
@@ -32,9 +36,17 @@ export const CellNetlistTerminalSchema = z.strictObject({
   direction: z.enum(["input", "output", "inout", "passive"]),
   interfaceInstanceId: StableIdSchema,
 });
+export const CellNetlistFormalParameterSchema = z.strictObject({
+  name: NetlistIdentifierSchema,
+  defaultValue: NetlistParameterValueSchema.optional(),
+});
 export const CellNetlistInterfaceSchema = z.strictObject({
   name: NetlistIdentifierSchema,
   terminals: z.array(CellNetlistTerminalSchema),
+  formalParameters: z
+    .array(CellNetlistFormalParameterSchema)
+    .max(128)
+    .default([]),
 });
 
 const SchematicDocumentBaseSchema = z.strictObject({
@@ -217,6 +229,20 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       }
     }
     if (document.netlist) {
+      const formalParameterNames = new Set<string>();
+      for (const [index, parameter] of (
+        document.netlist.formalParameters ?? []
+      ).entries()) {
+        const normalizedName = parameter.name.toLowerCase();
+        if (formalParameterNames.has(normalizedName)) {
+          context.addIssue({
+            code: "custom",
+            message: `Duplicate Cell formal parameter: ${parameter.name}`,
+            path: ["netlist", "formalParameters", index, "name"],
+          });
+        }
+        formalParameterNames.add(normalizedName);
+      }
       const terminalIds = new Set<string>();
       const terminalNames = new Set<string>();
       const interfaceInstanceIds = new Set<string>();

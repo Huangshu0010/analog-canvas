@@ -4,6 +4,11 @@ import {
   planCreateCellFromDraftingObject,
 } from "@icm/edit-engine";
 import {
+  createReferenceIndex,
+  hierarchyReferencePolicy,
+  nextReference,
+} from "@icm/devices";
+import {
   CircuitProjectSchema,
   createEmptyDocument,
   type CircuitProject,
@@ -108,18 +113,23 @@ export function convertRectangleToHierarchy(
   child.presentation = structuredClone(parent.presentation);
   let sequence = 1;
   const used = allDocumentObjectIds(parent);
-  for (const instance of parent.instances) {
-    if (instance.netlist?.reference) {
-      used.add(instance.netlist.reference.toLowerCase());
-    }
-  }
   while (used.has(`x${sequence}`)) sequence += 1;
   const instanceId = `X${sequence}`;
-  const instance = createHierarchyInstance(instanceId, child, {
-    position: object.center,
-    rotation: nearestOrthogonalRotation(object.rotation),
-    mirror: "none",
-  });
+  const reference = nextReference(
+    createReferenceIndex(parent),
+    hierarchyReferencePolicy,
+  );
+  if (!reference) throw new Error("Cannot allocate hierarchy reference");
+  const instance = createHierarchyInstance(
+    instanceId,
+    child,
+    {
+      position: object.center,
+      rotation: nearestOrthogonalRotation(object.rotation),
+      mirror: "none",
+    },
+    reference,
+  );
   const transaction = executeProjectTransaction(project, {
     transactionId: `rectangle-to-cell-${parent.id}-${rectangleId}`,
     projectId: project.id,

@@ -10,10 +10,12 @@ repository search, completed roadmaps, target plans, or `docs/archive/`.
 2. [`../adr/0022-current-protocol-baseline.md`](../adr/0022-current-protocol-baseline.md),
    [`../adr/0023-rolling-previous-project-compatibility.md`](../adr/0023-rolling-previous-project-compatibility.md),
    [`../adr/0024-device-protocol-and-compatibility-boundaries.md`](../adr/0024-device-protocol-and-compatibility-boundaries.md),
-   and [`../adr/0026-definition-level-cell-symbol-presentation.md`](../adr/0026-definition-level-cell-symbol-presentation.md)
+   [`../adr/0026-definition-level-cell-symbol-presentation.md`](../adr/0026-definition-level-cell-symbol-presentation.md),
+   and [`../adr/0027-stage-1-netlist-authoring-protocol.md`](../adr/0027-stage-1-netlist-authoring-protocol.md)
    — current Project shape, rolling previous-version read policy, independent
-   device and compatibility boundaries, Port-symbol, edit-union, and Agent
-   credential contract; identify superseded clauses in older ADRs.
+   device and compatibility boundaries, Port-symbol, edit-union, schema-14
+   implementation target, and Agent credential contract; identify superseded
+   clauses in older ADRs.
 3. [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)
    and [`../specs/razavi-visual-contract.md`](../specs/razavi-visual-contract.md)
    — the Razavi raster is the sole visual authority.

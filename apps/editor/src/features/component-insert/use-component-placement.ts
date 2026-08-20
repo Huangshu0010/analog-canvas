@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type {
+  ConnectivityIntent,
   ProjectStructureEdit,
   SchematicEdit,
   WireSource,
@@ -11,6 +12,11 @@ import {
   planPlaceCellInstance,
 } from "@icm/edit-engine";
 import type { SchematicStyleProfile } from "@icm/derived";
+import {
+  createReferenceIndex,
+  hierarchyReferencePolicy,
+  nextReference,
+} from "@icm/devices";
 import { defaultDraftTextDocument, semanticTextDocument } from "@icm/model";
 import type {
   CircuitProject,
@@ -35,7 +41,6 @@ import {
 } from "../wiring/route-interaction-geometry";
 import {
   initialInstanceNetlist,
-  netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
 } from "../netlist-export/netlist-authoring";
 import {
@@ -58,6 +63,12 @@ export interface UseComponentPlacementOptions {
     edits: SchematicEdit[],
     options?: { preserveInteraction?: boolean },
   ) => TransactionResult;
+  transactConnectivity: (
+    intent: ConnectivityIntent,
+    edits: readonly SchematicEdit[],
+    preview?: unknown,
+    options?: { preserveInteraction?: boolean },
+  ) => TransactionResult | null;
   transactProject: (
     transactionId: string,
     edits: ProjectStructureEdit[],
@@ -112,6 +123,11 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     if (placementRequest.kind !== "symbol") return;
     const id = nextInstanceDesignator(options.document, symbolId);
     const symbolVariantId = defaultRazaviSymbolVariantId(symbolId);
+    const netlist = initialInstanceNetlist(
+      options.document,
+      symbolId,
+      placementRequest.parameters,
+    );
     const instance = {
       id,
       symbolId,
@@ -121,13 +137,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         rotation: options.componentPlacementRotation,
         mirror: options.componentPlacementMirror,
       },
-      properties: placementRequest.properties,
-      netlist: initialInstanceNetlist(
-        options.document,
-        symbolId,
-        placementRequest.properties,
-        netlistReferenceMatchesPlacement(symbolId) ? id : undefined,
-      ),
+      ...(netlist ? { netlist } : {}),
     };
     const defaultLabel = defaultInstanceLabel(
       options.document,
@@ -140,7 +150,9 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         ? {
             ...defaultLabel,
             content: semanticTextDocument(
-              placementRequest.referenceText ?? instance.id,
+              placementRequest.referenceText ??
+                netlist?.reference ??
+                instance.id,
               "instance-label",
             ),
           }
@@ -203,7 +215,8 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           ),
       });
     }
-    const result = options.transact(
+    const result = options.transactConnectivity(
+      "connect_without_wire",
       [
         { kind: "add_instance", instance },
         ...contact.edits,
@@ -237,9 +250,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
             ]
           : []),
       ],
+      { contact, standalonePower },
       { preserveInteraction: true },
     );
-    if (!result.ok) return;
+    if (!result?.ok) return;
     options.selectOnly("instance", [id]);
     options.setComponentPreviewPoint(position);
     options.setStatus(
@@ -271,11 +285,24 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return;
     }
     const id = nextInstanceDesignator(options.document, symbolId);
-    const instance = createHierarchyInstance(id, child, {
-      position,
-      rotation: options.componentPlacementRotation,
-      mirror: options.componentPlacementMirror,
-    });
+    const reference = nextReference(
+      createReferenceIndex(options.document),
+      hierarchyReferencePolicy,
+    );
+    if (!reference) {
+      options.setStatus("Cannot allocate a hierarchy reference");
+      return;
+    }
+    const instance = createHierarchyInstance(
+      id,
+      child,
+      {
+        position,
+        rotation: options.componentPlacementRotation,
+        mirror: options.componentPlacementMirror,
+      },
+      reference,
+    );
     const defaultLabel = defaultInstanceLabel(
       options.document,
       instance,
@@ -335,8 +362,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         rotation: options.componentPlacementRotation,
         mirror: options.componentPlacementMirror,
       },
-      properties: {},
-      netlist: initialInstanceNetlist(options.document, symbolId, {}),
     };
     const annotation = defaultInstanceLabel(
       options.document,
@@ -450,8 +475,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.setStatus(`Cannot add VDD rail: ${railPlan.message}`);
       return;
     }
-    const result = options.transact([...railPlan.edits]);
-    if (!result.ok) return;
+    const result = options.transactConnectivity(
+      "draw_wire",
+      [...railPlan.edits],
+      { start, end, railPlan },
+    );
+    if (!result?.ok) return;
     options.selectOnly("route", [routeId]);
     options.completeVddRailPlacement();
     options.setStatus(`Added VDD rail ${instanceId}`);
@@ -499,7 +528,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         ? {
             kind: "cell-port",
             symbolId: request.symbolId,
-            properties: {},
+            parameters: {},
             initialRotation: request.initialRotation,
             showReference: false,
             referenceText: null,

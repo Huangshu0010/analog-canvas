@@ -52,19 +52,39 @@ export function validateDeviceDescriptors(
       pinNames.add(pinName);
     }
     const parameterNames = new Set<string>();
-    for (const parameter of descriptor.requiredParameters) {
-      if (!/^[A-Za-z_][A-Za-z0-9_]*$/u.test(parameter)) {
+    const displayRoles = new Set<string>();
+    for (const parameter of descriptor.parameters) {
+      const parameterName = parameter.name;
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/u.test(parameterName)) {
         issues.push({
           deviceId: descriptor.id,
-          message: `Invalid required parameter name: ${parameter}`,
+          message: `Invalid parameter name: ${parameterName}`,
         });
-      } else if (parameterNames.has(parameter.toLowerCase())) {
+      } else if (parameterNames.has(parameterName.toLowerCase())) {
         issues.push({
           deviceId: descriptor.id,
-          message: `Duplicate required parameter: ${parameter}`,
+          message: `Duplicate parameter: ${parameterName}`,
         });
       }
-      parameterNames.add(parameter.toLowerCase());
+      parameterNames.add(parameterName.toLowerCase());
+      if (!parameter.label || !parameter.placeholder || !parameter.help) {
+        issues.push({
+          deviceId: descriptor.id,
+          message: `Parameter ${parameterName} requires label, placeholder, and help`,
+        });
+      }
+      if (
+        parameter.displayRole !== "none" &&
+        displayRoles.has(parameter.displayRole)
+      ) {
+        issues.push({
+          deviceId: descriptor.id,
+          message: `Duplicate display role: ${parameter.displayRole}`,
+        });
+      }
+      if (parameter.displayRole !== "none") {
+        displayRoles.add(parameter.displayRole);
+      }
     }
     if (
       (descriptor.targetPolicy === "required-model") !==

@@ -29,13 +29,11 @@ function hierarchyInstance(
       rotation: 0 as const,
       mirror: "none" as const,
     },
-    properties: {},
     netlist: {
       reference: id,
       parameters: {},
       binding: {
         kind: "subcircuit" as const,
-        name: cellName,
         childDocumentId,
       },
     },
@@ -43,7 +41,7 @@ function hierarchyInstance(
 }
 
 describe("Project structural transaction", () => {
-  it("renames a Cell and reconciles every caller binding", () => {
+  it("renames a Cell and reconciles every caller symbol", () => {
     const project = createEmptyProject("project", "Project");
     const child = createEmptyDocument("document-child", "Child");
     project.documents.push(child);
@@ -68,7 +66,7 @@ describe("Project structural transaction", () => {
             instances: [
               {
                 symbolId: hierarchicalSymbolId("Stage"),
-                netlist: { binding: { name: "Stage" } },
+                netlist: { binding: { childDocumentId: child.id } },
               },
             ],
           },
@@ -245,7 +243,6 @@ describe("Project structural transaction", () => {
       id: "port-in",
       symbolId: "port",
       placement: null,
-      properties: {},
     });
     child.nets.push({
       id: "net-in",
@@ -262,9 +259,11 @@ describe("Project structural transaction", () => {
     project.documents.push(child);
     const caller = {
       ...hierarchyInstance("X1", "Child", child.id),
-      netlist: {
-        ...hierarchyInstance("X1", "Child", child.id).netlist,
-        terminals: [{ sourcePosition: 0, pinName: "IN" }],
+      importProvenance: {
+        kind: "subcircuit" as const,
+        name: "Child",
+        sourceTarget: `cell:${child.id}`,
+        terminalMapping: [{ sourcePosition: 0, pinName: "IN" }],
       },
     };
     project.documents[0]!.instances.push(caller);
@@ -290,7 +289,13 @@ describe("Project structural transaction", () => {
           {
             id: "document-main",
             nets: [{ terminals: [{ instanceId: "X1", pinName: "VIN" }] }],
-            instances: [{ netlist: { terminals: [{ pinName: "VIN" }] } }],
+            instances: [
+              {
+                importProvenance: {
+                  terminalMapping: [{ pinName: "VIN" }],
+                },
+              },
+            ],
           },
           {
             id: "document-child",
@@ -308,7 +313,6 @@ describe("Project structural transaction", () => {
       id: "port-vout",
       symbolId: "port",
       placement: null,
-      properties: {},
     });
     child.nets.push({
       id: "net-vout",
@@ -369,7 +373,6 @@ describe("Project structural transaction", () => {
       id: "port-unused",
       symbolId: "port",
       placement: null,
-      properties: {},
     });
     child.nets.push({
       id: "net-unused",
@@ -384,13 +387,9 @@ describe("Project structural transaction", () => {
       interfaceInstanceId: "port-unused",
     });
     project.documents.push(child);
-    project.documents[0]!.instances.push({
-      ...hierarchyInstance("X1", "Child", child.id),
-      netlist: {
-        ...hierarchyInstance("X1", "Child", child.id).netlist,
-        terminals: [{ sourcePosition: 0, pinName: "UNUSED" }],
-      },
-    });
+    project.documents[0]!.instances.push(
+      hierarchyInstance("X1", "Child", child.id),
+    );
 
     const result = executeProjectTransaction(project, {
       transactionId: "remove-unused-port",
@@ -405,7 +404,7 @@ describe("Project structural transaction", () => {
       applied: true,
       project: {
         documents: [
-          { instances: [{ netlist: { terminals: [] } }] },
+          { instances: [{ netlist: { reference: "X1" } }] },
           { instances: [], netlist: { terminals: [] } },
         ],
       },
@@ -420,13 +419,11 @@ describe("Project structural transaction", () => {
         id: "port-a",
         symbolId: "port",
         placement: null,
-        properties: {},
       },
       {
         id: "port-b",
         symbolId: "port",
         placement: null,
-        properties: {},
       },
     );
     child.nets.push(
@@ -458,16 +455,9 @@ describe("Project structural transaction", () => {
       },
     );
     project.documents.push(child);
-    project.documents[0]!.instances.push({
-      ...hierarchyInstance("X1", "Child", child.id),
-      netlist: {
-        ...hierarchyInstance("X1", "Child", child.id).netlist,
-        terminals: [
-          { sourcePosition: 0, pinName: "A" },
-          { sourcePosition: 1, pinName: "B" },
-        ],
-      },
-    });
+    project.documents[0]!.instances.push(
+      hierarchyInstance("X1", "Child", child.id),
+    );
 
     const result = executeProjectTransaction(project, {
       transactionId: "remove-unused-ports",
@@ -484,7 +474,7 @@ describe("Project structural transaction", () => {
       ok: true,
       project: {
         documents: [
-          { instances: [{ netlist: { terminals: [] } }] },
+          { instances: [{ netlist: { reference: "X1" } }] },
           { instances: [], netlist: { terminals: [] } },
         ],
       },
@@ -527,7 +517,6 @@ describe("Project structural transaction", () => {
       id: "P1",
       symbolId: "port",
       placement: null,
-      properties: {},
     });
     child.nets.push({
       id: "net-in",
@@ -543,13 +532,7 @@ describe("Project structural transaction", () => {
     });
     project.documents.push(child);
     const parent = project.documents[0]!;
-    parent.instances.push({
-      ...hierarchyInstance("X1", "Child", child.id),
-      netlist: {
-        ...hierarchyInstance("X1", "Child", child.id).netlist,
-        terminals: [{ sourcePosition: 0, pinName: "IN" }],
-      },
-    });
+    parent.instances.push(hierarchyInstance("X1", "Child", child.id));
     parent.nets.push({
       id: "net-parent",
       scope: "local",

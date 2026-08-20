@@ -19,7 +19,11 @@ describe("built-in device registry", () => {
       referencePrefix: "M",
       pinOrder: ["D", "G", "S", "B"],
       targetPolicy: "required-model",
-      requiredParameters: ["w", "l"],
+      parameters: [
+        { name: "w", required: true, displayRole: "width" },
+        { name: "l", required: true, displayRole: "length" },
+        { name: "m", required: false, displayRole: "multiplier" },
+      ],
       capabilities: { supportsBulkBinding: true },
     });
   });

@@ -18,7 +18,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "port"
         },
         {
@@ -31,7 +30,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "port"
         },
         {
@@ -44,7 +42,6 @@
             },
             "rotation": 90
           },
-          "properties": {},
           "symbolId": "port"
         },
         {
@@ -57,7 +54,6 @@
             },
             "rotation": 270
           },
-          "properties": {},
           "symbolId": "port"
         },
         {
@@ -70,7 +66,6 @@
             },
             "rotation": 90
           },
-          "properties": {},
           "symbolId": "port"
         }
       ],
@@ -78,6 +73,7 @@
       "layoutGroups": [],
       "name": "Phase 3 Routing",
       "netlist": {
+        "formalParameters": [],
         "name": "Phase_3_Routing",
         "terminals": []
       },
@@ -128,9 +124,10 @@
       "sourceStatus": "in-sync"
     }
   ],
+  "externalSubcircuitDefinitions": [],
   "id": "project-routing",
   "name": "Phase 3 Routing Demo",
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "source": {
     "dialect": "none",
     "entry": null,

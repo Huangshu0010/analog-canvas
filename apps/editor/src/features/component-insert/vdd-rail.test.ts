@@ -148,7 +148,6 @@ describe("drawn VDD rail construction", () => {
         netId: "net-global-vdd",
       },
       placement: null,
-      properties: {},
     });
     document.nets.push({
       id: "net-global-vdd",

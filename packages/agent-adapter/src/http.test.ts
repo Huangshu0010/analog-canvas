@@ -105,7 +105,6 @@ describe("authenticated loopback Agent HTTP adapter", () => {
                 symbolId: "resistor",
                 symbolVariantId: "",
                 placement: null,
-                properties: {},
               },
             },
           ],

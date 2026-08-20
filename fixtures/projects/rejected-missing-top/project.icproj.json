@@ -13,7 +13,8 @@
       "name": "Main",
       "netlist": {
         "name": "Main",
-        "terminals": []
+        "terminals": [],
+        "formalParameters": []
       },
       "nets": [],
       "noConnects": [],
@@ -29,7 +30,7 @@
   ],
   "id": "project-rejected",
   "name": "Rejected",
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "source": {
     "dialect": "none",
     "entry": null,
@@ -42,5 +43,6 @@
     "id": "razavi-symbols",
     "version": "1"
   },
-  "topDocumentId": "missing-document"
+  "topDocumentId": "missing-document",
+  "externalSubcircuitDefinitions": []
 }
