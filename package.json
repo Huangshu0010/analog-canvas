@@ -28,6 +28,7 @@
     "mcp:resources": "pnpm --filter @icm/agent-adapter... build && node scripts/generate-mcp-resources.mjs",
     "mcp:resources:check": "pnpm --filter @icm/agent-adapter... build && node scripts/generate-mcp-resources.mjs --check",
     "mcp:package": "pnpm build && node scripts/package-mcp.mjs",
+    "mcp:release:package": "pnpm build && node scripts/package-mcp.mjs --verify-declared-release-sha",
     "mcp:distribution:check": "node scripts/check-mcp-distribution.mjs",
     "mcp:smoke": "node scripts/mcp-release-smoke.mjs",
     "dev": "pnpm --filter @icm/editor dev",

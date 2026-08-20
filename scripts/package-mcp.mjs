@@ -4,6 +4,11 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { build } from "vite";
 
+import {
+  assertDeclaredReleaseSha,
+  VERIFY_DECLARED_RELEASE_SHA_FLAG,
+} from "./lib/mcp-release-integrity.mjs";
+
 const root = resolve(import.meta.dirname, "..");
 const distribution = JSON.parse(
   await readFile(resolve(root, "config/agent-mcp-distribution.json"), "utf8"),
@@ -81,15 +86,13 @@ const tarball = resolve(outputRoot, distribution.release.asset);
 const digest = createHash("sha256")
   .update(await readFile(tarball))
   .digest("hex");
-if (
-  process.platform === distribution.release.buildPlatform &&
-  distribution.release.sha256 &&
-  digest !== distribution.release.sha256
-) {
-  throw new Error(
-    `MCP tarball SHA-256 mismatch: expected ${distribution.release.sha256}, received ${digest}`,
-  );
-}
+assertDeclaredReleaseSha({
+  verify: process.argv.includes(VERIFY_DECLARED_RELEASE_SHA_FLAG),
+  platform: process.platform,
+  buildPlatform: distribution.release.buildPlatform,
+  expectedSha: distribution.release.sha256,
+  actualSha: digest,
+});
 await writeFile(
   resolve(outputRoot, "SHA256SUMS.txt"),
   `${digest}  ${distribution.release.asset}\n`,
