@@ -110,6 +110,12 @@ emitted `X` nodes and its `name` is the emitted master token. The instance owns
 raw overrides. A PDK may provide artwork later, but artwork cannot change
 external invocation into a primitive or model binding.
 
+External-master parameters are deliberately open: declared formal parameters
+provide authoring metadata, requiredness, and defaults, while additional raw
+instance keys are retained and emitted. This permits a project to carry
+library-specific settings such as `l`, `w`, and `nf` without bundling the
+library model or PDK.
+
 ## Device definition
 
 Each exportable electrical Symbol has one reviewed definition:

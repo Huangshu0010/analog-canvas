@@ -54,10 +54,10 @@ function externalInterface(
     kind: "external",
     definitionId: definition.id,
     name: definition.name,
-    terminals: definition.terminals.map((terminal, index) => ({
-      id: `${definition.id}:terminal:${index}`,
+    terminals: definition.terminals.map((terminal) => ({
+      id: terminal.id,
       name: terminal.name,
-      direction: "passive",
+      direction: terminal.direction,
     })),
     formalParameters: definition.formalParameters.map((parameter) => ({
       name: parameter.name,

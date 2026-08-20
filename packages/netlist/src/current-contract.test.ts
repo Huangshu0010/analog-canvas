@@ -277,6 +277,48 @@ describe("current formal cell interface", () => {
     );
   });
 
+  it("permits an external caller to retain raw library-specific parameters", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    project.externalSubcircuitDefinitions.push({
+      id: "external-library",
+      name: "LIBRARY_MASTER",
+      terminals: [
+        { id: "external-library-p1", name: "P1", direction: "passive" },
+      ],
+      formalParameters: [],
+      interfaceStatus: "inferred-positional",
+    });
+    document.instances.push({
+      id: "X1",
+      symbolId: "external-library-symbol",
+      placement: null,
+      netlist: {
+        reference: "X1",
+        binding: {
+          kind: "external-subcircuit",
+          definitionId: "external-library",
+        },
+        parameters: { l: "150n", w: "2u", nf: "4" },
+      },
+    });
+    document.nets.push({
+      id: "net-in",
+      name: "IN",
+      scope: "local",
+      terminals: [{ instanceId: "X1", pinName: "P1" }],
+    });
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.cells[0]!.instances[0]!.parameters).toEqual([
+      { name: "l", rawValue: "150n" },
+      { name: "nf", rawValue: "4" },
+      { name: "w", rawValue: "2u" },
+    ]);
+  });
+
   it("uses external terminal array order for X nodes while retaining terminal identities", () => {
     const project = createEmptyProject("project", "Project");
     const document = project.documents[0]!;

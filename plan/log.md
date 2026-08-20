@@ -3676,3 +3676,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: 49 focused unit/protocol tests, 3 focused browser tests,
   workspace typecheck, test-impact, and diff checks passed.
 - Commit status: prepared on `codex/unified-text-binding`.
+
+## 2026-08-20 - Phase 2 structural netlist closure
+
+- Changed areas: completed editor delivery of the existing structural SPICE
+  import/export loop with File-menu downloads and preflight preview for SPICE
+  and Spectre; retained external master terminal identity/direction and open
+  raw library parameters; added Project -> SPICE -> Project hierarchy/external
+  call semantic round-trip coverage; clarified the no-PDK/no-simulation-deck
+  boundary in user and export-contract documentation.
+- Validation: focused unit contracts (4 files / 28 tests), workspace
+  typecheck/build, focused Playwright preflight/preview/download flow (3
+  tests), format, Markdown-link (117 docs), test-impact, and diff checks
+  passed.
+- Commit status: prepared on `codex/phase2-netlist-closure`.

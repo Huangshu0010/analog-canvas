@@ -71,9 +71,16 @@ when you need to import them again.
 
 ## Export
 
-The **Export** menu produces SVG, PNG, and PDF containing only formal schematic
+The **File** menu exports SVG, PNG, and PDF containing only formal schematic
 layers. PNG uses 3x raster scale. PDF contains that same high-resolution raster
 on a page matching the SVG viewBox.
+
+For an electrical design netlist, choose **Netlist / Run Preflight** first.
+The dialog reports every blocking electrical fact and, when valid, previews
+the deterministic structural SPICE or Spectre text. Use either the dialog's
+download button or **File / SPICE netlist** and **File / Spectre netlist** to
+download it. These files contain structure only: they do not add PDK includes,
+models, corners, stimuli, analyses, or simulator options.
 
 ## Portable release
 

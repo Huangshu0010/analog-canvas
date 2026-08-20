@@ -1,7 +1,10 @@
+import { printDesignNetlist } from "@icm/netlist";
 import type {
   DesignNetlistAnalysisResult,
   NetlistDiagnostic,
+  NetlistFormat,
 } from "@icm/netlist";
+import { useMemo, useState } from "react";
 
 /** Presentation-only consumer of the canonical design-netlist analysis. */
 export function NetlistPreflightDialog({
@@ -9,12 +12,19 @@ export function NetlistPreflightDialog({
   result,
   onClose,
   onNavigate,
+  onExport,
 }: {
   open: boolean;
   result: DesignNetlistAnalysisResult;
   onClose(): void;
   onNavigate(diagnostic: NetlistDiagnostic): void;
+  onExport(format: NetlistFormat): void;
 }) {
+  const [format, setFormat] = useState<NetlistFormat>("spice");
+  const preview = useMemo(
+    () => (result.ir ? printDesignNetlist(format, result.ir).text : null),
+    [format, result.ir],
+  );
   if (!open) return null;
   const errors = result.diagnostics.filter(
     (diagnostic) => diagnostic.severity === "error",
@@ -48,6 +58,29 @@ export function NetlistPreflightDialog({
                 {result.ir.externalMasters?.length ?? 0} external interface
                 {(result.ir.externalMasters?.length ?? 0) === 1 ? "" : "s"}.
               </p>
+              <label>
+                Structural format
+                <select
+                  aria-label="Netlist export format"
+                  value={format}
+                  onChange={(event) =>
+                    setFormat(event.currentTarget.value as NetlistFormat)
+                  }
+                >
+                  <option value="spice">SPICE (.spi)</option>
+                  <option value="spectre">Spectre (.scs)</option>
+                </select>
+              </label>
+              <pre
+                className="netlist-preview"
+                data-testid="netlist-preview"
+                aria-label="Structural netlist preview"
+              >
+                {preview}
+              </pre>
+              <button type="button" onClick={() => onExport(format)}>
+                Download {format === "spice" ? "SPICE" : "Spectre"} netlist
+              </button>
             </section>
           ) : (
             <section className="insert-control-column">

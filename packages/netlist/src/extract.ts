@@ -389,6 +389,7 @@ function validateFormalParameterOverrides(
     defaultValue?: string | undefined;
   }[],
   diagnostics: NetlistDiagnostic[],
+  options: { allowAdditional?: boolean } = {},
 ): void {
   const parameters = instance.netlist?.parameters ?? {};
   const formalByFoldedName = new Map(
@@ -398,7 +399,8 @@ function validateFormalParameterOverrides(
     ]),
   );
   for (const name of Object.keys(parameters)) {
-    if (formalByFoldedName.has(name.toLowerCase())) continue;
+    if (options.allowAdditional || formalByFoldedName.has(name.toLowerCase()))
+      continue;
     diagnostic(
       diagnostics,
       document.id,
@@ -459,6 +461,7 @@ function extractExternalSubcircuitInstance(
     instance,
     definition.formalParameters,
     diagnostics,
+    { allowAdditional: true },
   );
   const allowedPins = new Set(
     definition.terminals.map((terminal) => terminal.name.toLowerCase()),
@@ -912,10 +915,10 @@ export function analyzeDesignNetlist(
         .map((definition) => ({
           id: definition.id,
           name: definition.name,
-          terminals: definition.terminals.map((terminal, index) => ({
-            id: `${definition.id}:terminal:${index}`,
+          terminals: definition.terminals.map((terminal) => ({
+            id: terminal.id,
             name: terminal.name,
-            direction: "passive" as const,
+            direction: terminal.direction,
           })),
           formalParameters: definition.formalParameters.map((parameter) => ({
             name: parameter.name,
