@@ -52,9 +52,11 @@ local `main` ref and its integration records only.
 ## Test Impact
 
 - Decision: no-test-change
-- Evidence: this target changes no production or test contract; source commit
-  `e11de334` completed `pnpm verify:branch` with 956 tests and a production
-  smoke check before integration.
+- Reason: this target changes no production or test contract; it only moves
+  the validated history and records the integration.
+- Existing protection: source commit `e11de334` completed
+  `pnpm verify:branch` with 956 tests and a production smoke check, and the
+  integrated candidate passed `pnpm ci:check` before remote review.
 
 ## Commit Intent
 
