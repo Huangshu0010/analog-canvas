@@ -3716,3 +3716,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   956 tests, workspace build, and production preview smoke).
 - Commit status: prepared on `codex/phase2-netlist-hardening` as a separate
   baseline-reconciliation commit.
+
+## 2026-08-21 - Phase 2 netlist mainline integration
+
+- Changed areas: fast-forwarded local `main` from `14fe2d54` through the
+  Phase 2 structural closure (`88a997df`), netlist hardening (`8d62fe21`), and
+  schema-15 baseline reconciliation (`e11de334`); recorded the local
+  integration boundary.
+- Validation: `pnpm install --frozen-lockfile` and complete `pnpm ci:check`
+  passed: static contracts, 159 unit-test files / 956 tests, workspace build,
+  release and production smoke checks, and 162 browser E2E tests.
+- Commit status: local `main` is now at `e11de334`, pending a records-only
+  integration commit; no remote push was requested.
