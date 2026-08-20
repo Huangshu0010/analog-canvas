@@ -11,7 +11,7 @@ import {
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { SchematicEdit } from "./edit-schema.js";
-import { isOrthogonal, normalizeRouteGeometry } from "./route-geometry-edit.js";
+import { isOctilinear, normalizeRouteGeometry } from "./route-geometry-edit.js";
 import { resolveRouteEditPath } from "./route-operations.js";
 import { pointOnSegment } from "./transaction-routing.js";
 
@@ -291,7 +291,7 @@ export function applyInstancesRouteFollow(
     }
 
     const normalized = normalizeRouteGeometry(points, modes);
-    if (!isOrthogonal(normalized.points)) continue;
+    if (!isOctilinear(normalized.points)) continue;
     route.waypoints = normalized.points.slice(1, -1);
     route.segmentModes = normalized.segmentModes;
     changed.push(route.id);

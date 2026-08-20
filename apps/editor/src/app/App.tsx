@@ -11,7 +11,7 @@ import type {
 import { deviceDescriptor, referencePolicyForInstance } from "@icm/devices";
 
 import {
-  buildManualWirePath,
+  compileWireDraft,
   createConnectivityProposal,
   createFreeWireAnchor,
   gateConnectivityProposal,
@@ -343,6 +343,30 @@ const COMPACT_LAYOUT_MEDIA_QUERY = "(max-width: 860px)";
 const DRAG_START_DISTANCE_PX = 4;
 const SNAP_CAPTURE_RADIUS_PX = 7;
 
+/** Persisted Junctions are grid points, including on ±45° Route segments. */
+function snapPointOnRouteGrid(
+  pointer: Point,
+  from: Point,
+  to: Point,
+  grid: number,
+): Point {
+  const projected = closestPointOnSegment(pointer, from, to);
+  if (from.y === to.y) {
+    return { x: snapCoordinate(projected.x, grid), y: from.y };
+  }
+  if (from.x === to.x) {
+    return { x: from.x, y: snapCoordinate(projected.y, grid) };
+  }
+  // Octilinear diagonal: choosing one grid coordinate determines the other.
+  // Endpoints already satisfy the grid invariant, so the paired coordinate
+  // remains integral and on-grid too.
+  const slope = Math.sign(to.y - from.y) * Math.sign(to.x - from.x);
+  const minX = Math.min(from.x, to.x);
+  const maxX = Math.max(from.x, to.x);
+  const x = clamp(snapCoordinate(projected.x, grid), minX, maxX);
+  return { x, y: from.y + slope * (x - from.x) };
+}
+
 type DragPreview = InstanceMovePreview;
 
 interface BoxPreview {
@@ -360,6 +384,7 @@ interface PanPreview {
   clientStart: Point;
   viewBoxStart: GridRect;
   pointerId: number;
+  dragged: boolean;
 }
 
 interface AnnotationDragPreview {
@@ -597,6 +622,7 @@ export function App({
     terminalId?: string;
   } | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
+  const [wireOptionsOpen, setWireOptionsOpen] = useState(false);
   const [routeStretchPreview, setRouteStretchPreview] =
     useState<RouteStretchPreview | null>(null);
   const [draftingHandlePreview, setDraftingHandlePreview] =
@@ -611,6 +637,9 @@ export function App({
     wireSourceRevision,
     wirePreviewPoint,
     wireWaypoints,
+    wireDraftSteps,
+    wireRoutingMode,
+    wireCornerOrder,
     draftingSource,
     draftingHover,
     draftingWaypoints,
@@ -636,7 +665,10 @@ export function App({
     mirrorCopyPlacement,
     setWireSource,
     setWirePreviewPoint,
-    setWireWaypoints,
+    setWireDraftSteps,
+    setWireRoutingMode,
+    toggleWireRoutingMode,
+    setWireCornerOrder,
     completeWire,
     setDraftingSource,
     setDraftingHover,
@@ -1282,13 +1314,16 @@ export function App({
     wireSource,
     wireSourceRevision,
     wireWaypoints,
+    wireDraftSteps,
+    wireRoutingMode,
+    wireCornerOrder,
     nextRoutingSuffix,
     transact,
     setStatus,
     setTool,
     setWireSource,
     setWirePreviewPoint,
-    setWireWaypoints,
+    setWireDraftSteps,
     completeWire,
     clearTransientCanvasState,
     cancelInteraction,
@@ -1479,14 +1514,16 @@ export function App({
     ...internalSelection.junctionIds,
   ]);
   const wireFixedPoints = wireSource
-    ? [wireSource.point, ...wireWaypoints]
+    ? compileWireDraft(wireSource, wireSource, wireDraftSteps).points
     : [];
   const wireDraftPoints =
     wireSource && wirePreviewPoint
-      ? buildManualWirePath(
+      ? compileWireDraft(
           wireSource,
           { point: wirePreviewPoint },
-          wireWaypoints,
+          wireDraftSteps,
+          wireRoutingMode,
+          wireCornerOrder,
         ).points
       : wireFixedPoints;
   const projectInstanceCount = project.documents.reduce(
@@ -3363,10 +3400,11 @@ export function App({
       geometry.centerline.slice(0, -1).map((from, segmentIndex) => ({
         anchor: {
           id: `wire-route:${route.id}:${segmentIndex}`,
-          point: closestPointOnSegment(
+          point: snapPointOnRouteGrid(
             point,
             from,
             geometry.centerline[segmentIndex + 1]!,
+            document.presentation.grid,
           ),
           kind: "route" as const,
         },
@@ -3476,7 +3514,7 @@ export function App({
       if (!wireSource) {
         setWireSource(resolved.endpoint, document.revision);
         setWirePreviewPoint(resolved.endpoint.point);
-        setWireWaypoints([]);
+        setWireDraftSteps([]);
       } else if (
         endpointKey(wireSource.endpoint) !==
         endpointKey(resolved.endpoint.endpoint)
@@ -3496,7 +3534,7 @@ export function App({
       if (!wireSource) {
         setWireSource(anchor, document.revision);
         setWirePreviewPoint(anchor.point);
-        setWireWaypoints([]);
+        setWireDraftSteps([]);
       } else {
         commitWire(anchor);
       }
@@ -5376,6 +5414,7 @@ export function App({
         clientStart: { x: event.clientX, y: event.clientY },
         viewBoxStart: viewBox,
         pointerId: event.pointerId,
+        dragged: false,
       });
       return;
     }
@@ -5477,6 +5516,13 @@ export function App({
       const dy =
         ((event.clientY - panPreview.clientStart.y) / bounds.height) *
         panPreview.viewBoxStart.height;
+      const moved =
+        Math.hypot(
+          event.clientX - panPreview.clientStart.x,
+          event.clientY - panPreview.clientStart.y,
+        ) >= DRAG_START_DISTANCE_PX;
+      if (moved && !panPreview.dragged)
+        setPanPreview({ ...panPreview, dragged: true });
       setViewBox({
         ...panPreview.viewBoxStart,
         x: Math.round(panPreview.viewBoxStart.x - dx),
@@ -5560,6 +5606,12 @@ export function App({
     if (completeCellSymbolLayoutDrag(event)) return;
     if (panPreview?.pointerId === event.pointerId) {
       event.currentTarget.releasePointerCapture(event.pointerId);
+      if (!panPreview.dragged && getCurrentInteractionState().kind === "wire") {
+        toggleWireRoutingMode();
+        setStatus(
+          `Wire mode: ${wireRoutingMode === "orthogonal" ? "45° octilinear" : "orthogonal"}`,
+        );
+      }
       setPanPreview(null);
       return;
     }
@@ -6094,7 +6146,7 @@ export function App({
           selectedDrafting?.kind === "construction-line" ||
           selectedDrafting?.kind === "rectangle",
         hasRemovableWireWaypoint: Boolean(
-          wireSource && wireWaypoints.length > 0,
+          wireSource && wireDraftSteps.length > 0,
         ),
         propertiesOpen: selectionOpen,
         hasHierarchyEnterSelection,
@@ -6257,6 +6309,9 @@ export function App({
         case "finish-wire":
           if (wirePreviewPoint) finishWireAtPoint(wirePreviewPoint);
           return;
+        case "toggle-wire-options":
+          setWireOptionsOpen((open) => !open);
+          return;
         case "finish-drafting":
           finishDraftingCreate();
           return;
@@ -6294,8 +6349,8 @@ export function App({
           setStatus("Cancelled");
           return;
         case "remove-wire-waypoint":
-          setWireWaypoints(wireWaypoints.slice(0, -1));
-          setStatus("Removed last wire bend");
+          setWireDraftSteps(wireDraftSteps.slice(0, -1));
+          setStatus("Removed last authored wire step");
           return;
         case "blocked-interaction-command":
           setStatus(
@@ -8494,7 +8549,7 @@ export function App({
               if (tool === "wire") {
                 setWireSource(null, null);
                 setWirePreviewPoint(null);
-                setWireWaypoints([]);
+                setWireDraftSteps([]);
                 setTool("pointer");
                 setBulkDrawInstanceId(null);
                 setStatus("Wire cancelled");
@@ -9595,6 +9650,49 @@ export function App({
                     ? "Line"
                     : tool.charAt(0).toUpperCase() + tool.slice(1)}
           </span>
+          {tool === "wire" ? (
+            <button
+              type="button"
+              className="statusbar-tool"
+              onClick={() => setWireOptionsOpen((open) => !open)}
+              aria-expanded={wireOptionsOpen}
+            >
+              {wireRoutingMode === "orthogonal" ? "Orthogonal" : "45°"} · F3
+            </button>
+          ) : null}
+          {tool === "wire" && wireOptionsOpen ? (
+            <span className="wire-options" data-testid="wire-options">
+              <label>
+                Route
+                <select
+                  value={wireRoutingMode}
+                  onChange={(event) =>
+                    setWireRoutingMode(
+                      event.target.value as typeof wireRoutingMode,
+                    )
+                  }
+                >
+                  <option value="orthogonal">Orthogonal</option>
+                  <option value="octilinear">45° octilinear</option>
+                </select>
+              </label>
+              <label>
+                Corner
+                <select
+                  value={wireCornerOrder}
+                  onChange={(event) =>
+                    setWireCornerOrder(
+                      event.target.value as typeof wireCornerOrder,
+                    )
+                  }
+                >
+                  <option value="auto">Auto</option>
+                  <option value="diagonal-first">Diagonal first</option>
+                  <option value="orthogonal-first">Orthogonal first</option>
+                </select>
+              </label>
+            </span>
+          ) : null}
           {recoveryStateLabel(recoveryState) === null ? null : (
             <output
               className="statusbar-recovery"

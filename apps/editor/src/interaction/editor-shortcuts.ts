@@ -64,6 +64,7 @@ export type EditorShortcutIntent =
       increase: boolean;
     }
   | { kind: "finish-wire" | "finish-drafting" }
+  | { kind: "toggle-wire-options" }
   | {
       kind:
         | "close-help"
@@ -92,6 +93,13 @@ export function resolveEditorShortcut(
 ): EditorShortcutIntent | null {
   const key = event.key.toLowerCase();
   const commandModifier = event.ctrlKey || event.metaKey;
+  if (
+    event.key === "F3" &&
+    !context.isTyping &&
+    context.interactionMode === "wire"
+  ) {
+    return { kind: "toggle-wire-options" };
+  }
   if (event.key === "F5") return { kind: "block-browser-refresh" };
   if (commandModifier && key === "r") {
     if (context.isTyping) return { kind: "block-browser-refresh" };

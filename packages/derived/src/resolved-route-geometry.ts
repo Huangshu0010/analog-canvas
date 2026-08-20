@@ -10,6 +10,7 @@ import {
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
 } from "./endpoint.js";
+import { unitDirection } from "./segment-geometry.js";
 
 /** A segment address is valid only for the current document revision. */
 export interface RouteSegmentAddress {
@@ -65,14 +66,6 @@ export interface ResolvedDocumentRoutingGeometry {
   endpointJoins: readonly EndpointJoin[];
 }
 
-function axisDirection(from: Point, to: Point): Point | null {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  if (dx !== 0 && dy === 0) return { x: Math.sign(dx), y: 0 };
-  if (dx === 0 && dy !== 0) return { x: 0, y: Math.sign(dy) };
-  return null;
-}
-
 function vertexKindForEndpoint(
   document: SchematicDocument,
   endpoint: RouteEndpoint,
@@ -119,7 +112,7 @@ export function resolveRouteGeometry(
       resolver,
       route.from,
     );
-    const routeDirection = axisDirection(centerline[0]!, centerline[1]!);
+    const routeDirection = unitDirection(centerline[0]!, centerline[1]!);
     if (pinOutward && routeDirection) {
       endpointJoins.push({
         kind: "terminal-miter",
@@ -136,7 +129,7 @@ export function resolveRouteGeometry(
       resolver,
       route.to,
     );
-    const routeDirection = axisDirection(
+    const routeDirection = unitDirection(
       centerline.at(-1)!,
       centerline.at(-2)!,
     );
@@ -216,7 +209,7 @@ function resolveRouteAnchorJoinsFromGeometry(
     if (endpoint.kind !== "junction") return;
     const anchor = anchors.get(endpoint.junctionId);
     if (!anchor) return;
-    const direction = axisDirection(point, neighbor);
+    const direction = unitDirection(point, neighbor);
     if (direction) anchor.directions.push(direction);
   };
   for (const route of document.routes) {

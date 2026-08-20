@@ -10620,6 +10620,21 @@
           "items": {
             "$ref": "#/$defs/__schema20"
           }
+        },
+        "routingMode": {
+          "type": "string",
+          "enum": [
+            "orthogonal",
+            "octilinear"
+          ]
+        },
+        "cornerOrder": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "diagonal-first",
+            "orthogonal-first"
+          ]
         }
       },
       "required": [

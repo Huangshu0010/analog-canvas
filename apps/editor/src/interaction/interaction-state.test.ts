@@ -20,7 +20,9 @@ describe("editor interaction state", () => {
       source: null,
       sourceRevision: null,
       previewPoint: null,
-      waypoints: [],
+      steps: [],
+      routingMode: "orthogonal",
+      cornerOrder: "auto",
     });
     expect(interactionTool(wiring)).toBe("wire");
   });
@@ -46,6 +48,26 @@ describe("editor interaction state", () => {
     expect(
       interactionReducer(state, { type: "activate-tool", tool: "wire" }),
     ).toBe(state);
+  });
+
+  it("switches only the active Wire constraint and preserves authored steps", () => {
+    let state = activateInteractionTool("wire");
+    state = interactionReducer(state, {
+      type: "set-wire-steps",
+      update: [
+        {
+          point: { x: 30, y: 20 },
+          routingMode: "orthogonal",
+          cornerOrder: "auto",
+        },
+      ],
+    });
+    state = interactionReducer(state, { type: "toggle-wire-routing-mode" });
+    expect(state).toMatchObject({
+      kind: "wire",
+      routingMode: "octilinear",
+      steps: [{ routingMode: "orthogonal" }],
+    });
   });
 
   it("keeps in-progress drawing geometry when the same tool is activated", () => {
@@ -125,7 +147,9 @@ describe("editor interaction state", () => {
       source: null,
       sourceRevision: null,
       previewPoint: null,
-      waypoints: [],
+      steps: [],
+      routingMode: "orthogonal",
+      cornerOrder: "auto",
     });
   });
 
@@ -215,7 +239,9 @@ describe("editor interaction state", () => {
       source: null,
       sourceRevision: null,
       previewPoint: null,
-      waypoints: [],
+      steps: [],
+      routingMode: "orthogonal",
+      cornerOrder: "auto",
     });
   });
 

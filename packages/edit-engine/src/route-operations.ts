@@ -4,13 +4,14 @@ import type { SymbolResolver } from "@icm/symbols";
 import {
   deriveInternalGroupSelection as deriveRoutingInternalGroupSelection,
   derivePowerRailComponent,
+  isSegmentAllowed,
   resolveDocumentRoutingGeometry,
   resolveEndpointPoint,
   resolveRouteGeometry,
   type ResolvedDocumentRoutingGeometry,
 } from "@icm/derived";
 import {
-  isOrthogonal,
+  isOctilinear,
   moveRouteSegment,
   normalizeRouteGeometry,
   type RouteEditPath,
@@ -115,9 +116,9 @@ function normalizeProposal(
   modes: readonly SegmentMode[],
 ): RouteStretchProposal {
   const normalized = normalizeRouteGeometry(points, modes);
-  if (!isOrthogonal(normalized.points)) {
+  if (!isOctilinear(normalized.points)) {
     throw new Error(
-      `Wire segment drag would make route ${routeId} non-orthogonal`,
+      `Wire segment drag would make route ${routeId} non-octilinear`,
     );
   }
   return {
@@ -148,31 +149,51 @@ function stretchRouteEndpoint(
     originalPoint.x === neighbor.x && originalPoint.y !== neighbor.y;
   const originallyHorizontal =
     originalPoint.y === neighbor.y && originalPoint.x !== neighbor.x;
-  if (!originallyVertical && !originallyHorizontal) {
-    throw new Error(`Route ${routeId} has invalid endpoint geometry`);
-  }
-
-  if (points.length > 2) {
-    if (originallyVertical) neighbor.x = movedPoint.x;
-    else neighbor.y = movedPoint.y;
+  // Preserve established orthogonal stretch geometry byte-for-byte. The
+  // generic branch below only handles an existing diagonal or future heading.
+  if (originallyVertical || originallyHorizontal) {
+    if (points.length > 2) {
+      if (originallyVertical) neighbor.x = movedPoint.x;
+      else neighbor.y = movedPoint.y;
+      return;
+    }
+    const stillAligned = originallyVertical
+      ? movedPoint.x === neighbor.x
+      : movedPoint.y === neighbor.y;
+    if (stillAligned) return;
+    const insertIndex = side === "from" ? 1 : points.length - 1;
+    points.splice(
+      insertIndex,
+      0,
+      originallyVertical
+        ? { x: neighbor.x, y: movedPoint.y }
+        : { x: movedPoint.x, y: neighbor.y },
+    );
+    const modeIndex = side === "from" ? 0 : modes.length - 1;
+    const mode = modes[modeIndex]!;
+    modes.splice(modeIndex, 1, mode, mode);
     return;
   }
 
-  const stillAligned = originallyVertical
-    ? movedPoint.x === neighbor.x
-    : movedPoint.y === neighbor.y;
-  if (stillAligned) return;
+  if (isSegmentAllowed(movedPoint, neighbor, "octilinear")) return;
 
+  const dx = neighbor.x - movedPoint.x;
+  const dy = neighbor.y - movedPoint.y;
+  const diagonalDistance = Math.min(Math.abs(dx), Math.abs(dy));
+  const elbow =
+    Math.abs(dx) > Math.abs(dy)
+      ? {
+          x: movedPoint.x + Math.sign(dx) * diagonalDistance,
+          y: neighbor.y,
+        }
+      : {
+          x: neighbor.x,
+          y: movedPoint.y + Math.sign(dy) * diagonalDistance,
+        };
   const insertIndex = side === "from" ? 1 : points.length - 1;
-  // A direct Route needs an orthogonal elbow when its Junction moves in both
-  // axes. Re-inserting the old endpoint would create a diagonal segment.
-  points.splice(
-    insertIndex,
-    0,
-    originallyVertical
-      ? { x: neighbor.x, y: movedPoint.y }
-      : { x: movedPoint.x, y: neighbor.y },
-  );
+  // The local stretch uses exactly the same octilinear leg constraint as Wire
+  // authoring. Existing points are never rerouted or reclassified.
+  points.splice(insertIndex, 0, elbow);
   const modeIndex = side === "from" ? 0 : modes.length - 1;
   const mode = modes[modeIndex]!;
   modes.splice(modeIndex, 1, mode, mode);
@@ -312,8 +333,12 @@ export function proposeWireSegmentDrag(
   const toPoint = selectedPolyline.points[segmentIndex + 1]!;
   const horizontal = fromPoint.y === toPoint.y;
   const vertical = fromPoint.x === toPoint.x;
-  if (!horizontal && !vertical) {
-    throw new Error(`Route ${routeId} segment is not orthogonal`);
+  const diagonal =
+    !horizontal &&
+    !vertical &&
+    Math.abs(toPoint.x - fromPoint.x) === Math.abs(toPoint.y - fromPoint.y);
+  if (!horizontal && !vertical && !diagonal) {
+    throw new Error(`Route ${routeId} segment is not octilinear`);
   }
 
   const lastPointIndex = selectedPolyline.points.length - 1;
@@ -328,6 +353,47 @@ export function proposeWireSegmentDrag(
   };
   const leftAnchorId = selectedEndpointJunction(segmentIndex);
   const rightAnchorId = selectedEndpointJunction(segmentIndex + 1);
+
+  if (diagonal) {
+    const slope = Math.sign(
+      (toPoint.y - fromPoint.y) / (toPoint.x - fromPoint.x),
+    );
+    const offset =
+      target.y - slope * target.x - (fromPoint.y - slope * fromPoint.x);
+    const movedJunctions = new Map<string, Point>();
+    for (const anchorId of [leftAnchorId, rightAnchorId]) {
+      if (!anchorId || movedJunctions.has(anchorId)) continue;
+      const junction = document.junctions.find(
+        (candidate) => candidate.id === anchorId,
+      )!;
+      // Vertical translation is an exact perpendicular offset for either
+      // 45-degree heading.  Incident routes are then stretched by the same
+      // shared Junction proposal as an orthogonal drag.
+      movedJunctions.set(anchorId, {
+        x: junction.position.x,
+        y: junction.position.y + offset,
+      });
+    }
+    if (movedJunctions.size > 0) {
+      return proposeJunctionGroupTranslation(
+        document,
+        resolver,
+        [...movedJunctions.entries()].map(([junctionId, position]) => ({
+          junctionId,
+          position,
+        })),
+      );
+    }
+    return {
+      routes: [
+        {
+          routeId,
+          ...moveRouteSegment(selectedPolyline, segmentIndex, target),
+        },
+      ],
+      junctions: [],
+    };
+  }
 
   // Ordinary single-Route bends keep the established dogleg behavior. The
   // topology-aware path is required only when a persisted Junction makes the

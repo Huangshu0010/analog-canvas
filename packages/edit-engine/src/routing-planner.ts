@@ -2,7 +2,9 @@ import {
   derivePowerRailComponent,
   isMosBulkRoute,
   isMosBulkTerminal,
+  pointOnSegment,
   resolveEndpointPoint,
+  segmentLength,
 } from "@icm/derived";
 import {
   normalizeRouteGeometry,
@@ -33,6 +35,23 @@ export interface ManualWirePath {
   points: Point[];
   waypoints: Point[];
   segmentModes: SegmentMode[];
+}
+
+/** A transient command constraint, never a second persisted Route type. */
+export type WireRoutingMode = "orthogonal" | "octilinear";
+export type WireCornerOrder = "auto" | "diagonal-first" | "orthogonal-first";
+
+/** One authored click. The compiler may insert an unpersisted elbow. */
+export interface WireDraftStep {
+  point: Point;
+  routingMode: WireRoutingMode;
+  cornerOrder?: WireCornerOrder;
+}
+
+export interface WireDraftOptions {
+  steps?: readonly WireDraftStep[];
+  routingMode?: WireRoutingMode;
+  cornerOrder?: WireCornerOrder;
 }
 
 export interface WireSource extends WireEndpointGeometry {
@@ -109,6 +128,8 @@ export interface WireIntent {
   from: WireIntentAnchor;
   to: WireIntentAnchor;
   waypoints?: readonly Point[] | undefined;
+  routingMode?: WireRoutingMode | undefined;
+  cornerOrder?: WireCornerOrder | undefined;
 }
 
 export interface VisualRouteDeletion {
@@ -608,18 +629,79 @@ function appendOrthogonal(
   append(points, modes, target, mode);
 }
 
-/** Build a persisted manual orthogonal path without hidden terminal escapes. */
-export function buildManualWirePath(
+function appendOctilinear(
+  points: Point[],
+  modes: SegmentMode[],
+  target: Point,
+  mode: SegmentMode,
+  cornerOrder: WireCornerOrder,
+): void {
+  const last = points.at(-1)!;
+  if (samePoint(last, target)) return;
+  const dx = target.x - last.x;
+  const dy = target.y - last.y;
+  if (dx === 0 || dy === 0 || Math.abs(dx) === Math.abs(dy)) {
+    append(points, modes, target, mode);
+    return;
+  }
+  const diagonalDistance = Math.min(Math.abs(dx), Math.abs(dy));
+  const diagonal = {
+    x: last.x + Math.sign(dx) * diagonalDistance,
+    y: last.y + Math.sign(dy) * diagonalDistance,
+  };
+  const useDiagonalFirst = cornerOrder !== "orthogonal-first";
+  if (useDiagonalFirst) {
+    append(points, modes, diagonal, mode);
+  } else if (Math.abs(dx) > Math.abs(dy)) {
+    append(
+      points,
+      modes,
+      { x: target.x - Math.sign(dx) * diagonalDistance, y: last.y },
+      mode,
+    );
+  } else {
+    append(
+      points,
+      modes,
+      { x: last.x, y: target.y - Math.sign(dy) * diagonalDistance },
+      mode,
+    );
+  }
+  append(points, modes, target, mode);
+}
+
+/**
+ * Compile authored wire clicks to ordinary persisted Route geometry.  A mode
+ * applies only to the leg being authored; prior compiled legs are immutable.
+ */
+export function compileWireDraft(
   from: WireEndpointGeometry,
   to: WireEndpointGeometry,
-  manualWaypoints: readonly Point[] = [],
+  steps: readonly WireDraftStep[] = [],
+  finalRoutingMode: WireRoutingMode = "orthogonal",
+  finalCornerOrder: WireCornerOrder = "auto",
 ): ManualWirePath {
   const points: Point[] = [{ ...from.point }];
   const modes: SegmentMode[] = [];
-  for (const waypoint of manualWaypoints) {
-    appendOrthogonal(points, modes, waypoint, "manual");
-  }
-  appendOrthogonal(points, modes, to.point, "manual");
+  const appendStep = (step: WireDraftStep) => {
+    if (step.routingMode === "orthogonal") {
+      appendOrthogonal(points, modes, step.point, "manual");
+    } else {
+      appendOctilinear(
+        points,
+        modes,
+        step.point,
+        "manual",
+        step.cornerOrder ?? "auto",
+      );
+    }
+  };
+  for (const step of steps) appendStep(step);
+  appendStep({
+    point: to.point,
+    routingMode: finalRoutingMode,
+    cornerOrder: finalCornerOrder,
+  });
   if (points.length === 1) return { points, waypoints: [], segmentModes: [] };
   const normalized = normalizeRouteGeometry(points, modes);
   return {
@@ -629,11 +711,25 @@ export function buildManualWirePath(
   };
 }
 
+/** Build a persisted manual orthogonal path without hidden terminal escapes. */
+export function buildManualWirePath(
+  from: WireEndpointGeometry,
+  to: WireEndpointGeometry,
+  manualWaypoints: readonly Point[] = [],
+): ManualWirePath {
+  return compileWireDraft(
+    from,
+    to,
+    manualWaypoints.map((point) => ({ point, routingMode: "orthogonal" })),
+  );
+}
+
 export function proposeWireCommit(
   from: WireSource,
   to: WireSource,
   manualWaypoints: readonly Point[],
   suffixOrIds: number | { routeId: string; newNetId: string },
+  draft: WireDraftOptions = {},
 ): WireCommitProposal {
   const ids =
     typeof suffixOrIds === "number"
@@ -668,7 +764,18 @@ export function proposeWireCommit(
     ...(!from.netId && !to.netId ? { newNetId: netId } : {}),
   });
   const routeId = ids.routeId;
-  const routed = buildManualWirePath(from, to, manualWaypoints);
+  const routed = compileWireDraft(
+    from,
+    to,
+    draft.steps ??
+      manualWaypoints.map((point) => ({
+        point,
+        routingMode: draft.routingMode ?? "orthogonal",
+        ...(draft.cornerOrder ? { cornerOrder: draft.cornerOrder } : {}),
+      })),
+    draft.routingMode ?? "orthogonal",
+    draft.cornerOrder ?? "auto",
+  );
   edits.push({
     kind: "set_route_points",
     routeId,
@@ -713,21 +820,10 @@ function pathOffsetAtPoint(
   for (let index = 0; index < points.length - 1; index += 1) {
     const from = points[index]!;
     const to = points[index + 1]!;
-    const horizontal = from.y === to.y;
-    const vertical = from.x === to.x;
-    const onSegment = horizontal
-      ? point.y === from.y &&
-        point.x >= Math.min(from.x, to.x) &&
-        point.x <= Math.max(from.x, to.x)
-      : vertical
-        ? point.x === from.x &&
-          point.y >= Math.min(from.y, to.y) &&
-          point.y <= Math.max(from.y, to.y)
-        : false;
-    if (onSegment) {
-      return offset + Math.abs(point.x - from.x) + Math.abs(point.y - from.y);
+    if (pointOnSegment(point, from, to)) {
+      return offset + segmentLength(from, point);
     }
-    offset += Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+    offset += segmentLength(from, to);
   }
   return null;
 }
@@ -742,7 +838,7 @@ function waypointsBetweenOffsets(
   for (let index = 0; index < path.points.length - 1; index += 1) {
     const from = path.points[index]!;
     const to = path.points[index + 1]!;
-    offset += Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+    offset += segmentLength(from, to);
     if (offset > fromOffset && offset < toOffset) result.push({ ...to });
   }
   return result;
@@ -773,8 +869,20 @@ export function proposeWireCommitThroughContacts(
   manualWaypoints: readonly Point[],
   contacts: readonly WireSource[],
   suffixOrIds: number | { routeId: string; newNetId: string },
+  draft: WireDraftOptions = {},
 ): WireCommitProposal {
-  const path = buildManualWirePath(from, to, manualWaypoints);
+  const path = compileWireDraft(
+    from,
+    to,
+    draft.steps ??
+      manualWaypoints.map((point) => ({
+        point,
+        routingMode: draft.routingMode ?? "orthogonal",
+        ...(draft.cornerOrder ? { cornerOrder: draft.cornerOrder } : {}),
+      })),
+    draft.routingMode ?? "orthogonal",
+    draft.cornerOrder ?? "auto",
+  );
   const endpointInstanceIds = new Set(
     [terminalInstanceId(from), terminalInstanceId(to)].filter(
       (instanceId): instanceId is string => instanceId !== null,
@@ -782,7 +890,7 @@ export function proposeWireCommitThroughContacts(
   );
   const totalOffset = path.points.slice(0, -1).reduce((total, point, index) => {
     const next = path.points[index + 1]!;
-    return total + Math.abs(next.x - point.x) + Math.abs(next.y - point.y);
+    return total + segmentLength(point, next);
   }, 0);
   const ordered = contacts
     .flatMap((source): OrderedWireContact[] => {
@@ -814,7 +922,7 @@ export function proposeWireCommitThroughContacts(
         ),
     );
   if (ordered.length === 0) {
-    return proposeWireCommit(from, to, manualWaypoints, suffixOrIds);
+    return proposeWireCommit(from, to, manualWaypoints, suffixOrIds, draft);
   }
 
   const ids =
@@ -861,6 +969,7 @@ export function proposeWireCommitThroughContacts(
         routeId: `${ids.routeId}-part-${index + 1}`,
         newNetId: ids.newNetId,
       },
+      { routingMode: "octilinear" },
     );
     edits.push(...proposal.edits);
     netId = proposal.netId;
@@ -1063,8 +1172,17 @@ export function proposeWireIntent(
   if (typeof from === "string") return from;
   const to = source(intent.to, "to");
   if (typeof to === "string") return to;
-  return proposeWireCommit(from, to, intent.waypoints ?? [], {
-    routeId: `${intent.id}-route`,
-    newNetId,
-  });
+  return proposeWireCommit(
+    from,
+    to,
+    intent.waypoints ?? [],
+    {
+      routeId: `${intent.id}-route`,
+      newNetId,
+    },
+    {
+      ...(intent.routingMode ? { routingMode: intent.routingMode } : {}),
+      ...(intent.cornerOrder ? { cornerOrder: intent.cornerOrder } : {}),
+    },
+  );
 }

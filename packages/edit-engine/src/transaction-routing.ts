@@ -10,30 +10,17 @@ import {
   endpointBelongsToNet,
   endpointKey,
   netEndpoints,
+  pointOnSegment as pointOnGenericSegment,
   resolveEndpointOutwardDirection,
 } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { SchematicEdit } from "./edit-schema.js";
-import { isOrthogonal } from "./route-geometry-edit.js";
+import { isOctilinear } from "./route-geometry-edit.js";
 import { resolveRouteEditPath } from "./route-operations.js";
 
 export function pointOnSegment(point: Point, from: Point, to: Point): boolean {
-  if (from.x === to.x) {
-    return (
-      point.x === from.x &&
-      point.y > Math.min(from.y, to.y) &&
-      point.y < Math.max(from.y, to.y)
-    );
-  }
-  if (from.y === to.y) {
-    return (
-      point.y === from.y &&
-      point.x > Math.min(from.x, to.x) &&
-      point.x < Math.max(from.x, to.x)
-    );
-  }
-  return false;
+  return pointOnGenericSegment(point, from, to, { interior: true });
 }
 
 export function routeIsProtected(route: RouteBranch): boolean {
@@ -229,8 +216,20 @@ export function validateRoute(
   }
   const polyline = resolveRouteEditPath(document, resolver, route);
   if (!polyline) return `Route ${route.id} has an unresolved endpoint`;
-  if (!isOrthogonal(polyline.points)) {
-    return `Route ${route.id} must contain only non-zero orthogonal segments`;
+  if (!isOctilinear(polyline.points)) {
+    return `Route ${route.id} must contain only non-zero octilinear segments`;
+  }
+  if (
+    route.presentation === "power-rail" &&
+    !polyline.points
+      .slice(1)
+      .every(
+        (point, index) =>
+          polyline.points[index]!.y === point.y &&
+          polyline.points[index]!.x !== point.x,
+      )
+  ) {
+    return `Power rail ${route.id} must contain only horizontal segments`;
   }
   for (const [endpoint, point, adjacent, mode] of [
     [

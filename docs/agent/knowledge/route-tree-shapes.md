@@ -16,7 +16,8 @@ and edges. It never chooses a shape, adds a missing branch/bend, or reroutes.
 3. Check available corridors, symbol escapes, labels, crossings, and locks.
 4. Choose or combine useful shapes below.
 5. Encode the result explicitly as RouteGraph `endpoint`, `bend`, real branch,
-   and label-anchor nodes plus axis-aligned edges.
+   and label-anchor nodes plus octilinear edges. Keep terminal escape edges
+   axis-aligned with their declared outward direction.
 6. Revise the graph if expansion conflicts or the formal render is confusing.
 
 The same Net may use a local branch in one region and labeled islands between

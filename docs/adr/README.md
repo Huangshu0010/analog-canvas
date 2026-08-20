@@ -54,6 +54,8 @@ The schema-13 definition-level Cell symbol presentation decision is
 The accepted Stage 1 schema-14 netlist-authoring contract, which preserves the
 current schematic GUI while unifying typed netlist facts, is
 [`0027-stage-1-netlist-authoring-protocol.md`](0027-stage-1-netlist-authoring-protocol.md).
+The single Route geometry and octilinear authoring decision is
+[`0028-octilinear-route-geometry-protocol.md`](0028-octilinear-route-geometry-protocol.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

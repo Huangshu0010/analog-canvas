@@ -195,6 +195,16 @@ describe("editor shortcut contract", () => {
     expect(resolve("x")).toBeNull();
   });
 
+  it("opens Wire options with F3 only while Wire owns the canvas", () => {
+    expect(resolve("F3")).toBeNull();
+    expect(resolve("F3", { interactionMode: "wire" })).toEqual({
+      kind: "toggle-wire-options",
+    });
+    expect(
+      resolve("F3", { interactionMode: "wire", isTyping: true }),
+    ).toBeNull();
+  });
+
   it("enters a selected Cell with E and returns to its parent with Shift+E", () => {
     expect(resolve("e")).toEqual({ kind: "hierarchy-selection-required" });
     expect(resolve("e", { hasHierarchyEnterSelection: true })).toEqual({

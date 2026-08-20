@@ -3589,3 +3589,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   verification passed; the protected remote replacement gate is pending.
 - Commit status: prepared for commit on
   `codex/phase1-schematic-foundation-plan`.
+
+## 2026-08-20 - Octilinear Route protocol
+
+- Changed areas: shared generic segment geometry; octilinear Route validation,
+  planning, route taps/crossings, stretch and 45-degree segment movement;
+  Wire draft-step interaction with MMB/F3 controls; Agent wire/RouteGraph
+  constraints; generated API/MCP resources; and current routing/Agent docs.
+- Validation: focused unit/component set (19 files / 166 tests); focused
+  Playwright Wire flow (2 tests); direct type checks; workspace build;
+  production smoke; generated API/MCP, Markdown-link, test-impact, and diff
+  checks passed.
+- Commit status: committed locally on `codex/octilinear-route-protocol`;
+  push/PR was not requested.

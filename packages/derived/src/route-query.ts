@@ -7,6 +7,11 @@ import type {
 import type { SymbolResolver } from "@icm/symbols";
 
 import { endpointKey, resolveEndpointPoint } from "./endpoint.js";
+import {
+  intersectSegments,
+  pointOnSegment,
+  projectPointToSegment,
+} from "./segment-geometry.js";
 
 import type {
   ResolvedDocumentRoutingGeometry,
@@ -32,39 +37,17 @@ export interface Crossing {
   kind: "crossing" | "overlap";
 }
 
-function isAxisAligned(segment: ResolvedRouteSegment): boolean {
-  return (
-    (segment.from.x === segment.to.x || segment.from.y === segment.to.y) &&
-    (segment.from.x !== segment.to.x || segment.from.y !== segment.to.y)
-  );
-}
-
 export function projectPointToRouteSegment(
   point: Point,
   segment: ResolvedRouteSegment,
 ): RouteSegmentHit | null {
-  const dx = segment.to.x - segment.from.x;
-  const dy = segment.to.y - segment.from.y;
-  const lengthSquared = dx * dx + dy * dy;
-  if (lengthSquared === 0) return null;
-  const t = Math.max(
-    0,
-    Math.min(
-      1,
-      ((point.x - segment.from.x) * dx + (point.y - segment.from.y) * dy) /
-        lengthSquared,
-    ),
-  );
-  const projected = {
-    x: segment.from.x + dx * t,
-    y: segment.from.y + dy * t,
-  };
+  const projected = projectPointToSegment(point, segment.from, segment.to);
+  if (!projected) return null;
   return {
     address: segment.address,
-    point: projected,
-    t,
-    distanceSquared:
-      (point.x - projected.x) ** 2 + (point.y - projected.y) ** 2,
+    point: projected.point,
+    t: projected.t,
+    distanceSquared: projected.distanceSquared,
   };
 }
 
@@ -88,7 +71,7 @@ export function nearestRouteSegment(
 
 /**
  * Preserve the editor's bend-first route hit behavior. A bend belongs to the
- * preceding segment; otherwise the nearest in-tolerance orthogonal segment
+ * preceding segment; otherwise the nearest in-tolerance segment
  * wins, with the lower segment index as the deterministic tie-break.
  */
 export function resolveRouteTap(
@@ -123,7 +106,6 @@ export function resolveRouteTap(
 
   return (
     geometry.segments
-      .filter(isAxisAligned)
       .flatMap((segment) => {
         const hit = projectPointToRouteSegment(pointer, segment);
         return hit && hit.distanceSquared <= toleranceSquared ? [hit] : [];
@@ -143,21 +125,7 @@ export function findRouteSegmentsAtPoint(
   return [...geometry.routes.values()]
     .flatMap((route) =>
       route.segments
-        .filter((segment) => {
-          if (!isAxisAligned(segment)) return false;
-          if (segment.from.x === segment.to.x) {
-            return (
-              point.x === segment.from.x &&
-              point.y >= Math.min(segment.from.y, segment.to.y) &&
-              point.y <= Math.max(segment.from.y, segment.to.y)
-            );
-          }
-          return (
-            point.y === segment.from.y &&
-            point.x >= Math.min(segment.from.x, segment.to.x) &&
-            point.x <= Math.max(segment.from.x, segment.to.x)
-          );
-        })
+        .filter((segment) => pointOnSegment(point, segment.from, segment.to))
         .map((segment) => segment.address),
     )
     .sort(
@@ -181,46 +149,6 @@ function sharedExplicitEndpoint(
         return leftEndpoint;
       }
     }
-  }
-  return null;
-}
-
-function between(value: number, first: number, second: number): boolean {
-  return value >= Math.min(first, second) && value <= Math.max(first, second);
-}
-
-function segmentIntersection(
-  a: Point,
-  b: Point,
-  c: Point,
-  d: Point,
-): { point: Point; kind: Crossing["kind"] } | null {
-  const abHorizontal = a.y === b.y;
-  const cdHorizontal = c.y === d.y;
-  if (abHorizontal !== cdHorizontal) {
-    const horizontalA = abHorizontal ? a : c;
-    const horizontalB = abHorizontal ? b : d;
-    const verticalA = abHorizontal ? c : a;
-    const verticalB = abHorizontal ? d : b;
-    const point = { x: verticalA.x, y: horizontalA.y };
-    return between(point.x, horizontalA.x, horizontalB.x) &&
-      between(point.y, verticalA.y, verticalB.y)
-      ? { point, kind: "crossing" }
-      : null;
-  }
-  if (abHorizontal && a.y === c.y) {
-    const start = Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x));
-    const end = Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x));
-    return start <= end
-      ? { point: { x: start, y: a.y }, kind: "overlap" }
-      : null;
-  }
-  if (!abHorizontal && a.x === c.x) {
-    const start = Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y));
-    const end = Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y));
-    return start <= end
-      ? { point: { x: a.x, y: start }, kind: "overlap" }
-      : null;
   }
   return null;
 }
@@ -254,7 +182,7 @@ export function deriveCrossings(
         : null;
       for (const leftSegment of leftGeometry.segments) {
         for (const rightSegment of rightGeometry.segments) {
-          const intersection = segmentIntersection(
+          const intersection = intersectSegments(
             leftSegment.from,
             leftSegment.to,
             rightSegment.from,

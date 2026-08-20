@@ -7,7 +7,7 @@
 // capability; their input is a derived slice of an existing Snapshot.
 //
 // The Agent gives a complete local Route graph (nodes + edges with roles); the
-// helper only projects each edge onto legal coordinates. The helper never
+// helper only projects each edge onto legal octilinear coordinates. The helper never
 // decides topology, adds a missing node, switches a shape, or reroutes.
 
 import type { Point, RouteEndpoint } from "@icm/model";

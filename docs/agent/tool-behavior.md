@@ -63,7 +63,10 @@ A persisted Route has:
 
 The effective polyline is `[resolved(from), ...waypoints, resolved(to)]`.
 Endpoint coordinates come from Instance terminals or Junctions; they are
-not duplicated in `waypoints`. The route must be orthogonal, and
+not duplicated in `waypoints`. Normal interactive route geometry must be
+octilinear (horizontal, vertical, or ±45°); orthogonal is the default
+authoring constraint, and `power-rail` remains horizontal-only. The Agent may
+request the same `wireIntent.routingMode: "octilinear"` constraint as GUI, and
 `segmentModes.length` must equal the number of polyline segments.
 
 Segment modes describe/edit segment handling; they do not generate geometry.
@@ -109,9 +112,11 @@ the offset in y; `axis: "y"` preserves y and offsets x.
 | `link`   | Produces an ordinary Route segment.                                                                  |
 | `label`  | Produces an attached `net-label` annotation instead of a Route.                                      |
 
-All non-label edges must already be axis-aligned. To turn a corner, the Agent
-must add a degree-two `bend`. The helper folds consecutive bend nodes into one
-Route's waypoints and keeps them dot-free.
+Non-label `link` and `trunk` edges must already be octilinear (horizontal,
+vertical, or ±45°). An `escape` edge remains axis-aligned with its terminal's
+outward direction. To turn a corner, the Agent must add a degree-two `bend`.
+The helper folds consecutive bend nodes into one Route's waypoints and keeps
+them dot-free.
 
 ### Atomic conflict behavior
 

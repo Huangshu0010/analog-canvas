@@ -14,6 +14,7 @@ import {
 import { resolveSchematicStyleProfile } from "./style-profile.js";
 import { deriveDocumentContactEvidence } from "./contact.js";
 import { resolveAnnotationPresentation } from "./annotation-presentation.js";
+import { pointOnSegment } from "./segment-geometry.js";
 
 export interface VisualDiagnostic {
   code: string;
@@ -249,19 +250,6 @@ export function visibleSymbolLocalBounds(resolved: ResolvedSymbol): Rect {
     width: ink.width + padding * 2,
     height: ink.height + padding * 2,
   };
-}
-
-function pointOnSegment(point: Point, from: Point, to: Point): boolean {
-  return (
-    (from.x === to.x &&
-      point.x === from.x &&
-      point.y >= Math.min(from.y, to.y) &&
-      point.y <= Math.max(from.y, to.y)) ||
-    (from.y === to.y &&
-      point.y === from.y &&
-      point.x >= Math.min(from.x, to.x) &&
-      point.x <= Math.max(from.x, to.x))
-  );
 }
 
 function instanceBounds(

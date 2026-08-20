@@ -68,17 +68,24 @@ Idle
   -> SymbolPlacement(preview, rotation)
   -> VddRailPlacement(preview, optional first point)
   -> CopyPlacement(clipboard, anchor, preview)
-  -> Wire(source, waypoints, preview)
+  -> Wire(source, authoredSteps, routingMode, cornerOrder, preview)
   -> Drawing(tool, source, waypoints, preview, snap)
 ```
 
 Box selection, selection move, pan, and text-edit sessions remain bounded
 gesture owners, but every reset boundary cancels them together with the
-canonical interaction. No component preview, rail endpoint, clipboard, Wire
-waypoint, drawing point, or snap guide is stored in a parallel React mode flag.
+canonical interaction. No component preview, rail endpoint, clipboard, authored
+Wire step, routing mode, drawing point, or snap guide is stored in a parallel
+React mode flag.
 Command arbitration reads the reducer's synchronously advanced state, not the
 last rendered React closure, so consecutive native events such as `Escape -> C`
 observe the first transition even when React batches the next render.
+
+Wire defaults to orthogonal. While Wire is active, a middle-button click
+switches only the unresolved leg between orthogonal and 45-degree octilinear;
+a middle-button drag pans as usual. F3 opens Wire options including corner
+order. Existing authored legs are immutable under mode switches; Backspace
+removes the latest authored step rather than an automatically compiled elbow.
 
 Activating the same tool is idempotent: repeated C, W, A, K, or selection of the
 same Library item preserves the active session. Activating a different creation

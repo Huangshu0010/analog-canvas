@@ -2,7 +2,12 @@ import { useReducer, useRef } from "react";
 import type { SetStateAction } from "react";
 
 import type { Mirror, Point } from "@icm/model";
-import type { WireSource } from "@icm/edit-engine";
+import type {
+  WireCornerOrder,
+  WireDraftStep,
+  WireRoutingMode,
+  WireSource,
+} from "@icm/edit-engine";
 
 import {
   reflectOrientation,
@@ -67,7 +72,9 @@ export type InteractionState<TClipboard = never> =
       source: WireSource | null;
       sourceRevision: number | null;
       previewPoint: Point | null;
-      waypoints: Point[];
+      steps: WireDraftStep[];
+      routingMode: WireRoutingMode;
+      cornerOrder: WireCornerOrder;
     }
   | {
       kind: "drawing";
@@ -103,7 +110,12 @@ export type InteractionAction<TClipboard = never> =
       sourceRevision: number | null;
     }
   | { type: "set-wire-preview"; point: Point | null }
+  | { type: "set-wire-steps"; update: SetStateAction<WireDraftStep[]> }
+  /** Compatibility adapter for existing callers; new code owns authored steps. */
   | { type: "set-wire-waypoints"; update: SetStateAction<Point[]> }
+  | { type: "set-wire-routing-mode"; mode: WireRoutingMode }
+  | { type: "toggle-wire-routing-mode" }
+  | { type: "set-wire-corner-order"; cornerOrder: WireCornerOrder }
   | { type: "complete-wire" }
   | { type: "set-drawing-source"; point: Point | null }
   | { type: "set-drawing-hover"; point: Point | null }
@@ -139,7 +151,9 @@ export function activateInteractionTool<TClipboard>(
         source: null,
         sourceRevision: null,
         previewPoint: null,
-        waypoints: [],
+        steps: [],
+        routingMode: "orthogonal",
+        cornerOrder: "auto",
       };
     case "arrow":
     case "construction-line":
@@ -297,9 +311,39 @@ export function interactionReducer<TClipboard>(
       return state.kind === "wire"
         ? { ...state, previewPoint: action.point }
         : state;
+    case "set-wire-steps":
+      return state.kind === "wire"
+        ? { ...state, steps: applyUpdate(state.steps, action.update) }
+        : state;
     case "set-wire-waypoints":
       return state.kind === "wire"
-        ? { ...state, waypoints: applyUpdate(state.waypoints, action.update) }
+        ? {
+            ...state,
+            steps: applyUpdate(
+              state.steps.map((step) => step.point),
+              action.update,
+            ).map((point) => ({
+              point,
+              routingMode: state.routingMode,
+              cornerOrder: state.cornerOrder,
+            })),
+          }
+        : state;
+    case "set-wire-routing-mode":
+      return state.kind === "wire"
+        ? { ...state, routingMode: action.mode }
+        : state;
+    case "toggle-wire-routing-mode":
+      return state.kind === "wire"
+        ? {
+            ...state,
+            routingMode:
+              state.routingMode === "orthogonal" ? "octilinear" : "orthogonal",
+          }
+        : state;
+    case "set-wire-corner-order":
+      return state.kind === "wire"
+        ? { ...state, cornerOrder: action.cornerOrder }
         : state;
     case "complete-wire":
       return state.kind === "wire"
@@ -308,7 +352,9 @@ export function interactionReducer<TClipboard>(
             source: null,
             sourceRevision: null,
             previewPoint: null,
-            waypoints: [],
+            steps: [],
+            routingMode: state.routingMode,
+            cornerOrder: state.cornerOrder,
           }
         : state;
     case "set-drawing-source":
@@ -390,7 +436,11 @@ export function useInteractionState<TClipboard>() {
     wireSource: state.kind === "wire" ? state.source : null,
     wireSourceRevision: state.kind === "wire" ? state.sourceRevision : null,
     wirePreviewPoint: state.kind === "wire" ? state.previewPoint : null,
-    wireWaypoints: state.kind === "wire" ? state.waypoints : [],
+    wireWaypoints:
+      state.kind === "wire" ? state.steps.map((step) => step.point) : [],
+    wireDraftSteps: state.kind === "wire" ? state.steps : [],
+    wireRoutingMode: state.kind === "wire" ? state.routingMode : "orthogonal",
+    wireCornerOrder: state.kind === "wire" ? state.cornerOrder : "auto",
     draftingSource: state.kind === "drawing" ? state.source : null,
     draftingHover: state.kind === "drawing" ? state.hover : null,
     draftingWaypoints: state.kind === "drawing" ? state.waypoints : [],
@@ -423,8 +473,15 @@ export function useInteractionState<TClipboard>() {
       dispatch({ type: "set-wire-source", source, sourceRevision }),
     setWirePreviewPoint: (point: Point | null) =>
       dispatch({ type: "set-wire-preview", point }),
+    setWireDraftSteps: (update: SetStateAction<WireDraftStep[]>) =>
+      dispatch({ type: "set-wire-steps", update }),
     setWireWaypoints: (update: SetStateAction<Point[]>) =>
       dispatch({ type: "set-wire-waypoints", update }),
+    setWireRoutingMode: (mode: WireRoutingMode) =>
+      dispatch({ type: "set-wire-routing-mode", mode }),
+    toggleWireRoutingMode: () => dispatch({ type: "toggle-wire-routing-mode" }),
+    setWireCornerOrder: (cornerOrder: WireCornerOrder) =>
+      dispatch({ type: "set-wire-corner-order", cornerOrder }),
     completeWire: () => dispatch({ type: "complete-wire" }),
     setDraftingSource: (point: Point | null) =>
       dispatch({ type: "set-drawing-source", point }),

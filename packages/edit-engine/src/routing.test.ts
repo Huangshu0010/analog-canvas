@@ -19,6 +19,7 @@ import {
   proposeLooseRouteTranslation,
   proposePowerRailEndpointResize,
   proposePowerRailTranslation,
+  proposeWireIntent,
   proposeVisualRouteDeletion,
   proposeWireSegmentMove,
 } from "./routing-planner.js";
@@ -55,6 +56,77 @@ function transaction(documentId: string, revision: number, edits: unknown[]) {
 }
 
 describe("routing Edit Engine", () => {
+  it("accepts one octilinear Route without creating a second topology protocol", () => {
+    const document = createEmptyDocument("octilinear", "Octilinear");
+    document.nets.push({ id: "n1", scope: "local", terminals: [] });
+    document.junctions.push(
+      {
+        id: "J1",
+        netId: "n1",
+        position: { x: 100, y: 100 },
+        role: "route-anchor",
+      },
+      {
+        id: "J2",
+        netId: "n1",
+        position: { x: 200, y: 200 },
+        role: "route-anchor",
+      },
+    );
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "wire-45",
+          netId: "n1",
+          from: { kind: "junction", junctionId: "J1" },
+          to: { kind: "junction", junctionId: "J2" },
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.document.routes[0]?.waypoints).toEqual([]);
+  });
+
+  it("gives Agent wire intent the same octilinear compiler", () => {
+    const document = createEmptyDocument(
+      "agent-octilinear",
+      "Agent octilinear",
+    );
+    document.nets.push({ id: "n1", scope: "local", terminals: [] });
+    document.junctions.push(
+      { id: "J1", netId: "n1", position: { x: 0, y: 0 }, role: "route-anchor" },
+      {
+        id: "J2",
+        netId: "n1",
+        position: { x: 100, y: 60 },
+        role: "route-anchor",
+      },
+    );
+    const planned = proposeWireIntent(document, resolver, {
+      id: "agent-wire",
+      from: {
+        kind: "endpoint",
+        endpoint: { kind: "junction", junctionId: "J1" },
+      },
+      to: {
+        kind: "endpoint",
+        endpoint: { kind: "junction", junctionId: "J2" },
+      },
+      routingMode: "octilinear",
+    });
+    expect(typeof planned).not.toBe("string");
+    if (typeof planned === "string") return;
+    const route = planned.edits.find(
+      (edit) => edit.kind === "set_route_points",
+    );
+    expect(route).toMatchObject({ waypoints: [{ x: 60, y: 60 }] });
+  });
+
   it("rejects a Junction move that would leave an incident Route geometry stale", () => {
     const document = createEmptyDocument("junction-integrity", "Junction");
     document.nets.push({ id: "n1", scope: "local", terminals: [] });
