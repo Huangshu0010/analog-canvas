@@ -3705,3 +3705,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   passed. Branch verification also reproduced two unrelated schema-15 baseline
   failures on the parent branch.
 - Commit status: prepared on `codex/phase2-netlist-hardening`.
+
+## 2026-08-21 - Schema 15 baseline reconciliation
+
+- Changed areas: aligned ADR 0026 and the user compatibility guide with the
+  accepted schema-15/schema-14 window, and moved the browser recovery
+  compatibility regression from retired schema 13 to active schema 14.
+- Validation: focused documentation/recovery tests (2 files / 25 tests), docs,
+  test-impact and diff checks; complete branch verification passed (159 files /
+  956 tests, workspace build, and production preview smoke).
+- Commit status: prepared on `codex/phase2-netlist-hardening` as a separate
+  baseline-reconciliation commit.
