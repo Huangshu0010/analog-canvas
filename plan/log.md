@@ -3556,3 +3556,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   test-impact; and diff check passed.
 - Commit status: committed as `50b6c28` on
   `codex/phase1-schematic-foundation-plan`, then rebased onto `origin/main`.
+
+## 2026-08-20 - Editor information architecture polish
+
+- Changed areas: merged Cell Interface into a master-detail Cell Manager,
+  moved Instance Table and Preflight into a first-level Netlist menu, regrouped
+  component Properties, and subordinated non-blocking live Issues.
+- Validation: typecheck; 37 focused unit/component tests; 14 focused browser
+  contracts; test-impact against `origin/main`; fresh-browser visual and
+  console inspection; and diff check passed.
+- Commit status: prepared on
+  `codex/phase1-schematic-foundation-plan` as one editor presentation target.
+```

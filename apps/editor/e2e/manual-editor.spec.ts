@@ -24,9 +24,7 @@ test("opens netlist preflight and navigates its canonical finding", async ({
 }) => {
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 360, y: 240 });
-  await page
-    .getByRole("button", { name: "Run Netlist Preflight", exact: true })
-    .click();
+  await clickCommand(page, "Netlist", "Run Preflight…");
   const dialog = page.getByRole("dialog", { name: "Netlist Preflight" });
   await expect(dialog).toContainText("blocking issue");
   await dialog
@@ -1654,6 +1652,19 @@ test("Properties toggles reference label visibility for one or many components",
 
   await page.getByTestId("hit-R1").click();
   await openSelectionShelf(page);
+  const properties = page.getByRole("complementary", { name: "Properties" });
+  for (const sectionName of [
+    "Identity",
+    "Netlist target",
+    "Parameters",
+    "Display",
+    "Advanced parameters",
+    "Placement",
+  ]) {
+    await expect(
+      properties.getByText(sectionName, { exact: true }),
+    ).toBeVisible();
+  }
   const singleToggle = page.getByRole("checkbox", {
     name: "Reference",
     exact: true,
@@ -3100,6 +3111,10 @@ test("surfaces and locates current-document ERC diagnostics", async ({
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 380, y: 260 });
   await openSelectionShelf(page);
+  await page
+    .getByRole("region", { name: "Project diagnostics" })
+    .locator("summary")
+    .click();
 
   await expect(page.getByTestId("project-diagnostics")).toContainText(
     "ERC_UNCONNECTED_PIN",
@@ -3126,6 +3141,10 @@ test("removes resolved live diagnostics and restores them through undo", async (
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 380, y: 260 });
   await openSelectionShelf(page);
+  await page
+    .getByRole("region", { name: "Project diagnostics" })
+    .locator("summary")
+    .click();
   const diagnostics = page.getByTestId("project-diagnostics");
   await expect(diagnostics).toContainText("ERC_UNCONNECTED_PIN");
 
@@ -3150,6 +3169,10 @@ test("filters and navigates locator-backed visual diagnostics", async ({
   await placeComponent(page, "resistor", { x: 420, y: 300 });
   await placeComponent(page, "resistor", { x: 420, y: 300 });
   await openSelectionShelf(page);
+  await page
+    .getByRole("region", { name: "Project diagnostics" })
+    .locator("summary")
+    .click();
 
   await page.getByTestId("diagnostic-observations-toggle").click();
   const diagnostics = page.getByTestId("project-diagnostics");

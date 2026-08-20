@@ -191,7 +191,6 @@ import {
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
-import { CellInterfaceDialog } from "../features/hierarchy/cell-interface-dialog";
 import { NetlistPreflightDialog } from "../features/netlist-export/netlist-preflight-dialog";
 import {
   proposeConnectedInstanceDeletion,
@@ -557,7 +556,6 @@ export function App({
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
-  const [cellInterfaceOpen, setCellInterfaceOpen] = useState(false);
   const [netlistPreflightOpen, setNetlistPreflightOpen] = useState(false);
   const [instanceTableOpen, setInstanceTableOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
@@ -1756,14 +1754,18 @@ export function App({
   function updateCellPortDirection(
     terminalId: string,
     direction: "input" | "output" | "inout" | "passive",
+    targetDocumentId = document.id,
   ): void {
-    if (!document.netlist) return;
+    const targetDocument = project.documents.find(
+      (candidate) => candidate.id === targetDocumentId,
+    );
+    if (!targetDocument?.netlist) return;
     if (
       commitStructure(
         "update-cell-port-direction",
         planUpdateCellTerminalDirection(
           project,
-          document.id,
+          targetDocumentId,
           terminalId,
           direction,
         ),
@@ -1773,9 +1775,16 @@ export function App({
     }
   }
 
-  function renameCellTerminal(terminalId: string, name: string): void {
+  function renameCellTerminal(
+    terminalId: string,
+    name: string,
+    targetDocumentId = document.id,
+  ): void {
     const nextName = name.trim();
-    const terminal = document.netlist?.terminals.find(
+    const targetDocument = project.documents.find(
+      (candidate) => candidate.id === targetDocumentId,
+    );
+    const terminal = targetDocument?.netlist?.terminals.find(
       (candidate) => candidate.id === terminalId,
     );
     if (!terminal || !nextName || terminal.name === nextName) return;
@@ -1783,7 +1792,12 @@ export function App({
       if (
         commitStructure(
           "rename-cell-interface-terminal",
-          planRenameCellTerminal(project, document.id, terminalId, nextName),
+          planRenameCellTerminal(
+            project,
+            targetDocumentId,
+            terminalId,
+            nextName,
+          ),
         )
       ) {
         setStatus(`Renamed formal port to ${nextName}`);
@@ -1795,10 +1809,14 @@ export function App({
     }
   }
 
-  function moveCellTerminal(terminalId: string, delta: -1 | 1): void {
+  function moveCellTerminal(
+    terminalId: string,
+    delta: -1 | 1,
+    targetDocumentId = document.id,
+  ): void {
     const edits = planReorderCellTerminal(
       project,
-      document.id,
+      targetDocumentId,
       terminalId,
       delta,
     );
@@ -1812,11 +1830,12 @@ export function App({
     formalParameters: NonNullable<
       SchematicDocument["netlist"]
     >["formalParameters"],
+    targetDocumentId = document.id,
   ): void {
     try {
       const proposal = proposeSetCellFormalParameters(
         project,
-        document.id,
+        targetDocumentId,
         formalParameters.map((parameter) => ({
           name: parameter.name.trim(),
           ...(parameter.defaultValue?.trim()
@@ -6473,14 +6492,6 @@ export function App({
                   </button>
                   <button
                     type="button"
-                    aria-haspopup="dialog"
-                    aria-expanded={instanceTableOpen}
-                    onClick={() => setInstanceTableOpen(true)}
-                  >
-                    Instance Table…
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => rotateSelected()}
                     disabled={selectedIds.length === 0}
                   >
@@ -6506,6 +6517,29 @@ export function App({
                       Align
                     </button>
                   ) : null}
+                </div>
+              </details>
+              <details className="command-menu" name="editor-command-menu">
+                <summary>Netlist</summary>
+                <div className="command-popover">
+                  <span className="command-group-label">Authoring</span>
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded={instanceTableOpen}
+                    onClick={() => setInstanceTableOpen(true)}
+                  >
+                    Instance Table…
+                  </button>
+                  <span className="command-group-label">Validation</span>
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded={netlistPreflightOpen}
+                    onClick={() => setNetlistPreflightOpen(true)}
+                  >
+                    Run Preflight…
+                  </button>
                 </div>
               </details>
               {publicAgentUiEnabled ? (
@@ -6697,21 +6731,6 @@ export function App({
               </button>
               <button
                 type="button"
-                onClick={() => setCellInterfaceOpen(true)}
-                disabled={!document.netlist}
-              >
-                Edit Cell Interface…
-              </button>
-              <button
-                type="button"
-                aria-haspopup="dialog"
-                aria-expanded={netlistPreflightOpen}
-                onClick={() => setNetlistPreflightOpen(true)}
-              >
-                Run Netlist Preflight
-              </button>
-              <button
-                type="button"
                 onClick={placeCellInstance}
                 disabled={project.documents.length < 2}
               >
@@ -6841,6 +6860,8 @@ export function App({
       <CellManagerDialog
         open={cellManagerOpen}
         cells={cellManagerEntries}
+        documents={project.documents}
+        activeDocumentId={document.id}
         onClose={() => setCellManagerOpen(false)}
         onCreate={(name) => {
           createCell(name);
@@ -6868,19 +6889,18 @@ export function App({
           }
         }}
         onJumpToCaller={jumpToCaller}
-      />
-      <CellInterfaceDialog
-        open={cellInterfaceOpen}
-        cell={document.netlist ? document : null}
-        callerCount={
-          cellManagerEntries.find((candidate) => candidate.id === document.id)
-            ?.callers.length ?? 0
+        onRenameTerminal={(documentId, terminalId, name) =>
+          renameCellTerminal(terminalId, name, documentId)
         }
-        onClose={() => setCellInterfaceOpen(false)}
-        onRenameTerminal={renameCellTerminal}
-        onSetTerminalDirection={updateCellPortDirection}
-        onMoveTerminal={moveCellTerminal}
-        onSetFormalParameters={setCellFormalParameters}
+        onSetTerminalDirection={(documentId, terminalId, direction) =>
+          updateCellPortDirection(terminalId, direction, documentId)
+        }
+        onMoveTerminal={(documentId, terminalId, delta) =>
+          moveCellTerminal(terminalId, delta, documentId)
+        }
+        onSetFormalParameters={(documentId, formalParameters) =>
+          setCellFormalParameters(formalParameters, documentId)
+        }
         externalDefinitions={project.externalSubcircuitDefinitions}
         onSetExternalDefinition={setExternalSubcircuitDefinition}
       />
@@ -7328,7 +7348,7 @@ export function App({
                     </div>
                   ) : null}
                   <div
-                    className="formal-port-properties"
+                    className="property-card property-identity-card"
                     aria-label="Component identity"
                   >
                     <div className="property-section-heading">Identity</div>
@@ -7366,14 +7386,10 @@ export function App({
                         <dd>{document.netlist?.name ?? document.name}</dd>
                       </div>
                     </dl>
-                    <small>
-                      Stable internal IDs stay hidden. References are unique per
-                      Cell and follow their component prefix.
-                    </small>
                   </div>
                   {selectedInstance.netlist ? (
                     <div
-                      className="formal-port-properties"
+                      className="property-card property-target-card"
                       aria-label="Netlist target"
                     >
                       <div className="property-section-heading">
@@ -7436,154 +7452,170 @@ export function App({
                       )}
                     </div>
                   ) : null}
-                  <div className="property-section-heading">Canvas labels</div>
-                  <div
-                    className="display-toggle-row"
-                    aria-label="Component display toggles"
-                  >
-                    <DisplayToggle
-                      label="Reference"
-                      checked={
-                        selectedInstanceLabel !== undefined &&
-                        selectedInstanceLabel.visible !== false
-                      }
-                      onChange={(checked) =>
-                        setReferenceLabelsVisible(
-                          [selectedInstance.id],
-                          checked,
-                        )
-                      }
-                    />
-                    <DisplayToggle
-                      label="Value"
-                      checked={
-                        selectedInstanceValue !== null &&
-                        selectedInstanceValue.visible !== false
-                      }
-                      disabled={!selectedInstanceValueAvailable}
-                      help={
-                        selectedInstanceValueAvailable
-                          ? undefined
-                          : "Set the device parameters first"
-                      }
-                      onChange={(checked) => {
-                        if (checked) {
-                          showSelectedInstanceValue();
-                        } else {
-                          setValueLabelsVisible([selectedInstance.id], false);
-                        }
-                      }}
-                    />
+                  <div className="property-card property-parameters-card">
+                    <div className="property-section-heading">Parameters</div>
+                    <div className="component-parameter-grid">
+                      {componentParameters(selectedInstance.symbolId).map(
+                        (parameter, index) => (
+                          <label key={parameter.key} title={parameter.help}>
+                            <span className="property-parameter-name">
+                              {parameter.label}
+                              {parameter.unit ? ` / ${parameter.unit}` : ""}
+                              <em>({parameter.help})</em>
+                            </span>
+                            <input
+                              ref={
+                                index === 0 ? instanceValueInputRef : undefined
+                              }
+                              aria-label={`Component ${parameter.label.toLowerCase()}`}
+                              inputMode={parameter.inputMode}
+                              value={
+                                instancePropertyDraft.parameters[
+                                  parameter.key
+                                ] ?? ""
+                              }
+                              placeholder={parameter.placeholder}
+                              onChange={(event) => {
+                                const value = event.currentTarget.value;
+                                updateInstancePropertyDraft((current) => ({
+                                  ...current,
+                                  parameters: {
+                                    ...current.parameters,
+                                    [parameter.key]: value,
+                                  },
+                                }));
+                              }}
+                            />
+                          </label>
+                        ),
+                      )}
+                    </div>
                   </div>
-                  {componentParameters(selectedInstance.symbolId).map(
-                    (parameter, index) => (
-                      <label key={parameter.key} title={parameter.help}>
-                        <span className="property-parameter-name">
-                          {parameter.label}
-                          {parameter.unit ? ` / ${parameter.unit}` : ""}
-                          <em>({parameter.help})</em>
-                        </span>
-                        <input
-                          ref={index === 0 ? instanceValueInputRef : undefined}
-                          aria-label={`Component ${parameter.label.toLowerCase()}`}
-                          inputMode={parameter.inputMode}
-                          value={
-                            instancePropertyDraft.parameters[parameter.key] ??
-                            ""
-                          }
-                          placeholder={parameter.placeholder}
-                          onChange={(event) => {
-                            const value = event.currentTarget.value;
-                            updateInstancePropertyDraft((current) => ({
-                              ...current,
-                              parameters: {
-                                ...current.parameters,
-                                [parameter.key]: value,
-                              },
-                            }));
-                          }}
-                        />
-                      </label>
-                    ),
-                  )}
-                  {selectedInstance.netlist ? (
+                  <div className="property-card property-display-card">
+                    <div className="property-section-heading">Display</div>
                     <div
-                      className="additional-parameters"
-                      aria-label="Additional parameters"
+                      className="display-toggle-row"
+                      aria-label="Component display toggles"
                     >
-                      <div className="property-section-heading">
-                        Additional parameters
-                      </div>
-                      <small>
-                        Model- or dialect-specific raw values. Apply commits all
-                        rows as one undoable edit.
-                      </small>
-                      {additionalParameterDraft.map((parameter, index) => (
-                        <div
-                          className="component-geometry-row"
-                          key={parameter.id}
-                        >
-                          <label>
-                            Name
-                            <input
-                              aria-label={`Additional parameter name ${index + 1}`}
-                              value={parameter.name}
-                              onChange={(event) =>
-                                updateAdditionalParameter(parameter.id, {
-                                  name: event.currentTarget.value,
-                                })
+                      <DisplayToggle
+                        label="Reference"
+                        checked={
+                          selectedInstanceLabel !== undefined &&
+                          selectedInstanceLabel.visible !== false
+                        }
+                        onChange={(checked) =>
+                          setReferenceLabelsVisible(
+                            [selectedInstance.id],
+                            checked,
+                          )
+                        }
+                      />
+                      <DisplayToggle
+                        label="Value"
+                        checked={
+                          selectedInstanceValue !== null &&
+                          selectedInstanceValue.visible !== false
+                        }
+                        disabled={!selectedInstanceValueAvailable}
+                        help={
+                          selectedInstanceValueAvailable
+                            ? undefined
+                            : "Set the device parameters first"
+                        }
+                        onChange={(checked) => {
+                          if (checked) {
+                            showSelectedInstanceValue();
+                          } else {
+                            setValueLabelsVisible([selectedInstance.id], false);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {selectedInstance.netlist ? (
+                    <details className="property-details">
+                      <summary>
+                        <span>Advanced parameters</span>
+                        <small>{additionalParameterDraft.length}</small>
+                      </summary>
+                      <div
+                        className="additional-parameters"
+                        aria-label="Additional parameters"
+                      >
+                        <small>
+                          Model- or dialect-specific raw values. Apply commits
+                          all rows as one undoable edit.
+                        </small>
+                        {additionalParameterDraft.map((parameter, index) => (
+                          <div
+                            className="component-geometry-row"
+                            key={parameter.id}
+                          >
+                            <label>
+                              Name
+                              <input
+                                aria-label={`Additional parameter name ${index + 1}`}
+                                value={parameter.name}
+                                onChange={(event) =>
+                                  updateAdditionalParameter(parameter.id, {
+                                    name: event.currentTarget.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <label>
+                              Value
+                              <input
+                                aria-label={`Additional parameter value ${index + 1}`}
+                                value={parameter.value}
+                                onChange={(event) =>
+                                  updateAdditionalParameter(parameter.id, {
+                                    value: event.currentTarget.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              aria-label={`Remove additional parameter ${index + 1}`}
+                              onClick={() =>
+                                removeAdditionalParameter(parameter.id)
                               }
-                            />
-                          </label>
-                          <label>
-                            Value
-                            <input
-                              aria-label={`Additional parameter value ${index + 1}`}
-                              value={parameter.value}
-                              onChange={(event) =>
-                                updateAdditionalParameter(parameter.id, {
-                                  value: event.currentTarget.value,
-                                })
-                              }
-                            />
-                          </label>
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                        <div className="component-mirror-row">
                           <button
                             type="button"
-                            aria-label={`Remove additional parameter ${index + 1}`}
-                            onClick={() =>
-                              removeAdditionalParameter(parameter.id)
-                            }
+                            onClick={addAdditionalParameter}
                           >
-                            Remove
+                            Add parameter
                           </button>
+                          {additionalParameterDraftChanges ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={applyAdditionalParameters}
+                              >
+                                Apply parameters
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelAdditionalParameters}
+                              >
+                                Cancel parameter edits
+                              </button>
+                            </>
+                          ) : null}
                         </div>
-                      ))}
-                      <div className="component-mirror-row">
-                        <button type="button" onClick={addAdditionalParameter}>
-                          Add parameter
-                        </button>
-                        {additionalParameterDraftChanges ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={applyAdditionalParameters}
-                            >
-                              Apply parameters
-                            </button>
-                            <button
-                              type="button"
-                              onClick={cancelAdditionalParameters}
-                            >
-                              Cancel parameter edits
-                            </button>
-                          </>
-                        ) : null}
                       </div>
-                    </div>
+                    </details>
                   ) : null}
                   {selectedInstance.importProvenance ? (
                     <div
-                      className="formal-port-properties"
+                      className="property-card"
                       aria-label="Imported source evidence"
                     >
                       <div className="property-section-heading">
@@ -7596,10 +7628,8 @@ export function App({
                     </div>
                   ) : null}
                   {selectedInstance.placement ? (
-                    <>
-                      <div className="property-section-heading">
-                        Position &amp; orientation
-                      </div>
+                    <div className="property-card property-placement-card">
+                      <div className="property-section-heading">Placement</div>
                       <div
                         className="component-geometry-row"
                         aria-label="Component geometry"
@@ -7655,9 +7685,6 @@ export function App({
                           </select>
                         </label>
                       </div>
-                      <div className="property-section-heading more-actions-heading">
-                        More actions
-                      </div>
                       <div
                         className="component-mirror-row"
                         aria-label="Mirror component"
@@ -7679,7 +7706,7 @@ export function App({
                           Mirror top/bottom
                         </button>
                       </div>
-                    </>
+                    </div>
                   ) : null}
                   {hasInstancePropertyDraftChanges ? (
                     <button

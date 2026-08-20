@@ -100,7 +100,9 @@ describe("editor shell", () => {
     expect(markup).toContain('data-testid="cell-command-menu"');
     expect(markup).toContain("Manage Cells…");
     expect(markup).toContain("Instance Table…");
-    expect(markup).not.toContain("Edit Interface…");
+    expect(markup).toContain("<summary>Netlist</summary>");
+    expect(markup).toContain("Run Preflight…");
+    expect(markup).not.toContain("Edit Cell Interface…");
   });
 
   it("shows a resolvable imported subcircuit in Cell navigation", () => {

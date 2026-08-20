@@ -14,7 +14,7 @@ test("edits compatible selected instances through the explicit Instance Table", 
   await canvas.click({ position: { x: 380, y: 180 } });
   await page.keyboard.press("Escape");
 
-  await clickCommand(page, "Edit", "Instance Table…");
+  await clickCommand(page, "Netlist", "Instance Table…");
   const table = page.getByRole("dialog", { name: "Instance Table" });
   await expect(table).toBeVisible();
   await expect(table.getByText("M1", { exact: true })).toBeVisible();

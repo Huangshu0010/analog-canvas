@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 async function runCellCommand(
   page: import("@playwright/test").Page,
-  name: "Manage Cells…" | "Place Cell" | "Edit Cell Interface…",
+  name: "Manage Cells…" | "Place Cell",
 ): Promise<void> {
   await page
     .getByTestId("cell-command-menu")
@@ -36,6 +36,13 @@ test("keeps direct Cell commands in one hierarchy row", async ({ page }) => {
     page.getByRole("button", { name: "Manage Cells…" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Place Cell" })).toBeVisible();
+  await expect(
+    toolbar.getByRole("button", { name: "Edit Cell Interface…" }),
+  ).toHaveCount(0);
+  await expect(toolbar.getByRole("button", { name: /Preflight/u })).toHaveCount(
+    0,
+  );
+  await expect(page.locator("summary", { hasText: "Netlist" })).toBeVisible();
   expect(
     await toolbar.evaluate((element) => element.getBoundingClientRect().height),
   ).toBeLessThan(90);
@@ -87,12 +94,16 @@ test("manages Cell rename and lists callers", async ({ page }) => {
 
   await runCellCommand(page, "Manage Cells…");
   const manager = page.getByRole("dialog", { name: "Cell Manager" });
+  await manager
+    .getByRole("button", { name: /ReusableStage.*1 callers/u })
+    .click();
   await expect(manager).toContainText("1 callers");
-  await manager.getByRole("button", { name: "Rename" }).last().click();
+  await manager.getByRole("button", { name: "Rename" }).click();
   const rename = page.getByRole("dialog", { name: "Rename Cell" });
   await rename.getByLabel("Cell name").fill("Stage");
   await rename.getByRole("button", { name: "Rename" }).click();
   await expect(manager).toContainText("Stage");
+  await manager.locator(".cell-manager-callers summary").click();
   await manager.getByRole("button", { name: "Jump to caller" }).click();
   await expect(page.getByTestId("active-document-id")).toHaveText(
     "document-main",
@@ -261,20 +272,23 @@ test("authors formal Cell parameters without entering Cell Symbol Layout", async
     .click({ position: { x: 300, y: 180 } });
   await page.keyboard.press("Escape");
 
-  await runCellCommand(page, "Edit Cell Interface…");
-  const dialog = page.getByRole("dialog", { name: /Cell Interface/u });
+  await runCellCommand(page, "Manage Cells…");
+  const dialog = page.getByRole("dialog", { name: "Cell Manager" });
   await expect(dialog.getByLabel("Formal terminal 1 name")).toHaveValue("P1");
   await expect(
     dialog.getByText("Cell symbol layout", { exact: false }),
   ).toHaveCount(0);
-  await dialog.getByRole("button", { name: "Add formal parameter" }).click();
+  await dialog
+    .getByLabel("Formal parameters")
+    .getByRole("button", { name: "Add" })
+    .click();
   await dialog.getByLabel("Formal parameter 1 name").fill("gain");
   await dialog.getByLabel("Formal parameter gain default").fill("10");
-  await dialog.getByRole("button", { name: "Apply formal parameters" }).click();
+  await dialog.getByRole("button", { name: "Apply parameters" }).click();
   await expect(page.getByTestId("status")).toContainText(
     "Updated Cell formal parameters",
   );
-  await dialog.getByRole("button", { name: "Close" }).click();
+  await dialog.getByRole("button", { name: "Close Cell Manager" }).click();
   await page.keyboard.press("Control+z");
   await expect(page.getByTestId("status")).toContainText("Committed revision");
 });

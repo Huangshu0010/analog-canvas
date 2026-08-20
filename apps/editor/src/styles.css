@@ -1808,10 +1808,41 @@ body {
  * remains available while manually repairing the active circuit. */
 .diagnostics.erc-diagnostics {
   display: block;
+  padding-top: 0;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-md);
 }
 
 .diagnostics h2 {
+  margin: 0;
   font-size: var(--icm-font-md);
+}
+
+.diagnostics summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 0 var(--icm-space-2);
+  cursor: pointer;
+  list-style: none;
+}
+
+.diagnostics summary::-webkit-details-marker {
+  display: none;
+}
+
+.diagnostics summary > span {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+}
+
+.diagnostics details[open] summary {
+  border-bottom: 1px solid var(--icm-border);
+}
+
+.diagnostics-body {
+  padding: 0 var(--icm-space-2) var(--icm-space-2);
 }
 
 .diagnostic-filters {
@@ -2322,6 +2353,84 @@ body {
   border-top: 1px solid var(--icm-border);
 }
 
+.property-card,
+.property-details {
+  min-width: 0;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-md);
+  background: var(--icm-surface);
+}
+
+.property-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem;
+}
+
+.property-identity-card,
+.property-target-card {
+  background: var(--icm-surface-muted);
+}
+
+.property-card > small,
+.additional-parameters > small {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  line-height: var(--icm-line);
+}
+
+.component-parameter-grid {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.property-display-card .display-toggle-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.property-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 var(--icm-space-2);
+  cursor: pointer;
+  list-style: none;
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.property-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.property-details summary small {
+  min-width: 20px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--icm-surface-muted);
+  font-size: var(--icm-font-xs);
+  text-align: center;
+}
+
+.property-details[open] summary {
+  border-bottom: 1px solid var(--icm-border);
+}
+
+.additional-parameters {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem;
+}
+
+.property-placement-card .component-mirror-row {
+  margin-top: 0;
+}
+
 .selection-panel > .property-section:first-of-type,
 .component-properties {
   margin-top: 0;
@@ -2764,6 +2873,401 @@ body {
   border-color: var(--icm-accent);
   color: #fff;
   background: var(--icm-accent);
+}
+
+/* Cell Manager is a compact master-detail workbench. Interface facts remain
+   definition-owned, while the left column stays purely navigational. */
+.cell-manager-dialog {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(64rem, calc(100vw - 2.5rem));
+  height: min(34rem, calc(100dvh - 2.5rem));
+  overflow: hidden;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: var(--icm-radius-lg);
+  color: var(--icm-text);
+  background: var(--icm-surface);
+  box-shadow: var(--icm-shadow-lg);
+}
+
+.cell-manager-header,
+.cell-manager-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--icm-space-3);
+}
+
+.cell-manager-header {
+  min-height: 58px;
+  padding: var(--icm-space-3) var(--icm-space-4);
+  border-bottom: 1px solid var(--icm-border);
+}
+
+.cell-manager-header p,
+.cell-manager-header h2,
+.cell-manager-detail-header h3,
+.cell-manager-detail-header p,
+.cell-interface-section h3,
+.cell-interface-section p {
+  margin: 0;
+}
+
+.cell-manager-header p {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cell-manager-header h2 {
+  margin-top: 2px;
+  font-size: var(--icm-font-lg);
+}
+
+.cell-manager-body {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  min-height: 0;
+}
+
+.cell-manager-list {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  border-right: 1px solid var(--icm-border);
+  background: var(--icm-surface-muted);
+}
+
+.cell-manager-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 0 var(--icm-space-3);
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cell-manager-list-scroll {
+  min-height: 0;
+  padding: 0 var(--icm-space-2);
+  overflow-y: auto;
+}
+
+.cell-manager-list-item {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  min-height: 52px;
+  padding: var(--icm-space-2);
+  border: 0;
+  border-radius: var(--icm-radius-sm);
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.cell-manager-list-item:hover,
+.cell-manager-list-item[aria-selected="true"] {
+  background: var(--icm-surface);
+}
+
+.cell-manager-list-item[aria-selected="true"] {
+  color: var(--icm-accent);
+  box-shadow: inset 3px 0 0 var(--icm-accent);
+}
+
+.cell-manager-list-item > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--icm-space-2);
+}
+
+.cell-manager-list-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-manager-list-item em,
+.cell-manager-title-row span,
+.cell-count-badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--icm-text-muted);
+  background: var(--icm-surface-hover);
+  font-size: var(--icm-font-xs);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.cell-manager-list-item small {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+}
+
+.cell-manager-new {
+  margin: var(--icm-space-2);
+}
+
+.cell-manager-detail {
+  min-width: 0;
+  min-height: 0;
+  padding: var(--icm-space-4);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.cell-manager-detail-header {
+  margin-bottom: var(--icm-space-3);
+}
+
+.cell-manager-title-row,
+.cell-manager-actions,
+.cell-interface-order-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--icm-space-1);
+}
+
+.cell-manager-title-row h3 {
+  font-size: 18px;
+}
+
+.cell-manager-detail-header p {
+  margin-top: 2px;
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-sm);
+}
+
+.cell-manager-actions button,
+.cell-interface-section button,
+.cell-manager-callers button {
+  min-height: var(--icm-control-h);
+  padding: 0 var(--icm-space-2);
+  box-shadow: none;
+}
+
+.cell-interface-editor {
+  display: grid;
+  gap: var(--icm-space-3);
+}
+
+.cell-interface-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(16rem, 0.85fr);
+  gap: var(--icm-space-3);
+}
+
+.cell-interface-section,
+.cell-external-interface,
+.cell-manager-callers {
+  min-width: 0;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-md);
+  background: var(--icm-surface);
+}
+
+.cell-interface-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--icm-space-2);
+  padding: var(--icm-space-3);
+}
+
+.cell-interface-section > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--icm-space-2);
+}
+
+.cell-interface-section h3 {
+  font-size: var(--icm-font-md);
+}
+
+.cell-interface-section header p,
+.cell-interface-empty {
+  margin-top: 2px;
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  line-height: var(--icm-line);
+}
+
+.cell-interface-table,
+.cell-parameter-list {
+  display: grid;
+  gap: 4px;
+}
+
+.cell-interface-row {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(5.5rem, 1fr) 6.2rem auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.cell-interface-order {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  text-align: center;
+}
+
+.cell-interface-row input,
+.cell-interface-row select,
+.cell-parameter-row input,
+.cell-external-grid input,
+.cell-external-grid select {
+  min-width: 0;
+  width: 100%;
+  height: var(--icm-control-h-lg);
+  padding: 0 var(--icm-space-2);
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  color: var(--icm-text);
+  background: var(--icm-surface);
+  font: inherit;
+  font-size: var(--icm-font-sm);
+}
+
+.cell-interface-order-actions {
+  gap: 2px;
+}
+
+.cell-interface-order-actions button,
+.cell-parameter-row button {
+  width: 28px;
+  min-width: 28px;
+  padding: 0;
+}
+
+.cell-parameter-row {
+  display: grid;
+  grid-template-columns: minmax(5rem, 1fr) minmax(5rem, 1fr) 28px;
+  gap: 4px;
+}
+
+.cell-inline-action {
+  flex: 0 0 auto;
+}
+
+.cell-apply-action {
+  align-self: flex-end;
+  margin-top: auto;
+}
+
+.cell-external-interface summary,
+.cell-manager-callers summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 0 var(--icm-space-3);
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--icm-font-sm);
+  font-weight: 600;
+}
+
+.cell-external-interface summary::-webkit-details-marker,
+.cell-manager-callers summary::-webkit-details-marker {
+  display: none;
+}
+
+.cell-external-interface summary small {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  font-weight: 500;
+}
+
+.cell-external-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--icm-space-2);
+  padding: 0 var(--icm-space-3) var(--icm-space-3);
+  border-top: 1px solid var(--icm-border);
+}
+
+.cell-external-grid label {
+  display: grid;
+  gap: 3px;
+  padding-top: var(--icm-space-2);
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+}
+
+.cell-external-grid button {
+  justify-self: end;
+  align-self: end;
+}
+
+.cell-manager-callers {
+  margin-top: var(--icm-space-3);
+}
+
+.cell-manager-callers ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0 var(--icm-space-3) var(--icm-space-3);
+  list-style: none;
+}
+
+.cell-manager-callers li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--icm-space-2);
+  font-size: var(--icm-font-sm);
+}
+
+.cell-inline-dialog {
+  position: absolute;
+  z-index: 2;
+  inset: 50% auto auto 50%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--icm-space-2);
+  width: min(26rem, calc(100% - 2rem));
+  padding: var(--icm-space-4);
+  border: 1px solid var(--icm-border-strong);
+  border-radius: var(--icm-radius-md);
+  background: var(--icm-surface);
+  box-shadow: var(--icm-shadow-lg);
+  transform: translate(-50%, -50%);
+}
+
+.cell-inline-dialog::before {
+  position: fixed;
+  z-index: -1;
+  inset: -100vh -100vw;
+  content: "";
+  background: rgb(15 23 42 / 20%);
+}
+
+.cell-inline-dialog h3,
+.cell-inline-dialog p {
+  flex: 1 0 100%;
+  margin: 0;
+}
+
+.cell-inline-dialog p {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-sm);
+}
+
+.cell-inline-dialog input {
+  flex: 1 1 12rem;
+  min-height: var(--icm-control-h-lg);
+  padding: 0 var(--icm-space-2);
 }
 
 .insert-cell-label-note {
@@ -3227,6 +3731,29 @@ body {
 
   .insert-dialog-body {
     grid-template-columns: minmax(12rem, 0.85fr) minmax(15rem, 1.15fr);
+  }
+
+  .cell-manager-dialog {
+    width: calc(100vw - 1rem);
+    height: calc(100dvh - 1rem);
+  }
+
+  .cell-manager-body {
+    grid-template-columns: 11.5rem minmax(0, 1fr);
+  }
+
+  .cell-manager-detail {
+    padding: var(--icm-space-3);
+  }
+
+  .cell-manager-detail-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cell-interface-grid,
+  .cell-external-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
