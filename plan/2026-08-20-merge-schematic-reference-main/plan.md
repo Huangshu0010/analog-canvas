@@ -51,10 +51,12 @@ the frozen lockfile; and remote branch protection/required checks.
 
 ## Test Impact
 
-- Decision: no-test-change
-- Evidence: this delivery target changes no implementation; the reviewed
-  implementation's focused unit, protocol, browser, typecheck, and impact
-  checks completed in its source target.
+- Decision: tests-updated
+- Contracts: Properties exposes and edits the user-owned schematic name rather
+  than the hidden SPICE reference; instance authoring still remains available
+  when netlist export is unavailable.
+- Primary checks: focused `component-insert.spec.ts` and `manual-editor.spec.ts`
+  contracts, then the mainline `pnpm ci:check` browser suite.
 
 ## Commit Intent
 
