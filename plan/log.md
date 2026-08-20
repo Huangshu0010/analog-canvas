@@ -3621,3 +3621,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   and diff check passed locally.
 - Commit status: pending push and replacement remote checks on
   `codex/octilinear-route-protocol`.
+
+## 2026-08-20 - Scope MCP SHA verification to publishing
+
+- Changed areas: MCP package checksum verification is now an explicit
+  release-only command; ordinary release contracts retain package generation,
+  smoke, and production checks without binding development output to the last
+  published asset.
+- Validation: focused integrity contract (5 tests); MCP package; static
+  contracts; test-impact; and full `pnpm ci:check` (including browser and
+  release verification) passed locally. Linux workflow validation is pending.
+- Commit status: pending commit and PR checks on `codex/mcp-release-sha-gate`.
