@@ -2,6 +2,7 @@ export { capacitorDevice } from "./capacitor.js";
 export { currentSourceDevice } from "./current-source.js";
 export { diodeDevice } from "./diode.js";
 export { groundDevice } from "./ground.js";
+export { inductorCompactDevice } from "./inductor-compact.js";
 export { inductorDevice } from "./inductor.js";
 export { nmosDevice } from "./nmos.js";
 export { npnDevice } from "./npn.js";

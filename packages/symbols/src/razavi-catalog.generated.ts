@@ -247,15 +247,15 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
   },
   {
     symbolId: "inductor",
-    name: "Inductor",
+    name: "Large Inductor",
     category: "passive",
     reviewStatus: "reviewed",
     pinOrder: ["1", "2"],
     palette: true,
-    automaticMappings: ["spice:L"],
+    automaticMappings: [],
     assetPath: "inductor.symbol.json",
     assetHash:
-      "b281e6f3fcca59eb84a5dfc1f9b9fd93a29bef226cc5b7113a3fd91f3c10d55e",
+      "11c01f2890b89fbe505252f2622e62838cd047885ad544fd862c3ae2d5821369",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -274,7 +274,42 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       referencePath:
         "fixtures/visual-reference/razavi-reference-v1/inductor-vector-source.json",
       converterPath: "scripts/generate-razavi-inductor-asset.mjs",
-      converterVersion: 1,
+      converterVersion: 2,
+    },
+    manualOnlyReason:
+      "Evidence-exact textbook proportions; imported L elements take the scale-reconciled inductor-compact symbol.",
+  },
+  {
+    symbolId: "inductor-compact",
+    name: "Inductor",
+    category: "passive",
+    reviewStatus: "reviewed",
+    pinOrder: ["1", "2"],
+    palette: true,
+    automaticMappings: ["spice:L"],
+    assetPath: "inductor-compact.symbol.json",
+    assetHash:
+      "ea49a969428ddb0bdce0a567467e11295a1e39f15ba71d0eafd5d316a0cbc6ea",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/inductor-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/inductor-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/inductor-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/inductor-vector-source.json",
+      converterPath: "scripts/generate-razavi-inductor-asset.mjs",
+      converterVersion: 2,
+      pinSpanScale: 0.666667,
     },
   },
   {
@@ -619,7 +654,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Manually selected adjustable presentation; structural SPICE L does not preserve a distinct variable-inductor symbol.",
     assetPath: "variable-inductor.symbol.json",
     assetHash:
-      "019535aa483deb0c3f33e635c8b926f45d17d90533acafb27135c831e251dddb",
+      "ac2a1e9e7c26bb77d9bb6f698d241b751e554583aba4e55478b1b5280fe7a018",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -1723,7 +1758,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
   {
     schemaVersion: 1,
     id: "inductor",
-    name: "Inductor",
+    name: "Large Inductor",
     viewBox: {
       x: -15,
       y: -32,
@@ -1762,6 +1797,57 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "path",
         data: "M 0 -30 L 0 -29.243 C 0 -29.243 0 -29.243 0 -27.3261 C 0 -25.4114 0 -21.5777 0 -19.663 C 0 -17.7462 0 -17.7462 0 -17.7462 C 0 -17.7462 0 -17.7462 1.86778 -17.3623 C 3.73333 -16.9785 7.46443 -16.2131 9.28089 -14.6801 C 11.0974 -13.147 10.9969 -10.8485 7.26583 -9.31325 C 3.5325 -7.78019 -3.83152 -7.01478 -7.51353 -8.16402 C -11.1955 -9.31325 -11.1955 -12.3816 -7.46443 -13.0801 C -3.7311 -13.7808 3.73333 -12.1138 7.53138 -9.58103 C 11.3317 -7.04826 11.4633 -3.64965 7.73222 -1.4159 C 3.99888 0.815621 -3.59944 1.88229 -7.39749 0.882566 C -11.1955 -0.117155 -11.1955 -3.18326 -7.39749 -3.94868 C -3.59944 -4.71632 3.99888 -3.18326 7.69874 -0.683961 C 11.3986 1.81534 11.1978 5.28089 7.39749 7.58159 C 3.59944 9.88006 -3.79805 11.0137 -7.49791 10.0474 C -11.1955 9.08117 -11.1955 6.01506 -7.49791 5.06443 C -3.79805 4.11604 3.59944 5.28089 7.33277 7.19777 C 11.0639 9.11464 11.1308 11.7813 9.29875 13.4974 C 7.46443 15.2134 3.73333 15.9788 1.86778 16.3626 C 0 16.7464 0 16.7464 0 16.7464 C 0 16.7464 0 16.7464 0 18.8285 C 0 20.9105 0 25.0767 0 27.1609 C 0 29.243 0 29.243 0 29.243 L 0 30",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "round",
+        },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "inductor-compact",
+    name: "Inductor",
+    viewBox: {
+      x: -10,
+      y: -24,
+      width: 20,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "1",
+        role: "passive",
+        at: {
+          x: 0,
+          y: -20,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "2",
+        role: "passive",
+        at: {
+          x: 0,
+          y: 20,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "path",
+        data: "M 0 -20 L 0 -19.4953 C 0 -19.4953 0 -19.4953 0 -18.2174 C 0 -16.9409 0 -14.3851 0 -13.1087 C 0 -11.8308 0 -11.8308 0 -11.8308 C 0 -11.8308 0 -11.8308 1.2452 -11.5749 C 2.4889 -11.319 4.9763 -10.8087 6.1873 -9.7867 C 7.3983 -8.7647 7.3313 -7.2323 4.8439 -6.2088 C 2.355 -5.1868 -2.5543 -4.6765 -5.009 -5.4427 C -7.4637 -6.2088 -7.4637 -8.2544 -4.9763 -8.7201 C -2.4874 -9.1872 2.4889 -8.0759 5.0209 -6.3874 C 7.5545 -4.6988 7.6422 -2.4331 5.1548 -0.9439 C 2.6659 0.5437 -2.3996 1.2549 -4.9317 0.5884 C -7.4637 -0.0781 -7.4637 -2.1222 -4.9317 -2.6325 C -2.3996 -3.1442 2.6659 -2.1222 5.1325 -0.456 C 7.5991 1.2102 7.4652 3.5206 4.9317 5.0544 C 2.3996 6.5867 -2.532 7.3425 -4.9986 6.6983 C -7.4637 6.0541 -7.4637 4.01 -4.9986 3.3763 C -2.532 2.744 2.3996 3.5206 4.8885 4.7985 C 7.3759 6.0764 7.4205 7.8542 6.1992 8.9983 C 4.9763 10.1423 2.4889 10.6525 1.2452 10.9084 C 0 11.1643 0 11.1643 0 11.1643 C 0 11.1643 0 11.1643 0 12.5523 C 0 13.9403 0 16.7178 0 18.1073 C 0 19.4953 0 19.4953 0 19.4953 L 0 20",
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -3603,9 +3689,9 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     name: "Variable Inductor",
     viewBox: {
       x: -16,
-      y: -32,
+      y: -24,
       width: 32,
-      height: 64,
+      height: 48,
     },
     pins: [
       {
@@ -3613,7 +3699,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "passive",
         at: {
           x: 0,
-          y: -30,
+          y: -20,
         },
         direction: "north",
         presentation: {
@@ -3626,7 +3712,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "passive",
         at: {
           x: 0,
-          y: 30,
+          y: 20,
         },
         direction: "south",
         presentation: {
@@ -3638,7 +3724,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     primitives: [
       {
         kind: "path",
-        data: "M 0 -30 L 0 -29.243 C 0 -29.243 0 -29.243 0 -27.3261 C 0 -25.4114 0 -21.5777 0 -19.663 C 0 -17.7462 0 -17.7462 0 -17.7462 C 0 -17.7462 0 -17.7462 1.86778 -17.3623 C 3.73333 -16.9785 7.46443 -16.2131 9.28089 -14.6801 C 11.0974 -13.147 10.9969 -10.8485 7.26583 -9.31325 C 3.5325 -7.78019 -3.83152 -7.01478 -7.51353 -8.16402 C -11.1955 -9.31325 -11.1955 -12.3816 -7.46443 -13.0801 C -3.7311 -13.7808 3.73333 -12.1138 7.53138 -9.58103 C 11.3317 -7.04826 11.4633 -3.64965 7.73222 -1.4159 C 3.99888 0.815621 -3.59944 1.88229 -7.39749 0.882566 C -11.1955 -0.117155 -11.1955 -3.18326 -7.39749 -3.94868 C -3.59944 -4.71632 3.99888 -3.18326 7.69874 -0.683961 C 11.3986 1.81534 11.1978 5.28089 7.39749 7.58159 C 3.59944 9.88006 -3.79805 11.0137 -7.49791 10.0474 C -11.1955 9.08117 -11.1955 6.01506 -7.49791 5.06443 C -3.79805 4.11604 3.59944 5.28089 7.33277 7.19777 C 11.0639 9.11464 11.1308 11.7813 9.29875 13.4974 C 7.46443 15.2134 3.73333 15.9788 1.86778 16.3626 C 0 16.7464 0 16.7464 0 16.7464 C 0 16.7464 0 16.7464 0 18.8285 C 0 20.9105 0 25.0767 0 27.1609 C 0 29.243 0 29.243 0 29.243 L 0 30",
+        data: "M 0 -20 L 0 -19.4953 C 0 -19.4953 0 -19.4953 0 -18.2174 C 0 -16.9409 0 -14.3851 0 -13.1087 C 0 -11.8308 0 -11.8308 0 -11.8308 C 0 -11.8308 0 -11.8308 1.2452 -11.5749 C 2.4889 -11.319 4.9763 -10.8087 6.1873 -9.7867 C 7.3983 -8.7647 7.3313 -7.2323 4.8439 -6.2088 C 2.355 -5.1868 -2.5543 -4.6765 -5.009 -5.4427 C -7.4637 -6.2088 -7.4637 -8.2544 -4.9763 -8.7201 C -2.4874 -9.1872 2.4889 -8.0759 5.0209 -6.3874 C 7.5545 -4.6988 7.6422 -2.4331 5.1548 -0.9439 C 2.6659 0.5437 -2.3996 1.2549 -4.9317 0.5884 C -7.4637 -0.0781 -7.4637 -2.1222 -4.9317 -2.6325 C -2.3996 -3.1442 2.6659 -2.1222 5.1325 -0.456 C 7.5991 1.2102 7.4652 3.5206 4.9317 5.0544 C 2.3996 6.5867 -2.532 7.3425 -4.9986 6.6983 C -7.4637 6.0541 -7.4637 4.01 -4.9986 3.3763 C -2.532 2.744 2.3996 3.5206 4.8885 4.7985 C 7.3759 6.0764 7.4205 7.8542 6.1992 8.9983 C 4.9763 10.1423 2.4889 10.6525 1.2452 10.9084 C 0 11.1643 0 11.1643 0 11.1643 C 0 11.1643 0 11.1643 0 12.5523 C 0 13.9403 0 16.7178 0 18.1073 C 0 19.4953 0 19.4953 0 19.4953 L 0 20",
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -3648,12 +3734,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -14,
-          y: 14,
+          x: -12,
+          y: 12,
         },
         to: {
-          x: 11,
-          y: -11,
+          x: 9,
+          y: -9,
         },
         part: "adjustment-arrow-shaft",
         style: {
@@ -3666,16 +3752,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: 14,
-            y: -14,
-          },
-          {
-            x: 8,
+            x: 12,
             y: -12,
           },
           {
-            x: 12,
-            y: -8,
+            x: 6,
+            y: -10,
+          },
+          {
+            x: 10,
+            y: -6,
           },
         ],
         fill: "foreground",

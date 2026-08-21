@@ -16,6 +16,16 @@ const assetPath = resolve(
   root,
   "packages/symbols/assets/razavi-v1/inductor.symbol.json",
 );
+const compactAssetPath = resolve(
+  root,
+  "packages/symbols/assets/razavi-v1/inductor-compact.symbol.json",
+);
+// The textbook figure is drawn at its own scale, so the calibrated Inductor is
+// 1.5x the pin span every other reviewed passive uses. `inductor` keeps that
+// evidence-exact geometry; `inductor-compact` is the same evidence reconciled
+// to the shared passive pin span so a schematic mixing R, C, and L reads at
+// one scale.
+const PASSIVE_PIN_SPAN_LOGICAL = 40;
 const catalogPath = resolve(
   root,
   "packages/symbols/assets/razavi-v1/catalog.json",
@@ -51,10 +61,29 @@ if (
   fail("vector evidence contract mismatch");
 }
 
+const anchors = evidence.normalization.pinAnchorsLogical;
+const evidencePinSpan =
+  Math.max(...anchors.map((anchor) => anchor.y)) -
+  Math.min(...anchors.map((anchor) => anchor.y));
+if (!(evidencePinSpan > 0)) fail("vector evidence has no pin span");
+const compactScale = PASSIVE_PIN_SPAN_LOGICAL / evidencePinSpan;
+const compactHalfSpan = PASSIVE_PIN_SPAN_LOGICAL / 2;
+
+/** Scale every absolute coordinate of an M/L/C path, preserving its commands. */
+function scalePathData(data, scale) {
+  const commands = data.match(/[A-Za-z]/g) ?? [];
+  if (commands.some((command) => !"MLC".includes(command))) {
+    fail(`unsupported path command in vector evidence: ${commands.join("")}`);
+  }
+  return data.replace(/-?\d+(?:\.\d+)?/g, (value) =>
+    String(Number((Number(value) * scale).toFixed(4))),
+  );
+}
+
 const symbol = {
   schemaVersion: 1,
   id: "inductor",
-  name: "Inductor",
+  name: "Large Inductor",
   viewBox: { x: -15, y: -32, width: 30, height: 64 },
   pins: [
     {
@@ -85,41 +114,80 @@ const symbol = {
   ],
   variants: [],
 };
+const compactSymbol = {
+  schemaVersion: 1,
+  id: "inductor-compact",
+  name: "Inductor",
+  // Shares the reviewed passive frame so the palette tile and label clearance
+  // match the Resistor and Capacitor exactly.
+  viewBox: { x: -10, y: -24, width: 20, height: 48 },
+  pins: symbol.pins.map((pin) => ({
+    ...pin,
+    at: { ...pin.at, y: Math.sign(pin.at.y) * compactHalfSpan },
+  })),
+  primitives: [
+    {
+      kind: "path",
+      data: scalePathData(evidence.normalization.symbolPathData, compactScale),
+      style: {
+        strokeRole: "normal",
+        lineCap: "butt",
+        lineJoin: "round",
+      },
+    },
+  ],
+  variants: [],
+};
 const assetSource = normalize(
   await format(JSON.stringify(symbol, null, 2), { parser: "json" }),
 );
+const compactAssetSource = normalize(
+  await format(JSON.stringify(compactSymbol, null, 2), { parser: "json" }),
+);
 
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
-const entry = catalog.entries.find(
-  (candidate) => candidate.symbolId === symbol.id,
-);
-if (!entry) fail("missing catalog entry inductor");
-entry.assetHash = hash(assetSource);
-entry.generation = {
+const generation = {
   kind: "razavi-pdf-vector-reference",
   referenceManifestPath:
     "fixtures/visual-reference/razavi-reference-v1/manifest.json",
   referencePath:
     "fixtures/visual-reference/razavi-reference-v1/inductor-vector-source.json",
   converterPath: "scripts/generate-razavi-inductor-asset.mjs",
-  converterVersion: 1,
+  converterVersion: 2,
 };
+for (const [id, source] of [
+  [symbol.id, assetSource],
+  [compactSymbol.id, compactAssetSource],
+]) {
+  const entry = catalog.entries.find((candidate) => candidate.symbolId === id);
+  if (!entry) fail(`missing catalog entry ${id}`);
+  entry.assetHash = hash(source);
+  entry.generation =
+    id === compactSymbol.id
+      ? { ...generation, pinSpanScale: Number(compactScale.toFixed(6)) }
+      : { ...generation };
+}
 const catalogSource = normalize(
   await format(JSON.stringify(catalog, null, 2), { parser: "json" }),
 );
 
 if (check) {
-  if (normalize(await readFile(assetPath, "utf8")) !== assetSource) {
-    fail(`${relative(root, assetPath)} is stale`);
-  }
-  if (normalize(await readFile(catalogPath, "utf8")) !== catalogSource) {
-    fail(`${relative(root, catalogPath)} is stale`);
+  for (const [path, source] of [
+    [assetPath, assetSource],
+    [compactAssetPath, compactAssetSource],
+    [catalogPath, catalogSource],
+  ]) {
+    if (normalize(await readFile(path, "utf8")) !== source) {
+      fail(`${relative(root, path)} is stale`);
+    }
   }
 } else {
   await writeFile(assetPath, assetSource, "utf8");
+  await writeFile(compactAssetPath, compactAssetSource, "utf8");
   await writeFile(catalogPath, catalogSource, "utf8");
 }
 
 console.log(
-  `${check ? "Validated" : "Generated"} PDF-derived Razavi inductor asset`,
+  `${check ? "Validated" : "Generated"} PDF-derived Razavi inductor assets` +
+    ` (compact pin-span scale ${compactScale.toFixed(4)})`,
 );

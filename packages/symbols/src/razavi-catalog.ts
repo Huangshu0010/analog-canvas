@@ -29,6 +29,11 @@ export interface RazaviSymbolCatalogEntry {
     referencePath: string;
     converterPath: string;
     converterVersion: number;
+    /**
+     * Uniform factor applied to the reference geometry so this Symbol shares
+     * the pin span of its sibling family. Absent means evidence-exact.
+     */
+    pinSpanScale?: number;
   };
 }
 
