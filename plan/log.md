@@ -4241,3 +4241,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   60).
 - Commit status: completed on `claude/inductor-scale-normalization`;
   mainline merge gated on the remote required checks.
+
+## 2026-08-22 — Publish dialog facelift and author memory
+
+- Target: `plan/2026-08-22-publish-dialog-facelift/plan.md` (completed).
+- Change: publish dialog rebuilt as a single-column modern card (stacked
+  full-width fields, inline optional hints, primary action) after user
+  feedback on the borrowed insert-picker shell; author byline now
+  persists in localStorage and prefills the next publish.
+- Validation: 6 unit tests, gallery Playwright spec 5/5 unchanged,
+  visual check, prettier, test-impact, diff checks.
+- Commit status: completed on `claude/publish-dialog-facelift`.
