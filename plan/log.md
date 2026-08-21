@@ -4222,3 +4222,22 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: gallery-publish unit tests, publish e2e scenario, prettier,
   test-impact, diff checks; production re-publish verified after deploy.
 - Commit status: completed on `claude/gallery-submissions-path`.
+
+## 2026-08-22 - Inductor scale reconciled with the other passives
+
+- Changed areas: the inductor generator now emits `inductor-compact` beside
+  the calibrated `inductor`, scaling the same manifest-pinned PDF vector
+  evidence by a derived 2/3 `pinSpanScale` so L matches R and C at a 40-unit
+  pin span; `inductor` keeps its evidence-exact geometry, fidelity target,
+  and existing Instances but is renamed "Large Inductor" and made
+  manual-only; the `spice:L` mapping and the SPICE importer's symbol choice
+  move to the compact Symbol; `variable-inductor` was rebuilt on the compact
+  base; new `inductorCompactDevice`, palette, label-side, and catalog
+  wiring. No reference evidence, measurement, or manifest hash was touched.
+- Validation: typecheck, full unit suite (174 files / 1074 tests), full
+  Playwright suite (179 passed), generator/catalog/agent-kit/MCP/
+  visual-golden/references/markdown drift checks; rendered bounds measured
+  in the running editor (R, C, compact L, variable L all 40 tall; large L
+  60).
+- Commit status: completed on `claude/inductor-scale-normalization`;
+  mainline merge gated on the remote required checks.

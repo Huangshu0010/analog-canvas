@@ -129,6 +129,7 @@ describe("Razavi symbol catalog", () => {
       ["ground", "reviewed", "razavi-reference-v1"],
       ["ideal-switch", "reviewed", "razavi-reference-v1"],
       ["inductor", "reviewed", "razavi-reference-v1"],
+      ["inductor-compact", "reviewed", "razavi-reference-v1"],
       ["inverter", "reviewed", "razavi-reference-v1"],
       ["nand-gate", "reviewed", "razavi-reference-v1"],
       ["nmos", "reviewed", "razavi-reference-v1"],
@@ -194,7 +195,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(27);
+    expect(razaviCatalogSymbols).toHaveLength(28);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -215,6 +216,7 @@ describe("Razavi symbol catalog", () => {
       "ground",
       "ideal-switch",
       "inductor",
+      "inductor-compact",
       "inverter",
       "nand-gate",
       "nmos",

@@ -32,6 +32,7 @@ const SIDE_LABEL_SYMBOLS = new Set([
   "capacitor",
   "variable-capacitor",
   "inductor",
+  "inductor-compact",
   "variable-inductor",
   "voltage-source",
   "current-source",
