@@ -77,6 +77,7 @@ uniform.
 
 Validation passed: focused placement/interaction/connectivity/lifecycle unit
 tests (4 files, 24 tests), focused Placement Tray browser regression, workspace
-typecheck, format, docs, test-impact, and diff checks. Test-impact reported one
-harmless warning while scanning the intentionally untouched local
+typecheck, format, docs, test-impact, diff checks, and complete
+`pnpm verify:branch` (static contracts, workspace unit suite, build, and
+production smoke). Test-impact reported one harmless warning while scanning the intentionally untouched local
 `.pnpm-store/` directory. Commit evidence follows this plan update.

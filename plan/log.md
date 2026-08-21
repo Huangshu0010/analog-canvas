@@ -3770,5 +3770,6 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   Return all, and a clear permanent-delete distinction.
 - Validation: focused tray/interaction/connectivity/lifecycle contracts (4
   files / 24 tests), focused browser tray flow, typecheck, format, docs,
-  test-impact, and diff checks passed.
-- Commit status: pending commit on `codex/schematic-instance-lifecycle-ux`.
+  test-impact, diff checks, and complete `pnpm verify:branch` passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  `13ba3a26`.
