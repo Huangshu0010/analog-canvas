@@ -25,7 +25,11 @@ server contract lives in
 - Public read API: list, entry, preview image. Publishing exists but is
   admin-token-gated until real sign-in lands (anonymous upload stays
   impossible from day one; admin-published entries go live directly — the
-  end-state review queue for ordinary users arrives in G3).
+  end-state review queue for ordinary users arrives in G3). The editor's
+  File > "Publish to Gallery…" dialog is the in-app publishing surface:
+  it posts the live Project with the owner passphrase (remembered per
+  browser session, forgotten on a 401) and later switches to signed-in
+  identity without moving the entry point.
 - Admin API (bearer `GALLERY_ADMIN_TOKEN`): recycle (soft, restorable),
   restore, hard-delete from the bin only, recycled list, and batch
   re-serialization that keeps long-lived entries inside the rolling schema

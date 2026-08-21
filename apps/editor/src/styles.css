@@ -3648,6 +3648,24 @@ body {
   scrollbar-width: thin;
 }
 
+.publish-gallery-dialog .insert-control-column {
+  border-right: none;
+}
+
+.publish-gallery-note {
+  margin: 0;
+  color: var(--icm-text-muted, #667085);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.publish-gallery-error {
+  margin: 0;
+  color: var(--icm-danger, #b42318);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 .netlist-preview {
   min-height: 10rem;
   margin: 0;
