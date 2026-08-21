@@ -7,7 +7,9 @@ netlist authority, formal Cell parameters, and Project-local external
 subcircuit definitions with stable ordered terminal identities and directions.
 Every ordinary Instance has one RichText schematic label, initially derived
 from its internal schematic or netlist reference until the user edits it. A
-formal Cell Port is instead identified by its terminal name, such as `Vout`. A
+free Port is identified by its Net name; a formal Cell Pin is identified by its
+terminal name, such as `Vout`. Their bound annotations may persist same-text
+RichText formatting but cannot store a divergent alias. A
 canonical v18 file can be opened, saved, reopened, and saved again without
 byte drift.
 

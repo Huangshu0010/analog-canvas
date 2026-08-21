@@ -94,8 +94,12 @@ existing netlist record. `set_instance_schematic_reference` changes the visible
 Reference for any non-formal Instance, including a non-emitting Port, without
 changing netlist output; formal Cell Ports use their terminal name and reject
 this edit. `set_instance_schematic_name` instead changes the user-owned
-RichText alias shown on a schematic. `bulk_patch_instance_netlist` is the
-bounded, atomic multi-instance netlist form. `set_instance_netlist` remains
+RichText label shown on an ordinary schematic instance. Port character edits
+rename their bound `Net.name` or `CellTerminal.name`; a formatting-only edit
+upserts the same-text `Annotation.formatOverride`. A Cell-terminal character
+edit uses the structural hierarchy planner so caller pins and the netlist
+interface reconcile atomically. `bulk_patch_instance_netlist` is the bounded,
+atomic multi-instance netlist form. `set_instance_netlist` remains
 the whole-record operation for object initialization, import, and bounded
 migrations; product editing must not rebuild unrelated netlist facts through
 it.

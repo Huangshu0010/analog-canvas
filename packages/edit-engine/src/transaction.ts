@@ -1223,7 +1223,19 @@ export function executeTransaction(
             `Cell terminal does not exist: ${edit.terminalId}`,
           );
         }
-        if (edit.name !== undefined) terminal.name = edit.name;
+        if (edit.name !== undefined) {
+          terminal.name = edit.name;
+          for (const annotation of draft.annotations) {
+            if (
+              annotation.binding?.kind === "cell-terminal-name" &&
+              annotation.binding.terminalId === terminal.id &&
+              annotation.formatOverride
+            ) {
+              delete annotation.formatOverride;
+              changedObjectIds.add(annotation.id);
+            }
+          }
+        }
         if (edit.direction !== undefined) terminal.direction = edit.direction;
         changedObjectIds.add(terminal.id);
         connectivityChanged = true;
@@ -2211,6 +2223,16 @@ export function executeTransaction(
         }
         net.name = edit.name;
         changedObjectIds.add(net.id);
+        for (const annotation of draft.annotations) {
+          if (
+            annotation.binding?.kind === "net-name" &&
+            annotation.binding.netId === net.id &&
+            annotation.formatOverride
+          ) {
+            delete annotation.formatOverride;
+            changedObjectIds.add(annotation.id);
+          }
+        }
         connectivityChanged = true;
         break;
       }

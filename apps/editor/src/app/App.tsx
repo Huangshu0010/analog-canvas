@@ -32,6 +32,7 @@ import {
   planRenameCellTerminal,
   planReorderCellTerminal,
   planSetCellSymbolPresentation,
+  planEditCellTerminalAnnotation,
   planSetCellTerminalPlacement,
   planUpdateCellTerminalDirection,
   planInstanceUnplacement,
@@ -106,6 +107,7 @@ import type {
   GridRect,
   Point,
   Rect,
+  RichTextDocument,
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
@@ -188,10 +190,7 @@ import {
   nextInstanceDesignator,
 } from "../features/netlist-export/netlist-authoring";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
-import {
-  quickPlaceRequest,
-  ShapesPanel,
-} from "../features/editor-shell/shapes-panel";
+import { ShapesPanel } from "../features/editor-shell/shapes-panel";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
@@ -1009,21 +1008,45 @@ export function App({
       );
       if (!terminal) return false;
       try {
-        const edits = planRenameCellTerminal(
+        const {
+          content,
+          formatOverride,
+          binding: _binding,
+          ...annotationPresentation
+        } = annotation;
+        const editedContent = formatOverride ?? content;
+        const semanticContent = semanticTextDocument(name, "formal-port");
+        const normalizedAnnotation: Annotation = {
+          ...annotationPresentation,
+          binding: {
+            kind: "cell-terminal-name",
+            terminalId: terminal.id,
+          },
+          ...(editedContent &&
+          JSON.stringify(editedContent) !== JSON.stringify(semanticContent)
+            ? { formatOverride: editedContent }
+            : {}),
+        };
+        const renamed = terminal.name !== name;
+        const edits = planEditCellTerminalAnnotation(
           project,
           document.id,
           terminal.id,
+          normalizedAnnotation,
           name,
         );
         if (edits.length === 0) {
-          setStatus(`Cell Port ${name} is already current`);
+          setStatus(`Cell Port ${terminal.name} is already current`);
           return true;
         }
-        const committed = commitStructure(
-          "rename-cell-port-from-annotation",
-          edits,
-        );
-        if (committed) setStatus(`Renamed formal port to ${name}`);
+        const committed = commitStructure("edit-cell-port-label", edits);
+        if (committed) {
+          setStatus(
+            renamed
+              ? `Renamed formal port to ${name}`
+              : `Formatted Cell Port ${name}`,
+          );
+        }
         return committed;
       } catch (error) {
         setStatus(
@@ -1392,6 +1415,7 @@ export function App({
     closeInsertDialog: closeInsertDialogFromHook,
     cellInsertOnly,
     insertDialogOpen,
+    insertInitialSelectionId,
     openInsertComponentDialog: openInsertComponentDialogFromHook,
     recentSymbolIds,
     rotatePendingComponent: rotatePendingComponentFromHook,
@@ -2091,6 +2115,26 @@ export function App({
         (terminal) => terminal.interfaceInstanceId === selectedInstance.id,
       )
     : undefined;
+  const selectedPortNet =
+    selectedInstance &&
+    (selectedInstance.symbolId === "port" ||
+      selectedInstance.symbolId === "port-filled")
+      ? document.nets.find((net) =>
+          net.terminals.some(
+            (terminal) => terminal.instanceId === selectedInstance.id,
+          ),
+        )
+      : undefined;
+  function renameSelectedNetPort(name: string): void {
+    if (!selectedPortNet || selectedFormalTerminal) return;
+    name = name.trim();
+    if (!name || name === selectedPortNet.name) return;
+    if (
+      transact([{ kind: "set_net_name", netId: selectedPortNet.id, name }]).ok
+    ) {
+      setStatus(`Renamed Net Port to ${name}`);
+    }
+  }
   function renameSelectedFormalPort(name: string): void {
     if (!selectedFormalTerminal) return;
     name = name.trim();
@@ -3777,12 +3821,20 @@ export function App({
     const formalName = document.netlist?.terminals.find(
       (terminal) => terminal.interfaceInstanceId === instance.id,
     )?.name;
+    const netPortName =
+      instance.symbolId === "port" || instance.symbolId === "port-filled"
+        ? document.nets.find((net) =>
+            net.terminals.some(
+              (terminal) => terminal.instanceId === instance.id,
+            ),
+          )?.name
+        : undefined;
     const schematicName = flattenRichText(
       instance.schematicName ?? { runs: [] },
     );
     const reference =
       instance.schematicReference ?? instance.netlist?.reference ?? null;
-    const secondary = formalName ?? schematicName;
+    const secondary = formalName ?? netPortName ?? schematicName;
     const identity =
       reference && secondary && reference !== secondary
         ? `${reference} · ${secondary}`
@@ -5064,6 +5116,7 @@ export function App({
     presentation?: {
       alignment: "start" | "middle" | "end";
       sizeScale: number;
+      formatOverride?: RichTextDocument;
     },
   ): SchematicEdit[] | null {
     const net = document.nets.find((candidate) => candidate.id === route.netId);
@@ -5143,6 +5196,9 @@ export function App({
           : existingLabel?.sizeScale !== undefined
             ? { sizeScale: existingLabel.sizeScale }
             : {}),
+        ...(presentation?.formatOverride
+          ? { formatOverride: presentation.formatOverride }
+          : {}),
       },
     });
     return edits;
@@ -6391,12 +6447,7 @@ export function App({
           openInsertComponentDialogFromHook();
           return;
         case "place-port": {
-          const request = quickPlaceRequest(
-            document.presentation.styleProfileId,
-            "port",
-          );
-          if (request) beginInsertedComponentPlacementFromHook(request);
-          else setStatus("Port is unavailable in this style profile");
+          openInsertComponentDialogFromHook(false, "port");
           return;
         }
         case "rotate-placement":
@@ -7098,6 +7149,8 @@ export function App({
         cells={cellInsertCandidates}
         externalDefinitions={externalSubcircuitInsertCandidates}
         cellOnly={cellInsertOnly}
+        allowFormalPort={document.id !== project.topDocumentId}
+        initialSelectionId={insertInitialSelectionId}
         onApply={beginInsertedComponentPlacementFromHook}
         onCancel={cancelComponentInsertFromHook}
       />
@@ -7333,7 +7386,17 @@ export function App({
             recentSymbolIds={recentSymbolIds}
             open={visibleLibraryPanelOpen}
             onOpenInsert={openInsertComponentDialogFromHook}
-            onQuickPlace={beginInsertedComponentPlacementFromHook}
+            onQuickPlace={(request) => {
+              if (
+                request.kind === "symbol" &&
+                (request.symbolId === "port" ||
+                  request.symbolId === "port-filled")
+              ) {
+                openInsertComponentDialogFromHook(false, request.symbolId);
+                return;
+              }
+              beginInsertedComponentPlacementFromHook(request);
+            }}
           />
         ) : (
           <ExamplesPanel
@@ -7431,6 +7494,17 @@ export function App({
                       className="formal-port-properties"
                       aria-label="Cell Port properties"
                     >
+                      <label>
+                        <span>Terminal name</span>
+                        <input
+                          key={`${selectedFormalTerminal.id}-${document.revision}-terminal-name`}
+                          aria-label="Cell Port terminal name"
+                          defaultValue={selectedFormalTerminal.name}
+                          onBlur={(event) =>
+                            renameSelectedFormalPort(event.currentTarget.value)
+                          }
+                        />
+                      </label>
                       <label>
                         <span>Direction</span>
                         <select
@@ -7598,7 +7672,21 @@ export function App({
                   >
                     <div className="property-section-heading">Identity</div>
                     <dl className="component-readonly-fields">
-                      {!selectedFormalTerminal ? (
+                      {selectedPortNet && !selectedFormalTerminal ? (
+                        <div>
+                          <dt>Net name</dt>
+                          <dd>
+                            <input
+                              key={`${selectedPortNet.id}-${document.revision}-net-port-name`}
+                              aria-label="Net Port name"
+                              defaultValue={selectedPortNet.name ?? ""}
+                              onBlur={(event) =>
+                                renameSelectedNetPort(event.currentTarget.value)
+                              }
+                            />
+                          </dd>
+                        </div>
+                      ) : !selectedFormalTerminal ? (
                         <div>
                           <dt>Schematic label</dt>
                           <dd>
@@ -7765,7 +7853,12 @@ export function App({
                       aria-label="Component display toggles"
                     >
                       <DisplayToggle
-                        label="Reference"
+                        label={
+                          selectedInstance.symbolId === "port" ||
+                          selectedInstance.symbolId === "port-filled"
+                            ? "Port label"
+                            : "Reference"
+                        }
                         checked={
                           selectedInstanceLabel !== undefined &&
                           selectedInstanceLabel.visible !== false

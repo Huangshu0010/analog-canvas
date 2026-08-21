@@ -56,8 +56,11 @@ export function instanceLabelAnnotationFor(
 ): Annotation | undefined {
   return document.annotations.find(
     (annotation) =>
-      annotation.kind === "instance-label" &&
-      annotation.binding?.kind === "instance-schematic-name" &&
+      (annotation.kind === "instance-label" ||
+        annotation.kind === "net-label") &&
+      (annotation.binding?.kind === "instance-schematic-name" ||
+        annotation.binding?.kind === "cell-terminal-name" ||
+        annotation.binding?.kind === "net-name") &&
       annotation.anchor.kind === "object" &&
       annotation.anchor.objectId === instanceId,
   );

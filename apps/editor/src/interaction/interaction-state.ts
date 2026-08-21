@@ -32,6 +32,7 @@ export interface PendingComponentPlacement {
     | "symbol"
     | "cell"
     | "external-subcircuit"
+    | "net-port"
     | "cell-port"
     | "retained-instance";
   symbolId: string;
@@ -45,6 +46,7 @@ export interface PendingComponentPlacement {
   definitionId?: string;
   masterName?: string;
   formalName?: string;
+  portName?: string;
   direction?: "input" | "output" | "inout" | "passive";
   /** Existing unplaced Instance being returned from the Placement Tray. */
   instanceId?: string;

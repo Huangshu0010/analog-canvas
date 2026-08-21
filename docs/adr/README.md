@@ -66,6 +66,9 @@ The schematic-reference and unified Port lifecycle decision is
 The formal-Port terminal-name display and retained-annotation visibility
 decision is
 [`0032-formal-port-display-and-retained-annotations.md`](0032-formal-port-display-and-retained-annotations.md).
+The unified free/formal Port semantic-name and same-text RichText presentation
+decision is
+[`0033-port-semantic-name-and-richtext-presentation.md`](0033-port-semantic-name-and-richtext-presentation.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

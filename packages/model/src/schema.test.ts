@@ -129,6 +129,20 @@ describe("CircuitProject schema", () => {
       terminalId: "terminal-vout",
     };
     expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
+    document.annotations[0]!.formatOverride = {
+      runs: [
+        {
+          kind: "span",
+          style: "bold",
+          children: [{ kind: "text", value: "Vout" }],
+        },
+      ],
+    };
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
+    document.annotations[0]!.formatOverride = {
+      runs: [{ kind: "text", value: "Different alias" }],
+    };
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(false);
   });
 
   it("rejects a persisted page point that is not aligned to its Document grid", () => {

@@ -31,9 +31,9 @@ migration. Invalid coordinates are rejected with their data path.
 - `Instance` selects one exact canonical symbol and optional visual variant.
   `Instance.schematicReference` is its canvas-facing Reference when the
   Instance has one, independent of the optional emitted
-  `Instance.netlist.reference`. A formal Cell Port instead uses its
-  `CellTerminal.name` as its sole visible identity and has no schematic
-  reference.
+  `Instance.netlist.reference`. A free Net Port instead projects `Net.name`; a
+  formal Cell Pin projects `CellTerminal.name`. Neither Port role has a visible
+  schematic reference.
 - `Net.terminals` is complete logical membership. A terminal is
   `{instanceId, pinName}` and belongs to at most one Net.
 - `Route` owns editable geometry for one Net and connects terminal or Junction
@@ -96,8 +96,10 @@ text baseline used by rendering, editor hit/marquee geometry, export bounds,
 and visual diagnostics; `fallbackPosition` is used only for a dangling target.
 `instance-schematic-name` resolves RichText `schematicName` and only then the
 internal schematic/netlist reference; `instance-designator` resolves an
-optional, read-only network ID. `instance-master-name`, `instance-value`, and
-`cell-terminal-name` resolve their own source. Renderers never derive visible
+optional, read-only network ID. `net-name` and `cell-terminal-name` resolve
+their semantic source and may use a same-text Annotation RichText
+`formatOverride`; `instance-master-name` and `instance-value` resolve their own
+source. Renderers never derive visible
 instance text from IDs or copied properties. Drafting objects are visual-only
 and cannot create connectivity.
 

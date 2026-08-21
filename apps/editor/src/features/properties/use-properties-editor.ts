@@ -6,9 +6,14 @@ import {
   gateConnectivityProposal,
   type SchematicEdit,
 } from "@icm/edit-engine";
-import { flattenRichText } from "@icm/model";
+import { flattenRichText, semanticTextDocument } from "@icm/model";
 import { resolveAnnotationText } from "@icm/derived";
-import type { Annotation, DraftingObject, SchematicDocument } from "@icm/model";
+import type {
+  Annotation,
+  DraftingObject,
+  RichTextDocument,
+  SchematicDocument,
+} from "@icm/model";
 
 import {
   componentParameters,
@@ -104,6 +109,7 @@ export interface UsePropertiesEditorOptions {
     presentation?: {
       alignment: "start" | "middle" | "end";
       sizeScale: number;
+      formatOverride?: RichTextDocument;
     },
   ) => SchematicEdit[] | null;
   instancePropertyEdits: (draft: InstancePropertyDraft) => {
@@ -579,10 +585,36 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       const presentationChanged =
         (boundAnnotation.sizeScale ?? 1) !== textEditing.sizeScale ||
         boundAnnotation.alignment !== textEditing.alignment;
+      const formatOverrideAllowed =
+        boundAnnotation.binding.kind === "net-name" ||
+        boundAnnotation.binding.kind === "cell-terminal-name";
+      const { formatOverride: _currentOverride, ...annotationWithoutOverride } =
+        boundAnnotation;
+      const semanticContent =
+        boundAnnotation.binding.kind === "cell-terminal-name"
+          ? semanticTextDocument(name, "formal-port")
+          : boundAnnotation.binding.kind === "net-name"
+            ? semanticTextDocument(
+                name,
+                boundAnnotation.kind === "power-label"
+                  ? "power-label"
+                  : "net-label",
+              )
+            : resolveAnnotationText(
+                options.document,
+                annotationWithoutOverride,
+              );
+      const nextFormatOverride = formatOverrideAllowed
+        ? JSON.stringify(semanticContent) ===
+          JSON.stringify(textEditing.content)
+          ? undefined
+          : textEditing.content
+        : boundAnnotation.formatOverride;
       const presentationEdit: SchematicEdit = {
         kind: "upsert_schematic_annotation",
         annotation: {
-          ...boundAnnotation,
+          ...annotationWithoutOverride,
+          ...(nextFormatOverride ? { formatOverride: nextFormatOverride } : {}),
           sizeScale: textEditing.sizeScale,
           alignment: textEditing.alignment,
         },
@@ -602,15 +634,18 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
           schematicNameInstance?.schematicName ??
             resolveAnnotationText(options.document, boundAnnotation),
         ) !== JSON.stringify(textEditing.content);
+      const formatOverrideChanged =
+        JSON.stringify(boundAnnotation.formatOverride ?? null) !==
+        JSON.stringify(nextFormatOverride ?? null);
       if (!name) {
         options.setStatus("Bound electrical names cannot be empty");
         return;
       }
-      if (name === currentName && !schematicNameSourceChanged) {
-        if (boundAnnotation.binding.kind === "cell-terminal-name") {
-          if (!options.commitCellPortAnnotation?.(boundAnnotation, name))
-            return;
-        }
+      if (
+        name === currentName &&
+        !schematicNameSourceChanged &&
+        !formatOverrideChanged
+      ) {
         if (presentationChanged && !options.transact([presentationEdit]).ok) {
           return;
         }
@@ -630,29 +665,50 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
             ? options.netLabelEditsForRoute(
                 boundRoute,
                 name,
-                presentationChanged
+                presentationChanged || formatOverrideChanged
                   ? {
                       alignment: textEditing.alignment,
                       sizeScale: textEditing.sizeScale,
+                      ...(nextFormatOverride
+                        ? { formatOverride: nextFormatOverride }
+                        : {}),
                     }
                   : undefined,
               )
             : [
-                {
-                  kind: "set_net_name" as const,
-                  netId: boundAnnotation.binding.netId,
-                  name,
-                },
-                ...(presentationChanged ? [presentationEdit] : []),
+                ...(name !== currentName
+                  ? [
+                      {
+                        kind: "set_net_name" as const,
+                        netId: boundAnnotation.binding.netId,
+                        name,
+                      },
+                    ]
+                  : []),
+                ...(presentationChanged || formatOverrideChanged
+                  ? [presentationEdit]
+                  : []),
               ];
           if (netLabelEdits && transactNamedNet(netLabelEdits)) {
             setTextEditing(null);
           }
           return;
         case "cell-terminal-name":
-          if (options.commitCellPortAnnotation?.(boundAnnotation, name)) {
-            if (presentationChanged && !options.transact([presentationEdit]).ok)
+          if (name !== currentName) {
+            if (
+              !options.commitCellPortAnnotation?.(
+                presentationEdit.annotation,
+                name,
+              )
+            )
               return;
+          } else if (
+            (presentationChanged || formatOverrideChanged) &&
+            !options.transact([presentationEdit]).ok
+          ) {
+            return;
+          }
+          {
             setTextEditing(null);
           }
           return;
@@ -712,13 +768,10 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       proposal.edit.annotation.kind === "instance-label" &&
       proposal.edit.annotation.anchor.kind === "object"
     ) {
-      const name = flattenRichText(
-        proposal.edit.annotation.content ?? { runs: [] },
-      ).trim();
-      if (
-        !name ||
-        !options.commitCellPortAnnotation(proposal.edit.annotation, name)
-      )
+      const content = proposal.edit.annotation.content ?? { runs: [] };
+      const name = flattenRichText(content).trim();
+      if (!name) return;
+      if (!options.commitCellPortAnnotation(proposal.edit.annotation, name))
         return;
       setTextEditing(null);
       return;

@@ -597,6 +597,7 @@ export function planRenameCellTerminal(
     throw new Error(`Cell terminal name already exists: ${newName}`);
   }
 
+  const terminalRename = terminal.name !== newName;
   const annotationEdits = child.annotations
     .filter(
       (annotation) =>
@@ -604,18 +605,32 @@ export function planRenameCellTerminal(
         annotation.anchor.kind === "object" &&
         annotation.anchor.objectId === terminal.interfaceInstanceId,
     )
-    .filter((annotation) => annotation.binding?.kind !== "cell-terminal-name")
-    .map((annotation) => ({
-      kind: "upsert_schematic_annotation" as const,
-      annotation: {
-        ...(() => {
-          const { content: _content, ...rest } = annotation;
-          return rest;
-        })(),
-        binding: { kind: "cell-terminal-name" as const, terminalId },
-      },
-    }));
-  const terminalRename = terminal.name !== newName;
+    .flatMap((annotation) => {
+      if (annotation.binding?.kind === "cell-terminal-name") {
+        if (!terminalRename || !annotation.formatOverride) return [];
+        const { formatOverride: _formatOverride, ...rest } = annotation;
+        return [
+          {
+            kind: "upsert_schematic_annotation" as const,
+            annotation: rest,
+          },
+        ];
+      }
+      const {
+        content: _content,
+        formatOverride: _formatOverride,
+        ...rest
+      } = annotation;
+      return [
+        {
+          kind: "upsert_schematic_annotation" as const,
+          annotation: {
+            ...rest,
+            binding: { kind: "cell-terminal-name" as const, terminalId },
+          },
+        },
+      ];
+    });
   if (!terminalRename && annotationEdits.length === 0) return [];
 
   const edits: ProjectStructureEdit[] = [
@@ -692,6 +707,42 @@ export function planRenameCellTerminal(
     }
   }
   return edits;
+}
+
+/**
+ * Applies a canvas Cell-Pin text edit atomically: the semantic character
+ * change uses the hierarchy rename planner, while the same-text RichText
+ * formatting remains on the bound annotation.
+ */
+export function planEditCellTerminalAnnotation(
+  project: CircuitProject,
+  documentId: string,
+  terminalId: string,
+  annotation: Annotation,
+  newName: string,
+): ProjectStructureEdit[] {
+  const renameEdits = planRenameCellTerminal(
+    project,
+    documentId,
+    terminalId,
+    newName,
+  );
+  const annotationEdit = {
+    kind: "upsert_schematic_annotation" as const,
+    annotation,
+  };
+  const childEditIndex = renameEdits.findIndex(
+    (edit) =>
+      edit.kind === "transact_document" && edit.documentId === documentId,
+  );
+  if (childEditIndex < 0) {
+    return [transactDocument(project, documentId, [annotationEdit])];
+  }
+  return renameEdits.map((edit, index) =>
+    index === childEditIndex && edit.kind === "transact_document"
+      ? { ...edit, edits: [...edit.edits, annotationEdit] }
+      : edit,
+  );
 }
 
 export function planExposePortInstance(

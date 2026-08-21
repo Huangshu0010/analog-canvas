@@ -211,11 +211,16 @@ insertion uses one default-display policy: ordinary instances receive an
 `instance-schematic-name` label, which uses RichText `schematicName` and
 otherwise falls back only to `schematicReference` or `netlist.reference`.
 Internal Cells and external subcircuits additionally receive their
-Cell/master presentation; formal Ports receive only `cell-terminal-name`; and
+Cell/master presentation; a free Net Port receives an object-anchored
+`net-name` label and a formal Cell Pin receives only `cell-terminal-name`; and
 parameter values use `instance-value` when requested and displayable.
 `instance-designator` is an explicitly requested, read-only network-ID
 projection, never the default editable label. Properties exposes one
 Schematic label field; RichText canvas editing materializes `schematicName`.
+For either Port role, a character edit renames the bound Net or terminal while
+a formatting-only edit persists a same-text annotation `formatOverride`.
+Properties exposes `Net name` for a free Port and `Terminal name` plus
+direction for a formal Pin.
 The renderer never synthesizes text from Instance IDs and no empty suppressor
 label exists. Reference label display is a Properties toggle for one or many
 selected components: hiding sets the annotation's optional `visible: false`

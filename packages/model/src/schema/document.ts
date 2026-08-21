@@ -11,6 +11,8 @@ import { NetSchema, NoConnectSchema } from "./connectivity.js";
 import { JunctionSchema, RouteBranchSchema } from "./routing.js";
 import { AnnotationSchema, VisualAnchorSchema } from "./annotations.js";
 import { DraftingLayerSchema } from "./drafting.js";
+import { flattenRichText } from "../rich-text.js";
+import { semanticTextDocument } from "../semantic-text.js";
 import {
   LayoutConstraintSchema,
   LayoutGroupSchema,
@@ -438,6 +440,34 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
           message:
             "A formal Cell Port projects only its Cell terminal name annotation",
           path: ["annotations", annotationIndex, "binding"],
+        });
+      }
+      if (!annotation.formatOverride || !binding) continue;
+      const semanticContent =
+        binding.kind === "cell-terminal-name"
+          ? semanticTextDocument(
+              document.netlist?.terminals.find(
+                (terminal) => terminal.id === binding.terminalId,
+              )?.name ?? "",
+              "formal-port",
+            )
+          : binding.kind === "net-name"
+            ? semanticTextDocument(
+                document.nets.find((net) => net.id === binding.netId)?.name ??
+                  "",
+                annotation.kind === "power-label" ? "power-label" : "net-label",
+              )
+            : null;
+      if (
+        semanticContent &&
+        flattenRichText(annotation.formatOverride) !==
+          flattenRichText(semanticContent)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "A bound RichText format override must preserve the semantic name text",
+          path: ["annotations", annotationIndex, "formatOverride"],
         });
       }
     }

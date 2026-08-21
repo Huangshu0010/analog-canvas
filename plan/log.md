@@ -3812,3 +3812,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   lifecycle/import/property flows (5 tests), workspace typecheck, Prettier,
   Markdown-link validation, test-impact, and diff checks passed.
 - Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.
+
+## 2026-08-21 - Unified Port naming and RichText presentation
+
+- Changed areas: added explicit Free Net Port versus Formal Cell Pin insertion;
+  bound their visible text to `Net.name` or `CellTerminal.name`; introduced a
+  same-text-only RichText annotation override; routed character edits through
+  Net/hierarchy rename transactions; exposed role-correct Properties; and
+  documented the protocol in ADR 0033. Also restored canonical formatting of
+  one fixture exposed by branch verification.
+- Validation: focused unit contracts (6 files / 72 tests), complete hierarchy
+  browser specification (9 tests), repaired gate regressions (2 files / 18
+  tests), typecheck, docs, test-impact and diff checks, plus complete
+  `pnpm verify:branch` (162 unit files / 975 tests, workspace build, production
+  preview smoke) passed.
+- Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.

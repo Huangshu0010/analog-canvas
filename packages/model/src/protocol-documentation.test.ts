@@ -26,6 +26,10 @@ describe("Project protocol documentation", () => {
         `Project schema ${version} makes`,
       ],
       [
+        "docs/adr/0033-port-semantic-name-and-richtext-presentation.md",
+        `Project schema ${version} keeps`,
+      ],
+      [
         "docs/user/project-compatibility.md",
         `schema version is \`${version}\``,
       ],

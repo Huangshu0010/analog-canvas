@@ -104,13 +104,30 @@ export function missingDefaultInstanceDisplayAnnotations(
   const formalTerminalId = document.netlist?.terminals.find(
     (terminal) => terminal.interfaceInstanceId === instance.id,
   )?.id;
-  return defaultInstanceDisplayAnnotations(
+  const freePortNet =
+    !formalTerminalId &&
+    (instance.symbolId === "port" || instance.symbolId === "port-filled")
+      ? document.nets.find((net) =>
+          net.terminals.some((terminal) => terminal.instanceId === instance.id),
+        )
+      : undefined;
+  const candidates = defaultInstanceDisplayAnnotations(
     document,
     instance,
     resolver,
     styleProfile,
     formalTerminalId ? { formalTerminalId } : {},
-  ).filter(
+  ).map((candidate) =>
+    freePortNet
+      ? {
+          ...candidate,
+          kind: "net-label" as const,
+          binding: { kind: "net-name" as const, netId: freePortNet.id },
+          netId: freePortNet.id,
+        }
+      : candidate,
+  );
+  return candidates.filter(
     (candidate) =>
       !document.annotations.some((existing) =>
         isSameDefaultProjection(existing, candidate),
@@ -131,6 +148,12 @@ function isSameDefaultProjection(
     candidateBinding.kind === "instance-schematic-name"
   ) {
     return existingBinding.instanceId === candidateBinding.instanceId;
+  }
+  if (
+    existingBinding.kind === "net-name" &&
+    candidateBinding.kind === "net-name"
+  ) {
+    return existingBinding.netId === candidateBinding.netId;
   }
   if (
     existingBinding.kind === "cell-terminal-name" &&

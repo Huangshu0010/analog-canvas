@@ -79,6 +79,41 @@ describe("default instance display annotations", () => {
     ]);
   });
 
+  it("materializes a free Port label from its connected Net name", () => {
+    const document = createEmptyDocument("main", "Main");
+    const instance = {
+      id: "P1",
+      symbolId: "port",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+    };
+    document.instances.push(instance);
+    document.nets.push({
+      id: "net-vin",
+      name: "VIN",
+      scope: "local",
+      terminals: [{ instanceId: instance.id, pinName: "P" }],
+    });
+
+    expect(
+      missingDefaultInstanceDisplayAnnotations(
+        document,
+        instance,
+        resolver,
+        resolveSchematicStyleProfile(document.presentation.styleProfileId),
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        kind: "net-label",
+        binding: { kind: "net-name", netId: "net-vin" },
+        netId: "net-vin",
+      }),
+    ]);
+  });
+
   it("materializes an imported reference once when a retained Instance is placed", () => {
     const document = createEmptyDocument("main", "Main");
     const instance = {

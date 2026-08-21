@@ -23,6 +23,8 @@ export interface InsertComponentDialogProps {
   cells: readonly CellInsertCandidate[];
   externalDefinitions?: readonly ExternalSubcircuitInsertCandidate[];
   cellOnly?: boolean;
+  allowFormalPort?: boolean;
+  initialSelectionId?: string | null;
   onApply(request: ComponentInsertRequest): void;
   onCancel(): void;
 }
@@ -100,6 +102,8 @@ export function InsertComponentDialog({
   cells,
   externalDefinitions = [],
   cellOnly = false,
+  allowFormalPort = false,
+  initialSelectionId = null,
   onApply,
   onCancel,
 }: InsertComponentDialogProps) {
@@ -146,6 +150,12 @@ export function InsertComponentDialog({
   const [showReference, setShowReference] = useState(true);
   const [referenceText, setReferenceText] = useState("");
   const [showValue, setShowValue] = useState(false);
+  const [portRole, setPortRole] = useState<"net-port" | "cell-terminal">(
+    "net-port",
+  );
+  const [portDirection, setPortDirection] = useState<
+    "input" | "output" | "inout" | "passive"
+  >("passive");
   const inputRef = useRef<HTMLInputElement>(null);
   const groups = useMemo<
     { category: string; choices: InsertChoice[] }[]
@@ -243,14 +253,21 @@ export function InsertComponentDialog({
     if (!open) return;
     setQuery("");
     setPickerOpen(true);
-    setSelectedId(initialChoices[0]?.key ?? null);
+    setSelectedId(
+      initialSelectionId &&
+        initialChoices.some((choice) => choice.key === initialSelectionId)
+        ? initialSelectionId
+        : (initialChoices[0]?.key ?? null),
+    );
     setInitialRotation(0);
     setShowReference(true);
     setReferenceText("");
     setShowValue(false);
+    setPortRole(allowFormalPort ? "cell-terminal" : "net-port");
+    setPortDirection("passive");
     const frame = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(frame);
-  }, [initialChoices, open]);
+  }, [allowFormalPort, initialChoices, initialSelectionId, open]);
 
   useEffect(() => {
     setParameterValues(
@@ -347,6 +364,22 @@ export function InsertComponentDialog({
         .filter(([, value]) => value !== ""),
     );
     const trimmedReference = referenceText.trim();
+    if (selectedIsPort) {
+      onApply({
+        kind: "symbol",
+        symbolId: selected.symbol.id,
+        symbolName: selected.symbol.name,
+        parameters: {},
+        initialRotation,
+        showReference: false,
+        referenceText: null,
+        showValue: false,
+        portRole,
+        ...(trimmedReference === "" ? {} : { portName: trimmedReference }),
+        portDirection,
+      });
+      return;
+    }
     onApply({
       kind: "symbol",
       symbolId: selected.symbol.id,
@@ -527,9 +560,64 @@ export function InsertComponentDialog({
                   </select>
                 </label>
                 {selectedIsPort ? (
-                  <p className="insert-cell-label-note">
-                    Port name and direction can be edited after placement.
-                  </p>
+                  <div className="insert-label-control">
+                    <label>
+                      <span>Port role</span>
+                      <select
+                        aria-label="Port role"
+                        value={portRole}
+                        onChange={(event) =>
+                          setPortRole(
+                            event.currentTarget.value as
+                              "net-port" | "cell-terminal",
+                          )
+                        }
+                      >
+                        <option value="net-port">Free Net Port</option>
+                        {allowFormalPort ? (
+                          <option value="cell-terminal">Formal Cell Pin</option>
+                        ) : null}
+                      </select>
+                    </label>
+                    <label>
+                      <span>
+                        {portRole === "cell-terminal"
+                          ? "Terminal name"
+                          : "Net name"}
+                      </span>
+                      <input
+                        aria-label={
+                          portRole === "cell-terminal"
+                            ? "New Cell terminal name"
+                            : "New Net Port name"
+                        }
+                        value={referenceText}
+                        placeholder="Use connected Net name"
+                        onChange={(event) =>
+                          setReferenceText(event.currentTarget.value)
+                        }
+                      />
+                    </label>
+                    {portRole === "cell-terminal" ? (
+                      <label>
+                        <span>Direction</span>
+                        <select
+                          aria-label="New Cell terminal direction"
+                          value={portDirection}
+                          onChange={(event) =>
+                            setPortDirection(
+                              event.currentTarget.value as typeof portDirection,
+                            )
+                          }
+                        >
+                          <option value="input">Input</option>
+                          <option value="output">Output</option>
+                          <option value="inout">Inout</option>
+                          <option value="passive">Passive</option>
+                        </select>
+                      </label>
+                    ) : null}
+                  </div>
                 ) : (
                   <div className="insert-label-control">
                     <DisplayToggle

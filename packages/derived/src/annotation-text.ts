@@ -20,6 +20,12 @@ export function resolveAnnotationText(
 ): RichTextDocument {
   const binding = annotation.binding;
   if (!binding) return annotation.content ?? EMPTY_TEXT;
+  if (
+    annotation.formatOverride &&
+    (binding.kind === "net-name" || binding.kind === "cell-terminal-name")
+  ) {
+    return annotation.formatOverride;
+  }
   switch (binding.kind) {
     case "instance-designator": {
       const instance = document.instances.find(

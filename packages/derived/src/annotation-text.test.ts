@@ -2,6 +2,7 @@ import {
   createEmptyDocument,
   flattenRichText,
   semanticTextDocument,
+  type Annotation,
 } from "@icm/model";
 import { describe, expect, it } from "vitest";
 
@@ -31,7 +32,7 @@ describe("bound annotation text", () => {
         ],
       },
     });
-    const annotation = {
+    const annotation: Annotation = {
       id: "instance-label-M1",
       kind: "instance-label" as const,
       binding: { kind: "instance-designator" as const, instanceId: "M1" },
@@ -82,6 +83,67 @@ describe("bound annotation text", () => {
     expect(resolveAnnotationText(document, annotation)).toEqual(
       semanticTextDocument("R_NETLIST", "instance-label"),
     );
+  });
+
+  it("uses a formal Port RichText label without changing its electrical terminal name", () => {
+    const document = createEmptyDocument("document-child", "Child");
+    document.instances.push({
+      id: "port-object",
+      symbolId: "port",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-vout",
+      scope: "local",
+      terminals: [{ instanceId: "port-object", pinName: "P" }],
+    });
+    document.netlist = {
+      name: "Child",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-vout",
+          name: "Vout",
+          netId: "net-vout",
+          direction: "output",
+          interfaceInstanceId: "port-object",
+        },
+      ],
+    };
+    const annotation: Annotation = {
+      id: "instance-label-port-object",
+      kind: "instance-label" as const,
+      binding: {
+        kind: "cell-terminal-name" as const,
+        terminalId: "terminal-vout",
+      },
+      anchor: { kind: "free" as const, position: { x: 0, y: 0 } },
+      alignment: "start" as const,
+      rotation: 0 as const,
+      locked: false,
+    };
+
+    expect(resolveAnnotationText(document, annotation)).toEqual(
+      semanticTextDocument("Vout", "formal-port"),
+    );
+    annotation.formatOverride = {
+      runs: [
+        {
+          kind: "span",
+          style: "bold",
+          children: [{ kind: "text", value: "V" }],
+        },
+        {
+          kind: "span",
+          style: "subscript",
+          children: [{ kind: "text", value: "out" }],
+        },
+      ],
+    };
+    expect(resolveAnnotationText(document, annotation)).toEqual(
+      annotation.formatOverride,
+    );
+    expect(document.netlist.terminals[0]!.name).toBe("Vout");
   });
 
   it("projects a Net name without touching its movable route anchor", () => {

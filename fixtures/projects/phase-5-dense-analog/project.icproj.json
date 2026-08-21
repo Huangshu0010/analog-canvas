@@ -155,7 +155,10 @@
           "id": "group-input-pair",
           "kind": "differential-pair",
           "locked": false,
-          "objectIds": ["M1", "M2"]
+          "objectIds": [
+            "M1",
+            "M2"
+          ]
         }
       ],
       "name": "Differential Stage",
@@ -243,7 +246,9 @@
           },
           "id": "route-vinp",
           "netId": "net-vinp",
-          "segmentModes": ["manual"],
+          "segmentModes": [
+            "manual"
+          ],
           "to": {
             "instanceId": "M1",
             "kind": "terminal",
@@ -259,7 +264,10 @@
           },
           "id": "route-vout",
           "netId": "net-vout",
-          "segmentModes": ["manual", "manual"],
+          "segmentModes": [
+            "manual",
+            "manual"
+          ],
           "to": {
             "instanceId": "VOUT",
             "kind": "terminal",
@@ -280,7 +288,11 @@
           },
           "id": "route-tail-left",
           "netId": "net-tail",
-          "segmentModes": ["manual", "manual", "manual"],
+          "segmentModes": [
+            "manual",
+            "manual",
+            "manual"
+          ],
           "to": {
             "instanceId": "GND",
             "kind": "terminal",
@@ -305,7 +317,11 @@
           },
           "id": "route-tail-right",
           "netId": "net-tail",
-          "segmentModes": ["manual", "manual", "manual"],
+          "segmentModes": [
+            "manual",
+            "manual",
+            "manual"
+          ],
           "to": {
             "instanceId": "GND",
             "kind": "terminal",

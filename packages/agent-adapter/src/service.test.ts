@@ -265,11 +265,11 @@ describe("current Agent Circuit API service", () => {
       }
     }
 
-    // The restored schema-v11 fraction run recursively unfolds into both
-    // part documents. The schema-16 placement lifecycle adds one small typed
-    // edit variant; this bound still guards accidental projection bloat.
+    // RichText recursively unfolds into both part documents. Schema 18 adds a
+    // bounded same-text Port-format override; this tight ceiling still guards
+    // accidental projection bloat.
     expect(JSON.stringify(AgentCircuitRequestJsonSchema).length).toBeLessThan(
-      121_000,
+      121_250,
     );
     expect(JSON.stringify(AgentCircuitResponseJsonSchema).length).toBeLessThan(
       180_000,

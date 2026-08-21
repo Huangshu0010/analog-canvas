@@ -26,9 +26,9 @@ shape.
   Each external definition has a stable identity, an ordered list of stable
   terminals, raw formal defaults, interface status and optional block
   presentation. It has no internal Document body.
-- `Instance.schematicReference` is the canvas-facing Reference for non-formal
-  Instances. A formal Cell Port instead uses its `CellTerminal.name` as its
-  sole visible identifier. `Instance.netlist` contains the separate emitted reference,
+- `Instance.schematicReference` is the canvas-facing Reference for ordinary
+  Instances. Ports use `Net.name` or `CellTerminal.name` and do not display a
+  `P#` reference. `Instance.netlist` contains the separate emitted reference,
   binding, and typed parameter values for emitting Instances. Import source
   order and symbol-mapping registry identity live in
   `Instance.importProvenance`; there is no persisted property bag.
@@ -50,7 +50,9 @@ shape.
   `instance-schematic-name`: it reads RichText `schematicName`, then falls
   back to the internal `schematicReference` or `netlist.reference`.
   `instance-designator` is optional read-only network-ID display. Renderers
-  never synthesize instance text from an internal ID.
+  never synthesize instance text from an internal ID. Bound `net-name` and
+  `cell-terminal-name` annotations may carry a RichText `formatOverride` only
+  when its flattened text equals the semantic Net or terminal name.
 - `Document.presentation.cellSymbol` is optional definition-level block intent:
   a minimum body size and stable formal-terminal side/offset placements.
   Symbol geometry remains derived and caller Instances never persist a copy.
