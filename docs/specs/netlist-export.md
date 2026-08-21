@@ -95,14 +95,17 @@ still open; explicit invalid names block export and printers do not silently
 rename them.
 
 `terminals` maps each ordered formal cell-terminal name to one existing Net.
-Canvas `port` and `port-filled` symbols are ordinary single-pin Instances; they
-do not define or reorder the formal cell interface. A hierarchy instance uses
-its bound child Document and that child's explicit private interface.
-Ports do not emit instance lines and receive no visible schematic Reference or
-`Instance.netlist.reference`. A free Net Port displays and edits its bound
-`Net.name`. A formal Cell Pin uses its ordered `CellTerminal.name`, such as
-`Vout`, for interface and export identity. Either bound Annotation may retain
-same-text RichText formatting, which never changes emitted names.
+Canvas `port` and `port-filled` symbols are ordinary single-pin Instances. A
+Free Net Port names its bound Net without changing the interface. A Formal
+Cell Pin is identified by `terminals[].interfaceInstanceId` and contributes
+that ordered interface. Both roles are available in top and child Documents,
+and neither emits an instance line. A hierarchy instance uses its bound child
+Document and that child's explicit private interface. Ports receive no visible
+schematic Reference or `Instance.netlist.reference`. A free Net Port displays
+and edits its bound `Net.name`. A formal Cell Pin uses its ordered
+`CellTerminal.name`, such as `Vout`, for interface and export identity. Either
+bound Annotation may retain same-text RichText formatting, which never changes
+emitted names.
 
 Every manually inserted device receives an explicit reference. References are
 unique per cell and have the prefix required by their device definition. Model-
@@ -170,6 +173,8 @@ represented structurally. A display string is not a source specification.
 - Named Nets are unique within a cell under case folding.
 - An unnamed local Net receives an ephemeral collision-free `N0001`, `N0002`,
   ... name in stable Net-ID order. This does not mutate the Project.
+- A Net mapped by a formal terminal uses the terminal name before anonymous
+  allocation and therefore receives no generated-name warning.
 - A global Net must have an explicit name.
 - The global Net named `0` is the reference node.
 - Other global Nets are emitted through the dialect's global declaration and

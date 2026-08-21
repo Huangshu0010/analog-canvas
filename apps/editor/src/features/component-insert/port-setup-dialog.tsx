@@ -14,6 +14,7 @@ export interface PortSetupDialogProps {
   readonly open: boolean;
   readonly symbolId: PortSymbolId;
   readonly allowFormalPort: boolean;
+  readonly defaultRole?: PortRole;
   onApply(request: ComponentInsertRequest): void;
   onCancel(): void;
 }
@@ -23,12 +24,11 @@ export function PortSetupDialog({
   open,
   symbolId,
   allowFormalPort,
+  defaultRole = allowFormalPort ? "cell-terminal" : "net-port",
   onApply,
   onCancel,
 }: PortSetupDialogProps) {
-  const [role, setRole] = useState<PortRole>(() =>
-    allowFormalPort ? "cell-terminal" : "net-port",
-  );
+  const [role, setRole] = useState<PortRole>(defaultRole);
   const [name, setName] = useState("");
   const [direction, setDirection] = useState<PortDirection>("passive");
   const [error, setError] = useState<string | null>(null);
@@ -36,11 +36,11 @@ export function PortSetupDialog({
 
   useEffect(() => {
     if (!open) return;
-    setRole(allowFormalPort ? "cell-terminal" : "net-port");
+    setRole(defaultRole);
     setName("");
     setDirection("passive");
     setError(null);
-  }, [allowFormalPort, open, symbolId]);
+  }, [defaultRole, open, symbolId]);
 
   if (!open) return null;
 

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { emulateDownloadOnlyBrowser } from "./editor-fixtures.js";
+import { clickCommand, emulateDownloadOnlyBrowser } from "./editor-fixtures.js";
 
 test.beforeEach(async ({ page }) => {
   await emulateDownloadOnlyBrowser(page);
@@ -37,25 +37,21 @@ async function beginPortPlacement(
   },
 ): Promise<void> {
   await page.getByTestId("shapes-chip-port").click();
-  const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  await dialog
-    .getByLabel("Port role")
-    .selectOption(
-      options.role === "cell-terminal" ? "cell-terminal" : "net-port",
-    );
+  const dialog = page.locator(".port-setup-dialog");
   await dialog
     .getByLabel(
-      options.role === "cell-terminal"
-        ? "New Cell terminal name"
-        : "New Net Port name",
+      options.role === "cell-terminal" ? "Formal Cell Pin" : "Free Net Port",
     )
+    .check();
+  await dialog
+    .getByLabel(options.role === "cell-terminal" ? "Terminal name" : "Net name")
     .fill(options.name);
   if (options.role === "cell-terminal") {
     await dialog
-      .getByLabel("New Cell terminal direction")
+      .getByLabel("Cell Pin direction")
       .selectOption(options.direction ?? "passive");
   }
-  await dialog.getByRole("button", { name: "Apply" }).click();
+  await dialog.getByRole("button", { name: "Place" }).click();
 }
 
 test("keeps direct Cell commands in one hierarchy row", async ({ page }) => {
@@ -303,6 +299,36 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   }
 });
 
+test("declares a top Formal Cell Pin and exports the top interface", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await beginPortPlacement(page, {
+    role: "cell-terminal",
+    name: "VIN",
+    direction: "input",
+  });
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 300, y: 180 } });
+  await expect(page.getByTestId("status")).toContainText("Added Cell port VIN");
+  await page.keyboard.press("Escape");
+  await page.getByTestId("hit-P1").click();
+  const shelf = page.getByTestId("selection-shelf");
+  if ((await shelf.getAttribute("aria-expanded")) === "false") {
+    await shelf.click();
+  }
+  await expect(page.getByLabel("Cell Port properties")).toBeVisible();
+
+  await clickCommand(page, "Netlist", "Run Preflight…");
+  const preflight = page.getByRole("dialog", { name: "Netlist Preflight" });
+  await expect(preflight.getByTestId("netlist-preview")).toContainText(
+    ".subckt Main VIN",
+  );
+  await expect(preflight).not.toContainText("GENERATED_NET_NAME");
+  await expect(preflight).not.toContainText("MISSING_DEVICE_DEFINITION");
+});
+
 test("places a free Net Port whose rich label edits the Net name", async ({
   page,
 }) => {
@@ -338,6 +364,13 @@ test("places a free Net Port whose rich label edits the Net name", async ({
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await page.getByTestId("hit-P1").click();
   await expect(netName).toHaveValue("VINP");
+
+  await clickCommand(page, "Netlist", "Run Preflight…");
+  const preflight = page.getByRole("dialog", { name: "Netlist Preflight" });
+  await expect(preflight).not.toContainText("MISSING_DEVICE_DEFINITION");
+  await expect(preflight.getByTestId("netlist-preview")).toContainText(
+    ".subckt Main",
+  );
 });
 
 test("returns a formal Cell Port to the Tray without deleting its interface", async ({

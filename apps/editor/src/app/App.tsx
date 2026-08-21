@@ -7166,7 +7166,10 @@ export function App({
       <PortSetupDialog
         open={portSetupOpen}
         symbolId={portSetupSymbolId}
-        allowFormalPort={document.id !== project.topDocumentId}
+        allowFormalPort
+        defaultRole={
+          document.id === project.topDocumentId ? "net-port" : "cell-terminal"
+        }
         onApply={(request) => startInsertFromHook({ kind: "quick", request })}
         onCancel={cancelPortSetupFromHook}
       />

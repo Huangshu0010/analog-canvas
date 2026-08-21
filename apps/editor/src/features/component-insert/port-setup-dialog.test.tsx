@@ -23,7 +23,7 @@ describe("PortSetupDialog", () => {
     expect(markup).not.toContain("insert-component-dialog");
   });
 
-  it("exposes formal Cell Pin facts only in a Cell context", () => {
+  it("exposes both explicit Port roles with a configurable default", () => {
     const markup = renderToStaticMarkup(
       <PortSetupDialog
         open
@@ -38,5 +38,23 @@ describe("PortSetupDialog", () => {
     expect(markup).toContain("Port type");
     expect(markup).toContain('aria-label="Terminal name"');
     expect(markup).toContain('aria-label="Cell Pin direction"');
+  });
+
+  it("keeps Free Net Port as the top-Document default while exposing Formal Pin", () => {
+    const markup = renderToStaticMarkup(
+      <PortSetupDialog
+        open
+        symbolId="port"
+        allowFormalPort
+        defaultRole="net-port"
+        onApply={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain("Place Net Port");
+    expect(markup).toContain('aria-label="Net name"');
+    expect(markup).toContain("Formal Cell Pin");
+    expect(markup).toContain("Free Net Port");
   });
 });

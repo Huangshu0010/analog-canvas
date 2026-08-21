@@ -16,11 +16,13 @@ repository search, completed roadmaps, target plans, or `docs/archive/`.
    [`../adr/0030-instance-identity-and-placement-lifecycle.md`](../adr/0030-instance-identity-and-placement-lifecycle.md),
    [`../adr/0031-schematic-reference-and-port-lifecycle.md`](../adr/0031-schematic-reference-and-port-lifecycle.md),
    [`../adr/0032-formal-port-display-and-retained-annotations.md`](../adr/0032-formal-port-display-and-retained-annotations.md),
-   and [`../adr/0033-port-semantic-name-and-richtext-presentation.md`](../adr/0033-port-semantic-name-and-richtext-presentation.md)
+   [`../adr/0033-port-semantic-name-and-richtext-presentation.md`](../adr/0033-port-semantic-name-and-richtext-presentation.md),
+   and [`../adr/0034-top-cell-formal-port-and-free-port-export.md`](../adr/0034-top-cell-formal-port-and-free-port-export.md)
    — current Project shape, rolling previous-version read policy, independent
    device and compatibility boundaries, Port-symbol, edit-union, schema-18
    identity and placement lifecycle, schematic references, Port semantic names
-   and RichText display, and Agent credential contract; identify superseded
+   and RichText display, top-Cell formal interfaces, Free Net Port export, and
+   Agent credential contract; identify superseded
    clauses in older ADRs.
 3. [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)
    and [`../specs/razavi-visual-contract.md`](../specs/razavi-visual-contract.md)

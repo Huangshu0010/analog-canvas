@@ -64,13 +64,11 @@ describe("current formal cell interface", () => {
     document.nets.push(
       {
         id: "net-in",
-        name: "internal_in",
         scope: "local",
         terminals: [{ instanceId: "P1", pinName: "P" }],
       },
       {
         id: "net-out",
-        name: "internal_out",
         scope: "local",
         terminals: [{ instanceId: "P2", pinName: "P" }],
       },
@@ -86,6 +84,51 @@ describe("current formal cell interface", () => {
       "VIN",
       "VOUT",
     ]);
+  });
+
+  it("treats a Free Net Port as a connected non-emitting Net marker", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-vin",
+      name: "VIN",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.cells[0]?.instances).toEqual([]);
+    expect(result.ir?.cells[0]?.nets).toContainEqual({
+      id: "net-vin",
+      name: "VIN",
+      scope: "local",
+    });
+  });
+
+  it("blocks an unconnected Free Net Port", () => {
+    const project = createEmptyProject("project", "Project");
+    project.documents[0]!.instances.push({
+      id: "P1",
+      symbolId: "port-filled",
+      placement: null,
+    });
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.ir).toBeNull();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "MISSING_PIN_NET",
+        objectIds: ["P1"],
+      }),
+    );
   });
 
   it("exports explicit NoConnect terminals through deterministic floating nodes", () => {

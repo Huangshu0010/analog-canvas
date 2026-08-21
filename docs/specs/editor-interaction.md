@@ -17,14 +17,15 @@ state as a Symbol; its commit factory alone differs, creating one typed
 subcircuit Instance through a Project structural transaction. `Xn` remains the
 internal netlist reference; the canvas has one object-anchored Cell-name
 annotation in the ordinary reference-label position. Both `port` and `port-filled`
-remain ordinary manually reachable components. Choosing either starts the same
-placement state as any component; terminal `P` participates in ordinary snap,
-wire, move/stretch, and selection behavior. In a reusable child Cell, its
-commit factory atomically adds the ordinary Instance, contacted or new local
-Net membership, and one stable formal terminal through the Project structural
-transaction. A top-level Port remains an ordinary electrical component. Every
-parent block therefore observes a child Cell interface revision without a later
-expose step.
+remain ordinary manually reachable components. Choosing either requires an
+explicit **Free Net Port** or **Formal Cell Pin** role in every Document,
+including the top Document. Terminal `P` participates in ordinary snap, wire,
+move/stretch, and selection behavior. A Free Net Port atomically creates or
+joins one named Net and is a non-emitting electrical marker. A Formal Cell Pin
+also creates one stable ordered Cell terminal through the Project structural
+transaction and contributes the `.subckt` interface without emitting an
+instance line. Every parent block therefore observes a child Cell interface
+revision without a later expose step.
 
 Library, the `I` shortcut, and **Place Cell** are entry views over one
 editor-local insert controller. Their request is either an `all` picker (the
@@ -38,12 +39,14 @@ an Edit Engine operation, or an Agent API endpoint.
 Port entry is intentionally a separate compact setup surface, not a mode of
 the generic Insert dialog. `P`, Library Port choices, and selecting either Port
 symbol from full Insert enter the same editor-local Port Setup intent before
-the ordinary placement cursor starts. At the top level, a Net name is optional:
-an isolated Port receives the first unused `NET<n>` name, while a named contact
-or explicit text takes precedence. In a child Cell, Port Setup exposes the
-formal-pin facts (name and direction) required before the interface transaction
-can commit. This separation is presentation-only and retains the same typed
-Port planners.
+the ordinary placement cursor starts. The top Document defaults this setup to
+Free Net Port so the direct `P` workflow remains fast; child Documents default
+to Formal Cell Pin. Both roles remain explicitly selectable in every Document.
+For a Free Port, a Net name is optional: an isolated Port receives the first
+unused `NET<n>` name, while a named contact or explicit text takes precedence.
+Formal Pin setup requires the terminal name and direction before its interface
+transaction can commit. This separation is presentation-only and retains the
+same typed Port planners.
 
 The default RichText projection of every Free Port Net name and Formal Cell Pin
 name uses the Razavi mathematical base (bold italic), including identifiers

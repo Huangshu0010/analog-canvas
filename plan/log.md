@@ -3894,3 +3894,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   checks passed.
 - Commit status: committed and pushed on `codex/insert-unification` as
   `65580820`.
+
+## 2026-08-21 - Top-Cell Port and Net semantics
+
+- Changed areas: enabled Formal Cell Pin authoring in the top Document; made
+  Free Net Ports validated, non-emitting Net markers; assigned formal terminal
+  names before anonymous Net generation; and accepted ADR 0034 with current
+  interaction, export, and hierarchy guidance.
+- Validation: netlist package (3 files / 19 tests), complete hierarchy browser
+  spec (10 tests), focused manual Port browser flows (2 tests), typecheck,
+  format/docs/test-impact, workspace build, and `pnpm verify:branch` (162 test
+  files / 977 tests plus production preview smoke) passed.
+- Commit status: committed on `codex/top-cell-port-net-semantics` as
+  `60d52ebb`; stacked integration is tracked separately.
