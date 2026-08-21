@@ -70,6 +70,7 @@ export type InteractionState<TClipboard = never> =
     }
   | {
       kind: "placing-vdd-rail";
+      netName: string;
       start: Point | null;
       previewPoint: Point | null;
     }
@@ -102,7 +103,7 @@ export type InteractionAction<TClipboard = never> =
   | { type: "set-component-preview"; point: Point | null }
   | { type: "rotate-component"; deltaDegrees: 90 | -90 }
   | { type: "mirror-component"; direction: ScreenFlip }
-  | { type: "begin-vdd-rail" }
+  | { type: "begin-vdd-rail"; netName: string }
   | { type: "set-vdd-rail-start"; point: Point | null }
   | { type: "set-vdd-rail-preview"; point: Point | null }
   | { type: "complete-vdd-rail" }
@@ -253,9 +254,15 @@ export function interactionReducer<TClipboard>(
         ),
       };
     case "begin-vdd-rail":
-      return state.kind === "placing-vdd-rail"
+      return state.kind === "placing-vdd-rail" &&
+        state.netName === action.netName
         ? state
-        : { kind: "placing-vdd-rail", start: null, previewPoint: null };
+        : {
+            kind: "placing-vdd-rail",
+            netName: action.netName,
+            start: null,
+            previewPoint: null,
+          };
     case "set-vdd-rail-start":
       return state.kind === "placing-vdd-rail"
         ? { ...state, start: action.point }
@@ -445,6 +452,7 @@ export function useInteractionState<TClipboard>() {
       vddRailPlacement?.previewPoint ??
       null,
     vddRailMode: vddRailPlacement !== null,
+    vddRailNetName: vddRailPlacement?.netName ?? null,
     vddRailStart: vddRailPlacement?.start ?? null,
     copyPlacement,
     wireSource: state.kind === "wire" ? state.source : null,
@@ -468,7 +476,8 @@ export function useInteractionState<TClipboard>() {
       dispatch({ type: "rotate-component", deltaDegrees }),
     mirrorComponentPlacement: (direction: ScreenFlip) =>
       dispatch({ type: "mirror-component", direction }),
-    beginVddRailPlacement: () => dispatch({ type: "begin-vdd-rail" }),
+    beginVddRailPlacement: (netName: string) =>
+      dispatch({ type: "begin-vdd-rail", netName }),
     setVddRailStart: (point: Point | null) =>
       dispatch({ type: "set-vdd-rail-start", point }),
     setVddRailPreviewPoint: (point: Point | null) =>

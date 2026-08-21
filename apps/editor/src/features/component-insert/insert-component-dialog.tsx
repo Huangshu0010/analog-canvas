@@ -156,6 +156,7 @@ export function InsertComponentDialog({
   const [showReference, setShowReference] = useState(true);
   const [referenceText, setReferenceText] = useState("");
   const [showValue, setShowValue] = useState(false);
+  const [railNetName, setRailNetName] = useState("VDD");
   const inputRef = useRef<HTMLInputElement>(null);
   const groups = useMemo<
     { category: string; choices: InsertChoice[] }[]
@@ -263,6 +264,7 @@ export function InsertComponentDialog({
     setShowReference(true);
     setReferenceText("");
     setShowValue(false);
+    setRailNetName("VDD");
     const frame = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(frame);
   }, [initialChoices, initialSelectionId, open]);
@@ -317,10 +319,13 @@ export function InsertComponentDialog({
   const apply = (): void => {
     if (!selected) return;
     if (selectedIsVddRail) {
+      const netName = railNetName.trim();
+      if (!netName) return;
       onApply({
         kind: "vdd-rail",
         symbolId: "vdd",
         symbolName: "VDD Rail",
+        netName,
       });
       return;
     }
@@ -528,7 +533,23 @@ export function InsertComponentDialog({
               ) : null}
             </section>
 
-            {!selectedIsVddRail ? (
+            {selectedIsVddRail ? (
+              <section
+                className="insert-placement-options"
+                aria-label="Power rail options"
+              >
+                <label>
+                  <span>Net name</span>
+                  <input
+                    aria-label="Power rail Net name"
+                    value={railNetName}
+                    onChange={(event) =>
+                      setRailNetName(event.currentTarget.value)
+                    }
+                  />
+                </label>
+              </section>
+            ) : (
               <section
                 className="insert-placement-options"
                 aria-label="Placement options"
@@ -584,7 +605,7 @@ export function InsertComponentDialog({
                   </div>
                 )}
               </section>
-            ) : null}
+            )}
 
             {parameters.length > 0 ? (
               <section

@@ -52,18 +52,21 @@ Instances with pin `P`; their electrical membership and Route endpoints are
 represented exactly like every other component terminal. The model has no
 separate canvas Port collection or Port-specific Net membership.
 
-`Net.powerDomain` is persisted explicitly. VDD consists of a global VDD Net,
-editable Route/Junction rail geometry, and a power-label annotation. Ground is
+`Net.powerDomain` is persisted explicitly. A named power rail consists of an
+ordinary Net, editable Route/Junction rail geometry, and a net-name-bound
+power-label annotation. Ground is
 an ordinary `ground` Instance attached through pin `0`. Supply role is never
-inferred from a marker, label, or fixed ID; canonical authoring selects an
-explicit global Net by normalized name and then verifies its persisted role.
+inferred from a marker, label, or fixed ID; authoring selects an explicit Net
+by normalized name in the current Document and then verifies its persisted role.
 
 `powerDomain` is role metadata, not Net identity: `AVDD` and `DVDD` may both
 have role `vdd` while remaining distinct Nets. Net names are unique within one
-Document under trimmed case-folding; a named global Net is an explicit semantic
-connection even when its marker geometry is separate. Canonical Ground and VDD
-attachment reuses a matching global Net by normalized name (`0` or `VDD`) and
-then checks its role; it never chooses the first Net with a matching role.
+Document under trimmed case-folding; all Port/Rail projections with the same
+name therefore share one Net. A named global Net is an explicit semantic
+connection even when its marker geometry is separate. Ground authoring retains
+the explicit global node `0` policy; VDD Port/Rail authoring creates a local
+named Net unless it reuses an existing Net of that name. Neither chooses the
+first Net with a matching role.
 Changing between non-`none` power roles is rejected atomically. The authored
 Net spelling remains persisted; normalized comparison is derived only.
 
@@ -79,14 +82,15 @@ an explicit rename or merge.
 
 Canonical MOS Instances use `nmos`/`pmos` with D/G/S/B electrical pins. The
 default `textbook-3terminal` variant is presentation-only. B membership is
-explicit first, then materialized from a configured cell-default Net, then
-from the current supply default. The supply default reuses a matching global
-ground/VDD Net or creates canonical `net-global-0`/`net-global-vdd`; its
-persisted `mosBulkBinding` records `supply-default`. Imported/source-bound MOS
-instances with missing fourth-node evidence remain unresolved.
+explicit first, then materialized from a configured cell-default Net. Without
+either, it remains unresolved; MOS polarity never creates or selects a power
+Net. Existing persisted `supply-default` bindings remain readable for rolling
+compatibility, but current manual authoring does not create them.
+Imported/source-bound MOS instances with missing fourth-node evidence remain
+unresolved.
 
 A visible `bulk-dashed` route is an explicit override. The override atomically
-removes the implicit cell/supply binding before connecting B to the selected
+removes the implicit cell-default binding before connecting B to the selected
 body-bias Net, so the default never remains as a hidden parallel connection.
 
 ## Presentation authority

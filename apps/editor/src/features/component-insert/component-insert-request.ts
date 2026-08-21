@@ -16,6 +16,7 @@ export interface VddRailInsertRequest {
   kind: "vdd-rail";
   symbolId: "vdd";
   symbolName: "VDD Rail";
+  netName: string;
 }
 
 export interface CellInsertRequest {

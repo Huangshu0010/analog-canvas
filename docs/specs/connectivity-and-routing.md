@@ -36,18 +36,20 @@ must use the same segment-geometry kernel and Route transaction.
 Routes may present as `wire`, `bulk-dashed`, or `power-rail`; presentation does
 not alter Net identity. `bulk-dashed` is used for explicit MOS B routing.
 Manual MOS instances without explicit B membership first use a configured
-cell-default Net, otherwise a `supply-default` creates or reuses canonical
-global ground/VDD. Starting a `bulk-dashed` route from B treats the implicit
-membership as unowned; committing clears the binding before connecting the
-explicit Net. Deleting the explicit route may reconcile the configured or
-canonical supply default. Source-bound/imported MOS instances remain governed
-by their fourth-node evidence and are never guessed.
+cell-default Net; without one, bulk remains unresolved. Starting a
+`bulk-dashed` route from B treats a configured default membership as unowned;
+committing clears the binding before connecting the explicit Net. Deleting the
+explicit route may reconcile only an explicitly configured cell default.
+Source-bound/imported MOS instances remain governed by their fourth-node
+evidence and are never guessed. Legacy persisted `supply-default` bindings are
+readable compatibility data, not a current authoring policy.
 
-A `power-rail` Route is valid only on an explicit Net whose persisted
-`powerDomain` is `vdd`. VDD rail authoring creates the global Net when needed,
-two route-anchor Junctions, the rail Route, and one attached RichText power
-label. It creates no VDD Instance. Branch wires on the same Net use ordinary
-wire presentation and explicit contact evidence.
+A `power-rail` Route is valid only on an explicit named Net whose persisted
+`powerDomain` is `vdd`. Rail authoring creates or reuses that name in the
+current Document, preserves an existing explicit scope, and otherwise creates
+a local Net. It adds two route-anchor Junctions, the rail Route, and one
+net-name-bound RichText power label. It creates no VDD Instance. Branch wires
+on the same Net use ordinary wire presentation and explicit contact evidence.
 
 A named global Net is itself an explicit semantic bridge. Separate Ground or
 VDD markers on that Net do not require a drawn trunk or matching label and do

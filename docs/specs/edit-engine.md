@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.12`
+Version: `1.13`
 
 Owning phase: `Phase 0/1/8`
 
@@ -201,8 +201,11 @@ Phase 8 topology operations have these preconditions:
   weaken the raw edit's rejection rule or create another mutation endpoint.
 - `set_net_power_domain` may classify an unclassified Net or clear a role, but
   cannot change directly between non-`none` roles. Canonical power authoring
-  selects by global Net name (`0` or `VDD`) before applying this edit; a power
-  role alone never selects a Net.
+  selects by Net name before applying this edit; a power role alone never
+  selects a Net.
+- `add_power_rail` requires an explicit trimmed `netName` and scope, creates or
+  reuses exactly that named compatible Net, and binds its RichText annotation
+  to the Net name. It does not infer identity from `powerDomain`.
 - Power-Net normalization is not an edit operation. Normal production
   authoring uses the name-first power and named-Net planners; a transaction
   cannot silently add a canonical name, change scope, or repair a duplicate

@@ -10032,7 +10032,19 @@
               "labelId": {
                 "$ref": "#/components/schemas/agentCircuitRequest/$defs/__schema1"
               },
-              "domain": {
+              "netName": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "local",
+                  "global"
+                ]
+              },
+              "powerDomain": {
                 "type": "string",
                 "const": "vdd"
               },
@@ -10050,7 +10062,9 @@
               "startJunctionId",
               "endJunctionId",
               "labelId",
-              "domain",
+              "netName",
+              "scope",
+              "powerDomain",
               "start",
               "end"
             ],

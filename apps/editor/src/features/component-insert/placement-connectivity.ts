@@ -18,8 +18,18 @@ import type { Instance, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 const POWER_CONNECTION_BY_SYMBOL = {
-  ground: { name: "0", pinName: "0", domain: "ground" },
-  "vdd-port": { name: "VDD", pinName: "P", domain: "vdd" },
+  ground: {
+    name: "0",
+    pinName: "0",
+    domain: "ground",
+    scope: "global",
+  },
+  "vdd-port": {
+    name: "VDD",
+    pinName: "P",
+    domain: "vdd",
+    scope: "local",
+  },
 } as const;
 
 export type SymbolPowerConnection =
@@ -176,7 +186,7 @@ export function proposePlacementContact(
         to: target.endpoint.endpoint,
         ...(createsNet ? { newNetId } : {}),
         ...(createsNet && power
-          ? { newNetName: power.name, newNetScope: "global" as const }
+          ? { newNetName: power.name, newNetScope: power.scope }
           : {}),
       });
       if (power && createsNet) powerNetId = newNetId;
@@ -268,7 +278,7 @@ export function proposedStandalonePowerConnection(
         to: endpoint,
         newNetId: netId,
         newNetName: power.name,
-        newNetScope: "global",
+        newNetScope: power.scope,
       },
       ...plan.edits,
     ],

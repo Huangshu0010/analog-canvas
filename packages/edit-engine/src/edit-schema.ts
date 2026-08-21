@@ -237,7 +237,7 @@ export const ConnectEndpointsEditSchema = z.strictObject({
   newNetScope: z.enum(["local", "global"]).optional(),
 });
 
-/** A VDD rail edit creates/reuses one explicit supply Net and its geometry. */
+/** A power rail edit creates/reuses one explicit named Net and its geometry. */
 export const AddPowerRailEditSchema = z.strictObject({
   kind: z.literal("add_power_rail"),
   netId: StableIdSchema,
@@ -245,7 +245,9 @@ export const AddPowerRailEditSchema = z.strictObject({
   startJunctionId: StableIdSchema,
   endJunctionId: StableIdSchema,
   labelId: StableIdSchema,
-  domain: z.literal("vdd"),
+  netName: z.string().trim().min(1).max(128),
+  scope: z.enum(["local", "global"]),
+  powerDomain: z.literal("vdd"),
   start: PointSchema,
   end: PointSchema,
 });

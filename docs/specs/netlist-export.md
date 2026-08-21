@@ -160,9 +160,11 @@ hint/example/help, and display role). Required export fields are derived from
 
 Pin order names canonical Symbol pins. Hidden or implicit pins remain present.
 Canonical MOS ordering is D/G/S/B. Ground is a Net marker that verifies an
-explicit global Net and emits no instance line. VDD is an explicit global Net
-and Route rail, never a symbol instance. Decorative symbols never have a device
-definition. An unsupported electrical Symbol blocks export.
+explicit global Net and emits no instance line. A VDD Port or named power Rail
+is ordinary Net presentation, never a VDD symbol instance; only an explicitly
+global Net is emitted through the dialect's global declaration. Decorative
+symbols never have a device definition. An unsupported electrical Symbol blocks
+export.
 
 Independent source syntax is accepted only after its source specification is
 represented structurally. A display string is not a source specification.

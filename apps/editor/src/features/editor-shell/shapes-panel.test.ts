@@ -88,6 +88,7 @@ describe("shapes quick-place", () => {
       kind: "vdd-rail",
       symbolId: "vdd",
       symbolName: "VDD Rail",
+      netName: "VDD",
     });
   });
 

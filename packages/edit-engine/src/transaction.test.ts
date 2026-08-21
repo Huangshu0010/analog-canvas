@@ -407,7 +407,9 @@ describe("Edit Transaction envelope", () => {
             startJunctionId: "junction-start",
             endJunctionId: "junction-end",
             labelId: "label-vdd",
-            domain: "vdd",
+            netName: "VDD",
+            scope: "local",
+            powerDomain: "vdd",
             start: { x: 10, y: 10 },
             end: { x: 10, y: 40 },
           },
@@ -440,7 +442,9 @@ describe("Edit Transaction envelope", () => {
             startJunctionId: "junction-start",
             endJunctionId: "junction-end",
             labelId: "label-vdd",
-            domain: "vdd",
+            netName: "VDD",
+            scope: "local",
+            powerDomain: "vdd",
             start: { x: 10, y: 10 },
             end: { x: 80, y: 10 },
           },
@@ -519,7 +523,7 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
-  it("creates a canonical supply default and permits an explicit bulk override", () => {
+  it("leaves unconfigured bulk unresolved and permits an explicit connection", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "M1",
@@ -537,25 +541,14 @@ describe("Edit Transaction envelope", () => {
     );
     expect(reconciled.ok).toBe(true);
     if (!reconciled.ok) return;
-    expect(reconciled.document.instances[0]?.mosBulkBinding).toEqual({
-      origin: "supply-default",
-      netId: "net-global-0",
-    });
-    expect(reconciled.document.nets).toContainEqual({
-      id: "net-global-0",
-      name: "0",
-      scope: "global",
-      powerDomain: "ground",
-      terminals: [{ instanceId: "M1", pinName: "B" }],
-      origin: { kind: "authored" },
-    });
+    expect(reconciled.document.instances[0]?.mosBulkBinding).toBeUndefined();
+    expect(reconciled.document.nets).toEqual([]);
 
     const overridden = executeTransaction(
       reconciled.document,
       {
         ...transaction(reconciled.document.revision),
         edits: [
-          { kind: "clear_mos_bulk_default", instanceId: "M1" },
           {
             kind: "connect_endpoints",
             from: { kind: "terminal", instanceId: "M1", pinName: "B" },
@@ -569,10 +562,6 @@ describe("Edit Transaction envelope", () => {
     expect(overridden.ok).toBe(true);
     if (!overridden.ok) return;
     expect(overridden.document.instances[0]?.mosBulkBinding).toBeUndefined();
-    expect(
-      overridden.document.nets.find((net) => net.id === "net-global-0")
-        ?.terminals,
-    ).not.toContainEqual({ instanceId: "M1", pinName: "B" });
     expect(
       overridden.document.nets.find((net) => net.id === "net-explicit-body")
         ?.terminals,

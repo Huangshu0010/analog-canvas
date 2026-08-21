@@ -659,7 +659,7 @@ function compileAddPowerRail(
     );
   }
   const supplyNet = document.nets.find(
-    (net) => net.powerDomain === "vdd" && net.scope === "global",
+    (net) => net.name?.toLocaleLowerCase("en-US") === "vdd",
   );
   pushEdit(index, action.kind, {
     kind: "add_power_rail",
@@ -668,7 +668,9 @@ function compileAddPowerRail(
     startJunctionId: allocateId("junction"),
     endJunctionId: allocateId("junction"),
     labelId: allocateId("label"),
-    domain: "vdd",
+    netName: supplyNet?.name ?? "VDD",
+    scope: supplyNet?.scope ?? "local",
+    powerDomain: "vdd",
     start: action.start,
     end: action.end,
   });

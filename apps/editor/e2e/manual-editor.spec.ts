@@ -385,7 +385,7 @@ test("keeps a tapped VDD rail movable and stretchable as one supply bar", async 
   ).toBeGreaterThan(beforeResizeRight);
 });
 
-test("reuses the PMOS bulk supply Net when drawing a VDD rail", async ({
+test("keeps unresolved PMOS bulk separate from a named VDD rail", async ({
   page,
 }) => {
   await page.goto("/");
@@ -412,13 +412,13 @@ test("reuses the PMOS bulk supply Net when drawing a VDD rail", async ({
   const vddNets = document.nets.filter((net) => net.powerDomain === "vdd");
   expect(vddNets).toEqual([
     expect.objectContaining({
-      id: "net-global-vdd",
-      terminals: [{ instanceId: "M1", pinName: "B" }],
+      id: "net-power-vdd1",
+      terminals: [],
     }),
   ]);
   expect(document.routes).toContainEqual(
     expect.objectContaining({
-      netId: "net-global-vdd",
+      netId: "net-power-vdd1",
       presentation: "power-rail",
     }),
   );
@@ -987,7 +987,7 @@ test("keeps a selected MOS in its fixed Razavi three-terminal view", async ({
   ).toHaveCount(0);
 });
 
-test("materializes a MOS supply default and lets a dashed bulk route override it", async ({
+test("leaves unconfigured MOS bulk unresolved until an explicit dashed route connects it", async ({
   page,
 }) => {
   await page.goto("/");
@@ -997,7 +997,7 @@ test("materializes a MOS supply default and lets a dashed bulk route override it
   await page.getByTestId("hit-M1").click();
   await openSelectionShelf(page);
   await expect(page.getByLabel("MOS bulk connection")).toContainText(
-    "supply-default",
+    "unresolved",
   );
   await page.getByRole("button", { name: "Draw bulk connection" }).click();
   await page.getByTestId("terminal-GND1-0").click();
@@ -1014,6 +1014,7 @@ test("materializes a MOS supply default and lets a dashed bulk route override it
       routes: Array<{ presentation?: string }>;
       nets: Array<{
         id: string;
+        name?: string;
         terminals: Array<{ instanceId: string; pinName: string }>;
       }>;
     }>;
@@ -1025,9 +1026,7 @@ test("materializes a MOS supply default and lets a dashed bulk route override it
   expect(document.routes).toContainEqual(
     expect.objectContaining({ presentation: "bulk-dashed" }),
   );
-  expect(
-    document.nets.find((net) => net.id === "net-global-0")?.terminals,
-  ).toEqual(
+  expect(document.nets.find((net) => net.name === "0")?.terminals).toEqual(
     expect.arrayContaining([
       { instanceId: "M1", pinName: "B" },
       { instanceId: "GND1", pinName: "0" },

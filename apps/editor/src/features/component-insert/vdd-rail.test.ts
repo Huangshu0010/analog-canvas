@@ -27,7 +27,9 @@ describe("drawn VDD rail construction", () => {
         startJunctionId: "junction-vdd3-start",
         endJunctionId: "junction-vdd3-end",
         labelId: "label-VDD3",
-        domain: "vdd",
+        netName: "VDD",
+        scope: "local",
+        powerDomain: "vdd",
         start: { x: 80, y: 40 },
         end: { x: 260, y: 40 },
       },
@@ -101,7 +103,7 @@ describe("drawn VDD rail construction", () => {
       {
         id: "net-power-vdd1",
         name: "VDD",
-        scope: "global",
+        scope: "local",
         powerDomain: "vdd",
       },
     ]);
@@ -112,33 +114,12 @@ describe("drawn VDD rail construction", () => {
     expect(result.document.annotations).toMatchObject([
       {
         kind: "power-label",
-        content: {
-          runs: [
-            {
-              kind: "span",
-              style: "italic",
-              children: [
-                {
-                  kind: "span",
-                  style: "bold",
-                  children: [
-                    { kind: "text", value: "V" },
-                    {
-                      kind: "span",
-                      style: "subscript",
-                      children: [{ kind: "text", value: "DD" }],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
+        binding: { kind: "net-name", netId: "net-power-vdd1" },
       },
     ]);
   });
 
-  it("adds rail geometry to an existing canonical PMOS supply Net", () => {
+  it("adds rail geometry to an existing explicitly global VDD Net", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push({
       id: "M1",
@@ -167,6 +148,7 @@ describe("drawn VDD rail construction", () => {
         edits: constructVddRailEdits({
           instanceId: "VDD2",
           netId: "net-global-vdd",
+          scope: "global",
           start: { x: 40, y: 20 },
           end: { x: 180, y: 20 },
         }),
@@ -235,8 +217,35 @@ describe("drawn VDD rail construction", () => {
     expect(deleted.document.routes).toEqual([]);
     expect(deleted.document.junctions).toEqual([]);
     expect(deleted.document.annotations).toEqual([]);
-    expect(deleted.document.nets).toMatchObject([
-      { name: "VDD", scope: "global", powerDomain: "vdd" },
-    ]);
+    expect(deleted.document.nets).toEqual([]);
+  });
+
+  it("reuses a same-name local AVDD Net already projected by a Port", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.nets.push({
+      id: "net-port-avdd",
+      name: "AVDD",
+      scope: "local",
+      powerDomain: "vdd",
+      terminals: [],
+    });
+    const first = planVddRailEdits(document, {
+      instanceId: "VDD1",
+      netName: "AVDD",
+      start: { x: 40, y: 20 },
+      end: { x: 180, y: 20 },
+    });
+    expect(first).toMatchObject({
+      ok: true,
+      netId: "net-port-avdd",
+      edits: [
+        {
+          kind: "add_power_rail",
+          netId: "net-port-avdd",
+          netName: "AVDD",
+          scope: "local",
+        },
+      ],
+    });
   });
 });

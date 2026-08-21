@@ -96,7 +96,7 @@ export interface UseComponentPlacementOptions {
   cancelCanvasDrag: () => void;
   clearTransientCanvasState: () => void;
   paintSnapGuides: (guides: []) => void;
-  beginVddRailInteraction: () => void;
+  beginVddRailInteraction: (netName: string) => void;
   beginComponentPlacement: (request: PendingComponentPlacement) => void;
   rotateComponentPlacement: (delta: 90 | -90) => void;
   mirrorComponentPlacement: (direction: ScreenFlip) => void;
@@ -108,6 +108,7 @@ export interface UseComponentPlacementOptions {
   setComponentPreviewPoint: (point: Point) => void;
   setStatus: (status: string) => void;
   vddRailMode: boolean;
+  vddRailNetName: string | null;
   vddRailStart: Point | null;
   pendingSymbolId: string | null;
   pendingComponentPlacement: PendingComponentPlacement | null;
@@ -705,9 +706,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       instanceId,
       start,
       end,
+      netName: options.vddRailNetName ?? "VDD",
     });
     if (!railPlan.ok) {
-      options.setStatus(`Cannot add VDD rail: ${railPlan.message}`);
+      options.setStatus(
+        `Cannot add ${options.vddRailNetName ?? "VDD"} rail: ${railPlan.message}`,
+      );
       return;
     }
     const result = options.transactConnectivity(
@@ -718,7 +722,9 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     if (!result?.ok) return;
     options.selectOnly("route", [routeId]);
     options.completeVddRailPlacement();
-    options.setStatus(`Added VDD rail ${instanceId}`);
+    options.setStatus(
+      `Added ${options.vddRailNetName ?? "VDD"} rail ${instanceId}`,
+    );
   };
 
   const openInsertPicker = ({
@@ -759,8 +765,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     setInsertInitialSelectionId(null);
     setPortSetupOpen(false);
     if (request.kind === "vdd-rail") {
-      options.beginVddRailInteraction();
-      options.setStatus("Place VDD Rail: click the first end · Esc cancels");
+      options.beginVddRailInteraction(request.netName);
+      options.setStatus(
+        `Place ${request.netName} Rail: click the first end · Esc cancels`,
+      );
       return;
     }
     const pendingRequest: PendingComponentPlacement =
@@ -850,9 +858,13 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       if (!options.vddRailStart) {
         options.setVddRailStart(point);
         options.setVddRailPreviewPoint(point);
-        options.setStatus("VDD rail: click the right end (Esc cancels)");
+        options.setStatus(
+          `${options.vddRailNetName ?? "VDD"} rail: click the right end (Esc cancels)`,
+        );
       } else if (point.x === options.vddRailStart.x) {
-        options.setStatus("VDD rail needs a non-zero horizontal length");
+        options.setStatus(
+          `${options.vddRailNetName ?? "VDD"} rail needs a non-zero horizontal length`,
+        );
       } else {
         placeVddRail(options.vddRailStart, {
           x: point.x,

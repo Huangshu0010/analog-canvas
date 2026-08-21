@@ -3948,3 +3948,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   production preview smoke) passed.
 - Commit status: routing source stacked as `85cf56ec`; coordinated repair is
   committed as the current `codex/insert-unification` branch HEAD.
+
+## 2026-08-21 - Named power and MOS bulk hotfix
+
+- Changed areas: made VDD/AVDD/DVDD Rails ordinary named Net projections;
+  unified VDD Port/Rail reuse and Razavi net-name text; and removed MOS-polarity
+  fallback creation of global VDD/0 while retaining explicit and configured
+  cell-default bulk connections.
+- Validation: focused unit/browser tests, generated Agent/MCP artifact checks,
+  test-impact and diff checks, plus canonical `pnpm ci:check` passed with
+  165 unit files / 990 tests, all builds/release checks, and 169 browser tests.
+- Commit status: ready to commit on `codex/vdd-named-power-hotfix`.

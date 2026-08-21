@@ -80,7 +80,7 @@ describe("editor shell", () => {
       },
     ]);
     expect(razaviHiddenBulkRisk(document, "Mimplicit")).toBeUndefined();
-    expect(razaviHiddenBulkRisk(document, "Msupply")).toBeUndefined();
+    expect(razaviHiddenBulkRisk(document, "Msupply")?.id).toBe("net-vdd");
     expect(razaviHiddenBulkRisk(document, "MbodyBias")?.id).toBe(
       "net-body-bias",
     );

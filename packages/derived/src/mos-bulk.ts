@@ -1,4 +1,3 @@
-import { foldNetName } from "@icm/model";
 import type {
   Instance,
   Net,
@@ -14,13 +13,6 @@ export type MosBulkResolution =
       instance: Instance;
       net: Net;
       materialized: boolean;
-    }
-  | {
-      status: "supply-default";
-      instance: Instance;
-      net: undefined;
-      materialized: false;
-      defaultName: "0" | "VDD";
     }
   | {
       status: "no-connect" | "unresolved";
@@ -64,34 +56,11 @@ export function isMosBulkRoute(
   );
 }
 
-function supplyDefaultNet(
-  document: SchematicDocument,
-  kind: MosBulkKind,
-): Net | undefined {
-  const domain = kind === "nmos" ? "ground" : "vdd";
-  const canonicalName = kind === "nmos" ? "0" : "VDD";
-  const canonicalId = kind === "nmos" ? "net-global-0" : "net-global-vdd";
-  return (
-    document.nets.find(
-      (net) =>
-        net.scope === "global" &&
-        net.name !== undefined &&
-        foldNetName(net.name) === foldNetName(canonicalName) &&
-        (net.powerDomain ?? "none") === domain,
-    ) ??
-    document.nets.find(
-      (net) =>
-        net.id === canonicalId &&
-        net.scope === "global" &&
-        (net.powerDomain ?? "none") === domain,
-    )
-  );
-}
-
 /**
  * Single authority for MOS body intent. Net membership remains the electrical
  * truth; this function only explains whether that truth was explicit or was
- * materialized from a cell or canonical supply default.
+ * materialized from a configured cell default. MOS polarity never creates or
+ * selects a named supply Net.
  */
 export function resolveMosBulkConnection(
   document: SchematicDocument,
@@ -163,21 +132,12 @@ export function resolveMosBulkConnection(
     };
   }
 
-  const supply = supplyDefaultNet(document, kind);
-  return supply
-    ? {
-        status: "supply-default",
-        instance,
-        net: supply,
-        materialized: false,
-      }
-    : {
-        status: "supply-default",
-        instance,
-        net: undefined,
-        materialized: false,
-        defaultName: kind === "nmos" ? "0" : "VDD",
-      };
+  return {
+    status: "unresolved",
+    instance,
+    net: undefined,
+    materialized: false,
+  };
 }
 
 export function mosBulkShouldBeVisible(
@@ -186,15 +146,5 @@ export function mosBulkShouldBeVisible(
 ): boolean {
   const resolution = resolveMosBulkConnection(document, instanceOrId);
   if (resolution?.status !== "explicit") return false;
-  const kind = mosBulkKind(resolution.instance)!;
-  const configuredId =
-    kind === "nmos"
-      ? document.mosBulkDefaults?.nmosNetId
-      : document.mosBulkDefaults?.pmosNetId;
-  if (configuredId === resolution.net.id) return false;
-  const expectedDomain = kind === "nmos" ? "ground" : "vdd";
-  return (
-    (resolution.net.powerDomain ?? "none") !== expectedDomain &&
-    supplyDefaultNet(document, kind)?.id !== resolution.net.id
-  );
+  return true;
 }

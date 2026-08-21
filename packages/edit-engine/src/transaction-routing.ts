@@ -1,4 +1,3 @@
-import { powerDomainForNet } from "@icm/model";
 import type {
   Annotation,
   Point,
@@ -205,8 +204,8 @@ export function validateRoute(
   }
   const net = document.nets.find((candidate) => candidate.id === route.netId);
   if (!net) return `Route net does not exist: ${route.netId}`;
-  if (route.presentation === "power-rail" && powerDomainForNet(net) !== "vdd") {
-    return `Power rail ${route.id} must belong to a VDD Net`;
+  if (route.presentation === "power-rail" && !net.name) {
+    return `Power rail ${route.id} must belong to a named Net`;
   }
   if (!endpointBelongsToNet(document, net, route.from)) {
     return `Route from endpoint is not a member of ${route.netId}`;

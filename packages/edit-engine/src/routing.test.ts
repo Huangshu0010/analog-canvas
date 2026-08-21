@@ -188,6 +188,7 @@ describe("routing Edit Engine", () => {
     const document = createEmptyDocument("vdd-manipulation", "VDD edit");
     document.nets.push({
       id: "VDD",
+      name: "VDD",
       scope: "global",
       powerDomain: "vdd",
       terminals: [],

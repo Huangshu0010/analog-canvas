@@ -27,7 +27,7 @@ export function razaviHiddenBulkRisk(
     : undefined;
 }
 
-/** One Edit-Engine operation owns cell and supply-default materialization. */
+/** One Edit-Engine operation owns configured cell-default materialization. */
 export function razaviManualBulkConnectionEdits(
   document: SchematicDocument,
   instances: readonly SchematicDocument["instances"][number][],
@@ -38,8 +38,7 @@ export function razaviManualBulkConnectionEdits(
       return Boolean(
         resolution &&
         !resolution.materialized &&
-        (resolution.status === "cell-default" ||
-          resolution.status === "supply-default"),
+        resolution.status === "cell-default",
       );
     })
     .map((instance) => instance.id);

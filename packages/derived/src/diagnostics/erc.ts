@@ -411,7 +411,7 @@ export function runErcChecks(
               severity: "warning",
               confidence: "high",
               gateEligible: false,
-              message: `Bulk ${instance.id}.${pin.name} has no explicit, cell-default, or supply-default connection`,
+              message: `Bulk ${instance.id}.${pin.name} has no explicit or configured cell-default connection`,
               primary: terminalLocator(document.id, instance.id, pin.name),
               related: [],
               parameters: {

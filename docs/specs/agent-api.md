@@ -43,8 +43,9 @@ terminal mappings report stable ID, direction, Net, and their ordinary Port
 Instance; they never materialize a separate canvas object class. The Project
 index reports `structureRevision` for structural optimistic concurrency.
 
-VDD is an explicit global Net with Route/Junction rail geometry and an
-annotation. It is never a symbol. MOS Instances use canonical `nmos`/`pmos`
+VDD is a named Net with Route/Junction rail geometry and a net-name-bound
+annotation. It is never a symbol, and local versus global scope is explicit in
+the Net/edit payload. MOS Instances use canonical `nmos`/`pmos`
 assets, whose deterministic default visual variant is
 `textbook-3terminal`; explicit bulk connectivity remains a terminal/Net fact.
 

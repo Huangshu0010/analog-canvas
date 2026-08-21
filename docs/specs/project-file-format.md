@@ -41,10 +41,10 @@ shape.
   guidance; it does not itself make a visible connection.
 - Route endpoints are terminal or Junction references only.
 - `Net.powerDomain` explicitly records `none`, `vdd`, `ground`, or diagnostic
-  `conflict`; canonical authoring verifies this persisted role after matching
-  an explicit global Net by normalized name, never by symbol or fixed ID.
-- VDD uses an explicit global Net, Route/Junction rail geometry, and RichText
-  annotation. There is no VDD symbol Instance.
+  `conflict`; authoring verifies this persisted role after matching an explicit
+  Net by normalized name, never by symbol or fixed ID.
+- A named power rail uses an ordinary Net, Route/Junction geometry, and a
+  net-name-bound RichText annotation. There is no VDD symbol Instance.
 - Every visible editable label is a RichText annotation. Its binding separates
   `instance-designator`, `instance-schematic-name`, `instance-master-name`,
   `instance-value`, and `cell-terminal-name`. The default ordinary label is

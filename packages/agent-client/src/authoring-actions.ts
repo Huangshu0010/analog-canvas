@@ -88,7 +88,7 @@ export const AuthoringActionSchema = z.discriminatedUnion("kind", [
     parameters: z.record(z.string().min(1), z.string().min(1)).optional(),
   }),
   z.strictObject({
-    /** VDD authoring primitive (`add_power_rail`), never a `vdd` symbol. */
+    /** Named VDD rail primitive (`add_power_rail`), never a `vdd` symbol. */
     kind: z.literal("add-power-rail"),
     start: PointInputSchema,
     end: PointInputSchema,

@@ -49,6 +49,7 @@ export function quickPlaceRequest(
       kind: "vdd-rail",
       symbolId: "vdd",
       symbolName: "VDD Rail",
+      netName: "VDD",
     };
   }
   return {

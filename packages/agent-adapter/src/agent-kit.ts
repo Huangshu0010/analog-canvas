@@ -100,8 +100,9 @@ the next Snapshot is the only source of their actual pins and positions.
    it. Dry-run then commit ordinary \`add_instance\` edits for known catalog
    symbols. Omit \`symbolVariantId\` to use the catalog default unless a
    listed variant is intentionally required.
-2. Create supply using the catalog primitive: \`VDD\` is
-   \`add_power_rail\` with \`powerDomain: "vdd"\`, never
+2. Create supply using the catalog primitive: a named \`VDD\` rail is
+   \`add_power_rail\` with \`netName: "VDD"\`, explicit scope, and
+   \`powerDomain: "vdd"\`, never
    \`add_instance { symbolId: "vdd" }\`. \`ground\`, \`port\`, and
    \`port-filled\` are ordinary catalog symbols.
 3. Refresh Snapshot before wiring. Prefer one high-level \`wireIntent\` for
@@ -167,7 +168,8 @@ boundary.
 ## Product primitives
 
 - \`vdd-rail\` is a semantic authoring primitive. Submit the OpenAPI-defined
-  \`add_power_rail\` edit with its \`powerDomain: "vdd"\`; \`vdd\` is never
+  \`add_power_rail\` edit with explicit \`netName\`, scope, and
+  \`powerDomain: "vdd"\`; \`vdd\` is never
   a symbol ID.
 - \`ground\`, \`port\`, and \`port-filled\` are ordinary symbols in the
   catalog. Their canonical pins are listed there.

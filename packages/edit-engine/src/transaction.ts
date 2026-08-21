@@ -2035,7 +2035,7 @@ export function executeTransaction(
         if (edit.start.y !== edit.end.y || edit.start.x === edit.end.x) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            "A VDD power rail must be a non-zero horizontal segment",
+            "A power rail must be a non-zero horizontal segment",
           );
         }
         const ids = [
@@ -2056,14 +2056,14 @@ export function executeTransaction(
         );
         if (
           existingSupplyNet &&
-          (existingSupplyNet.scope !== "global" ||
-            (existingSupplyNet.powerDomain ?? "none") !== edit.domain ||
+          (existingSupplyNet.scope !== edit.scope ||
             !existingSupplyNet.name ||
-            foldNetName(existingSupplyNet.name) !== foldNetName("VDD"))
+            foldNetName(existingSupplyNet.name) !== foldNetName(edit.netName) ||
+            (existingSupplyNet.powerDomain ?? "none") !== edit.powerDomain)
         ) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            `Power rail Net ${edit.netId} is not a global VDD Net`,
+            `Power rail Net ${edit.netId} does not match ${edit.scope} ${edit.netName}`,
             [],
             [edit.netId],
           );
@@ -2094,9 +2094,9 @@ export function executeTransaction(
         if (!existingSupplyNet) {
           draft.nets.push({
             id: edit.netId,
-            name: "VDD",
-            scope: "global",
-            powerDomain: edit.domain,
+            name: edit.netName,
+            scope: edit.scope,
+            powerDomain: edit.powerDomain,
             terminals: [],
             origin: { kind: "authored" },
           });
@@ -2128,28 +2128,7 @@ export function executeTransaction(
           AnnotationSchema.parse({
             id: edit.labelId,
             kind: "power-label",
-            content: {
-              runs: [
-                {
-                  kind: "span",
-                  style: "italic",
-                  children: [
-                    {
-                      kind: "span",
-                      style: "bold",
-                      children: [
-                        { kind: "text", value: "V" },
-                        {
-                          kind: "span",
-                          style: "subscript",
-                          children: [{ kind: "text", value: "DD" }],
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
+            binding: { kind: "net-name", netId: edit.netId },
             netId: edit.netId,
             anchor: {
               kind: "object",
@@ -2387,41 +2366,10 @@ export function executeTransaction(
             continue;
           }
           let target = resolution.net;
-          if (!target) {
-            if (
-              resolution.status !== "supply-default" ||
-              !("defaultName" in resolution)
-            ) {
-              continue;
-            }
-            const name = resolution.defaultName;
-            const id = name === "0" ? "net-global-0" : "net-global-vdd";
-            const conflictingNet = draft.nets.find((net) => net.id === id);
-            if (conflictingNet) {
-              return rejectAt(
-                "EDIT_PRECONDITION",
-                `Canonical MOS supply Net ${id} exists without the required ${name === "0" ? "ground" : "vdd"} global identity`,
-                [],
-                [id],
-              );
-            }
-            target = {
-              id,
-              name,
-              scope: "global",
-              powerDomain: name === "0" ? "ground" : "vdd",
-              terminals: [],
-              origin: { kind: "authored" },
-            };
-            draft.nets.push(target);
-            changedObjectIds.add(id);
-          }
+          if (!target || resolution.status !== "cell-default") continue;
           target.terminals.push({ instanceId: instance.id, pinName: "B" });
           instance.mosBulkBinding = {
-            origin:
-              resolution.status === "cell-default"
-                ? "cell-default"
-                : "supply-default",
+            origin: "cell-default",
             netId: target.id,
           };
           changedObjectIds.add(instance.id);

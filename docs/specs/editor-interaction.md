@@ -81,25 +81,25 @@ new interfaces use deterministic direction-aware automatic layout.
 
 Canonical `nmos`/`pmos` use the asset's `textbook-3terminal` visual variant by
 default while retaining D/G/S/B electrically. A manual MOS uses explicit B
-membership first, then a configured cell default, then the canonical supply
-default: NMOS bulk uses/creates global ground and PMOS bulk uses/creates global
-VDD. Drawing the visible `bulk-dashed` connection clears that implicit binding
-and connects B to the selected Net in the same transaction. Imported MOS
-instances do not receive a guessed fourth node.
+membership first, then an explicitly configured cell default; otherwise bulk
+remains unresolved. Drawing the visible `bulk-dashed` connection clears that
+default binding and connects B to the selected Net in the same transaction.
+Imported MOS instances do not receive a guessed fourth node.
 
 Ground is the `ground` component connected through pin `0`; placement reuses an
-existing global ground supply Net. VDD Rail is a virtual Library item presented
+existing global ground supply Net. Power Rail is a virtual Library item presented
 through the same I-dialog, Library, and placement input plane as components.
 Its editor-local VDD artwork is preview-only and is not registered with the
 product Symbol Resolver. Before the first click the artwork follows the
 pointer; after the first click the preview becomes the horizontal rail. The
-second click creates/reuses an explicit global VDD Net, creates two route-anchor
-Junctions and one `power-rail` Route, and persists one RichText power-label
-annotation. The Route is the only rail geometry: the annotation adds no supply
-bar or terminal stub, and its complete `V_DD` text is bold italic with `DD` as
-a subscript. It creates no VDD Instance and exits placement after the commit.
-Deleting the rail also deletes its power label and rail-only Junctions while
-preserving a VDD Net still used elsewhere.
+second click creates/reuses the selected named Net in this Document, creates two
+route-anchor Junctions and one `power-rail` Route, and persists one net-name-bound
+RichText power-label annotation. A new Net is local; a matching explicitly
+global Net keeps its scope. The Route is the only rail geometry: the annotation
+adds no supply bar or terminal stub, and the semantic name uses the shared
+Razavi schematic-math style. It creates no VDD Instance and exits placement
+after the commit. Deleting the rail also deletes its power label and rail-only
+Junctions; an otherwise-unused local Net follows the ordinary orphan lifecycle.
 
 ## Interaction states
 

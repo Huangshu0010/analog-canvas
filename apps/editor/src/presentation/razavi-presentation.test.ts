@@ -65,7 +65,7 @@ describe("Razavi hidden bulk policy", () => {
     ]);
   });
 
-  it("reuses an unconfigured global VDD supply Net", () => {
+  it("does not infer bulk from an unconfigured VDD Net", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push(manualMos("M4", "pmos"));
     document.nets.push({
@@ -78,15 +78,10 @@ describe("Razavi hidden bulk policy", () => {
 
     expect(
       razaviManualBulkConnectionEdits(document, document.instances),
-    ).toEqual([
-      {
-        kind: "reconcile_mos_bulk",
-        instanceIds: ["M4"],
-      },
-    ]);
+    ).toEqual([]);
   });
 
-  it("applies a supply default only to manual MOS instances", () => {
+  it("leaves imported and manual MOS unresolved without a configured default", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push(
       {
@@ -101,15 +96,10 @@ describe("Razavi hidden bulk policy", () => {
     );
     expect(
       razaviManualBulkConnectionEdits(document, document.instances),
-    ).toEqual([
-      {
-        kind: "reconcile_mos_bulk",
-        instanceIds: ["MnoSupply"],
-      },
-    ]);
+    ).toEqual([]);
   });
 
-  it("creates and materializes both canonical supply defaults at entry", () => {
+  it("does not create canonical supply Nets at Project entry", () => {
     const project = createEmptyProject("project-entry", "Entry");
     const document = project.documents[0]!;
     document.instances.push(manualMos("MN", "nmos"), manualMos("MP", "pmos"));
@@ -117,25 +107,8 @@ describe("Razavi hidden bulk policy", () => {
     const prepared = materializeRazaviProjectBulkConnections(project);
     const preparedDocument = prepared.project.documents[0]!;
 
-    expect(prepared.instanceCount).toBe(2);
-    expect(preparedDocument.nets).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "net-global-0",
-          name: "0",
-          scope: "global",
-          powerDomain: "ground",
-          terminals: [{ instanceId: "MN", pinName: "B" }],
-        }),
-        expect.objectContaining({
-          id: "net-global-vdd",
-          name: "VDD",
-          scope: "global",
-          powerDomain: "vdd",
-          terminals: [{ instanceId: "MP", pinName: "B" }],
-        }),
-      ]),
-    );
+    expect(prepared.instanceCount).toBe(0);
+    expect(preparedDocument.nets).toEqual([]);
   });
 
   it("does not repair duplicate canonical Nets at Project entry", () => {
