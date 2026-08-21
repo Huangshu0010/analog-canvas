@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -47,15 +47,15 @@ Google, Resend) reached through an injectable fetch seam.
 ## Design
 
 - `AuthDO` (fourth SQLite DO, singleton `auth`): `users(id, provider,
-  provider_id UNIQUE(provider, provider_id), email, display_name,
-  created_at)`, `sessions(token_hash, user_id, expires_at)`,
+provider_id UNIQUE(provider, provider_id), email, display_name,
+created_at)`, `sessions(token_hash, user_id, expires_at)`,
   `login_tokens(token_hash, email, expires_at)`, `login_rates(day,
-  email_hash, count)`. Raw session tokens live only in the cookie; the DB
+email_hash, count)`. Raw session tokens live only in the cookie; the DB
   stores SHA-256 hashes. Sessions last 30 days; magic links 15 minutes,
   single-use, 5/day per email.
 - Public routes (worker forwards `/api/auth/*` to the DO verbatim):
   `GET providers` (which providers are lit), `GET me`, `GET
-  github/start|callback`, `GET google/start|callback`, `POST email/start`,
+github/start|callback`, `GET google/start|callback`, `POST email/start`,
   `GET email/callback`, `POST logout`, `POST profile` (rename, 1–40
   chars). OAuth `state` is double-submit: random value in a short-lived
   HttpOnly cookie compared on callback. GitHub uses only the verified
@@ -110,4 +110,27 @@ feat(worker): gallery accounts and sign-in (phase G2, dark-shipped)
 
 ## Outcome
 
-Pending.
+Delivered, dark-shipped: `AuthDO` (migration v4) serves the whole
+`/api/auth/*` surface — GitHub and Google OAuth code flows with
+double-submit state cookies, Resend magic links (single-use, 15-minute,
+5/day/address), hashed-token HttpOnly 30-day sessions, per-request
+`ADMIN_EMAILS` super-admin, display-name rename, logout. The gallery
+accepts an admin session wherever the bearer worked (submissions and all
+admin routes). The feed header gained the account area (sign-in per
+enabled provider, email-link form, rename-in-place, Owner badge, sign
+out; invisible while every provider is dark), and the publish dialog
+drops the passphrase row for a signed-in admin, prefilling the author
+byline from the account name. The deploy workflow syncs whichever
+secrets exist; the spec and roadmap record the contract and the exact
+enable checklist (`GH_OAUTH_*` naming because GitHub Actions forbids
+`GITHUB_`).
+
+Fixed in passing on this branch's base: the publish client now posts to
+`/api/gallery/submissions` (hotfix PR #156) and the facelift dialog
+(PR #157) is the base for the session-aware variant.
+
+Validation: worker suites 18 (9 auth + 9 gallery incl. session
+acceptance), editor unit sweep 92 across worker+editor-shell+components+
+app, gallery Playwright spec 8/8 (sign-in providers, rename/sign-out,
+passphrase publish, admin session publish), repository typecheck,
+prettier, test-impact, diff checks.

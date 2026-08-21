@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   describePublishOutcome,
@@ -44,6 +44,15 @@ export function PublishGalleryDialog({
   const [token, setToken] = useState(() => rememberedPublishToken());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The session usually arrives after mount; fill the untouched author
+  // byline with the account name once it does.
+  const sessionDisplayName = session?.displayName;
+  useEffect(() => {
+    if (sessionDisplayName) {
+      setAuthor((previous) => previous || sessionDisplayName);
+    }
+  }, [sessionDisplayName]);
 
   async function submit(): Promise<void> {
     setBusy(true);

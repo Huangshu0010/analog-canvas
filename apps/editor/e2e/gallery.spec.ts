@@ -214,6 +214,49 @@ test("File > Publish to Gallery posts the live Project with the passphrase", asy
   ).toHaveValue("secret-token");
 });
 
+test("an admin session publishes without the passphrase row", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u1",
+          displayName: "Token Zhang",
+          email: "owner@example.com",
+          provider: "github",
+          isAdmin: true,
+        },
+      },
+    }),
+  );
+  const posted: { authorization: string | null; author: string }[] = [];
+  await page.route("**/api/gallery/submissions", (route) => {
+    const body = route.request().postDataJSON() as { author: string };
+    posted.push({
+      authorization: route.request().headers()["authorization"] ?? null,
+      author: body.author,
+    });
+    return route.fulfill({ status: 201, json: { id: "entry-77" } });
+  });
+
+  await page.goto("/editor");
+  await clickCommand(page, "File", "Publish to Gallery…");
+  const dialog = page.getByTestId("publish-gallery-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Signed in as Token Zhang")).toBeVisible();
+  await expect(dialog.getByLabel("Owner passphrase")).toHaveCount(0);
+  // The account display name prefills the author byline.
+  await expect(dialog.getByLabel("Author")).toHaveValue("Token Zhang");
+
+  await dialog.getByLabel("Circuit name").fill("Session Publish");
+  await dialog.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByTestId("status")).toHaveText(
+    'Published "Session Publish" to the gallery',
+  );
+  expect(posted).toEqual([{ authorization: null, author: "Token Zhang" }]);
+});
+
 test("bundled starter tiles open their example in the editor", async ({
   page,
 }) => {

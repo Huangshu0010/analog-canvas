@@ -116,9 +116,7 @@ async function emailSignIn(
   expect(start.status).toBe(202);
   const link = sent[0]?.text.match(/https?:\/\/\S+/u)?.[0];
   if (!link) throw new Error("no sign-in link sent");
-  const callback = await auth.call(
-    link.slice(ORIGIN.length),
-  );
+  const callback = await auth.call(link.slice(ORIGIN.length));
   expect(callback.status).toBe(302);
   const session = cookieValue(callback, "icm_session");
   if (!session) throw new Error("no session cookie set");

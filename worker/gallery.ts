@@ -354,8 +354,7 @@ function sameOrigin(request: Request): boolean {
 async function isAdmin(request: Request, env: GalleryEnv): Promise<boolean> {
   if (
     env.GALLERY_ADMIN_TOKEN &&
-    request.headers.get("Authorization") ===
-      `Bearer ${env.GALLERY_ADMIN_TOKEN}`
+    request.headers.get("Authorization") === `Bearer ${env.GALLERY_ADMIN_TOKEN}`
   ) {
     return true;
   }

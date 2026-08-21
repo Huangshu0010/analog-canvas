@@ -28,4 +28,36 @@ describe("PublishGalleryDialog", () => {
     expect(markup).toContain('placeholder="Shown on your tile"');
     expect(markup).not.toContain("insert-component-dialog");
   });
+
+  it("drops the passphrase row for a signed-in admin session", () => {
+    const markup = renderToStaticMarkup(
+      createElement(PublishGalleryDialog, {
+        defaultName: "Ring Oscillator",
+        session: { displayName: "Token Zhang", isAdmin: true },
+        publish: () => Promise.resolve({ status: "unauthorized" as const }),
+        onPublished: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+    expect(markup).not.toContain("Owner passphrase");
+    expect(markup).toContain("Signed in as Token Zhang");
+    // Publish is enabled without any passphrase.
+    expect(markup).not.toMatch(/disabled=""[^>]*>Publish</u);
+    // The account display name prefills the author byline.
+    expect(markup).toContain('value="Token Zhang"');
+  });
+
+  it("keeps the passphrase row for an ordinary signed-in user", () => {
+    const markup = renderToStaticMarkup(
+      createElement(PublishGalleryDialog, {
+        defaultName: "Ring Oscillator",
+        session: { displayName: "Visitor", isAdmin: false },
+        publish: () => Promise.resolve({ status: "unauthorized" as const }),
+        onPublished: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+    expect(markup).toContain("Owner passphrase");
+    expect(markup).toMatch(/disabled=""[^>]*>Publish</u);
+  });
 });

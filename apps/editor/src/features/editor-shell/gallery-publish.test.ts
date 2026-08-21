@@ -88,6 +88,19 @@ describe("publishProjectToGallery", () => {
     }
   });
 
+  it("omits the bearer for an empty passphrase so the session cookie signs", async () => {
+    const seen: { url?: string; init?: RequestInit | undefined } = {};
+    const outcome = await publishProjectToGallery(
+      project,
+      { name: "N", author: "", description: "", token: "" },
+      fetchReturning(201, { id: "entry-2" }, seen),
+    );
+    expect(outcome.status).toBe("published");
+    const headers = seen.init?.headers as Record<string, string>;
+    expect(headers.authorization).toBeUndefined();
+    expect(seen.init?.credentials).toBe("same-origin");
+  });
+
   it("reports a thrown fetch as unreachable", async () => {
     const outcome = await publishProjectToGallery(
       project,

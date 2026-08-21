@@ -333,8 +333,11 @@ export class AuthDO {
       // The verified email may change at the provider; the display name
       // belongs to the user once created and is never overwritten here.
       if (existing.email !== email) {
-        this.sql.exec("UPDATE users SET email = ? WHERE id = ?", email,
-          existing.id);
+        this.sql.exec(
+          "UPDATE users SET email = ? WHERE id = ?",
+          email,
+          existing.id,
+        );
         existing.email = email;
       }
       return existing;
@@ -616,7 +619,9 @@ export class AuthDO {
             "content-type": "application/json",
           },
           body: JSON.stringify({
-            from: this.env.AUTH_EMAIL_FROM ?? "Analog Canvas <onboarding@resend.dev>",
+            from:
+              this.env.AUTH_EMAIL_FROM ??
+              "Analog Canvas <onboarding@resend.dev>",
             to: [email],
             subject: "Sign in to Analog Canvas",
             text:

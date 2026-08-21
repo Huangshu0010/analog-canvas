@@ -295,7 +295,10 @@ describe("gallery admin sessions (phase G2)", () => {
       },
     };
 
-    const adminCookie = await sessionCookieFor(authDurable, "owner@example.com");
+    const adminCookie = await sessionCookieFor(
+      authDurable,
+      "owner@example.com",
+    );
     const viaSession = await route(
       env,
       submissionRequest(
