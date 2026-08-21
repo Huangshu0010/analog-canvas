@@ -3827,3 +3827,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `pnpm verify:branch` (162 unit files / 975 tests, workspace build, production
   preview smoke) passed.
 - Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.
+
+## 2026-08-21 - Schematic lifecycle mainline gate closure
+
+- Changed areas: fixed Clipboard paste to allocate a unique
+  `schematicReference` alongside each fresh netlist designator; aligned Port,
+  Net RichText, connected-deletion, and Project persistence browser contracts
+  with the accepted schema-18 behavior.
+- Validation: Clipboard unit tests (1 file / 8 tests), all 14 originally
+  failing browser cases, typecheck, test-impact and diff checks, and canonical
+  `pnpm ci:check` passed with 162 unit files / 975 tests, all workspace builds,
+  release/MCP smoke checks, and 167 browser tests.
+- Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.

@@ -239,6 +239,47 @@ function pastedInstanceId(
 }
 
 /**
+ * Allocate the copied schematic reference independently while preserving the
+ * common case where schematic and emitted references intentionally agree.
+ */
+function pastedSchematicReference(
+  source: Instance,
+  nextNetlistReference: string | undefined,
+  nextId: string,
+  sequence: number,
+  reserved: Set<string>,
+): string | undefined {
+  const current = source.schematicReference;
+  if (!current) return undefined;
+  const synchronized =
+    nextNetlistReference &&
+    (current === source.netlist?.reference || current === source.id)
+      ? nextNetlistReference
+      : current === source.id
+        ? nextId
+        : undefined;
+  if (synchronized) {
+    reserved.add(synchronized.toLowerCase());
+    return synchronized;
+  }
+
+  const suffix = /^(.*?)(\d+)$/u.exec(current);
+  const prefix = suffix?.[1] || `${current}-copy-`;
+  let index = suffix ? Number(suffix[2]) + 1 : sequence;
+  const candidateFor = (value: number): string => {
+    const digits = String(value);
+    return `${prefix.slice(0, Math.max(1, 128 - digits.length))}${digits}`;
+  };
+  let candidate = candidateFor(index);
+  while (reserved.has(candidate.toLowerCase())) {
+    index += 1;
+    candidate = candidateFor(index);
+  }
+  reserved.add(candidate.toLowerCase());
+  return candidate;
+}
+
+/**
  * Rewrites a pasted instance-label whose text is still the copied reference
  * (or copied id) to the new reference, so a pasted R1 reads R2 on canvas.
  * The replacement content is rebuilt exactly like a freshly placed label
@@ -358,6 +399,28 @@ export function proposePaste(
       ),
     ]),
   );
+  const reservedSchematicReferences = new Set([
+    ...document.instances.flatMap((instance) =>
+      [instance.schematicReference, instance.netlist?.reference]
+        .filter((reference): reference is string => reference !== undefined)
+        .map((reference) => reference.toLowerCase()),
+    ),
+    ...[...instanceReferences.values()].map((reference) =>
+      reference.toLowerCase(),
+    ),
+  ]);
+  const instanceSchematicReferences = new Map(
+    clipboard.instances.flatMap((instance) => {
+      const reference = pastedSchematicReference(
+        instance,
+        instanceReferences.get(instance.id),
+        instanceIds.get(instance.id)!,
+        sequence,
+        reservedSchematicReferences,
+      );
+      return reference ? [[instance.id, reference] as const] : [];
+    }),
+  );
   const routeIds = new Map(
     clipboard.routes.map((route) => [
       route.id,
@@ -403,6 +466,11 @@ export function proposePaste(
       instance: {
         ...structuredClone(instance),
         id: instanceIds.get(instance.id)!,
+        ...(instanceSchematicReferences.has(instance.id)
+          ? {
+              schematicReference: instanceSchematicReferences.get(instance.id)!,
+            }
+          : {}),
         ...(instance.netlist && instanceReferences.has(instance.id)
           ? {
               netlist: {
