@@ -58,6 +58,11 @@ export const PlaceInstanceEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   placement: PlacementSchema,
 });
+/** Return a placed Instance to the retained Placement Tray. */
+export const UnplaceInstanceEditSchema = z.strictObject({
+  kind: z.literal("unplace_instance"),
+  instanceId: StableIdSchema,
+});
 export const MoveInstanceEditSchema = z.strictObject({
   kind: z.literal("move_instance"),
   instanceId: StableIdSchema,
@@ -335,6 +340,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   RemoveInstanceEditSchema,
   SetInstanceSymbolEditSchema,
   PlaceInstanceEditSchema,
+  UnplaceInstanceEditSchema,
   MoveInstanceEditSchema,
   RotateInstanceEditSchema,
   MirrorInstanceEditSchema,

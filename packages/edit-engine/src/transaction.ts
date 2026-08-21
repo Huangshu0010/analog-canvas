@@ -552,6 +552,49 @@ export function executeTransaction(
         changedObjectIds.add(edit.instanceId);
         break;
       }
+      case "unplace_instance": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
+          );
+        }
+        const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
+        if (lockOwner) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
+          );
+        }
+        if (instance.placement === null) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Instance is already unplaced: ${edit.instanceId}`,
+          );
+        }
+        if (
+          draft.routes.some((route) =>
+            [route.from, route.to].some(
+              (endpoint) =>
+                endpoint.kind === "terminal" &&
+                endpoint.instanceId === edit.instanceId,
+            ),
+          )
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Instance has routed terminals; detach routes before unplacing: ${edit.instanceId}`,
+          );
+        }
+        instance.placement = null;
+        changedObjectIds.add(edit.instanceId);
+        break;
+      }
       case "move_instance": {
         const instance = draft.instances.find(
           (candidate) => candidate.id === edit.instanceId,

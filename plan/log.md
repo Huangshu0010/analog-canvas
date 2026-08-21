@@ -3750,3 +3750,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   flows (4 tests), typecheck, format, docs, test-impact, and diff checks passed.
 - Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
   `0da8da3c`.
+
+## 2026-08-21 - Instance placement lifecycle engine
+
+- Changed areas: added explicit retained-unplaced transaction semantics and a
+  shared lifecycle planner; selection deletion now clears route endpoints,
+  memberships, NoConnects, labels, and unlocked layout references safely
+  before strict instance removal.
+- Validation: focused lifecycle/transaction/protocol/selection/Agent contracts
+  (5 files / 56 tests), typecheck, format, docs, MCP-resource freshness,
+  test-impact, and diff checks passed.
+- Commit status: pending commit on `codex/schematic-instance-lifecycle-ux`.

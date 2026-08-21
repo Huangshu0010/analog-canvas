@@ -55,7 +55,8 @@ for readability; these groups do not create separate mutation endpoints:
 
 - control/history: `noop`, `clear_document`, `undo`, `redo`;
 - Instance: `add_instance`, `remove_instance`, `set_instance_symbol`,
-  `place_instance`, `move_instance`, `rotate_instance`, `mirror_instance`,
+  `place_instance`, `unplace_instance`, `move_instance`, `rotate_instance`,
+  `mirror_instance`,
   `set_instance_reference`, `set_instance_schematic_name`, `set_instance_binding`,
   `patch_instance_netlist_parameters`, `bulk_patch_instance_netlist`,
   `set_instance_netlist`;
@@ -169,7 +170,7 @@ Phase 8 topology operations have these preconditions:
   covered by an explicit one-to-one `pinMap`; the edit atomically updates Net,
   Route, and preserved `spice.pin.*` references without changing Net ownership.
 - `port` and `port-filled` use the ordinary `add_instance`, `place_instance`,
-  `move_instance`, and terminal-connectivity edit paths; there is no
+  `unplace_instance`, `move_instance`, and terminal-connectivity edit paths; there is no
   Port-specific edit kind.
 - `set_cell_symbol_presentation` changes only a Cell definition's optional
   stable-terminal visual intent. It is wrapped in a Project structural
@@ -177,6 +178,9 @@ Phase 8 topology operations have these preconditions:
   it creates no endpoint or drawing-object kind.
 - `remove_instance` requires no Net, annotation, group, or constraint
   reference.
+- `unplace_instance` returns only a placed, unlocked Instance to the Placement
+  Tray. It preserves Net membership, NoConnects, bindings, parameters, and
+  annotations, but rejects while a Route still terminates at the Instance.
 - `connect_endpoints` creates a caller-named local Net when both endpoints are
   unowned, or attaches an unowned endpoint to the other endpoint's Net.
 - `set_net_name` requires a non-empty trimmed name. A name already owned by a
@@ -210,8 +214,9 @@ Phase 8 topology operations have these preconditions:
   endpoint without a second mutation path.
 - Connected-instance deletion remains a composed transaction rather than a
   destructive `remove_instance` flag: Routes are first repointed to replacement
-  Junctions, terminals and annotations are removed explicitly, and only then is
-  the unreferenced instance removed.
+  Junctions, terminals, NoConnects, instance-owned annotations, and unlocked
+  layout references are removed explicitly, and only then is the unreferenced
+  instance removed.
 - Endpoints on different Nets require an explicit preceding `merge_nets` edit
   in the same transaction.
 - `merge_nets` retargets routes, junctions, annotations, and layout references

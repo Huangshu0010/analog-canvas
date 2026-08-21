@@ -32,8 +32,11 @@ visual-only drafting objects.
 There is no separate Cell Interface authoring surface. A child Cell Port's
 single object-anchored annotation owns its terminal name; normal Properties own
 direction. Annotation rename reconciles callers by stable terminal identity.
-Ordinary Delete reuses the normal instance/route deletion proposal, with the
-formal-terminal and caller projection appended only by the Project transaction.
+Ordinary Delete reuses the normal instance/route deletion proposal: it retains
+wire geometry by replacing affected terminal endpoints with Junctions, then
+removes electrical memberships, NoConnects, owned labels, layout references,
+and the Instance in one transaction. The formal-terminal and caller projection
+is appended only by the Project transaction.
 Definition-level pin placement data remains compatible, while
 new interfaces use deterministic direction-aware automatic layout.
 

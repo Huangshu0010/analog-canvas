@@ -216,7 +216,12 @@ describe("current Agent Circuit API service", () => {
       ]),
     );
     expect(AGENT_EDIT_KINDS).not.toEqual(
-      expect.arrayContaining(["undo", "redo", "normalize_power_nets"]),
+      expect.arrayContaining([
+        "undo",
+        "redo",
+        "unplace_instance",
+        "normalize_power_nets",
+      ]),
     );
   });
 
@@ -261,10 +266,10 @@ describe("current Agent Circuit API service", () => {
     }
 
     // The restored schema-v11 fraction run recursively unfolds into both
-    // part documents, which grows the generated projection past the old
-    // post-retirement budget; the bound still guards accidental bloat.
+    // part documents. The schema-16 placement lifecycle adds one small typed
+    // edit variant; this bound still guards accidental projection bloat.
     expect(JSON.stringify(AgentCircuitRequestJsonSchema).length).toBeLessThan(
-      120_000,
+      121_000,
     );
     expect(JSON.stringify(AgentCircuitResponseJsonSchema).length).toBeLessThan(
       180_000,

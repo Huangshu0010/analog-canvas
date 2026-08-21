@@ -126,6 +126,13 @@ two explicit placements may occupy the same side/offset slot.
   Routes, Junctions, NoConnects, and formal cell terminals, but excludes
   placement, annotation, and drafting presentation.
 
+An Instance has three lifecycle states: retained in the Placement Tray
+(`placement: null`), placed (`placement` present), or deleted (absent). Returning
+to the Tray retains every electrical and netlist fact; any visible Route endpoint
+is first detached to a Junction at the resolved pin position. Deletion is a
+separate atomic composition that clears membership, NoConnect, owned annotation,
+and unlocked layout references before removing the Instance.
+
 Mutation occurs only through atomic Edit Engine transactions against an exact
 Document revision. GUI and Agent writes use the same schema and invariants.
 Formal-interface edits and add/remove Document operations are composed with
