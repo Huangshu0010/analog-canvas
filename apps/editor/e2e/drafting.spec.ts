@@ -4,6 +4,7 @@ import type { Locator, Page } from "@playwright/test";
 import {
   chooseComponent,
   clickCommand,
+  clickDrawTool,
   downloadBytes,
   emulateDownloadOnlyBrowser,
 } from "./editor-fixtures.js";
@@ -107,7 +108,7 @@ test("adds formatted drafting text and undo/redo restores it", async ({
   await page.goto("/");
   await expect(page.getByTestId("revision")).toHaveText("0");
 
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   const draftInput = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
@@ -202,7 +203,7 @@ test("snaps quick Text creation after a non-grid viewport zoom", async ({
     Object.values(unsnappedTextPosition).some((value) => value % 10 !== 0),
   ).toBe(true);
 
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   await expect(page.getByTestId("revision")).toHaveText("1");
   await expect(page.getByTestId("status")).toContainText("Added drafting text");
 
@@ -219,7 +220,7 @@ test("fits drafting text with F using an integer grid camera", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   const draftInput = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
@@ -242,12 +243,12 @@ test("text floating editor closes on Escape or an outside pointer", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   await expect(page.getByTestId("canvas-text-editor")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("canvas-text-editor")).toHaveCount(0);
 
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   await expect(page.getByTestId("canvas-text-editor")).toBeVisible();
   await page
     .getByTestId("schematic-canvas")
@@ -259,7 +260,7 @@ test("exports a newly created construction line through the File menu", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (K)");
+  await clickDrawTool(page, "line");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -273,13 +274,13 @@ test("switching creation tools discards the incompatible draft session", async (
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Arrow (A)");
+  await clickDrawTool(page, "arrow");
   await page.getByTestId("schematic-canvas").click({
     position: { x: 220, y: 220 },
   });
   await expect(page.getByTestId("drafting-create-preview")).toBeVisible();
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await expect(page.getByTestId("active-tool")).toHaveText("wire");
   await expect(page.getByTestId("drafting-create-preview")).toHaveCount(0);
 
@@ -318,7 +319,7 @@ test("existing text drag commits once and undoes atomically", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   await page
     .getByRole("textbox", { name: "Canvas text editor" })
     .press("Escape");
@@ -349,7 +350,7 @@ test("Escape cancels an existing text drag without a revision", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   await page
     .getByRole("textbox", { name: "Canvas text editor" })
     .press("Escape");
@@ -413,7 +414,7 @@ test("Escape removes Smart Snap guides from a cancelled component drag", async (
 // Creating a construction line commits one object.
 test("two-phase click-creates a construction line", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (K)");
+  await clickDrawTool(page, "line");
   await expect(page.getByTestId("active-tool")).toHaveText("construction-line");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
   await expect(page.getByTestId("revision")).toHaveText("1");
@@ -427,7 +428,7 @@ test("two-phase click-creates a construction line", async ({ page }) => {
 // Two-phase click-creating an arrow commits one object.
 test("two-phase click-creates an arrow", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Arrow (A)");
+  await clickDrawTool(page, "arrow");
   await expect(page.getByTestId("active-tool")).toHaveText("arrow");
   await clickCreate(page, { x: 200, y: 320 }, { x: 420, y: 380 });
   await expect(page.getByTestId("revision")).toHaveText("1");
@@ -442,7 +443,7 @@ test("construction line uses stroke-based hit, not a blocking rect", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (K)");
+  await clickDrawTool(page, "line");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -465,7 +466,7 @@ test("construction line uses stroke-based hit, not a blocking rect", async ({
 // An unedited Apply must not add a revision.
 test("unedited Apply does not add a revision", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   const draftInput = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
@@ -487,7 +488,7 @@ test("drafting content and anchor survive save and reopen", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   const draftInput = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
@@ -508,7 +509,7 @@ test("drafting content and anchor survive save and reopen", async ({
   ).toContain("span");
   expect(textObject.anchor).toMatchObject({ kind: "free" });
   expect(typeof textObject.anchor.position.x).toBe("number");
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   await expect(page.locator('[data-kind="draft-text"]')).toHaveCount(2);
 
   await page.getByTestId("project-file").setInputFiles({
@@ -535,7 +536,7 @@ test("selected arrow rotates via R and shows selection handles", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Arrow (A)");
+  await clickDrawTool(page, "arrow");
   await clickCreate(page, { x: 200, y: 300 }, { x: 320, y: 300 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -720,7 +721,7 @@ test("E converts a rectangle into a navigable hierarchical Cell", async ({
 // transaction; undo restores it.
 test("arrow endpoint handle drag moves the tip", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Arrow (A)");
+  await clickDrawTool(page, "arrow");
   await clickCreate(page, { x: 200, y: 300 }, { x: 320, y: 300 });
   await clickSvgPolyline(page.getByTestId(/^drafting-hit-arrow-/));
   const tipHandle = page.getByTestId(/^draft-handle-to-arrow-/);
@@ -735,7 +736,7 @@ test("arrow endpoint handle drag moves the tip", async ({ page }) => {
 // vertex below the two-vertex floor is refused.
 test("construction line vertex insert via double-click", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (K)");
+  await clickDrawTool(page, "line");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -757,7 +758,7 @@ test("construction line vertex insert via double-click", async ({ page }) => {
 // revision each.
 test("bracket shortcuts step stroke width", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (K)");
+  await clickDrawTool(page, "line");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-construction-/).click({ force: true });
   await page.keyboard.press("]");
@@ -769,7 +770,7 @@ test("bracket shortcuts step stroke width", async ({ page }) => {
 // Drawing style lives in Properties; it is not a second floating canvas UI.
 test("Properties changes drawing line style", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (K)");
+  await clickDrawTool(page, "line");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-construction-/).click({ force: true });
   await page.keyboard.press("q");
@@ -783,7 +784,7 @@ test("Properties changes drawing line style", async ({ page }) => {
 
 test("Properties renders an arrow line-style override", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Arrow (A)");
+  await clickDrawTool(page, "arrow");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-arrow-/).click({ force: true });
   await page.keyboard.press("q");
@@ -800,7 +801,7 @@ test("Properties renders an arrow line-style override", async ({ page }) => {
 
 test("arrow Properties omits the Segment selector", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Arrow (A)");
+  await clickDrawTool(page, "arrow");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-arrow-/).click({ force: true });
   await page.keyboard.press("q");
@@ -828,7 +829,7 @@ test("drawing Properties follows selection and closes with the dock", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Arrow (A)");
+  await clickDrawTool(page, "arrow");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   const hit = page.getByTestId(/^drafting-hit-arrow-/);
   await hit.click({ force: true });
@@ -860,7 +861,7 @@ test("drawing Properties unlocks a protected drawing and Delete overrides its lo
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (K)");
+  await clickDrawTool(page, "line");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   const drawing = page.getByTestId(/^drafting-hit-construction-/);
   await drawing.click({ force: true });

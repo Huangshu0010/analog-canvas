@@ -31,7 +31,7 @@ const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   "port-filled": "Filled",
   resistor: "Res",
   "variable-resistor": "Var Res",
-  vdd: "VDD",
+  vdd: "Rail",
   "vdd-port": "V Port",
   "voltage-amplifier": "V Amp",
   "voltage-source": "V Src",
@@ -55,7 +55,7 @@ export function quickPlaceRequest(
     return {
       kind: "vdd-rail",
       symbolId: "vdd",
-      symbolName: "VDD Rail",
+      symbolName: "Power Rail",
       netName: "VDD",
     };
   }
@@ -76,14 +76,12 @@ export function quickPlaceRequest(
 
 export interface ShapesPanelProps {
   styleProfileId: string;
-  recentSymbolIds: readonly string[];
   open: boolean;
   onStartInsert(launch: InsertLaunch): void;
 }
 
 export function ShapesPanel({
   styleProfileId,
-  recentSymbolIds,
   open,
   onStartInsert,
 }: ShapesPanelProps) {
@@ -95,11 +93,6 @@ export function ShapesPanel({
   const [openCategories, setOpenCategories] = useState<ReadonlySet<string>>(
     () => new Set(libraryGroups.map((group) => group.category)),
   );
-
-  const recents = recentSymbolIds
-    .map((symbolId) => findPaletteSymbol(styleProfileId, symbolId))
-    .filter((symbol): symbol is NonNullable<typeof symbol> => Boolean(symbol))
-    .slice(0, 6);
 
   function placeSymbol(symbolId: string): void {
     if (symbolId === "port" || symbolId === "port-filled") {
@@ -195,46 +188,6 @@ export function ShapesPanel({
                 </details>
               ))}
             </div>
-          </div>
-        </details>
-
-        <details
-          className="shapes-fold"
-          open={recents.length > 0}
-          data-testid="shapes-fold-recent"
-        >
-          <summary className="shapes-fold-summary">
-            <span className="shapes-fold-label">Recent</span>
-            <span className="shapes-fold-count">{recents.length}</span>
-          </summary>
-          <div className="shapes-fold-body">
-            {recents.length > 0 ? (
-              <div className="shapes-grid">
-                {recents.map((symbol) => (
-                  <button
-                    key={`recent-${symbol.id}`}
-                    type="button"
-                    className="shapes-chip"
-                    data-testid={`shapes-recent-${symbol.id}`}
-                    aria-label={`Place ${symbol.name}`}
-                    title={`Place ${symbol.name}`}
-                    onClick={() => placeSymbol(symbol.id)}
-                  >
-                    <SymbolArtwork
-                      symbol={symbol}
-                      className="shapes-chip-art"
-                      paddingRatio={0.04}
-                    />
-                    <span>{libraryLabel(symbol.id, symbol.name)}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="shapes-hint">
-                Recent parts appear here after you place something. Use Insert
-                for the full catalog with parameters.
-              </p>
-            )}
           </div>
         </details>
       </div>

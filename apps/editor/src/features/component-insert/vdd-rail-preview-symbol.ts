@@ -1,14 +1,14 @@
 import type { SymbolDefinition } from "@icm/symbols";
 
 /**
- * Editor-only artwork for the virtual VDD Rail Library item. This definition
+ * Editor-only artwork for the virtual Power Rail Library item. This definition
  * is deliberately absent from the product Symbol Resolver: it may be rendered
  * in the picker and placement preview, but it can never become an Instance.
  */
 export const vddRailPreviewSymbol = {
   schemaVersion: 1,
   id: "vdd",
-  name: "VDD Rail",
+  name: "Power Rail",
   viewBox: { x: -12, y: -2, width: 24, height: 26 },
   pins: [
     {

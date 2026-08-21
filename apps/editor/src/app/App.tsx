@@ -250,7 +250,6 @@ import { ReplaceGuardDialog } from "../components/replace-guard-dialog";
 import { RecentRecoveryDialog } from "../components/recent-recovery-dialog";
 import {
   RecoveryFailureBanner,
-  StartupRecoveryBanner,
   recoveryStateLabel,
 } from "../components/recovery-banners";
 import { ProjectSearchDialog } from "../features/search/project-search-dialog";
@@ -521,7 +520,6 @@ export function App({
     null,
   );
   const [recoveryDialogOpen, setRecoveryDialogOpen] = useState(false);
-  const [recoveryBannerDismissed, setRecoveryBannerDismissed] = useState(false);
   const [recoveryFailureDismissed, setRecoveryFailureDismissed] =
     useState(false);
   const {
@@ -4477,7 +4475,6 @@ export function App({
   }
 
   function openRecoveryDialog(): void {
-    setRecoveryBannerDismissed(true);
     // Refresh summaries so the dialog reflects records written after the
     // startup discovery (including this session's own latest commits).
     void (async () => {
@@ -4520,7 +4517,6 @@ export function App({
         { source: "recovered" },
       );
       setRecoveryDialogOpen(false);
-      setRecoveryBannerDismissed(true);
       await discoverRecovery();
       setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
     })();
@@ -4595,7 +4591,6 @@ export function App({
         DEFAULT_VIEWBOX,
         { source: "recovered", keepWorkingCopy: true },
       );
-      setRecoveryBannerDismissed(true);
       setStatus(`Restored recovery revision ${restoredDocument.revision}`);
     })();
   }, [restoreAfterRefresh, recoveryReady, recoveryWorkingCopyId]);
@@ -6944,66 +6939,6 @@ export function App({
                   </div>
                 </details>
               ) : null}
-              <details className="command-menu" name="editor-command-menu">
-                <summary>Draw</summary>
-                <div className="command-popover">
-                  <button
-                    type="button"
-                    onClick={() => startInsertFromHook(fullInsertLaunch())}
-                  >
-                    <ToolIcon name="insert" />
-                    Insert component (I)
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={tool === "wire"}
-                    onClick={() => activateTool("wire")}
-                  >
-                    <ToolIcon name="wire" />
-                    Wire (W)
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Text"
-                    onClick={addPlainText}
-                  >
-                    <ToolIcon name="text" />
-                    Text (T)
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={tool === "arrow"}
-                    onClick={() => activateTool("arrow")}
-                  >
-                    <ToolIcon name="arrow" />
-                    Arrow (A)
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={tool === "construction-line"}
-                    onClick={() => activateTool("construction-line")}
-                  >
-                    <ToolIcon name="line" />
-                    Construction line (K)
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={tool === "rectangle"}
-                    onClick={() => activateTool("rectangle")}
-                  >
-                    <ToolIcon name="rectangle" />
-                    Rectangle (R)
-                  </button>
-                  <button
-                    type="button"
-                    aria-haspopup="dialog"
-                    aria-expanded={styleDialogOpen}
-                    onClick={() => setStyleDialogOpen(true)}
-                  >
-                    Document style…
-                  </button>
-                </div>
-              </details>
               <button
                 type="button"
                 data-testid="project-search-button"
@@ -7054,6 +6989,91 @@ export function App({
               Help
             </button>
           </div>
+        </div>
+        <div
+          className="toolbar-row draw-toolbar"
+          aria-label="Drawing tools"
+          data-testid="draw-toolbar"
+        >
+          <button
+            type="button"
+            className="draw-tool"
+            data-testid="draw-tool-insert"
+            title="Insert component (I)"
+            onClick={() => startInsertFromHook(fullInsertLaunch())}
+          >
+            <ToolIcon name="insert" />
+            <span>Insert</span>
+          </button>
+          <button
+            type="button"
+            className="draw-tool"
+            data-testid="draw-tool-wire"
+            aria-pressed={tool === "wire"}
+            title="Wire (W)"
+            onClick={() => activateTool("wire")}
+          >
+            <ToolIcon name="wire" />
+            <span>Wire</span>
+          </button>
+          <button
+            type="button"
+            className="draw-tool"
+            data-testid="draw-tool-text"
+            aria-label="Text"
+            title="Text (T)"
+            onClick={addPlainText}
+          >
+            <ToolIcon name="text" />
+            <span>Text</span>
+          </button>
+          <span className="toolbar-divider" aria-hidden="true" />
+          <button
+            type="button"
+            className="draw-tool"
+            data-testid="draw-tool-arrow"
+            aria-pressed={tool === "arrow"}
+            title="Arrow (A)"
+            onClick={() => activateTool("arrow")}
+          >
+            <ToolIcon name="arrow" />
+            <span>Arrow</span>
+          </button>
+          <button
+            type="button"
+            className="draw-tool"
+            data-testid="draw-tool-line"
+            aria-pressed={tool === "construction-line"}
+            title="Construction line (K)"
+            onClick={() => activateTool("construction-line")}
+          >
+            <ToolIcon name="line" />
+            <span>Line</span>
+          </button>
+          <button
+            type="button"
+            className="draw-tool"
+            data-testid="draw-tool-rectangle"
+            aria-pressed={tool === "rectangle"}
+            title="Rectangle (R)"
+            onClick={() => activateTool("rectangle")}
+          >
+            <ToolIcon name="rectangle" />
+            <span>Rect</span>
+          </button>
+          <span className="toolbar-divider" aria-hidden="true" />
+          <button
+            type="button"
+            className="draw-tool"
+            data-testid="draw-tool-document-style"
+            aria-haspopup="dialog"
+            aria-expanded={styleDialogOpen}
+            title="Document style"
+            onClick={() => setStyleDialogOpen(true)}
+          >
+            <ToolIcon name="style" />
+            <span>Style</span>
+          </button>
         </div>
         <div className="toolbar-row" aria-label="Document hierarchy">
           <div
@@ -7169,15 +7189,6 @@ export function App({
         <EditorAboutDialog
           closeButtonRef={aboutCloseRef}
           onClose={closeAbout}
-        />
-      ) : null}
-      {recoveryReady &&
-      recoverySessions.length > 0 &&
-      !recoveryBannerDismissed &&
-      !recoveryDialogOpen ? (
-        <StartupRecoveryBanner
-          onOpen={openRecoveryDialog}
-          onDismiss={() => setRecoveryBannerDismissed(true)}
         />
       ) : null}
       {(recoveryState === "quota-exceeded" ||
@@ -7460,61 +7471,10 @@ export function App({
             <ToolIcon name="library" />
             <span>Library</span>
           </button>
-          <button
-            type="button"
-            className="tool-rail-button"
-            aria-pressed={tool === "wire"}
-            title="Wire (W)"
-            onClick={() => activateTool("wire")}
-          >
-            <ToolIcon name="wire" />
-            <span>Wire</span>
-          </button>
-          <button
-            type="button"
-            className="tool-rail-button"
-            title="Text (T)"
-            aria-label="Text"
-            onClick={addPlainText}
-          >
-            <ToolIcon name="text" />
-            <span>Text</span>
-          </button>
-          <button
-            type="button"
-            className="tool-rail-button"
-            aria-pressed={tool === "arrow"}
-            title="Arrow (A)"
-            onClick={() => activateTool("arrow")}
-          >
-            <ToolIcon name="arrow" />
-            <span>Arrow</span>
-          </button>
-          <button
-            type="button"
-            className="tool-rail-button"
-            aria-pressed={tool === "construction-line"}
-            title="Construction line (K)"
-            onClick={() => activateTool("construction-line")}
-          >
-            <ToolIcon name="line" />
-            <span>Line</span>
-          </button>
-          <button
-            type="button"
-            className="tool-rail-button"
-            aria-pressed={tool === "rectangle"}
-            title="Rectangle"
-            onClick={() => activateTool("rectangle")}
-          >
-            <ToolIcon name="rectangle" />
-            <span>Rect</span>
-          </button>
         </aside>
         {leftPanelMode === "library" ? (
           <ShapesPanel
             styleProfileId={document.presentation.styleProfileId}
-            recentSymbolIds={recentSymbolIds}
             open={visibleLibraryPanelOpen}
             onStartInsert={startInsertFromHook}
           />

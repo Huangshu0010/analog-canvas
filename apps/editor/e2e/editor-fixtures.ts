@@ -18,6 +18,23 @@ export async function clickCommand(
   await details.getByRole("button", { name: button, exact: true }).click();
 }
 
+export type DrawTool =
+  | "insert"
+  | "wire"
+  | "text"
+  | "arrow"
+  | "line"
+  | "rectangle"
+  | "document-style";
+
+/** Activate one tool from the always-visible drawing toolbar. */
+export async function clickDrawTool(
+  page: Page,
+  tool: DrawTool,
+): Promise<void> {
+  await page.getByTestId(`draw-tool-${tool}`).click();
+}
+
 export async function chooseComponent(
   page: Page,
   symbolId: string,

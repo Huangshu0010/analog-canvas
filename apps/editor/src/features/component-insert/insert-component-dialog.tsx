@@ -322,7 +322,7 @@ export function InsertComponentDialog({
       onApply({
         kind: "vdd-rail",
         symbolId: "vdd",
-        symbolName: "VDD Rail",
+        symbolName: "Power Rail",
         netName,
       });
       return;
@@ -460,11 +460,7 @@ export function InsertComponentDialog({
                         : undefined
                     }
                     value={query}
-                    placeholder={
-                      selected
-                        ? `${selected.cellName ?? selected.symbol.name} · ${selected.symbol.id}`
-                        : `Search ${pickerNoun.toLowerCase()}`
-                    }
+                    placeholder={`Search ${pickerNoun.toLowerCase()}`}
                     onChange={(event) => setQuery(event.currentTarget.value)}
                   />
                 </div>

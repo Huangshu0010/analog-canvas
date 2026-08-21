@@ -15,7 +15,6 @@ describe("shapes quick-place", () => {
     const markup = renderToStaticMarkup(
       createElement(ShapesPanel, {
         styleProfileId: "razavi",
-        recentSymbolIds: [],
         open: true,
         onStartInsert: () => undefined,
       }),
@@ -95,7 +94,7 @@ describe("shapes quick-place", () => {
     expect(quickPlaceRequest("razavi", "vdd")).toEqual({
       kind: "vdd-rail",
       symbolId: "vdd",
-      symbolName: "VDD Rail",
+      symbolName: "Power Rail",
       netName: "VDD",
     });
   });

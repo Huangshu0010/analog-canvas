@@ -332,6 +332,44 @@ body {
   overflow: visible;
 }
 
+.draw-toolbar {
+  gap: 2px;
+  background: var(--icm-surface);
+}
+
+.draw-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--icm-space-1);
+  height: var(--icm-control-h);
+  padding: 0 var(--icm-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--icm-radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: var(--icm-font-sm);
+  white-space: nowrap;
+}
+
+.draw-tool:hover {
+  border-color: var(--icm-border);
+  background: var(--icm-surface-muted);
+}
+
+.draw-tool[aria-pressed="true"] {
+  border-color: var(--icm-accent);
+  background: var(--icm-accent-soft);
+  color: var(--icm-accent);
+  font-weight: 600;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 var(--icm-space-1);
+  background: var(--icm-border);
+}
+
 .toolbar-group {
   display: inline-flex;
   flex-wrap: wrap;
