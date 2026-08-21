@@ -93,4 +93,5 @@ Validation passed: focused edit-engine tests (9 tests), three browser Port
 workflows (same-name merge/lifecycle, direct shortcut, and wired Ports),
 typecheck, Prettier, test-impact, and diff checks.
 
-Commit pending.
+Committed and pushed as `65580820` (`fix(editor): complete free port net
+lifecycle`) on `codex/insert-unification`.

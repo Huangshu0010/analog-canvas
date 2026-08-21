@@ -3892,4 +3892,5 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: focused lifecycle/named-Net tests (9 tests), three targeted
   browser Port flows, workspace typecheck, Prettier, test-impact, and diff
   checks passed.
-- Commit status: pending on `codex/insert-unification`.
+- Commit status: committed and pushed on `codex/insert-unification` as
+  `65580820`.
