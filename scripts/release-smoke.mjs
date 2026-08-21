@@ -34,7 +34,7 @@ try {
     !serviceWorkerSource.includes("caches.open(")
   )
     throw new Error("Service worker shell contract is incomplete");
-  if (!index.ok || !(await index.text()).includes("Interactive Circuit Maker"))
+  if (!index.ok || !(await index.text()).includes("Analog Canvas"))
     throw new Error("Editor shell is missing");
   process.stdout.write(`Release smoke passed at ${running.origin}.\n`);
 } finally {

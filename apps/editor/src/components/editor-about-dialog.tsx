@@ -29,7 +29,7 @@ export function EditorAboutDialog({
       >
         <header className="help-dialog-header">
           <div>
-            <p className="help-kicker">Interactive Circuit Maker</p>
+            <p className="help-kicker">Analog Canvas</p>
             <h2 id="about-title">About</h2>
           </div>
           <button

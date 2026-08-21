@@ -6801,7 +6801,7 @@ export function App({
               <span className="app-brand-mark" aria-hidden="true" />
             </a>
             <div className="app-brand-copy">
-              <h1 title="Interactive Circuit Maker">Circuit Maker</h1>
+              <h1 title="Analog Canvas">Analog Canvas</h1>
               <p title={`${project.name} / ${document.name}`}>
                 {project.name} /{" "}
                 <span data-testid="active-document-name">{document.name}</span>
@@ -7155,6 +7155,15 @@ export function App({
             aria-label="Cell navigation"
             data-testid="cell-navigation"
           >
+            <a
+              className="toolbar-gallery-link"
+              href="/"
+              title="Back to the gallery"
+              aria-label="Back to the gallery feed"
+              data-testid="toolbar-gallery-link"
+            >
+              ← Gallery
+            </a>
             <button
               type="button"
               onClick={returnToParentDocument}

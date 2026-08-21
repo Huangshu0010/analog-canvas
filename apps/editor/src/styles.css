@@ -444,6 +444,26 @@ body {
   white-space: nowrap;
 }
 
+/* One-click return to the gallery landing page from the editor. */
+.toolbar-gallery-link {
+  display: inline-flex;
+  align-items: center;
+  height: var(--icm-control-h);
+  padding: 0 var(--icm-space-2);
+  border: 1px solid var(--icm-border-strong);
+  border-radius: var(--icm-radius-sm);
+  background: var(--icm-surface);
+  color: var(--icm-text);
+  font-size: var(--icm-font-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.toolbar-gallery-link:hover {
+  border-color: var(--icm-border-hover);
+  background: var(--icm-surface-hover);
+}
+
 .document-nav select {
   flex: 1 1 12rem;
   min-width: 5rem;
