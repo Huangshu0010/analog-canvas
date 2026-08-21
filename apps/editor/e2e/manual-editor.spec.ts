@@ -3537,3 +3537,29 @@ test("Document style dialog scales fonts document-wide and resets", async ({
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(dialog).toHaveCount(0);
 });
+
+test("saves, reopens, and deletes a user Library example", async ({ page }) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await expect(page.getByTestId("hit-R1")).toHaveCount(1);
+
+  await clickCommand(page, "File", "Save as Example");
+  await expect(page.getByTestId("status")).toContainText("to My examples");
+  const panel = page.getByTestId("examples-panel");
+  await expect(panel).toHaveAttribute("data-open", "true");
+  const section = page.getByTestId("user-examples-section");
+  await expect(section).toBeVisible();
+  const card = section.locator('[data-testid^="user-example-"]');
+  await expect(card).toHaveCount(1);
+
+  // Opening the snapshot replaces the live Project with the saved circuit.
+  await card.getByRole("button", { name: /Open my example/ }).click();
+  await expect(page.getByTestId("status")).toContainText("Opened my example");
+  await expect(page.getByTestId("hit-R1")).toHaveCount(1);
+
+  await card.getByRole("button", { name: /Delete my example/ }).click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Deleted saved example",
+  );
+  await expect(section).toHaveCount(0);
+});

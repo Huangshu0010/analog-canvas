@@ -4095,3 +4095,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   export-golden, agent-api/MCP generator checks, test-impact, diff checks.
 - Commit status: completed on `claude/document-style-overrides`; mainline
   merge gated on the remote required checks.
+
+## 2026-08-21 - User-saved Library examples
+
+- Changed areas: new origin-local `user-examples-store` (own IndexedDB
+  database, canonical Project text, protocol re-parse on read), Examples
+  panel "My examples" section with open/export/delete, File-menu
+  "Save as Example", persistence-spec classification plus two corrected
+  schema-version sentences.
+- Validation: store and panel unit contracts, one Playwright scenario, full
+  unit suite (173 files / 1064 tests), typecheck, prettier, markdown links,
+  test-impact, diff checks.
+- Commit status: completed on `claude/user-examples`; mainline merge gated
+  on the remote required checks.

@@ -197,6 +197,10 @@ import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
 import { NetlistPreflightDialog } from "../features/netlist-export/netlist-preflight-dialog";
 import { StyleDialog } from "../features/editor-shell/style-dialog";
 import {
+  createUserExamplesStore,
+  type UserExampleSummary,
+} from "../document/user-examples-store";
+import {
   proposeConnectedInstanceDeletion,
   proposeVisualSelectionDeletion,
 } from "../features/selection/delete-selection";
@@ -596,6 +600,8 @@ export function App({
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
   const [netlistPreflightOpen, setNetlistPreflightOpen] = useState(false);
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const userExamplesStore = useRef(createUserExamplesStore());
+  const [userExamples, setUserExamples] = useState<UserExampleSummary[]>([]);
   const [instanceTableOpen, setInstanceTableOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
     useState<AgentFileCandidateSummary | null>(null);
@@ -1733,6 +1739,75 @@ export function App({
 
   function showExamplesPanel(): void {
     showLeftPanel("examples");
+    void refreshUserExamples();
+  }
+
+  async function refreshUserExamples(): Promise<void> {
+    const outcome = await userExamplesStore.current.list();
+    if (outcome.status === "ready") setUserExamples(outcome.examples);
+  }
+
+  async function saveCurrentProjectAsExample(): Promise<void> {
+    const outcome = await userExamplesStore.current.save(project, {
+      id: crypto.randomUUID(),
+      name: project.name,
+      savedAt: new Date().toISOString(),
+    });
+    if (outcome.status === "stored") {
+      await refreshUserExamples();
+      setStatus(`Saved "${outcome.record.name}" to My examples`);
+      showExamplesPanel();
+      return;
+    }
+    setStatus(
+      outcome.status === "rejected-too-large"
+        ? "Cannot save example: the Project snapshot is too large"
+        : `Cannot save example: ${outcome.message}`,
+    );
+  }
+
+  async function openUserExample(id: string): Promise<void> {
+    const outcome = await userExamplesStore.current.read(id);
+    if (outcome.status !== "ready") {
+      setStatus(
+        outcome.status === "missing"
+          ? "This saved example no longer exists"
+          : `Cannot open saved example: ${
+              outcome.status === "invalid" ? outcome.message : outcome.message
+            }`,
+      );
+      void refreshUserExamples();
+      return;
+    }
+    void guardDirtyReplacement(`Open ${outcome.record.name} example`, () => {
+      replaceActiveProject(outcome.project);
+      setStatus(`Opened my example: ${outcome.record.name}`);
+    });
+  }
+
+  async function exportUserExample(id: string): Promise<void> {
+    const outcome = await userExamplesStore.current.read(id);
+    if (outcome.status !== "ready") {
+      setStatus("Cannot export: this saved example is unavailable");
+      return;
+    }
+    download(
+      outcome.record.projectText,
+      "application/json",
+      "icproj.json",
+      outcome.record.name,
+    );
+    setStatus(`Exported my example: ${outcome.record.name}`);
+  }
+
+  async function deleteUserExample(id: string): Promise<void> {
+    const outcome = await userExamplesStore.current.remove(id);
+    setStatus(
+      outcome.status === "deleted"
+        ? "Deleted saved example"
+        : `Cannot delete saved example: ${outcome.message}`,
+    );
+    await refreshUserExamples();
   }
 
   function resetInteractionState(): void {
@@ -4301,11 +4376,12 @@ export function App({
     bytes: BlobPart,
     mediaType: string,
     extension: string,
+    baseName = project.name,
   ): void {
     const url = URL.createObjectURL(new Blob([bytes], { type: mediaType }));
     const anchor = window.document.createElement("a");
     anchor.href = url;
-    anchor.download = `${safeExportBaseName(project.name)}.${extension}`;
+    anchor.download = `${safeExportBaseName(baseName)}.${extension}`;
     anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   }
@@ -6712,6 +6788,12 @@ export function App({
                       }
                     />
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => void saveCurrentProjectAsExample()}
+                  >
+                    Save as Example
+                  </button>
                   <span className="command-group-label">Export</span>
                   <button
                     type="button"
@@ -7440,6 +7522,10 @@ export function App({
           <ExamplesPanel
             open={visibleLibraryPanelOpen}
             onOpenExample={openLibraryExample}
+            userExamples={userExamples}
+            onOpenUserExample={(id) => void openUserExample(id)}
+            onExportUserExample={(id) => void exportUserExample(id)}
+            onDeleteUserExample={(id) => void deleteUserExample(id)}
           />
         )}
         <aside
