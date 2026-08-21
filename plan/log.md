@@ -3883,6 +3883,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `pnpm ci:check` passed with 162 unit files / 975 tests, all workspace builds,
   release/MCP smoke checks, and 167 browser tests.
 - Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.
+
 ## 2026-08-21 - Free Net Port lifecycle
 
 - Changed areas: reused the deterministic named-Net planner for Free Port
@@ -4065,7 +4066,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 ## 2026-08-21 - Visual golden refresh and release-gate wiring
 
 - Changed areas: regenerated the stale `fixtures/visual-golden/
-  {phase-3-crossing,phase-5-dense-analog}.svg` from current `main`
+{phase-3-crossing,phase-5-dense-analog}.svg` from current `main`
   (d8a813a8) after tracing every delta to accepted merged changes —
   9a552d32 removed the legacy ports layer and in-symbol instance labels and
   replaced the phase-5 input project; later bound-display/rich-text,
@@ -4076,7 +4077,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   gate catalog's release group.
 - Validation: fresh renders diffed element-by-element against both stale
   goldens with per-delta commit attribution; `node scripts/visual-golden.mjs
-  --check` passes post-regeneration; prettier, markdown-link, test-impact,
+--check` passes post-regeneration; prettier, markdown-link, test-impact,
   and diff checks passed. pnpm is unavailable on this machine, so the
   canonical mainline gate is delegated to the remote required checks.
 - Commit status: completed on `claude/peaceful-poitras-f8ccde`; mainline
@@ -4194,4 +4195,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   App/component unit suites (18), typecheck, prettier, test-impact, diff
   checks.
 - Commit status: completed on `claude/gallery-back-button`; mainline merge
+  gated on the remote required checks.
+
+## 2026-08-22 — In-editor Publish to Gallery (admin-gated bridge)
+
+- Target: `plan/2026-08-22-gallery-publish-dialog/plan.md` (completed).
+- Change: File > "Publish to Gallery…" dialog publishes the live Project
+  through the documented submissions endpoint with the owner passphrase
+  (session-remembered, forgotten on 401); outcome-specific messages for
+  201/401/413/429/400/network. Roadmap G1 notes the in-app surface.
+- Files: `features/editor-shell/gallery-publish.ts(.test.ts)`,
+  `publish-gallery-dialog.tsx(.test.tsx)`, `App.tsx`, `styles.css`,
+  `e2e/gallery.spec.ts`, roadmap.
+- Validation: 5 unit tests, gallery Playwright spec 5/5, typecheck,
+  prettier, test-impact, diff checks.
+- Commit status: completed on `claude/gallery-publish`; mainline merge
   gated on the remote required checks.
