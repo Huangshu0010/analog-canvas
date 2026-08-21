@@ -3967,8 +3967,11 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   it as a two-port Passive whose first placement creates one reusable
   parameterized child Cell; and bound instances as `X` calls so export emits a
   real `.subckt` body rather than a parent-level resistor primitive. Runtime
-  and Agent catalogs were regenerated.
-- Validation: focused tests (8 files / 58 tests), final hierarchy/export rerun
-  (2 tests), symbol/Agent/MCP generated checks, typecheck, test-impact,
-  dependency-ordered editor production build, docs, and diff checks passed.
-- Commit status: ready to commit on `codex/variable-resistor`.
+  and Agent catalogs were regenerated; Library coverage was brought in sync,
+  and the gate's rich-text selection was made cross-platform.
+- Validation: focused tests (8 files / 58 tests), hierarchy/export rerun (2
+  tests), repaired overbar E2E, symbol/Agent/MCP generated checks, typecheck,
+  test-impact, docs and diff checks, plus canonical `pnpm ci:check` (166 unit
+  files / 995 tests, all builds and release checks, 169 browser tests) passed.
+- Commit status: completed on `codex/variable-resistor` across the feature,
+  subcircuit, and final gate-closure commits.

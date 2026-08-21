@@ -25,6 +25,17 @@ The worktree was clean. This target owns the new symbol/device definition and
 the directly affected product catalogs, label placement, tests, generated
 catalog adapters, target record, and maintenance log.
 
+During mainline-gate closure, an unrelated untracked `CLAUDE.md` appeared. It
+is treated as user-owned, does not affect a shared dependency, and remains
+excluded from this target and every commit. A separate concurrent
+`rectangle-centered-text` target later modified `packages/derived/src/anchor.ts`
+and `packages/render-svg/src/render.ts` and created its own plan directory;
+those paths are likewise excluded and do not overlap this target's exact
+owned files. The gate also exposed one existing macOS-only rich-text E2E
+selection failure; this target owns only the bounded cross-platform shortcut
+repair in `manual-editor.spec.ts` needed to complete the required canonical
+gate.
+
 - `packages/symbols/assets/razavi-v1/`
 - `packages/symbols/src/`
 - `packages/devices/src/`
@@ -32,6 +43,9 @@ catalog adapters, target record, and maintenance log.
 - `apps/editor/src/features/component-insert/symbol-catalog*`
 - `apps/editor/src/features/component-insert/use-component-placement.ts`
 - `apps/editor/src/features/component-insert/variable-resistor-cell*`
+- `apps/editor/src/features/editor-shell/shapes-panel*`
+- `apps/editor/e2e/component-insert.spec.ts`
+- `apps/editor/e2e/manual-editor.spec.ts` (cross-platform gate repair only)
 - `apps/editor/src/features/netlist-export/netlist-authoring.test.ts`
 - `packages/agent-adapter/src/agent-authoring-catalog.generated.ts`
 - `apps/mcp-server/src/resources.generated.ts`
@@ -81,14 +95,25 @@ user's explicit two-terminal visual direction.
   `packages/derived/src/instance-label-placement.test.ts`,
   `apps/editor/src/features/component-insert/symbol-catalog.test.ts`, and
   `apps/editor/src/features/netlist-export/netlist-authoring.test.ts`, and
-  `apps/editor/src/features/component-insert/variable-resistor-cell.test.ts`
+  `apps/editor/src/features/component-insert/variable-resistor-cell.test.ts`,
+  `apps/editor/src/features/editor-shell/shapes-panel.test.ts`, and
+  `apps/editor/e2e/component-insert.spec.ts`; the existing rich-text overbar
+  browser contract in `apps/editor/e2e/manual-editor.spec.ts` protects the
+  bounded `ControlOrMeta+A` gate repair
 
 ## Commit Intent
 
-Commit as:
+The feature and subcircuit corrections are already committed as:
 
 ```text
 feat: add variable resistor component
+fix: model variable resistor as subcircuit
+```
+
+Commit the final palette coverage and cross-platform gate closure as:
+
+```text
+test: update variable resistor library coverage
 ```
 
 ## Outcome
@@ -100,6 +125,11 @@ parameterized ordinary resistor, and visible routes; every placed custom
 symbol binds to that same Cell with an `X` reference. Export therefore emits a
 real `.subckt VariableResistor`, its internal `R1`, and parent `X…` calls.
 Runtime and Agent catalogs were regenerated. Eight focused test files passed
-(58 tests), the final hierarchy/export contract rerun passed (2 tests), and
-symbol, Agent/MCP generation checks, typecheck, test-impact,
-dependency-ordered editor production build, docs, and diff checks passed.
+(58 tests), and the hierarchy/export contract rerun passed (2 tests). The
+first canonical mainline gate then exposed one stale left-Library count
+assertion; the target was reopened to update that direct palette consumer and
+repeat the complete gate. Library totals and compact labeling now cover the
+new component, and the pre-existing rich-text overbar browser contract uses a
+cross-platform select-all shortcut. The repaired overbar test passed in
+isolation, and the canonical `pnpm ci:check` passed with 166 unit-test files /
+995 tests, all workspace builds and release checks, and 169 browser tests.
