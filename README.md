@@ -50,20 +50,30 @@ not product inputs; see [ADR 0011](docs/adr/0011-retire-visio-vss-as-visual-auth
 ## Validation
 
 ```powershell
+# Review the planned validation surface before expensive checks
+pnpm gate:plan -- --base origin/main
+pnpm gate:preflight -- --base origin/main
+
 # Focused implementation loop
 pnpm test:local <test-paths>
 pnpm test:e2e:local <spec-paths> --grep <pattern>
 
+# Automated affected checks selected from the real diff
+pnpm gate:affected -- --base origin/main
+
 # Branch integration
-pnpm verify:branch
+pnpm gate:branch
 
 # Required local gate before a non-document delivery reaches main
-pnpm ci:check
+pnpm gate:full
 ```
 
-Use the smallest relevant check during development. Every target also closes
-with `git diff --check` and `git status --short --branch`; see
-[AGENTS.md](AGENTS.md) for the delivery gate.
+Gate planning is advisory and conservatively falls back to the full gate for
+unknown paths or validation-policy changes. Use the smallest relevant check
+during development; the canonical complete gate and GitHub required checks
+still apply before mainline delivery. Every target also closes with
+`git diff --check` and `git status --short --branch`; see [AGENTS.md](AGENTS.md)
+for the delivery gate.
 
 ## Citation
 

@@ -1,8 +1,11 @@
-import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  collectChangedPaths,
+  loadGateCatalog,
+} from "./lib/validation-gates.mjs";
 import { assessTestImpact, testPathKind } from "./lib/test-impact.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -13,28 +16,10 @@ if (!base) {
   console.error("Usage: node scripts/check-test-impact.mjs --base <git-ref>");
   process.exitCode = 2;
 } else {
-  const changedPaths = (args) =>
-    execFileSync("git", args, { cwd: root, encoding: "utf8" })
-      .split(/\r?\n/u)
-      .filter(Boolean);
-  const paths = [
-    ...new Set([
-      ...changedPaths([
-        "diff",
-        "--name-only",
-        "--diff-filter=ACMR",
-        `${base}...HEAD`,
-      ]),
-      ...changedPaths(["diff", "--name-only", "--diff-filter=ACMR"]),
-      ...changedPaths([
-        "diff",
-        "--cached",
-        "--name-only",
-        "--diff-filter=ACMR",
-      ]),
-      ...changedPaths(["ls-files", "--others", "--exclude-standard"]),
-    ]),
-  ];
+  const catalog = await loadGateCatalog();
+  const paths = collectChangedPaths(base, {
+    ignoredPaths: catalog.ignoredPaths,
+  });
   const planDocuments = await Promise.all(
     paths
       .filter((path) => testPathKind(path) === "plan")

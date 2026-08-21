@@ -3960,6 +3960,20 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   165 unit files / 990 tests, all builds/release checks, and 169 browser tests.
 - Commit status: ready to commit on `codex/vdd-named-power-hotfix`.
 
+## 2026-08-21 - Advisory validation gate planning
+
+- Changed areas: added a versioned validation-gate catalog, explainable diff
+  planner, executable preflight/affected commands, target-plan Gate Review,
+  shared changed-path collection, and an advisory GitHub Actions summary;
+  existing required jobs and the canonical full delivery gate remain intact.
+- Validation: planner/governance tests (2 files / 16 tests), representative
+  path plans, `pnpm gate:preflight`, `pnpm gate:affected` (166 files / 1001
+  tests, builds and production smoke), frozen install, and final canonical
+  `pnpm ci:check` (166 files / 1002 tests, all build/release checks, 169 browser
+  tests) passed, plus diff/status checks.
+- Commit status: committed on `codex/gate-planning-preflight`; mainline
+  integration is tracked by the branch PR.
+
 ## 2026-08-22 - Repeated Formal Port markers
 
 - Changed areas: advanced Project persistence to schema 20; let one formal

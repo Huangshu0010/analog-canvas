@@ -1,18 +1,32 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assessGateReview,
   assessTestImpact,
+  readGateReview,
   readTestImpact,
   testPathKind,
 } from "./test-impact.mjs";
 
-const updatedPlan = `## Test Impact
+const gateReview = `## Gate Review
+
+- Decision: affected
+- Early gates: typecheck and focused unit contracts
+- Affected gates: package unit and browser contracts
+- Final gates: complete delivery gate
+`;
+
+const updatedPlan = `${gateReview}
+
+## Test Impact
 
 - Decision: tests-updated
 - Contracts: example
 `;
 
-const noTestPlan = `## Test Impact
+const noTestPlan = `${gateReview}
+
+## Test Impact
 
 - Decision: no-test-change
 - Reason: formatting only; existing contract tests exercise unchanged behavior
@@ -63,5 +77,36 @@ describe("test-impact governance", () => {
       valid: false,
       reason: "no-test-change requires Reason or Existing protection",
     });
+  });
+
+  it("requires an explicit gate decision with early and final gates", () => {
+    expect(readGateReview(gateReview)).toEqual({
+      valid: true,
+      decision: "affected",
+    });
+    expect(
+      readGateReview(
+        "## Gate Review\n\n- Decision: affected\n- Affected gates: unit\n- Final gates: full\n",
+      ),
+    ).toEqual({ valid: false, reason: "missing Early gates" });
+    expect(
+      readGateReview(
+        "## Gate Review\n\n- Decision: affected\n- Early gates: static\n- Final gates: full\n",
+      ),
+    ).toEqual({ valid: false, reason: "missing Affected gates" });
+    expect(
+      assessGateReview([
+        {
+          path: "plan/x/plan.md",
+          text: "## Test Impact\n\n- Decision: no-test-change\n- Reason: formatting only\n",
+        },
+      ]),
+    ).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("Gate Review"),
+    });
+    expect(
+      assessGateReview([{ path: "plan/x/plan.md", text: updatedPlan }]),
+    ).toMatchObject({ ok: true });
   });
 });

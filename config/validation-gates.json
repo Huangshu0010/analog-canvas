@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "ignoredPaths": [
+    ".pnpm-store/**",
+    ".worktrees/**",
+    "node_modules/**",
+    "output/**",
+    "test-results/**",
+    "playwright-report/**"
+  ],
+  "pathGroups": {
+    "documentation": ["**/*.md", "docs/**", "plan/**"],
+    "source": ["apps/**", "packages/**", "worker/**", "scripts/**"],
+    "editorInteraction": [
+      "apps/editor/src/app/**",
+      "apps/editor/src/components/**",
+      "apps/editor/src/interaction/**",
+      "apps/editor/src/presentation/**",
+      "apps/editor/src/features/editor-shell/**"
+    ],
+    "componentInsert": [
+      "apps/editor/src/features/component-insert/**",
+      "apps/editor/e2e/component-insert.spec.ts"
+    ],
+    "hierarchy": [
+      "apps/editor/src/features/hierarchy/**",
+      "apps/editor/e2e/hierarchy.spec.ts",
+      "packages/model/**",
+      "packages/project-protocol/**",
+      "packages/edit-engine/**",
+      "packages/symbols/**",
+      "packages/render-svg/**"
+    ],
+    "projectPersistence": [
+      "apps/editor/src/features/document/**",
+      "apps/editor/src/features/project-file/**",
+      "apps/editor/e2e/project-file.spec.ts",
+      "packages/model/**",
+      "packages/project-protocol/**"
+    ],
+    "agent": [
+      "apps/editor/src/agent/**",
+      "apps/editor/e2e/web-agent-session.spec.ts",
+      "apps/mcp-server/**",
+      "packages/agent-adapter/**",
+      "packages/agent-client/**",
+      "packages/agent-routing/**"
+    ],
+    "release": [
+      "apps/local-host/**",
+      "config/agent-mcp-distribution.json",
+      "packages/exporters/**",
+      "scripts/export-golden.mjs",
+      "scripts/package-*.mjs",
+      "scripts/pwa-icons.mjs",
+      "scripts/*release-smoke.mjs",
+      "scripts/editor-production-smoke.mjs"
+    ],
+    "gateContract": [
+      ".github/workflows/**",
+      "AGENTS.md",
+      "package.json",
+      "pnpm-lock.yaml",
+      "config/validation-gates.json",
+      "docs/testing/**",
+      "plan/target-plan.template.md",
+      "scripts/gate-*.mjs",
+      "scripts/check-gate-review.mjs",
+      "scripts/check-test-impact.mjs",
+      "scripts/lib/test-impact*.mjs",
+      "scripts/lib/validation-gates*.mjs"
+    ]
+  },
+  "gates": [
+    {
+      "id": "documentation-links",
+      "stage": "preflight",
+      "when": "docs-only",
+      "description": "Validate links for documentation-only changes.",
+      "command": ["pnpm", "docs:check"]
+    },
+    {
+      "id": "gate-review",
+      "stage": "preflight",
+      "when": "non-doc",
+      "description": "Require the target plan to review early, affected, and final gates.",
+      "command": ["pnpm", "gate:review:check", "--", "--base", "{base}"]
+    },
+    {
+      "id": "static-contracts",
+      "stage": "preflight",
+      "when": "non-doc",
+      "description": "Formatting, generated metadata, documentation, and type contracts.",
+      "command": ["pnpm", "ci:static"]
+    },
+    {
+      "id": "test-impact",
+      "stage": "preflight",
+      "when": "non-doc",
+      "description": "Require explicit test and gate impact declarations.",
+      "command": ["pnpm", "test:impact", "--", "--base", "{base}"]
+    },
+    {
+      "id": "workspace-unit",
+      "stage": "affected",
+      "groups": ["source"],
+      "description": "Run the bounded-concurrency workspace unit and module contracts.",
+      "command": ["pnpm", "test:local"]
+    },
+    {
+      "id": "component-insert-browser",
+      "stage": "affected",
+      "groups": ["componentInsert"],
+      "description": "Validate component catalog and placement workflows.",
+      "command": [
+        "pnpm",
+        "test:e2e:local",
+        "apps/editor/e2e/component-insert.spec.ts"
+      ]
+    },
+    {
+      "id": "hierarchy-browser",
+      "stage": "affected",
+      "groups": ["hierarchy"],
+      "description": "Validate Cell hierarchy authoring and instance workflows.",
+      "command": ["pnpm", "test:e2e:local", "apps/editor/e2e/hierarchy.spec.ts"]
+    },
+    {
+      "id": "project-file-browser",
+      "stage": "affected",
+      "groups": ["projectPersistence"],
+      "description": "Validate persisted Project compatibility and save/open workflows.",
+      "command": [
+        "pnpm",
+        "test:e2e:local",
+        "apps/editor/e2e/project-file.spec.ts"
+      ]
+    },
+    {
+      "id": "agent-browser",
+      "stage": "affected",
+      "groups": ["agent"],
+      "description": "Validate the browser-authoritative Agent session workflow.",
+      "command": [
+        "pnpm",
+        "test:e2e:local",
+        "apps/editor/e2e/web-agent-session.spec.ts"
+      ]
+    },
+    {
+      "id": "editor-browser",
+      "stage": "affected",
+      "groups": ["editorInteraction"],
+      "description": "Validate general canvas and editor interaction workflows.",
+      "command": [
+        "pnpm",
+        "test:e2e:local",
+        "apps/editor/e2e/manual-editor.spec.ts"
+      ]
+    },
+    {
+      "id": "release-verification",
+      "stage": "affected",
+      "groups": ["release"],
+      "description": "Build and validate release packaging, goldens, and smoke contracts.",
+      "command": ["pnpm", "release:verify"]
+    },
+    {
+      "id": "branch-verification",
+      "stage": "affected",
+      "groups": ["gateContract"],
+      "description": "Conservatively verify a branch that changes gate policy or infrastructure.",
+      "command": ["pnpm", "verify:branch"],
+      "supersedes": ["workspace-unit"]
+    },
+    {
+      "id": "full-delivery",
+      "stage": "final",
+      "when": "non-doc",
+      "description": "Canonical complete local gate before mainline delivery.",
+      "command": ["pnpm", "ci:check"]
+    }
+  ],
+  "fullFallback": {
+    "gateContractGroups": ["gateContract"],
+    "preflightGate": "gate-review",
+    "affectedGate": "branch-verification",
+    "finalGate": "full-delivery"
+  }
+}
