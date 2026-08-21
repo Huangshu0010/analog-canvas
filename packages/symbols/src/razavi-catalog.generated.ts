@@ -289,7 +289,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "inverter.symbol.json",
     assetHash:
-      "2f93576529dab328557311e448f0dbc70a9c4c35898b88e5281fd44363184046",
+      "e019a1a1326406ecb58136e1c5e950eb8c07427ad94cdb59021c2963e4d134b4",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -359,7 +359,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "nor-gate.symbol.json",
     assetHash:
-      "3898bb81070142e6dc9c56df277300973e7ca0c27ab8c2d5b56313902df34d75",
+      "221944c93a1d805f4bd9a86761208485c72b02316cdb60f76c677ed616c38422",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -1780,7 +1780,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -20 -20 L -20 20 L 16 0 Z",
+        data: "M -20 -20 L -20 20 L 13.65 0 Z",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -2327,7 +2327,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -24 -20 Q -14 0 -24 20 Q 4 20 20 0 Q 4 -20 -24 -20 Z",
+        data: "M -24 -20 Q -14 0 -24 20 Q 4 20 18.52 0 Q 4 -20 -24 -20 Z",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
