@@ -74,10 +74,16 @@ test("a gallery tile opens its circuit in the editor", async ({ page }) => {
   );
   await expect(page.locator(".app-brand-copy p")).toContainText(ENTRY.name);
 
-  // The brand mark links back to the gallery landing page.
+  // The brand mark and the explicit toolbar button both lead back to the
+  // gallery, and the product name is one name everywhere.
   await expect(
-    page.getByRole("link", { name: "Back to the gallery" }),
+    page.getByRole("link", { name: "Back to the gallery", exact: true }),
   ).toHaveAttribute("href", "/");
+  await expect(page.locator(".app-brand-copy h1")).toHaveText("Analog Canvas");
+  const backLink = page.getByTestId("toolbar-gallery-link");
+  await expect(backLink).toBeVisible();
+  await backLink.click();
+  await expect(page.getByTestId("gallery-feed")).toBeVisible();
 });
 
 test("bundled starter tiles open their example in the editor", async ({

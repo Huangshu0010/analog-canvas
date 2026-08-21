@@ -4151,3 +4151,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   markdown links, test-impact, diff checks.
 - Commit status: completed on `claude/community-gallery`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 - Gallery return button and one product name
+
+- Changed areas: explicit "<- Gallery" control at the far left of the
+  document toolbar (one-click return to the landing feed); every
+  user-visible "(Interactive) Circuit Maker" string — editor header,
+  help/about dialogs, page title, PWA manifest — renamed to Analog Canvas.
+- Validation: gallery Playwright spec (4 passed incl. click-through),
+  App/component unit suites (18), typecheck, prettier, test-impact, diff
+  checks.
+- Commit status: completed on `claude/gallery-back-button`; mainline merge
+  gated on the remote required checks.
