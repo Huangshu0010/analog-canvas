@@ -4062,6 +4062,25 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Commit status: completed on `claude/junction-dot-collinear-arms`; mainline
   merge gated on the remote required checks.
 
+## 2026-08-21 - Visual golden refresh and release-gate wiring
+
+- Changed areas: regenerated the stale `fixtures/visual-golden/
+  {phase-3-crossing,phase-5-dense-analog}.svg` from current `main`
+  (d8a813a8) after tracing every delta to accepted merged changes —
+  9a552d32 removed the legacy ports layer and in-symbol instance labels and
+  replaced the phase-5 input project; later bound-display/rich-text,
+  canonical route geometry/contact, and collinear-arm dot (PR #144) work
+  finished the drift; wired `node scripts/visual-golden.mjs --check` into
+  `release:verify:built` (so `ci:check`, `ci:release`, and the CI Release
+  contracts job now fail on golden drift) and classified the script in the
+  gate catalog's release group.
+- Validation: fresh renders diffed element-by-element against both stale
+  goldens with per-delta commit attribution; `node scripts/visual-golden.mjs
+  --check` passes post-regeneration; prettier, markdown-link, test-impact,
+  and diff checks passed. pnpm is unavailable on this machine, so the
+  canonical mainline gate is delegated to the remote required checks.
+- Commit status: completed on `claude/peaceful-poitras-f8ccde`; mainline
+
 ## 2026-08-21 - Document style overrides (schema 21)
 
 - Changed areas: schema-21 `presentation.styleOverrides` (five bounded scale
