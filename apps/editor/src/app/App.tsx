@@ -7478,34 +7478,36 @@ export function App({
               </span>
             </button>
             <div className="selection-panel" hidden={!selectionOpen}>
-              <section
-                className="context-actions"
-                aria-label="Routing guidance"
-              >
-                <h2>Imported routing guidance</h2>
-                <div className="component-mirror-row">
-                  {(
-                    [
-                      ["focused", "Focused"],
-                      ["all", "All"],
-                      ["hidden", "Hide"],
-                    ] as const
-                  ).map(([view, label]) => (
-                    <button
-                      type="button"
-                      aria-pressed={routingGuidanceView === view}
-                      key={view}
-                      onClick={() => setRoutingGuidanceView(view)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <small>
-                  {displayedFlightlines.length} shown / {flightlines.length}{" "}
-                  derived. Guidance exists only for imported Nets.
-                </small>
-              </section>
+              {flightlines.length > 0 ? (
+                <section
+                  className="context-actions"
+                  aria-label="Routing guidance"
+                >
+                  <h2>Imported routing guidance</h2>
+                  <div className="component-mirror-row">
+                    {(
+                      [
+                        ["focused", "Focused"],
+                        ["all", "All"],
+                        ["hidden", "Hide"],
+                      ] as const
+                    ).map(([view, label]) => (
+                      <button
+                        type="button"
+                        aria-pressed={routingGuidanceView === view}
+                        key={view}
+                        onClick={() => setRoutingGuidanceView(view)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <small>
+                    {displayedFlightlines.length} shown / {flightlines.length}{" "}
+                    derived. Guidance exists only for imported Nets.
+                  </small>
+                </section>
+              ) : null}
               {!hasInspectableSelection ? (
                 <p className="inspect-empty">Select an object to inspect.</p>
               ) : null}

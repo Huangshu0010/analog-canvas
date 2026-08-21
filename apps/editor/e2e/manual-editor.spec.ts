@@ -491,6 +491,10 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
     ),
   ).toBeVisible();
   await page.keyboard.press("Escape");
+  await openSelectionShelf(page);
+  await expect(
+    page.getByRole("region", { name: "Routing guidance" }),
+  ).toHaveCount(0);
 });
 
 test("Free Net Ports merge by name and release their final Net lifecycle", async ({

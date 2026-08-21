@@ -148,9 +148,10 @@ function ensureDraftingLayer(draft: SchematicDocument): void {
  * immediately after the final endpoint is disconnected so a later
  * `remove_instance` cannot retain a stale Port designator through its Net.
  *
- * Deliberately retain named labels, geometry, formal interfaces, layout
- * references, global Nets, and MOS-default references. Those are all durable
- * authoring intent even when the Net currently has no ordinary terminal.
+ * Deliberately retain imported provenance, named labels, geometry, formal
+ * interfaces, layout references, global Nets, and MOS-default references.
+ * Those are all durable authoring intent even when the Net currently has no
+ * ordinary terminal.
  */
 function pruneUnreachableLocalNet(
   draft: SchematicDocument,
@@ -158,7 +159,14 @@ function pruneUnreachableLocalNet(
   changedObjectIds: Set<string>,
 ): void {
   const net = draft.nets.find((candidate) => candidate.id === netId);
-  if (!net || net.scope !== "local" || net.terminals.length > 0) return;
+  if (
+    !net ||
+    net.scope !== "local" ||
+    net.terminals.length > 0 ||
+    net.origin?.kind === "spice-import"
+  ) {
+    return;
+  }
   if (
     draft.routes.some((route) => route.netId === netId) ||
     draft.junctions.some((junction) => junction.netId === netId) ||

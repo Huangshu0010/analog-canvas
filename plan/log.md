@@ -3918,8 +3918,8 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   flows (5 tests), typecheck, format/docs/test-impact/diff checks, and complete
   `pnpm verify:branch` (164 files / 986 tests, workspace builds, production
   preview smoke) passed.
-- Commit status: integrated as `dff2568c` on `codex/insert-unification`; plan
-  close-out pending commit.
+- Commit status: integrated as `dff2568c` and closed by `b891998e` on
+  `codex/insert-unification`.
 
 ## 2026-08-21 - Imported Net routing guidance
 
@@ -3935,3 +3935,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   smoke, test-impact, and diff checks passed.
 - Commit status: committed on `codex/spice-import-routing-guidance` as
   `60ff3692`; stacked coordination is tracked separately.
+
+## 2026-08-21 - Port and imported-routing-guidance stack
+
+- Changed areas: stacked schema-19 imported-only routing guidance above the
+  unified Port/export lifecycle; resolved the ADR 0034 collision as ADR 0035;
+  preserved imported provenance through Port Net merge/delete; and hid
+  guidance controls when an authored canvas has no derived guides.
+- Validation: focused cross-layer unit tests, 8 combined Port/guidance browser
+  flows, typecheck, format/docs/test-impact, Agent API and MCP generated checks,
+  and complete `pnpm verify:branch` (165 files / 991 tests, workspace builds,
+  production preview smoke) passed.
+- Commit status: routing source stacked as `85cf56ec`; coordinated repair is
+  committed as the current `codex/insert-unification` branch HEAD.

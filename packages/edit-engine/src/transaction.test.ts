@@ -767,6 +767,57 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
+  it("retains imported provenance when an authored Port Net merges into it", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push(
+      { id: "P1", symbolId: "port", placement: null },
+      { id: "P2", symbolId: "port", placement: null },
+    );
+    document.nets.push(
+      {
+        id: "net-imported-bus",
+        name: "BUS",
+        scope: "local",
+        terminals: [{ instanceId: "P1", pinName: "P" }],
+        origin: { kind: "spice-import", sourceNetIds: ["source-bus"] },
+      },
+      {
+        id: "net-authored-port",
+        scope: "local",
+        terminals: [{ instanceId: "P2", pinName: "P" }],
+        origin: { kind: "authored" },
+      },
+    );
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "merge_nets",
+          targetNetId: "net-imported-bus",
+          sourceNetId: "net-authored-port",
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        nets: [
+          {
+            id: "net-imported-bus",
+            name: "BUS",
+            terminals: [
+              { instanceId: "P1", pinName: "P" },
+              { instanceId: "P2", pinName: "P" },
+            ],
+            origin: { kind: "spice-import", sourceNetIds: ["source-bus"] },
+          },
+        ],
+      },
+    });
+  });
+
   it("rejects a stale revision without changing the Document", () => {
     const document = createEmptyDocument("document-main", "Main");
     const before = JSON.stringify(document);

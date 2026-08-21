@@ -308,6 +308,65 @@ describe("Instance lifecycle planning", () => {
     });
   });
 
+  it("retains imported Net provenance after deleting its final Port marker", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+    });
+    document.nets.push({
+      id: "net-port-p1",
+      name: "BUS",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+      origin: { kind: "spice-import", sourceNetIds: ["source-bus"] },
+    });
+    document.annotations.push({
+      id: "instance-label-P1",
+      kind: "net-label",
+      binding: { kind: "net-name", netId: "net-port-p1" },
+      netId: "net-port-p1",
+      anchor: {
+        kind: "object",
+        objectId: "P1",
+        localOffset: { x: 10, y: 0 },
+        fallbackPosition: { x: 110, y: 100 },
+      },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+
+    const result = executeTransaction(
+      document,
+      transaction(
+        document.id,
+        planInstanceDeletion(document, resolver, ["P1"], 7),
+      ),
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        instances: [],
+        annotations: [],
+        nets: [
+          {
+            id: "net-port-p1",
+            terminals: [],
+            origin: { kind: "spice-import", sourceNetIds: ["source-bus"] },
+          },
+        ],
+      },
+    });
+  });
+
   it("rejects disconnecting a formal Cell interface Net", () => {
     const document = createEmptyDocument("document-child", "Child");
     document.instances.push({
