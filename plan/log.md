@@ -3907,3 +3907,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   files / 977 tests plus production preview smoke) passed.
 - Commit status: committed on `codex/top-cell-port-net-semantics` as
   `60d52ebb`; stacked integration is tracked separately.
+
+## 2026-08-21 - Unified Port semantics stack
+
+- Changed areas: stacked top-Cell formal-interface and Free Port export
+  semantics onto the unified Insert/Port Setup and Free Port Net lifecycle;
+  retained the top-level Free Port default while exposing both explicit roles
+  in every Document.
+- Validation: focused unit tests (5 files / 29 tests), combined Port browser
+  flows (5 tests), typecheck, format/docs/test-impact/diff checks, and complete
+  `pnpm verify:branch` (164 files / 986 tests, workspace builds, production
+  preview smoke) passed.
+- Commit status: integrated as `dff2568c` on `codex/insert-unification`; plan
+  close-out pending commit.
