@@ -24,6 +24,8 @@
   --icm-accent-tint: #e7f3fc;
   --icm-error: #eb5757;
   --icm-warning: #9a6700;
+  --icm-marquee-crossing: #3fa34d;
+  --icm-marquee-crossing-soft: rgb(63 163 77 / 10%);
   --icm-grid-dot: #c4c7c9;
 
   /* Spacing: 4px base */
@@ -1916,6 +1918,19 @@ body {
   background: #fff;
   box-shadow: none;
   touch-action: none;
+  /* Canvas drags are gestures, never reading flows: without this, a marquee
+     sweep starts a NATIVE browser text selection across the SVG labels in
+     DOM order, highlighting text far outside the dragged rectangle. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The inline text editor is the one place canvas text is really edited;
+   restore selection inside it so caret and range editing keep working. */
+.canvas-text-editor-overlay,
+.canvas-text-editor-overlay * {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* The interactive scene reuses the formal renderer body without its exported
@@ -2083,6 +2098,18 @@ body {
   stroke-dasharray: 5 4;
   pointer-events: none;
   vector-effect: non-scaling-stroke;
+}
+
+/* Directional marquee affordance: a left-to-right window (solid blue) selects
+   only what it fully contains; a right-to-left crossing (dashed green) selects
+   anything it touches — the classic drafting-tool pairing. */
+.selection-box--window {
+  stroke-dasharray: none;
+}
+
+.selection-box--crossing {
+  fill: var(--icm-marquee-crossing-soft);
+  stroke: var(--icm-marquee-crossing);
 }
 
 /* Right-drag camera frame: hints navigation, not selection. */

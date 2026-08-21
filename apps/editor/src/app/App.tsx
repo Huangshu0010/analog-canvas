@@ -145,11 +145,7 @@ import {
   closestPointOnSegment,
   normalizedBearing,
   normalizedRect,
-  pointInRect,
   polylineBounds,
-  rectangleBoundaryIntersectsRect,
-  rectsIntersect,
-  segmentIntersectsRect,
   serializePolylinePoints,
 } from "../canvas/canvas-geometry";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
@@ -230,6 +226,10 @@ import {
   rectangleInteriorAt,
   rectangleLabelFor,
 } from "../features/drafting/rectangle-label";
+import {
+  marqueeMode,
+  marqueeSelection,
+} from "../features/selection/marquee-selection";
 import {
   draftingPathData,
   quadraticMidpoint,
@@ -5923,84 +5923,28 @@ export function App({
     const clicked =
       rect.width <= document.presentation.grid &&
       rect.height <= document.presentation.grid;
-    const ids = clicked
-      ? []
-      : [
-          ...new Set(
-            document.instances
-              .filter((instance) => {
-                const bounds = instanceHitBox(instance, resolver);
-                return bounds !== null && rectsIntersect(bounds, rect);
-              })
-              .map((instance) => instance.id),
-          ),
-        ];
-    const supplemental = clicked
-      ? EMPTY_SUPPLEMENTAL_SELECTION
-      : {
-          routeIds: routeGeometryRecords
-            .filter(({ geometry }) =>
-              geometry.centerline
-                .slice(0, -1)
-                .some((from, index) =>
-                  segmentIntersectsRect(
-                    from,
-                    geometry.centerline[index + 1]!,
-                    rect,
-                  ),
-                ),
-            )
-            .map(({ route }) => route.id),
-          junctionIds: document.junctions
-            .filter((junction) => pointInRect(junction.position, rect))
-            .map((junction) => junction.id),
-          annotationIds: document.annotations
-            .filter(
-              (annotation) =>
-                isSchematicAnnotationVisible(document, annotation) &&
-                rectsIntersect(
-                  annotationHitBox(
-                    document,
-                    annotation,
-                    annotationAnchor(
-                      document,
-                      resolver,
-                      annotation,
-                      routeGeometryRecords,
-                      styleProfile,
-                    ),
-                    routeGeometryRecords,
-                    styleProfile,
-                  ),
-                  rect,
-                ),
-            )
-            .map((annotation) => annotation.id),
-          draftingIds: (document.drafting?.objects ?? [])
-            .filter((object) => {
-              const geometry = resolveDraftingObjectGeometry(
-                document,
-                resolver,
-                object,
-              );
-              return geometry.kind === "rectangle"
-                ? rectangleBoundaryIntersectsRect(geometry.corners, rect)
-                : rectsIntersect(geometry.bounds, rect);
-            })
-            .map((object) => object.id),
-        };
-    replaceSelection({
-      instanceIds: ids,
-      ...supplemental,
-    });
+    // Classic directional marquee: a left-to-right drag is a window (full
+    // containment required), a right-to-left drag is a crossing (any overlap
+    // selects). Geometry alone decides membership.
+    const selection = clicked
+      ? { instanceIds: [], ...EMPTY_SUPPLEMENTAL_SELECTION }
+      : marqueeSelection(
+          document,
+          resolver,
+          routeGeometryRecords,
+          styleProfile,
+          rect,
+          marqueeMode(boxPreview.start, boxPreview.end),
+        );
+    replaceSelection(selection);
     setSelectedEndpoint(null);
     setBoxPreview(null);
     const count =
-      ids.length +
-      supplemental.routeIds.length +
-      supplemental.junctionIds.length +
-      supplemental.annotationIds.length +
-      supplemental.draftingIds.length;
+      selection.instanceIds.length +
+      selection.routeIds.length +
+      selection.junctionIds.length +
+      selection.annotationIds.length +
+      selection.draftingIds.length;
     setStatus(count > 0 ? `Selected ${count} objects` : "Selection cleared");
   }
 
@@ -10103,7 +10047,12 @@ export function App({
                     boxPreview.intent === "zoom" ? "zoom-box" : "selection-box"
                   }
                   className={
-                    boxPreview.intent === "zoom" ? "zoom-box" : "selection-box"
+                    boxPreview.intent === "zoom"
+                      ? "zoom-box"
+                      : `selection-box selection-box--${marqueeMode(
+                          boxPreview.start,
+                          boxPreview.end,
+                        )}`
                   }
                   {...normalizedRect(boxPreview.start, boxPreview.end)}
                 />

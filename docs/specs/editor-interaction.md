@@ -210,6 +210,16 @@ fallback, not a second progressive planner for a group gesture. Marquee Route
 selection tests actual polyline segments against the rectangle, rather than
 selecting a distant bend solely because its bounding box overlaps the gesture.
 
+The marquee is directional, following the classic drafting-tool pairing. A
+left-to-right drag is a window: an object joins the selection only when its
+geometry is fully contained (an outline rectangle needs all four corners; a
+Route needs its whole centerline). A right-to-left drag is a crossing: any
+geometric overlap selects, which preserves the previous behavior. A Junction
+is its point in both directions. The live preview distinguishes the modes
+(solid window, dashed crossing). Membership is decided by document geometry
+alone: the canvas suppresses native browser text selection, so a drag can
+never highlight or select labels outside the dragged rectangle.
+
 ## No-reroute movement boundary
 
 The editor's finite direct-manipulation vocabulary is transient only:

@@ -4035,3 +4035,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   inspected in the running editor.
 - Commit status: completed on `claude/block-diagram-authoring` at the
   user's direction; mainline merge gated on the remote required checks.
+
+## 2026-08-21 - Directional marquee and native text-selection fix
+
+- Changed areas: canvas suppresses native browser text selection (the cause
+  of "distant labels" highlighting during drags) with an overlay restore;
+  box-selection extracted to a pure marquee-selection module implementing
+  left-to-right window (full containment) vs right-to-left crossing (overlap)
+  with distinct live-preview styling; editor-interaction spec updated; one
+  browser test's marquee gesture widened for window semantics.
+- Validation: 19 new unit tests (64 across selection/canvas/wiring), full
+  manual-editor/drafting/hierarchy Playwright suites, typecheck, prettier,
+  markdown links, test-impact, and diff checks passed.
+- Commit status: completed on `claude/marquee-window-crossing`; mainline
+  merge gated on the remote required checks.
