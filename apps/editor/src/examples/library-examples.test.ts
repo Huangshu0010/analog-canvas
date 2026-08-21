@@ -1,3 +1,4 @@
+import { CURRENT_PROJECT_SCHEMA_VERSION } from "@icm/model";
 import { serializeProject } from "@icm/project-protocol";
 import { describe, expect, it } from "vitest";
 
@@ -7,16 +8,27 @@ import {
 } from "./library-examples";
 
 describe("bundled Library Project examples", () => {
-  it("ships two canonical, schema-valid Projects", () => {
-    expect(libraryProjectExamples.map((example) => example.name)).toEqual([
-      "Common-Source Amplifier",
-      "Two-Stage Op Amp",
-    ]);
+  it("ships canonical, schema-current, openable Projects", () => {
+    // The curated pair stays; promoted examples may extend the set (see
+    // scripts/promote-example.mjs), so the contract is per-example, not a
+    // frozen count or single-document shape.
+    expect(libraryProjectExamples.map((example) => example.id)).toEqual(
+      expect.arrayContaining(["common-source-amplifier", "two-stage-op-amp"]),
+    );
+    expect(
+      new Set(libraryProjectExamples.map((example) => example.id)).size,
+    ).toBe(libraryProjectExamples.length);
     for (const example of libraryProjectExamples) {
+      expect(example.name.trim()).not.toBe("");
       expect(serializeProject(example.project)).toContain(
-        '"schemaVersion": 21',
+        `"schemaVersion": ${CURRENT_PROJECT_SCHEMA_VERSION}`,
       );
-      expect(example.project.documents).toHaveLength(1);
+      expect(example.project.documents.length).toBeGreaterThanOrEqual(1);
+      expect(
+        example.project.documents.some(
+          (document) => document.id === example.project.topDocumentId,
+        ),
+      ).toBe(true);
     }
   });
 

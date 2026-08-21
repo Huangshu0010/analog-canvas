@@ -4121,3 +4121,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   test-impact, diff checks; verified live.
 - Commit status: completed on `claude/insert-picker-always-open`; mainline
   merge gated on the remote required checks.
+
+## 2026-08-21 - Bundled-example promotion path
+
+- Changed areas: new `scripts/promote-example.mjs` plus testable
+  registration codemod in `scripts/lib/example-promotion.mjs` (exported
+  Project -> validated canonical asset + registry entry in one command);
+  bundled-example test refactored to per-example contracts so promotions
+  cannot break a frozen count or single-document assumption.
+- Validation: codemod tests, refactored examples suite, end-to-end smoke
+  promotion (then reverted), typecheck, prettier, markdown links,
+  test-impact, diff checks.
+- Commit status: completed on `claude/example-promotion`; mainline merge
+  gated on the remote required checks.
