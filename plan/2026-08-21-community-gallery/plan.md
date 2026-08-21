@@ -125,5 +125,9 @@ limiting, recycle lifecycle, re-serialization), feed component tests, the
 new gallery Playwright spec (4 scenarios), the COMPLETE Playwright suite
 (179 passed) on the new routing, repository typecheck, prettier, markdown
 links, test-impact, and diff checks all green; feed and tile-to-editor
-flow verified live. Deploy note: set the `GALLERY_ADMIN_TOKEN` secret to
-enable publishing/administration.
+flow verified live. Administration was enabled at the user's request: a
+generated `GALLERY_ADMIN_TOKEN` now lives in the repository's GitHub
+secrets, the Cloudflare deploy workflow syncs it to the Worker on every
+deploy (rotation = update the GitHub secret and re-run the deploy), and a
+copy for the user sits outside the repository in
+`~/analog-canvas-gallery-admin-token.txt`.

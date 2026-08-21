@@ -50,7 +50,9 @@ nullable owner column so G3 ownership requires no migration.
 ## Administration
 
 Admin routes require `Authorization: Bearer <GALLERY_ADMIN_TOKEN>` (a
-Cloudflare secret; every admin route answers 401 until it is set):
+Cloudflare Worker secret, synced from the GitHub Actions secret of the same
+name on every Cloudflare deploy; every admin route answers 401 until it is
+set, and rotation is one GitHub-secret update plus a deploy run):
 
 - `POST /api/gallery/<id>/recycle` — soft delete into the restorable bin;
   the entry disappears from every public surface.
