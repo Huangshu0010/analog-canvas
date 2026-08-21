@@ -140,27 +140,31 @@ export function GalleryFeed() {
               </span>
             </a>
           ))}
-          {bundledTiles().map((tile) => (
-            <a
-              key={tile.id}
-              className="gallery-tile gallery-tile-bundled"
-              href={`/editor?example=${tile.id}`}
-              data-testid={`gallery-bundled-${tile.id}`}
-            >
-              <span
-                className="gallery-tile-preview"
-                // Server-free preview: our own renderer's escaped SVG output.
-                dangerouslySetInnerHTML={{ __html: tile.svg }}
-              />
-              <span className="gallery-tile-copy">
-                <span className="gallery-tile-kicker">Built-in example</span>
-                <span className="gallery-tile-name">{tile.name}</span>
-                <span className="gallery-tile-description">
-                  {tile.description}
-                </span>
-              </span>
-            </a>
-          ))}
+          {entries.length === 0
+            ? bundledTiles().map((tile) => (
+                <a
+                  key={tile.id}
+                  className="gallery-tile gallery-tile-bundled"
+                  href={`/editor?example=${tile.id}`}
+                  data-testid={`gallery-bundled-${tile.id}`}
+                >
+                  <span
+                    className="gallery-tile-preview"
+                    // Server-free preview: our own renderer's escaped SVG output.
+                    dangerouslySetInnerHTML={{ __html: tile.svg }}
+                  />
+                  <span className="gallery-tile-copy">
+                    <span className="gallery-tile-kicker">
+                      Built-in example
+                    </span>
+                    <span className="gallery-tile-name">{tile.name}</span>
+                    <span className="gallery-tile-description">
+                      {tile.description}
+                    </span>
+                  </span>
+                </a>
+              ))
+            : null}
         </section>
       )}
       <footer className="gallery-footnote">
