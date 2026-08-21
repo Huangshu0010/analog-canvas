@@ -39,18 +39,31 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      # The gallery admin bearer lives in the GitHub secret and is synced to
-      # the Worker on every deploy; rotate by updating the GitHub secret and
-      # re-running this workflow. The guard is shell-level because the
-      # secrets context is not available in step `if` expressions.
-      - name: Sync gallery admin secret
+      # Gallery/auth secrets live in GitHub secrets and are synced to the
+      # Worker on every deploy; rotate by updating the GitHub secret and
+      # re-running this workflow. Providers without a secret simply stay
+      # dark (skipped here, feature invisible on the site). The guard is
+      # shell-level because the secrets context is not available in step
+      # `if` expressions. GitHub forbids secret names starting with
+      # GITHUB_, hence GH_OAUTH_*.
+      - name: Sync worker secrets
         run: |
-          if [ -z "$GALLERY_ADMIN_TOKEN" ]; then
-            echo "GALLERY_ADMIN_TOKEN is not configured; skipping sync"
-            exit 0
-          fi
-          printf '%s' "$GALLERY_ADMIN_TOKEN" | pnpm dlx wrangler@4.120.1 secret put GALLERY_ADMIN_TOKEN
+          for name in GALLERY_ADMIN_TOKEN GH_OAUTH_CLIENT_ID GH_OAUTH_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET RESEND_API_KEY AUTH_EMAIL_FROM ADMIN_EMAILS; do
+            value="${!name}"
+            if [ -z "$value" ]; then
+              echo "$name is not configured; skipping"
+              continue
+            fi
+            printf '%s' "$value" | pnpm dlx wrangler@4.120.1 secret put "$name"
+          done
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           GALLERY_ADMIN_TOKEN: ${{ secrets.GALLERY_ADMIN_TOKEN }}
+          GH_OAUTH_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
+          GH_OAUTH_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}

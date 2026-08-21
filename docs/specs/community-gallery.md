@@ -1,8 +1,9 @@
 # Community Gallery
 
-Status: `accepted` (Phase G1 surface)
+Status: `accepted` (Phase G1 surface + Phase G2 accounts, dark-shipped)
 
-Primary owners: `worker/gallery.ts`, `apps/editor` landing feed
+Primary owners: `worker/gallery.ts`, `worker/auth.ts`, `apps/editor`
+landing feed
 
 Roadmap: [community gallery platform](../roadmap/community-gallery-platform.md)
 (G1 public feed foundation → G2 sign-in → G3 ownership → G4 feed
@@ -42,17 +43,57 @@ serialization, renders the preview, and stores the entry as `public`.
 Submissions count against a per-submitter (hashed IP) limit of 10 per UTC
 day.
 
-Phase G1 gate: publishing additionally requires the admin bearer until
-Phase G2 sign-in replaces it with session identity — anonymous upload is
+Phase G1 gate: publishing additionally requires admin authority —
+the bearer, or (since G2) a signed-in super-admin session — until Phase
+G3 opens a review queue for ordinary signed-in users. Anonymous upload is
 impossible from day one, which is also the end state. Entries persist a
 nullable owner column so G3 ownership requires no migration.
 
+## Accounts and sessions (Phase G2, dark-shipped)
+
+`AuthDO` (one SQLite Durable Object singleton) owns users and sessions
+behind `/api/auth/*`. Every provider is invisible until its Worker
+secrets exist (`GET /api/auth/providers` reports `{github, google,
+email}`); with no provider configured the site shows no sign-in UI at
+all. No passwords ever exist. The browser holds a random session token in
+an HttpOnly `SameSite=Lax` cookie (`icm_session`, 30-day TTL); the
+database stores only SHA-256 hashes of session and login tokens.
+
+- `GET /api/auth/github/start|callback` — GitHub OAuth code flow
+  (secrets `GH_OAUTH_CLIENT_ID`/`GH_OAUTH_CLIENT_SECRET`; GitHub Actions
+  forbids the `GITHUB_` prefix, hence the names). Callback URL:
+  `<origin>/api/auth/github/callback`. Only a verified email is stored.
+- `GET /api/auth/google/start|callback` — Google OAuth code flow
+  (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`); an unverified Google email
+  is treated as absent.
+- `POST /api/auth/email/start` + `GET /api/auth/email/callback` — email
+  magic links via Resend (`RESEND_API_KEY`, optional `AUTH_EMAIL_FROM`);
+  links are single-use, expire in 15 minutes, and are limited to 5 per
+  address per UTC day.
+- `GET /api/auth/me` — `{user}` with `id`, `displayName`, `email`,
+  `provider`, and the per-request `isAdmin` flag.
+- `POST /api/auth/profile` — rename the caller's display name (trimmed,
+  1–40 chars). `POST /api/auth/logout` ends the session. Both are
+  same-origin gated like submissions.
+- OAuth `state` is double-submitted through a short-lived HttpOnly cookie
+  and compared on the callback; failures redirect to `/?auth=failed`.
+
+Identities from different providers are distinct accounts in G2 (linking
+is a later refinement). Super-admin is computed per request: a session
+whose email appears in the `ADMIN_EMAILS` secret (comma-separated,
+case-insensitive) has admin authority everywhere the bearer does —
+including publishing and the administration routes below — and rotation
+of `ADMIN_EMAILS` needs no re-login. Ordinary sessions cannot publish
+until the G3 review queue exists.
+
 ## Administration
 
-Admin routes require `Authorization: Bearer <GALLERY_ADMIN_TOKEN>` (a
-Cloudflare Worker secret, synced from the GitHub Actions secret of the same
-name on every Cloudflare deploy; every admin route answers 401 until it is
-set, and rotation is one GitHub-secret update plus a deploy run):
+Admin routes require admin authority: `Authorization: Bearer
+<GALLERY_ADMIN_TOKEN>` (a Cloudflare Worker secret, synced from the
+GitHub Actions secret of the same name on every Cloudflare deploy;
+rotation is one GitHub-secret update plus a deploy run) or, since G2, a
+signed-in super-admin session. With neither configured every admin route
+answers 401:
 
 - `POST /api/gallery/<id>/recycle` — soft delete into the restorable bin;
   the entry disappears from every public surface.

@@ -16,6 +16,8 @@ import { renderDocumentSvg } from "@icm/render-svg";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import type { CircuitProject } from "@icm/model";
 
+import { sessionUserOf, type AuthNamespaceLike } from "./auth";
+
 export const GALLERY_MAX_PROJECT_BYTES = 2 * 1024 * 1024;
 export const GALLERY_MAX_NAME_LENGTH = 120;
 export const GALLERY_MAX_AUTHOR_LENGTH = 40;
@@ -49,6 +51,9 @@ export type GalleryNamespaceLike = {
 export type GalleryEnv = {
   GALLERY: GalleryNamespaceLike;
   GALLERY_ADMIN_TOKEN?: string;
+  /** Phase G2: an admin session works wherever the bearer does. */
+  AUTH?: AuthNamespaceLike;
+  ADMIN_EMAILS?: string;
 };
 
 export interface GalleryEntrySummary {
@@ -346,11 +351,15 @@ function sameOrigin(request: Request): boolean {
   return true;
 }
 
-function isAdmin(request: Request, env: GalleryEnv): boolean {
-  if (!env.GALLERY_ADMIN_TOKEN) return false;
-  return (
+async function isAdmin(request: Request, env: GalleryEnv): Promise<boolean> {
+  if (
+    env.GALLERY_ADMIN_TOKEN &&
     request.headers.get("Authorization") === `Bearer ${env.GALLERY_ADMIN_TOKEN}`
-  );
+  ) {
+    return true;
+  }
+  const user = await sessionUserOf(request, env);
+  return user?.isAdmin === true;
 }
 
 async function submitterHash(request: Request): Promise<string> {
@@ -391,7 +400,7 @@ async function handleSubmission(
   // Phase G1: publishing requires the admin bearer until Phase G2 sign-in
   // replaces it with session identity. Anonymous upload therefore stays
   // impossible from day one — which is also the end-state rule.
-  if (!isAdmin(request, env)) {
+  if (!(await isAdmin(request, env))) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
   const body = (await request.json().catch(() => null)) as {
@@ -513,7 +522,7 @@ export async function routeGalleryRequest(
     segments[0] === "recycled" &&
     request.method === "GET"
   ) {
-    if (!isAdmin(request, env)) {
+    if (!(await isAdmin(request, env))) {
       return Response.json({ error: "unauthorized" }, { status: 401 });
     }
     const { payload } = await callGallery(env, "recycled", {});
@@ -527,7 +536,7 @@ export async function routeGalleryRequest(
     segments[1] === "reserialize" &&
     request.method === "POST"
   ) {
-    if (!isAdmin(request, env)) {
+    if (!(await isAdmin(request, env))) {
       return Response.json({ error: "unauthorized" }, { status: 401 });
     }
     return handleReserialize(env);
@@ -568,7 +577,7 @@ export async function routeGalleryRequest(
     if (action !== "recycle" && action !== "restore") {
       return Response.json({ error: "not-found" }, { status: 404 });
     }
-    if (!isAdmin(request, env)) {
+    if (!(await isAdmin(request, env))) {
       return Response.json({ error: "unauthorized" }, { status: 401 });
     }
     const { status, payload } = await callGallery(env, "set-status", {
@@ -579,7 +588,7 @@ export async function routeGalleryRequest(
     return Response.json(payload, { status });
   }
   if (segments.length === 1 && request.method === "DELETE") {
-    if (!isAdmin(request, env)) {
+    if (!(await isAdmin(request, env))) {
       return Response.json({ error: "unauthorized" }, { status: 401 });
     }
     const { status, payload } = await callGallery(env, "delete", {

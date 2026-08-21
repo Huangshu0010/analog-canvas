@@ -89,6 +89,79 @@ test("a gallery tile opens its circuit in the editor", async ({ page }) => {
   await expect(page.getByTestId("gallery-feed")).toBeVisible();
 });
 
+test("the feed offers exactly the enabled sign-in providers and sends email links", async ({
+  page,
+}) => {
+  await mockGallery(page, [ENTRY]);
+  await page.route("**/api/auth/providers", (route) =>
+    route.fulfill({ json: { github: true, google: false, email: true } }),
+  );
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({ json: { user: null } }),
+  );
+  const emailStarts: string[] = [];
+  await page.route("**/api/auth/email/start", (route) => {
+    emailStarts.push(String(route.request().postDataJSON().email));
+    return route.fulfill({ status: 202, json: { sent: true } });
+  });
+
+  await page.goto("/");
+  await page.getByTestId("account-signin").locator("summary").click();
+  await expect(page.getByTestId("signin-github")).toHaveAttribute(
+    "href",
+    "/api/auth/github/start",
+  );
+  await expect(page.getByTestId("signin-google")).toHaveCount(0);
+  await page.getByTestId("signin-email-input").fill("vivian@example.com");
+  await page.getByTestId("signin-email-send").click();
+  await expect(page.getByTestId("account-notice")).toHaveText(
+    "Check your inbox for the link.",
+  );
+  expect(emailStarts).toEqual(["vivian@example.com"]);
+});
+
+test("a signed-in owner renames the display name and signs out", async ({
+  page,
+}) => {
+  await mockGallery(page, [ENTRY]);
+  await page.route("**/api/auth/providers", (route) =>
+    route.fulfill({ json: { github: true, google: true, email: true } }),
+  );
+  const user = {
+    id: "u1",
+    displayName: "tz",
+    email: "owner@example.com",
+    provider: "github",
+    isAdmin: true,
+  };
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({ json: { user } }),
+  );
+  const renames: string[] = [];
+  await page.route("**/api/auth/profile", (route) => {
+    const displayName = String(route.request().postDataJSON().displayName);
+    renames.push(displayName);
+    return route.fulfill({ json: { user: { ...user, displayName } } });
+  });
+  let loggedOut = 0;
+  await page.route("**/api/auth/logout", (route) => {
+    loggedOut += 1;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await expect(page.getByTestId("account-owner")).toHaveText("Owner");
+  await page.getByTestId("account-name").click();
+  await page.getByTestId("account-rename-input").fill("Token Zhang");
+  await page.getByTestId("account-rename-input").press("Enter");
+  await expect(page.getByTestId("account-name")).toHaveText("Token Zhang");
+  expect(renames).toEqual(["Token Zhang"]);
+
+  await page.getByTestId("account-signout").click();
+  await expect(page.getByTestId("account-signin")).toBeVisible();
+  expect(loggedOut).toBe(1);
+});
+
 test("File > Publish to Gallery posts the live Project with the passphrase", async ({
   page,
 }) => {
@@ -139,6 +212,49 @@ test("File > Publish to Gallery posts the live Project with the passphrase", asy
   await expect(
     page.getByTestId("publish-gallery-dialog").getByLabel("Owner passphrase"),
   ).toHaveValue("secret-token");
+});
+
+test("an admin session publishes without the passphrase row", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u1",
+          displayName: "Token Zhang",
+          email: "owner@example.com",
+          provider: "github",
+          isAdmin: true,
+        },
+      },
+    }),
+  );
+  const posted: { authorization: string | null; author: string }[] = [];
+  await page.route("**/api/gallery/submissions", (route) => {
+    const body = route.request().postDataJSON() as { author: string };
+    posted.push({
+      authorization: route.request().headers()["authorization"] ?? null,
+      author: body.author,
+    });
+    return route.fulfill({ status: 201, json: { id: "entry-77" } });
+  });
+
+  await page.goto("/editor");
+  await clickCommand(page, "File", "Publish to Gallery…");
+  const dialog = page.getByTestId("publish-gallery-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Signed in as Token Zhang")).toBeVisible();
+  await expect(dialog.getByLabel("Owner passphrase")).toHaveCount(0);
+  // The account display name prefills the author byline.
+  await expect(dialog.getByLabel("Author")).toHaveValue("Token Zhang");
+
+  await dialog.getByLabel("Circuit name").fill("Session Publish");
+  await dialog.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByTestId("status")).toHaveText(
+    'Published "Session Publish" to the gallery',
+  );
+  expect(posted).toEqual([{ authorization: null, author: "Token Zhang" }]);
 });
 
 test("bundled starter tiles open their example in the editor", async ({

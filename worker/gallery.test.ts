@@ -11,6 +11,7 @@ import {
   routeGalleryRequest,
   type GalleryEnv,
 } from "./gallery";
+import { AuthDO, type AuthEnv } from "./auth";
 
 function sqliteState() {
   const db = new DatabaseSync(":memory:");
@@ -69,6 +70,7 @@ function submissionRequest(
     ip?: string;
     origin?: string | null;
     token?: string | null;
+    cookie?: string;
   } = {},
 ): Request {
   const headers = new Headers({ "content-type": "application/json" });
@@ -78,6 +80,7 @@ function submissionRequest(
   if (overrides.token !== null) {
     headers.set("Authorization", `Bearer ${overrides.token ?? ADMIN_TOKEN}`);
   }
+  if (overrides.cookie) headers.set("Cookie", overrides.cookie);
   headers.set("CF-Connecting-IP", overrides.ip ?? "203.0.113.7");
   return new Request(`${ORIGIN}/api/gallery/submissions`, {
     method: "POST",
@@ -242,6 +245,89 @@ describe("gallery submissions", () => {
       ),
     );
     expect(other.status).toBe(201);
+  });
+});
+
+describe("gallery admin sessions (phase G2)", () => {
+  async function sessionCookieFor(
+    authDurable: AuthDO,
+    email: string,
+  ): Promise<string> {
+    const sent: string[] = [];
+    authDurable.fetchLike = (async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      void input;
+      sent.push((JSON.parse(String(init?.body)) as { text: string }).text);
+      return Response.json({ id: "email-1" });
+    }) as typeof fetch;
+    const start = await authDurable.fetch(
+      new Request(`${ORIGIN}/api/auth/email/start`, {
+        method: "POST",
+        headers: { Origin: ORIGIN, "content-type": "application/json" },
+        body: JSON.stringify({ email }),
+      }),
+    );
+    expect(start.status).toBe(202);
+    const link = sent[0]!.match(/https?:\/\/\S+/u)![0];
+    const callback = await authDurable.fetch(new Request(link));
+    const header = callback.headers
+      .getSetCookie()
+      .find((cookie) => cookie.startsWith("icm_session="));
+    return header!.split(";")[0]!;
+  }
+
+  it("accepts an admin session in place of the bearer and refuses others", async () => {
+    const authDurable = new AuthDO(sqliteState(), {
+      RESEND_API_KEY: "rk",
+      ADMIN_EMAILS: "owner@example.com",
+    } as AuthEnv);
+    const env: GalleryEnv = {
+      ...environment(ADMIN_TOKEN),
+      AUTH: {
+        getByName: () => ({
+          fetch: (input: Request | string, init?: RequestInit) =>
+            authDurable.fetch(
+              typeof input === "string" ? new Request(input, init) : input,
+            ),
+        }),
+      },
+    };
+
+    const adminCookie = await sessionCookieFor(
+      authDurable,
+      "owner@example.com",
+    );
+    const viaSession = await route(
+      env,
+      submissionRequest(
+        { name: "Session Published", projectText: projectText() },
+        { token: null, cookie: adminCookie },
+      ),
+    );
+    expect(viaSession.status).toBe(201);
+
+    const ordinaryCookie = await sessionCookieFor(
+      authDurable,
+      "visitor@example.com",
+    );
+    const viaOrdinary = await route(
+      env,
+      submissionRequest(
+        { name: "Blocked", projectText: projectText() },
+        { token: null, cookie: ordinaryCookie },
+      ),
+    );
+    expect(viaOrdinary.status).toBe(401);
+
+    const recycledList = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/recycled`, {
+        headers: { Cookie: adminCookie },
+      }),
+    );
+    expect(recycledList.status).toBe(200);
   });
 });
 

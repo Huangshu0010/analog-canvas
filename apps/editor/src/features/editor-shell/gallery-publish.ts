@@ -12,7 +12,14 @@ export interface GalleryPublishFields {
   name: string;
   author: string;
   description: string;
+  /** Owner passphrase; empty when an admin session authenticates instead. */
   token: string;
+}
+
+/** What the dialog needs to know about the signed-in user (phase G2). */
+export interface PublishSessionUser {
+  displayName: string;
+  isAdmin: boolean;
 }
 
 export type GalleryPublishOutcome =
@@ -28,14 +35,17 @@ export async function publishProjectToGallery(
   fields: GalleryPublishFields,
   fetchLike: typeof fetch = fetch,
 ): Promise<GalleryPublishOutcome> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+  };
+  // Without a passphrase the admin session cookie authenticates instead.
+  if (fields.token) headers.authorization = `Bearer ${fields.token}`;
   let response: Response;
   try {
     response = await fetchLike("/api/gallery/submissions", {
       method: "POST",
-      headers: {
-        authorization: `Bearer ${fields.token}`,
-        "content-type": "application/json",
-      },
+      credentials: "same-origin",
+      headers,
       body: JSON.stringify({
         name: fields.name.trim(),
         author: fields.author.trim(),

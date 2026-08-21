@@ -45,23 +45,32 @@ Acceptance: feed loads from the deployed worker; a seeded entry renders as
 a tile, opens in the editor, and survives recycle/restore; all existing
 editor behavior reachable at `/editor` unchanged.
 
-## Phase G2 — Accounts and sign-in
+## Phase G2 — Accounts and sign-in (implemented, dark until secrets)
 
 - `AuthDO` (users, sessions): GitHub and Google OAuth code flows on the
-  worker plus email magic-link sign-in behind a mail-provider credential —
-  any one credential signs a user in, no passwords stored; HttpOnly
-  session cookie; sign-in UI on the feed and in the editor chrome.
-- Profile basics: users can rename their own display name (shown on their
-  tiles); identities from different providers stay distinct accounts in
-  G2 (linking is a later refinement).
-- Super-admin role assigned automatically to the owner's sign-in identity
-  (`ADMIN_EMAILS` secret), replacing bearer-token administration in the UI.
-- External prerequisites the owner must provision (Claude cannot create
-  accounts or handle credentials): a GitHub OAuth App
-  (`GITHUB_OAUTH_CLIENT_ID`/`GITHUB_OAUTH_CLIENT_SECRET`), a Google OAuth
-  client (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`), `ADMIN_EMAILS`, and
-  — for email sign-in — a transactional mail provider key; each provider
-  ships dark until its secrets exist.
+  worker plus email magic-link sign-in (Resend) — any one credential
+  signs a user in, no passwords stored, only token hashes persisted;
+  HttpOnly session cookie; sign-in/account UI on the gallery feed.
+- Profile basics: users rename their own display name; identities from
+  different providers stay distinct accounts in G2 (linking is a later
+  refinement).
+- Super-admin is computed per request from the `ADMIN_EMAILS` secret; an
+  admin session carries the same authority as the gallery bearer,
+  including in-app publishing without the pasted passphrase.
+- Every provider ships dark until its secrets exist; the deploy workflow
+  syncs whichever of the GitHub secrets are present. To light one up, the
+  owner provisions (Claude cannot create accounts or handle credentials):
+  - GitHub: an OAuth App with callback
+    `https://analog-canvas.tokenzhang.com/api/auth/github/callback`;
+    secrets `GH_OAUTH_CLIENT_ID` + `GH_OAUTH_CLIENT_SECRET` (GitHub
+    Actions forbids the `GITHUB_` prefix).
+  - Google: an OAuth client with redirect URI
+    `https://analog-canvas.tokenzhang.com/api/auth/google/callback`;
+    secrets `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`.
+  - Email: `RESEND_API_KEY` (optional `AUTH_EMAIL_FROM` once a domain is
+    verified at the mail provider).
+  - Admin: `ADMIN_EMAILS` (comma-separated owner emails).
+  - Then re-run the Deploy Cloudflare workflow once.
 
 Acceptance: sign in/out round-trips on the deployed site with any single
 provider; display-name edits stick; the owner's account sees admin

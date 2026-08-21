@@ -4252,3 +4252,23 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: 6 unit tests, gallery Playwright spec 5/5 unchanged,
   visual check, prettier, test-impact, diff checks.
 - Commit status: completed on `claude/publish-dialog-facelift`.
+
+## 2026-08-22 — Gallery phase G2: accounts and sign-in (dark-shipped)
+
+- Target: `plan/2026-08-22-gallery-auth-g2/plan.md` (completed).
+- Change: `AuthDO` (migration v4) behind `/api/auth/*` — GitHub/Google
+  OAuth, Resend magic links, hashed HttpOnly sessions, `ADMIN_EMAILS`
+  per-request super-admin, rename, logout; gallery accepts an admin
+  session wherever the bearer worked; feed header account UI (dark until
+  a provider secret exists); publish dialog goes passphrase-free on an
+  admin session and prefills the author byline from the account name;
+  deploy workflow syncs the new secrets when present.
+- Files: `worker/auth.ts(.test.ts)`, `worker/gallery.ts(.test.ts)`,
+  `worker/index.ts`, `wrangler.jsonc`, `cloudflare.yml`,
+  `components/account.tsx(.test.tsx)`, `gallery-feed.tsx`,
+  `gallery-publish.ts(.test.ts)`, `publish-gallery-dialog.tsx(.test.tsx)`,
+  `App.tsx`, `styles.css`, `e2e/gallery.spec.ts`, spec + roadmap.
+- Validation: worker suites 18, editor unit sweep 92, gallery Playwright
+  8/8, typecheck, prettier, test-impact, diff checks.
+- Commit status: completed on `claude/gallery-auth-g2`; mainline merge
+  gated on the remote required checks.
