@@ -198,6 +198,11 @@ function netContacts(
  * on a Route middle/bend contributes the Route arms on both sides and therefore
  * becomes a three-way branch. Three coincident pins also require a dot even if
  * two symbol stems happen to share the same geometric direction.
+ *
+ * Route arms count by DISTINCT direction: two same-Net arms arriving from the
+ * same side lie on top of each other and paint as one conductor, so they can
+ * never justify a dot the visible drawing cannot explain (the spec's "a
+ * visible dot represents authored branch topology").
  */
 export function contactRequiresJunctionDot(
   contact: CoincidentContact,
@@ -205,7 +210,12 @@ export function contactRequiresJunctionDot(
   const terminalCount = contact.endpoints.filter(
     (endpoint) => endpoint.kind === "terminal",
   ).length;
-  return terminalCount + contact.routeArmCount >= 3;
+  const distinctRouteDirections = new Set(
+    contact.incidents
+      .filter((incident) => incident.kind === "route")
+      .map((incident) => directionKey(incident.direction)),
+  ).size;
+  return terminalCount + distinctRouteDirections >= 3;
 }
 
 export function deriveDocumentContactEvidence(
