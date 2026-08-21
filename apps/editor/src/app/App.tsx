@@ -200,6 +200,7 @@ import { parseProject } from "@icm/project-protocol";
 import { StyleDialog } from "../features/editor-shell/style-dialog";
 import { PublishGalleryDialog } from "../features/editor-shell/publish-gallery-dialog";
 import { publishProjectToGallery } from "../features/editor-shell/gallery-publish";
+import { fetchSessionUser, type SessionUser } from "../components/account";
 import {
   createUserExamplesStore,
   type UserExampleSummary,
@@ -607,6 +608,19 @@ export function App({
   const [netlistPreflightOpen, setNetlistPreflightOpen] = useState(false);
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
   const [publishGalleryOpen, setPublishGalleryOpen] = useState(false);
+  const [publishSession, setPublishSession] = useState<SessionUser | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!publishGalleryOpen) return;
+    let cancelled = false;
+    void fetchSessionUser().then((user) => {
+      if (!cancelled) setPublishSession(user);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [publishGalleryOpen]);
   const userExamplesStore = useRef(createUserExamplesStore());
   const [userExamples, setUserExamples] = useState<UserExampleSummary[]>([]);
   const [instanceTableOpen, setInstanceTableOpen] = useState(false);
@@ -7434,6 +7448,7 @@ export function App({
       {publishGalleryOpen ? (
         <PublishGalleryDialog
           defaultName={project.name}
+          session={publishSession}
           publish={(fields) => publishProjectToGallery(project, fields)}
           onPublished={({ name }) => {
             setPublishGalleryOpen(false);

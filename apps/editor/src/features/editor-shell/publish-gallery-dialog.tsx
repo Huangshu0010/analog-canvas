@@ -9,29 +9,37 @@ import {
   rememberPublishToken,
   type GalleryPublishFields,
   type GalleryPublishOutcome,
+  type PublishSessionUser,
 } from "./gallery-publish";
 
 export interface PublishGalleryDialogProps {
   defaultName: string;
+  /** The signed-in user, if any; an admin session publishes cookie-side. */
+  session?: PublishSessionUser | null;
   publish: (fields: GalleryPublishFields) => Promise<GalleryPublishOutcome>;
   onPublished: (outcome: { id: string; name: string }) => void;
   onClose: () => void;
 }
 
 /**
- * File > "Publish to Gallery…". Phase G1: the submissions endpoint accepts
- * only the gallery owner's passphrase (remembered for the browser session,
- * forgotten on a 401); the author byline is remembered locally so repeat
- * publishes prefill it, until G2 sign-in supplies the account name.
+ * File > "Publish to Gallery…". A signed-in super-admin (G2) publishes
+ * directly on the session — no passphrase row. Anyone else needs the
+ * gallery owner's passphrase (remembered for the browser session,
+ * forgotten on a 401). The author byline prefills from the account's
+ * display name, else from the last successful publish.
  */
 export function PublishGalleryDialog({
   defaultName,
+  session = null,
   publish,
   onPublished,
   onClose,
 }: PublishGalleryDialogProps) {
+  const admin = session?.isAdmin === true;
   const [name, setName] = useState(defaultName);
-  const [author, setAuthor] = useState(() => rememberedPublishAuthor());
+  const [author, setAuthor] = useState(
+    () => rememberedPublishAuthor() || session?.displayName || "",
+  );
   const [description, setDescription] = useState("");
   const [token, setToken] = useState(() => rememberedPublishToken());
   const [busy, setBusy] = useState(false);
@@ -40,9 +48,14 @@ export function PublishGalleryDialog({
   async function submit(): Promise<void> {
     setBusy(true);
     setError(null);
-    const outcome = await publish({ name, author, description, token });
+    const outcome = await publish({
+      name,
+      author,
+      description,
+      token: admin ? "" : token,
+    });
     if (outcome.status === "published") {
-      rememberPublishToken(token);
+      if (!admin) rememberPublishToken(token);
       rememberPublishAuthor(author);
       onPublished({ id: outcome.id, name: name.trim() });
       return;
@@ -106,20 +119,22 @@ export function PublishGalleryDialog({
               onChange={(event) => setDescription(event.currentTarget.value)}
             />
           </label>
-          <label>
-            Owner passphrase
-            <input
-              aria-label="Owner passphrase"
-              type="password"
-              value={token}
-              onChange={(event) => setToken(event.currentTarget.value)}
-            />
-          </label>
+          {admin ? null : (
+            <label>
+              Owner passphrase
+              <input
+                aria-label="Owner passphrase"
+                type="password"
+                value={token}
+                onChange={(event) => setToken(event.currentTarget.value)}
+              />
+            </label>
+          )}
         </div>
         <p className="publish-gallery-note">
-          Publishing is owner-approved for now: it needs the gallery
-          owner&apos;s passphrase. Community sign-in with review is on the
-          roadmap — until then, send your circuit file to the owner.
+          {admin
+            ? `Signed in as ${session?.displayName} — this publishes directly as the gallery owner.`
+            : "Publishing is owner-approved for now: it needs the gallery owner's passphrase. Community sign-in with review is on the roadmap — until then, send your circuit file to the owner."}
         </p>
         {error ? (
           <p role="alert" className="publish-gallery-error">
@@ -133,7 +148,9 @@ export function PublishGalleryDialog({
           <button
             type="button"
             className="publish-gallery-primary"
-            disabled={busy || name.trim() === "" || token.trim() === ""}
+            disabled={
+              busy || name.trim() === "" || (!admin && token.trim() === "")
+            }
             onClick={() => void submit()}
           >
             {busy ? "Publishing…" : "Publish"}
