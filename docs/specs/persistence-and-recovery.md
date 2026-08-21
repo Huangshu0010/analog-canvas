@@ -9,15 +9,19 @@ model in `packages/model` validates the normalized shape;
 `packages/project-protocol` owns parsing, rolling compatibility diagnostics,
 and canonical serialization. Persistence validates
 the complete current schema before open or save and writes atomically where the
-platform supports it. Schema 19 reads through one direct upgrade to schema 20;
+platform supports it. Schema 20 reads through one direct upgrade to schema 21;
 older and future versions are rejected. Migration runs only at ingestion, and
-serialization remains schema 20.
+serialization remains schema 21.
 
 Recovery state is a non-authoritative browser safety copy. It may restore a
 complete schema-21 Project or a schema-20 record that validates after the direct
 upgrade, associated with a recorded working-copy session.
 Corrupt, incompatible, or partial recovery data is discarded or retained as raw
-data without changing the live Project. Credentials, Agent bearer tokens,
+data without changing the live Project. User-saved Library examples are the
+same class of origin-local, non-authoritative convenience data: canonical
+serialized Project snapshots in their own IndexedDB store, re-validated
+through the ordinary protocol boundary before they may replace a live
+Project, and never a substitute for the downloaded `.icproj.json` file. Credentials, Agent bearer tokens,
 selection, viewport, overlays, and pending external approvals are never
 embedded in Project JSON or recovery records.
 

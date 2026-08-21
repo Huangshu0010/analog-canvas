@@ -25,3 +25,39 @@ describe("ExamplesPanel", () => {
     }
   });
 });
+
+describe("user examples section", () => {
+  it("renders saved snapshots with open, export, and delete actions", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ExamplesPanel, {
+        open: true,
+        onOpenExample: () => undefined,
+        userExamples: [
+          {
+            id: "ex-1",
+            name: "My Inverter",
+            savedAt: "2026-08-21T10:00:00.000Z",
+            schemaVersion: 21,
+          },
+        ],
+      }),
+    );
+    expect(markup).toContain('data-testid="user-examples-section"');
+    expect(markup).toContain("My examples");
+    expect(markup).toContain('data-testid="user-example-ex-1"');
+    expect(markup).toContain('aria-label="Open my example My Inverter"');
+    expect(markup).toContain('aria-label="Export my example My Inverter"');
+    expect(markup).toContain('aria-label="Delete my example My Inverter"');
+  });
+
+  it("hides the section entirely without saved snapshots", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ExamplesPanel, {
+        open: true,
+        onOpenExample: () => undefined,
+        userExamples: [],
+      }),
+    );
+    expect(markup).not.toContain('data-testid="user-examples-section"');
+  });
+});

@@ -1154,6 +1154,53 @@ body {
   text-align: left;
 }
 
+/* User-saved examples: the card is a row of one open surface plus small
+   export/delete actions, sharing the bundled-example card chrome. */
+.user-example-card {
+  display: flex;
+  align-items: stretch;
+  gap: var(--icm-space-2);
+  padding: var(--icm-space-2);
+}
+
+.user-example-card .user-example-open {
+  flex: 1;
+  min-width: 0;
+  padding: var(--icm-space-1);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-example-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--icm-space-1);
+}
+
+.user-example-actions button {
+  padding: 2px var(--icm-space-2);
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  background: var(--icm-surface);
+  color: var(--icm-text-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.user-example-actions button:hover {
+  border-color: var(--icm-border-hover);
+  color: var(--icm-text);
+}
+
+.user-example-list .shapes-category-header {
+  display: block;
+  margin-top: var(--icm-space-2);
+}
+
 .shapes-example-card:hover:not(:disabled) {
   border-color: var(--icm-border-hover);
   background: #fff;
