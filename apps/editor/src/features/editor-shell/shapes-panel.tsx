@@ -24,6 +24,7 @@ const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   pnp: "PNP",
   "port-filled": "Filled",
   resistor: "Res",
+  "variable-resistor": "Var Res",
   vdd: "VDD",
   "vdd-port": "V Port",
   "voltage-amplifier": "V Amp",

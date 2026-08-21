@@ -363,6 +363,26 @@
       }
     },
     {
+      "symbolId": "variable-resistor",
+      "name": "Variable Resistor",
+      "category": "passive",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["P1", "P2"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Manually selected adjustable presentation; structural SPICE R does not preserve a distinct variable-resistor symbol.",
+      "assetPath": "variable-resistor.symbol.json",
+      "assetHash": "b281a5d5b954430073cd2bb4374390fdc90e34d046206d86ae7bce40d1532b01",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json"
+      }
+    },
+    {
       "symbolId": "vdd-port",
       "name": "VDD Power Port",
       "category": "power",

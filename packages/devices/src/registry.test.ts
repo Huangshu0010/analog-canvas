@@ -28,6 +28,16 @@ describe("built-in device registry", () => {
     });
   });
 
+  it("models the variable resistor as a two-terminal child Cell", () => {
+    expect(deviceDescriptor("variable-resistor")).toMatchObject({
+      deviceClass: "resistor",
+      referencePrefix: "X",
+      pinOrder: ["P1", "P2"],
+      targetPolicy: "child-cell",
+      parameters: [{ name: "value", required: true, displayRole: "value" }],
+    });
+  });
+
   it("keeps reviewed net markers non-emitting", () => {
     expect(deviceDescriptor("ground")).toMatchObject({
       deviceClass: "net-marker",
