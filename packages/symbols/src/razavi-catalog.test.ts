@@ -141,6 +141,8 @@ describe("Razavi symbol catalog", () => {
       ["port", "reviewed", "razavi-reference-v1"],
       ["port-filled", "reviewed", "razavi-reference-v1"],
       ["resistor", "reviewed", "razavi-reference-v1"],
+      ["variable-capacitor", "reviewed", "razavi-reference-v1"],
+      ["variable-inductor", "reviewed", "razavi-reference-v1"],
       ["variable-resistor", "reviewed", "razavi-reference-v1"],
       ["vdd-port", "reviewed", "razavi-reference-v1"],
       ["voltage-amplifier", "reviewed", "razavi-reference-v1"],
@@ -192,7 +194,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(25);
+    expect(razaviCatalogSymbols).toHaveLength(27);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -225,6 +227,8 @@ describe("Razavi symbol catalog", () => {
       "port",
       "port-filled",
       "resistor",
+      "variable-capacitor",
+      "variable-inductor",
       "variable-resistor",
       "vdd-port",
       "voltage-amplifier",

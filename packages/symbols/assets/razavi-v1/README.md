@@ -14,7 +14,9 @@ The product set is exactly the reviewed, Reference-calibrated entries:
 
 - `nmos`, `pmos`, and `ground`;
 - `voltage-source`, `current-source`;
-- `resistor`, `variable-resistor`, `capacitor`, `port`, and `port-filled`;
+- `resistor`, `capacitor`, `inductor`, their adjustable siblings
+  `variable-resistor`, `variable-capacitor`, and `variable-inductor` (the base
+  body plus one diagonal adjustment arrow), `port`, and `port-filled`;
 - the behavioral block family `inverter`, `and-gate`, `or-gate`, `nand-gate`,
   `nor-gate`, and `comparator` (manual-only netlist mapping, like `opamp`).
 

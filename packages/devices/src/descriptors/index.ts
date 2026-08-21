@@ -8,6 +8,8 @@ export { npnDevice } from "./npn.js";
 export { pmosDevice } from "./pmos.js";
 export { pnpDevice } from "./pnp.js";
 export { resistorDevice } from "./resistor.js";
+export { variableCapacitorDevice } from "./variable-capacitor.js";
+export { variableInductorDevice } from "./variable-inductor.js";
 export { variableResistorDevice } from "./variable-resistor.js";
 export { vddPortDevice } from "./vdd-port.js";
 export { voltageSourceDevice } from "./voltage-source.js";

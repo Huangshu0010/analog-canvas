@@ -235,7 +235,7 @@
       "automaticMappings": [],
       "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
       "assetPath": "inverter.symbol.json",
-      "assetHash": "2f93576529dab328557311e448f0dbc70a9c4c35898b88e5281fd44363184046",
+      "assetHash": "e019a1a1326406ecb58136e1c5e950eb8c07427ad94cdb59021c2963e4d134b4",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -294,7 +294,7 @@
       "automaticMappings": [],
       "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
       "assetPath": "nor-gate.symbol.json",
-      "assetHash": "3898bb81070142e6dc9c56df277300973e7ca0c27ab8c2d5b56313902df34d75",
+      "assetHash": "221944c93a1d805f4bd9a86761208485c72b02316cdb60f76c677ed616c38422",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -474,6 +474,46 @@
       "automaticMappings": ["spice:R"],
       "assetPath": "resistor.symbol.json",
       "assetHash": "28c1b0fcbd541685dec951e05b1a1f1fe71a6aabf572c5b706143b377b7677c1",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json"
+      }
+    },
+    {
+      "symbolId": "variable-capacitor",
+      "name": "Variable Capacitor",
+      "category": "passive",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["P1", "P2"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Manually selected adjustable presentation; structural SPICE C does not preserve a distinct variable-capacitor symbol.",
+      "assetPath": "variable-capacitor.symbol.json",
+      "assetHash": "feffb09d98cfeb5c5e6a29502112bb7bcfc3796f6654b7dcbb920036295f5a28",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json"
+      }
+    },
+    {
+      "symbolId": "variable-inductor",
+      "name": "Variable Inductor",
+      "category": "passive",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["P1", "P2"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Manually selected adjustable presentation; structural SPICE L does not preserve a distinct variable-inductor symbol.",
+      "assetPath": "variable-inductor.symbol.json",
+      "assetHash": "019535aa483deb0c3f33e635c8b926f45d17d90533acafb27135c831e251dddb",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

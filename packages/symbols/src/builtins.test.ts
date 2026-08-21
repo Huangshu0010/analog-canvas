@@ -28,6 +28,8 @@ const PRODUCT_IDS = [
   "port",
   "port-filled",
   "resistor",
+  "variable-capacitor",
+  "variable-inductor",
   "variable-resistor",
   "vdd-port",
   "voltage-amplifier",

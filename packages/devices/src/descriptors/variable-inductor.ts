@@ -1,10 +1,10 @@
 import type { DeviceDescriptor } from "../contract.js";
 
-export const variableResistorDevice = {
-  id: "variable-resistor",
-  symbolId: "variable-resistor",
-  deviceClass: "resistor",
-  referencePrefix: "R",
+export const variableInductorDevice = {
+  id: "variable-inductor",
+  symbolId: "variable-inductor",
+  deviceClass: "inductor",
+  referencePrefix: "L",
   pinOrder: ["P1", "P2"],
   targetPolicy: "builtin",
   parameters: [
@@ -13,9 +13,9 @@ export const variableResistorDevice = {
       label: "Value",
       required: true,
       editor: "text",
-      unitHint: "Ohm",
-      placeholder: "10k",
-      help: "Resistance",
+      unitHint: "H",
+      placeholder: "3n",
+      help: "Inductance",
       displayRole: "value",
     },
   ],

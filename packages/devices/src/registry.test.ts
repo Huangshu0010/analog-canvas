@@ -28,12 +28,26 @@ describe("built-in device registry", () => {
     });
   });
 
-  it("models the variable resistor as a two-terminal child Cell", () => {
+  it("models adjustable passives as ordinary primitives of their base class", () => {
     expect(deviceDescriptor("variable-resistor")).toMatchObject({
       deviceClass: "resistor",
-      referencePrefix: "X",
+      referencePrefix: "R",
       pinOrder: ["P1", "P2"],
-      targetPolicy: "child-cell",
+      targetPolicy: "builtin",
+      parameters: [{ name: "value", required: true, displayRole: "value" }],
+    });
+    expect(deviceDescriptor("variable-capacitor")).toMatchObject({
+      deviceClass: "capacitor",
+      referencePrefix: "C",
+      pinOrder: ["P1", "P2"],
+      targetPolicy: "builtin",
+      parameters: [{ name: "value", required: true, displayRole: "value" }],
+    });
+    expect(deviceDescriptor("variable-inductor")).toMatchObject({
+      deviceClass: "inductor",
+      referencePrefix: "L",
+      pinOrder: ["P1", "P2"],
+      targetPolicy: "builtin",
       parameters: [{ name: "value", required: true, displayRole: "value" }],
     });
   });

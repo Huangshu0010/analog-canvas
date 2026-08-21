@@ -84,7 +84,7 @@
     },
     {
       "kind": "path",
-      "data": "M -24 -20 Q -14 0 -24 20 Q 4 20 20 0 Q 4 -20 -24 -20 Z",
+      "data": "M -24 -20 Q -14 0 -24 20 Q 4 20 18.52 0 Q 4 -20 -24 -20 Z",
       "style": {
         "strokeRole": "emphasis",
         "lineCap": "butt",

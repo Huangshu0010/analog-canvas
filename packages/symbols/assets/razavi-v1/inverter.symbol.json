@@ -55,7 +55,7 @@
     },
     {
       "kind": "path",
-      "data": "M -20 -20 L -20 20 L 16 0 Z",
+      "data": "M -20 -20 L -20 20 L 13.65 0 Z",
       "style": {
         "strokeRole": "emphasis",
         "lineCap": "butt",

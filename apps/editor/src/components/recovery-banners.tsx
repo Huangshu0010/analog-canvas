@@ -1,41 +1,5 @@
 import type { RecoveryState } from "../document/recovery-coordinator";
 
-export interface StartupRecoveryBannerProps {
-  onOpen(): void;
-  onDismiss(): void;
-}
-
-/**
- * Non-blocking startup notice that recent browser recovery copies exist.
- * Rendered as a fixed overlay so it never resizes the canvas, and it never
- * restores anything by itself — opening the dialog requires a human action.
- */
-export function StartupRecoveryBanner({
-  onOpen,
-  onDismiss,
-}: StartupRecoveryBannerProps) {
-  return (
-    <aside
-      className="recovery-banner"
-      data-testid="recovery-banner"
-      role="status"
-      aria-label="Recent work recovery available"
-    >
-      <p>
-        Recent unsaved work from this browser is available as a safety copy.
-      </p>
-      <div className="recovery-banner-actions">
-        <button type="button" onClick={onOpen}>
-          Recover recent work…
-        </button>
-        <button type="button" onClick={onDismiss} aria-label="Dismiss notice">
-          Dismiss
-        </button>
-      </div>
-    </aside>
-  );
-}
-
 export interface RecoveryFailureBannerProps {
   state: RecoveryState;
   onDownload(): void;

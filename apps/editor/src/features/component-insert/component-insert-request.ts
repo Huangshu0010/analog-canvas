@@ -15,7 +15,7 @@ export interface SymbolInsertRequest {
 export interface VddRailInsertRequest {
   kind: "vdd-rail";
   symbolId: "vdd";
-  symbolName: "VDD Rail";
+  symbolName: "Power Rail";
   netName: string;
 }
 
