@@ -62,20 +62,7 @@ async function placeComponent(
   symbolId: string,
   position: { x: number; y: number },
 ): Promise<void> {
-  if (symbolId === "port" || symbolId === "port-filled") {
-    await page.keyboard.press("i");
-    const dialog = page.getByRole("dialog", { name: "Insert Component" });
-    await dialog.getByLabel("Component search").fill(symbolId);
-    await dialog.getByTestId(`insert-component-${symbolId}`).click();
-    await dialog.getByRole("button", { name: "Apply" }).click();
-    const portDialog = page.getByRole("dialog", { name: "Place Net Port" });
-    await portDialog
-      .getByLabel("Net name")
-      .fill(symbolId === "port" ? "NET_HOLLOW" : "NET_FILLED");
-    await portDialog.getByRole("button", { name: "Place" }).click();
-  } else {
-    await chooseComponent(page, symbolId);
-  }
+  await chooseComponent(page, symbolId);
   await page.getByTestId("schematic-canvas").click({ position });
   await page.keyboard.press("Escape");
 }
@@ -475,10 +462,10 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
   await page.goto("/");
   const canvas = page.getByTestId("schematic-canvas");
   await page.keyboard.press("p");
-  const dialog = page.getByRole("dialog", { name: "Place Net Port" });
-  await expect(dialog).toHaveClass(/port-setup-dialog/u);
-  await expect(dialog.getByLabel("Net name")).toHaveValue("");
-  await dialog.getByRole("button", { name: "Place" }).click();
+  // No setup dialog: the shortcut goes straight to the placement cursor.
+  await expect(
+    page.getByRole("dialog", { name: "Place Net Port" }),
+  ).toHaveCount(0);
   await canvas.hover({ position: { x: 320, y: 180 } });
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 320, y: 180 } });
@@ -509,11 +496,12 @@ test("Free Net Ports merge by name and release their final Net lifecycle", async
     position: { x: number; y: number },
   ) => {
     await page.keyboard.press("p");
-    const dialog = page.getByRole("dialog", { name: "Place Net Port" });
-    await dialog.getByLabel("Net name").fill(name);
-    await dialog.getByRole("button", { name: "Place" }).click();
     await canvas.click({ position });
     await page.keyboard.press("Escape");
+    await openSelectionShelf(page);
+    const nameField = page.getByLabel("Net Port name");
+    await nameField.fill(name);
+    await nameField.blur();
   };
 
   await placeNamedPort("BUS", { x: 260, y: 180 });
@@ -3015,9 +3003,12 @@ test("keeps the production command surface compact and publishes PWA metadata", 
 }) => {
   await page.goto("/");
   const toolbar = page.getByRole("navigation", { name: "Editor commands" });
-  for (const label of ["File", "Edit", "Draw"]) {
+  for (const label of ["File", "Edit"]) {
     await expect(toolbar.locator("summary", { hasText: label })).toBeVisible();
   }
+  // Drawing tools live in the always-visible toolbar, not behind a menu.
+  await expect(toolbar.locator("summary", { hasText: "Draw" })).toHaveCount(0);
+  await expect(page.getByTestId("draw-toolbar")).toBeVisible();
   await expect(toolbar.locator("summary", { hasText: "More" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "View" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "Style" })).toHaveCount(0);

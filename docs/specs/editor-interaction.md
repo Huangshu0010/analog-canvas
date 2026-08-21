@@ -36,17 +36,19 @@ existing component, Cell, Port, external-master, or VDD-rail planner. This is
 an editor interaction boundary only: it does not add a persisted project type,
 an Edit Engine operation, or an Agent API endpoint.
 
-Port entry is intentionally a separate compact setup surface, not a mode of
-the generic Insert dialog. `P`, Library Port choices, and selecting either Port
-symbol from full Insert enter the same editor-local Port Setup intent before
-the ordinary placement cursor starts. The top Document defaults this setup to
-Free Net Port so the direct `P` workflow remains fast; child Documents default
-to Formal Cell Pin. Both roles remain explicitly selectable in every Document.
-For a Free Port, a Net name is optional: an isolated Port receives the first
-unused `NET<n>` name, while a named contact or explicit text takes precedence.
-Formal Pin setup requires the terminal name and direction before its interface
-transaction can commit. This separation is presentation-only and retains the
-same typed Port planners.
+Port entry carries its role in the chosen Library entry rather than in a setup
+dialog. **Port** and **Filled Port** place a Free Net Port; the separate
+**Cell Pin** entry places a Formal Cell Pin. `P` and selecting either Port
+symbol from full Insert take the Free Net Port entry. Both roles therefore stay
+explicitly selected in every Document, including the top Document, and neither
+is inferred from hierarchy position, artwork, or a matching name.
+
+Placement never blocks on naming. An isolated Free Port receives the first
+unused `NET<n>` name and an isolated Formal Pin the first unused `P<n>`
+terminal name, while a named contact or explicit text takes precedence; a
+Formal Pin defaults to the `passive` direction. Both names are ordinary bound
+canvas displays, so they are renamed in place by editing the label — the same
+typed Port planners run either way.
 
 The default RichText projection of every Free Port Net name and Formal Cell Pin
 name uses the Razavi mathematical base (bold italic), including identifiers

@@ -26,7 +26,6 @@ export interface InsertComponentDialogProps {
   scope?: InsertScope;
   initialSelectionId?: string | null;
   onApply(request: ComponentInsertRequest): void;
-  onConfigurePort(symbolId: "port" | "port-filled"): void;
   onCancel(): void;
 }
 
@@ -105,7 +104,6 @@ export function InsertComponentDialog({
   scope = "all",
   initialSelectionId = null,
   onApply,
-  onConfigurePort,
   onCancel,
 }: InsertComponentDialogProps) {
   const cellsOnly = scope === "cells";
@@ -360,7 +358,17 @@ export function InsertComponentDialog({
       return;
     }
     if (selectedIsPort) {
-      onConfigurePort(selected.symbol.id as "port" | "port-filled");
+      onApply({
+        kind: "symbol",
+        symbolId: selected.symbol.id,
+        symbolName: selected.symbol.name,
+        parameters: {},
+        initialRotation,
+        showReference: false,
+        referenceText: null,
+        showValue: false,
+        portRole: "net-port",
+      });
       return;
     }
     const parameters = Object.fromEntries(
@@ -554,7 +562,7 @@ export function InsertComponentDialog({
                 </label>
                 {selectedIsPort ? (
                   <p className="insert-cell-label-note">
-                    Apply opens compact Port setup.
+                    Places a Free Net Port; rename it on the canvas.
                   </p>
                 ) : (
                   <div className="insert-label-control">

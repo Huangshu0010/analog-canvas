@@ -1,6 +1,7 @@
 import { razaviProductSymbols } from "@icm/symbols";
 import type { SymbolDefinition } from "@icm/symbols";
 
+import { cellPinPreviewSymbol } from "./cell-pin-preview-symbol";
 import { vddRailPreviewSymbol } from "./vdd-rail-preview-symbol";
 
 const CATEGORY_ORDER = [
@@ -55,7 +56,7 @@ export function symbolCategory(symbolId: string): string {
 }
 
 export function paletteSymbols(_styleProfileId: string): SymbolDefinition[] {
-  return [vddRailPreviewSymbol, ...razaviProductSymbols];
+  return [vddRailPreviewSymbol, cellPinPreviewSymbol, ...razaviProductSymbols];
 }
 
 function searchableText(symbol: SymbolDefinition): string {

@@ -28,10 +28,7 @@ export type DrawTool =
   | "document-style";
 
 /** Activate one tool from the always-visible drawing toolbar. */
-export async function clickDrawTool(
-  page: Page,
-  tool: DrawTool,
-): Promise<void> {
+export async function clickDrawTool(page: Page, tool: DrawTool): Promise<void> {
   await page.getByTestId(`draw-tool-${tool}`).click();
 }
 

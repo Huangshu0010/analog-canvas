@@ -156,9 +156,7 @@ import {
 import {
   cellInsertLaunch,
   fullInsertLaunch,
-  portSetupLaunch,
 } from "../features/component-insert/insert-launch";
-import { PortSetupDialog } from "../features/component-insert/port-setup-dialog";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
 import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
@@ -190,7 +188,10 @@ import {
   nextInstanceDesignator,
 } from "../features/netlist-export/netlist-authoring";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
-import { ShapesPanel } from "../features/editor-shell/shapes-panel";
+import {
+  quickPlaceRequest,
+  ShapesPanel,
+} from "../features/editor-shell/shapes-panel";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
@@ -1440,7 +1441,6 @@ export function App({
   const {
     beginRetainedInstancePlacement: beginRetainedInstancePlacementFromHook,
     cancelComponentInsert: cancelComponentInsertFromHook,
-    cancelPortSetup: cancelPortSetupFromHook,
     commitPendingPlacementAt: commitPendingPlacementAtFromHook,
     closeInsertDialog: closeInsertDialogFromHook,
     insertDialogOpen,
@@ -1449,8 +1449,6 @@ export function App({
     recentSymbolIds,
     rotatePendingComponent: rotatePendingComponentFromHook,
     mirrorPendingComponent: mirrorPendingComponentFromHook,
-    portSetupOpen,
-    portSetupSymbolId,
     startInsert: startInsertFromHook,
   } = useComponentPlacement({
     recentStorageKey: RECENT_COMPONENTS_STORAGE_KEY,
@@ -2245,10 +2243,18 @@ export function App({
     if (!selectedPortNet || selectedFormalTerminal) return;
     name = name.trim();
     if (!name || name === selectedPortNet.name) return;
-    if (
-      transact([{ kind: "set_net_name", netId: selectedPortNet.id, name }]).ok
-    ) {
-      setStatus(`Renamed Net Port to ${name}`);
+    // Naming a Free Net Port joins an existing Net of that name instead of
+    // leaving two same-name Nets behind, exactly as placing a named Port does.
+    const plan = planEnsureNamedNet(document, {
+      candidateNetId: selectedPortNet.id,
+      name,
+    });
+    if (!plan.ok) {
+      setStatus(plan.message);
+      return;
+    }
+    if (plan.edits.length === 0 || transact([...plan.edits]).ok) {
+      setStatus(`Renamed Net Port to ${plan.name}`);
     }
   }
   function renameSelectedFormalPort(name: string): void {
@@ -6522,7 +6528,11 @@ export function App({
           startInsertFromHook(fullInsertLaunch());
           return;
         case "place-port": {
-          startInsertFromHook(portSetupLaunch());
+          const request = quickPlaceRequest(
+            document.presentation.styleProfileId,
+            "port",
+          );
+          if (request) startInsertFromHook({ kind: "quick", request });
           return;
         }
         case "rotate-placement":
@@ -7259,20 +7269,7 @@ export function App({
         scope={insertScope}
         initialSelectionId={insertInitialSelectionId}
         onApply={(request) => startInsertFromHook({ kind: "quick", request })}
-        onConfigurePort={(symbolId) =>
-          startInsertFromHook(portSetupLaunch(symbolId))
-        }
         onCancel={cancelComponentInsertFromHook}
-      />
-      <PortSetupDialog
-        open={portSetupOpen}
-        symbolId={portSetupSymbolId}
-        allowFormalPort
-        defaultRole={
-          document.id === project.topDocumentId ? "net-port" : "cell-terminal"
-        }
-        onApply={(request) => startInsertFromHook({ kind: "quick", request })}
-        onCancel={cancelPortSetupFromHook}
       />
       <CellManagerDialog
         open={cellManagerOpen}

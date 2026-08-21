@@ -70,6 +70,17 @@ function nextFreePortNetName(document: SchematicDocument): string {
   return `NET${ordinal}`;
 }
 
+function nextFreeCellTerminalName(document: SchematicDocument): string {
+  const occupiedNames = new Set(
+    (document.netlist?.terminals ?? []).map((terminal) =>
+      terminal.name.trim().toLowerCase(),
+    ),
+  );
+  let ordinal = 1;
+  while (occupiedNames.has(`p${ordinal}`)) ordinal += 1;
+  return `P${ordinal}`;
+}
+
 export interface UseComponentPlacementOptions {
   recentStorageKey: string;
   document: SchematicDocument;
@@ -120,10 +131,6 @@ export interface UseComponentPlacementOptions {
 export function useComponentPlacement(options: UseComponentPlacementOptions) {
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
   const [insertScope, setInsertScope] = useState<InsertScope>("all");
-  const [portSetupSymbolId, setPortSetupSymbolId] = useState<
-    "port" | "port-filled"
-  >("port");
-  const [portSetupOpen, setPortSetupOpen] = useState(false);
   const [insertInitialSelectionId, setInsertInitialSelectionId] = useState<
     string | null
   >(null);
@@ -475,14 +482,13 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     const connectedNet = contact.netId
       ? options.document.nets.find((net) => net.id === contact.netId)
       : undefined;
+    // Placement never blocks on naming: an unnamed Cell Pin takes the first
+    // free ordinal terminal name and is renamed on the canvas like any other
+    // bound display.
     const formalName =
-      placementRequest.portName?.trim() || connectedNet?.name?.trim();
-    if (!formalName) {
-      options.setStatus(
-        "A Formal Cell Pin needs a Terminal name or a named Net contact",
-      );
-      return;
-    }
+      placementRequest.portName?.trim() ||
+      connectedNet?.name?.trim() ||
+      nextFreeCellTerminalName(options.document);
     if (
       options.document.netlist?.terminals.some(
         (terminal) => terminal.name === formalName,
@@ -766,7 +772,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     setInsertDialogOpen(false);
     setInsertScope("all");
     setInsertInitialSelectionId(null);
-    setPortSetupOpen(false);
     if (request.kind === "vdd-rail") {
       options.beginVddRailInteraction(request.netName);
       options.setStatus(
@@ -811,16 +816,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       beginInsertedComponentPlacement(launch.request);
       return;
     }
-    if (launch.kind === "port-setup") {
-      options.cancelAllTransientInteraction();
-      setInsertDialogOpen(false);
-      setInsertScope("all");
-      setInsertInitialSelectionId(null);
-      setPortSetupSymbolId(launch.symbolId);
-      setPortSetupOpen(true);
-      options.setStatus("Set up Port before placing it on the canvas");
-      return;
-    }
     openInsertPicker(launch);
   };
 
@@ -836,12 +831,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     setInsertDialogOpen(false);
     setInsertScope("all");
     setInsertInitialSelectionId(null);
-  };
-
-  const cancelPortSetup = (): void => {
-    setPortSetupOpen(false);
-    options.cancelAllTransientInteraction();
-    options.setStatus("Port setup cancelled");
   };
 
   const rotatePendingComponent = (delta: 90 | -90): void => {
@@ -942,15 +931,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
   return {
     beginRetainedInstancePlacement,
     cancelComponentInsert,
-    cancelPortSetup,
     closeInsertDialog,
     commitPendingPlacementAt,
     insertDialogOpen,
     insertInitialSelectionId,
     insertScope,
     mirrorPendingComponent,
-    portSetupOpen,
-    portSetupSymbolId,
     recentSymbolIds,
     rotatePendingComponent,
     startInsert,

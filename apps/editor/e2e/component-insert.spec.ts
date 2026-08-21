@@ -308,9 +308,11 @@ test("places the VDD power-port device as the default VDD entry", async ({
     .evaluateAll((elements) =>
       elements.map((element) => element.getAttribute("data-testid")),
     );
+  // Both VDD entries stay reachable from one search; the rail now reads
+  // "Power Rail", so it sorts first by name.
   expect(vddEntries).toEqual([
-    "insert-component-vdd-port",
     "insert-component-vdd",
+    "insert-component-vdd-port",
   ]);
   await dialog.getByTestId("insert-component-vdd-port").click();
   await expect(dialog.locator("svg.insert-symbol-artwork")).toBeVisible();
@@ -739,7 +741,7 @@ test("shows the complete foldable categorized Library, quick-places a device, an
   const categories = panel.locator('[data-testid^="shapes-category-"]');
 
   await expect(panel).toHaveAttribute("data-open", "true");
-  await expect(libraryChips).toHaveCount(26);
+  await expect(libraryChips).toHaveCount(29);
   await expect(categories).toHaveCount(7);
   const transistorCategory = page.getByTestId("shapes-category-transistors");
   const transistorChips = transistorCategory.locator(
@@ -846,7 +848,7 @@ test("shows the complete foldable categorized Library, quick-places a device, an
   expect(artworkGeometry.every((artwork) => artwork.separatedFromLabel)).toBe(
     true,
   );
-  await expect(libraryChips.locator("span")).toHaveCount(26);
+  await expect(libraryChips.locator("span")).toHaveCount(29);
   await expect(transistorCategory).toHaveJSProperty("open", true);
   await transistorCategory.locator("summary").click();
   await expect(transistorCategory).toHaveJSProperty("open", false);
@@ -857,7 +859,7 @@ test("shows the complete foldable categorized Library, quick-places a device, an
     page
       .getByTestId("shapes-category-power-and-ports")
       .locator('[data-testid^="shapes-chip-"]'),
-  ).toHaveCount(5);
+  ).toHaveCount(6);
   await expect(
     panel.getByRole("button", { name: "Place Independent Voltage Source" }),
   ).toBeAttached();
@@ -873,20 +875,12 @@ test("shows the complete foldable categorized Library, quick-places a device, an
   await canvas.click({ position: { x: 280, y: 220 } });
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("hit-R1")).toBeVisible();
-  const recentResistor = page.getByTestId("shapes-recent-resistor");
-  await expect(recentResistor).toBeVisible();
-  await expect(recentResistor).toHaveAttribute("aria-label", "Place Resistor");
-  await expect(recentResistor).toHaveAttribute("title", "Place Resistor");
-  await expect(recentResistor.locator("span")).toHaveText("Res");
-  expect(
-    await page
-      .getByTestId("shapes-fold-recent")
-      .locator(".shapes-grid")
-      .evaluate(
-        (element) =>
-          getComputedStyle(element).gridTemplateColumns.split(" ").length,
-      ),
-  ).toBe(4);
+  // The Library has no Recent fold; the placed device stays reachable from
+  // its own category chip.
+  await expect(page.getByTestId("shapes-fold-recent")).toHaveCount(0);
+  const resistorChip = page.getByTestId("shapes-chip-resistor");
+  await expect(resistorChip).toHaveAttribute("aria-label", "Place Resistor");
+  await expect(resistorChip.locator("span")).toHaveText("Res");
   await expect(transistorCategory).toHaveJSProperty("open", false);
   await expect(page.getByTestId("shapes-chip-nmos")).not.toBeVisible();
   await expect(analogCategory).toHaveJSProperty("open", true);

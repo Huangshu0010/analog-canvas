@@ -3,7 +3,6 @@ import { useState } from "react";
 import type { ComponentInsertRequest } from "../component-insert/component-insert-request";
 import {
   fullInsertLaunch,
-  portSetupLaunch,
   type InsertLaunch,
 } from "../component-insert/insert-launch";
 import { SymbolArtwork } from "../component-insert/symbol-artwork";
@@ -15,6 +14,7 @@ import {
 
 const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   capacitor: "Cap",
+  "cell-pin": "Cell Pin",
   "closed-switch": "Closed",
   "current-source": "I Src",
   "ideal-switch": "Open",
@@ -61,6 +61,36 @@ export function quickPlaceRequest(
       netName: "VDD",
     };
   }
+  // ADR 0034 keeps both Port roles explicit. The Library entry carries that
+  // choice, so placement starts immediately and the generated name is edited
+  // on the canvas instead of in a setup dialog.
+  if (symbolId === "cell-pin") {
+    return {
+      kind: "symbol",
+      symbolId: "port",
+      symbolName: symbol.name,
+      parameters: {},
+      initialRotation: 0,
+      showReference: false,
+      referenceText: null,
+      showValue: false,
+      portRole: "cell-terminal",
+      portDirection: "passive",
+    };
+  }
+  if (symbolId === "port" || symbolId === "port-filled") {
+    return {
+      kind: "symbol",
+      symbolId,
+      symbolName: symbol.name,
+      parameters: {},
+      initialRotation: 0,
+      showReference: false,
+      referenceText: null,
+      showValue: false,
+      portRole: "net-port",
+    };
+  }
   return {
     kind: "symbol",
     symbolId: symbol.id,
@@ -97,10 +127,6 @@ export function ShapesPanel({
   );
 
   function placeSymbol(symbolId: string): void {
-    if (symbolId === "port" || symbolId === "port-filled") {
-      onStartInsert(portSetupLaunch(symbolId));
-      return;
-    }
     const request = quickPlaceRequest(styleProfileId, symbolId);
     if (request) onStartInsert({ kind: "quick", request });
   }
