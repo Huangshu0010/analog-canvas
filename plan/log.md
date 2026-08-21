@@ -4151,3 +4151,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   markdown links, test-impact, diff checks.
 - Commit status: completed on `claude/community-gallery`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 - Bundled tiles only while the gallery is empty
+
+- Changed areas: gallery feed gates its bundled starter tiles on the
+  community list being empty, removing the duplicated wall after the first
+  real entries; populated-feed e2e expectation flipped.
+- Validation: gallery Playwright spec (4 passed), feed unit tests,
+  typecheck, prettier, test-impact, diff checks.
+- Commit status: completed on `claude/gallery-bundled-fallback`; mainline
+  merge gated on the remote required checks.
