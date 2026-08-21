@@ -19,6 +19,7 @@ import {
   RotationSchema,
   SegmentModeSchema,
   StableIdSchema,
+  StyleOverridesSchema,
 } from "@icm/model";
 import { z } from "zod";
 
@@ -299,6 +300,12 @@ export const RemoveNoConnectEditSchema = z.strictObject({
 export const SetPresentationStyleEditSchema = z.strictObject({
   kind: z.literal("set_presentation_style"),
   styleProfileId: StableIdSchema,
+  /**
+   * Optional document style overrides: omitted leaves the persisted value
+   * untouched, `null` clears it back to profile defaults, an object replaces
+   * it whole.
+   */
+  styleOverrides: StyleOverridesSchema.nullable().optional(),
 });
 export const SetCellSymbolPresentationEditSchema = z.strictObject({
   kind: z.literal("set_cell_symbol_presentation"),

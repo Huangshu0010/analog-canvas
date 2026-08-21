@@ -17,7 +17,7 @@ import {
   resolveAnnotationPresentation,
   isSchematicAnnotationVisible,
   resolveAnnotationText,
-  resolveSchematicStyleProfile,
+  resolveDocumentStyleProfile,
   resolveRouteAttachment,
   textbookMonochromeProfile,
 } from "@icm/derived";
@@ -509,9 +509,7 @@ export function buildSvgScene(
   options: SvgRenderOptions = {},
 ): SvgScene {
   const document = SchematicDocumentSchema.parse(input);
-  const profile = resolveSchematicStyleProfile(
-    document.presentation.styleProfileId,
-  );
+  const profile = resolveDocumentStyleProfile(document.presentation);
   const margin = options.margin ?? 40;
   if (!Number.isInteger(margin) || margin < 0) {
     throw new Error("SVG margin must be a non-negative integer");
@@ -1162,9 +1160,7 @@ export function renderDocumentSvg(
   options: SvgRenderOptions = {},
 ): string {
   const scene = buildSvgScene(document, resolver, options);
-  const profile = resolveSchematicStyleProfile(
-    document.presentation.styleProfileId,
-  );
+  const profile = resolveDocumentStyleProfile(document.presentation);
   const title = escapeXml(options.title ?? document.name);
   const { x, y, width, height } = scene.viewBox;
   const scalingRule = profile.scaleFormalStrokes

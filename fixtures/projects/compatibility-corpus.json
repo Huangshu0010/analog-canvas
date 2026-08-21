@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "description": "Canonical current Project corpus. Every listed accepted file is schema-v20; rolling schema-v19 read compatibility is covered by synthesized tests rather than retained historic assets.",
+  "description": "Canonical current Project corpus. Every listed accepted file is schema-v21; rolling schema-v20 read compatibility is covered by synthesized tests rather than retained historic assets.",
   "current": [
     "fixtures/projects/minimal/project.icproj.json",
     "fixtures/projects/phase-1-manual/project.icproj.json",

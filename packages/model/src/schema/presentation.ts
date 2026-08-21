@@ -50,10 +50,31 @@ export const CellSymbolPresentationSchema = z.strictObject({
   pinPlacements: z.array(CellSymbolPinPlacementSchema).max(256).optional(),
 });
 
+/**
+ * Bounded per-document scale factor over the resolved style profile. The
+ * approved profiles stay the single base-value authority; an absent factor
+ * means exactly 1.0, so a document without overrides renders byte-identical.
+ */
+const StyleScaleSchema = z.number().min(0.5).max(2);
+
+/**
+ * Optional document-wide style intent composed over the base profile:
+ * uniform typography scale, wire stroke, symbol-artwork strokes, drafting
+ * and annotation strokes, and the junction-dot radius.
+ */
+export const StyleOverridesSchema = z.strictObject({
+  fontScale: StyleScaleSchema.optional(),
+  wireStrokeScale: StyleScaleSchema.optional(),
+  symbolStrokeScale: StyleScaleSchema.optional(),
+  annotationStrokeScale: StyleScaleSchema.optional(),
+  junctionRadiusScale: StyleScaleSchema.optional(),
+});
+
 export const PresentationIntentSchema = z.strictObject({
   styleProfileId: StableIdSchema,
   grid: z.number().int().positive(),
   compactness: z.enum(["loose", "normal", "compact"]),
+  styleOverrides: StyleOverridesSchema.optional(),
   flow: z
     .strictObject({
       power: z.literal("top").optional(),
@@ -99,3 +120,4 @@ export type CellSymbolPinPlacement = z.infer<
 export type CellSymbolPresentation = z.infer<
   typeof CellSymbolPresentationSchema
 >;
+export type StyleOverrides = z.infer<typeof StyleOverridesSchema>;

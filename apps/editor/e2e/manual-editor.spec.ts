@@ -3506,3 +3506,34 @@ test("directional marquee: window needs full coverage, crossing selects on touch
     await page.evaluate(() => window.getSelection()?.toString() ?? ""),
   ).toBe("");
 });
+
+test("Document style dialog scales fonts document-wide and resets", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  const label = page.locator('[data-kind="instance-label"]').first();
+  await expect(label).toHaveAttribute("font-size", "15.116");
+
+  await clickCommand(page, "Draw", "Document style…");
+  const dialog = page.getByTestId("document-style-dialog");
+  await expect(dialog).toBeVisible();
+  const reset = dialog.getByRole("button", {
+    name: "Reset all to profile defaults",
+  });
+  await expect(reset).toBeDisabled();
+
+  await dialog.getByLabel("Font size").selectOption("1.5");
+  await expect(label).toHaveAttribute("font-size", "22.674");
+  await expect(page.getByTestId("status")).toContainText(
+    "Updated document style",
+  );
+  await expect(reset).toBeEnabled();
+
+  // The override persists as ordinary undoable document state.
+  await reset.click();
+  await expect(label).toHaveAttribute("font-size", "15.116");
+  await expect(reset).toBeDisabled();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+});

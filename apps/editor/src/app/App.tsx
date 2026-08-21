@@ -71,7 +71,7 @@ import {
   displayableInstanceValue,
   resolveNetLabelBinding,
   resolveMosBulkConnection,
-  resolveSchematicStyleProfile,
+  resolveDocumentStyleProfile,
   resolveRouteAttachment,
   resolveRouteTap,
   summarizeProjectCells,
@@ -195,6 +195,7 @@ import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
 import { NetlistPreflightDialog } from "../features/netlist-export/netlist-preflight-dialog";
+import { StyleDialog } from "../features/editor-shell/style-dialog";
 import {
   proposeConnectedInstanceDeletion,
   proposeVisualSelectionDeletion,
@@ -594,6 +595,7 @@ export function App({
   const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
   const [netlistPreflightOpen, setNetlistPreflightOpen] = useState(false);
+  const [styleDialogOpen, setStyleDialogOpen] = useState(false);
   const [instanceTableOpen, setInstanceTableOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
     useState<AgentFileCandidateSummary | null>(null);
@@ -1142,9 +1144,7 @@ export function App({
       ? displayableInstanceValue(instance).kind === "displayable"
       : false;
   });
-  const styleProfile = resolveSchematicStyleProfile(
-    document.presentation.styleProfileId,
-  );
+  const styleProfile = resolveDocumentStyleProfile(document.presentation);
   const selectedNoConnect =
     selectedEndpoint && selectedEndpoint.endpoint.kind !== "junction"
       ? document.noConnects.find(
@@ -6912,6 +6912,14 @@ export function App({
                     <ToolIcon name="rectangle" />
                     Rectangle (R)
                   </button>
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded={styleDialogOpen}
+                    onClick={() => setStyleDialogOpen(true)}
+                  >
+                    Document style…
+                  </button>
                 </div>
               </details>
               <button
@@ -7227,6 +7235,28 @@ export function App({
         onNavigate={navigateToNetlistDiagnostic}
         onExport={(format) => exportDesignNetlist(format, true)}
       />
+      {styleDialogOpen ? (
+        <StyleDialog
+          overrides={document.presentation.styleOverrides}
+          onApply={(styleOverrides) => {
+            const result = transact([
+              {
+                kind: "set_presentation_style",
+                styleProfileId: document.presentation.styleProfileId,
+                styleOverrides,
+              },
+            ]);
+            if (result.ok) {
+              setStatus(
+                styleOverrides
+                  ? "Updated document style"
+                  : "Reset document style to profile defaults",
+              );
+            }
+          }}
+          onClose={() => setStyleDialogOpen(false)}
+        />
+      ) : null}
       {publicAgentUiEnabled ? (
         <ConnectAgentPanel
           open={agentPanelOpen}

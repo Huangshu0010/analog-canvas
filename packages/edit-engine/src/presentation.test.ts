@@ -44,6 +44,86 @@ describe("presentation and layout edits", () => {
     );
   });
 
+  it("sets, preserves, and clears document style overrides undoably", () => {
+    const document = createEmptyDocument("doc", "Presentation");
+    const history = new DocumentHistory(document);
+
+    const set = history.transact(
+      transaction("doc", [
+        {
+          kind: "set_presentation_style",
+          styleProfileId: "razavi-textbook-v1",
+          styleOverrides: { fontScale: 1.5, wireStrokeScale: 0.75 },
+        },
+      ]),
+    );
+    expect(set).toMatchObject({ ok: true, applied: true });
+    expect(history.document.presentation.styleOverrides).toEqual({
+      fontScale: 1.5,
+      wireStrokeScale: 0.75,
+    });
+
+    // Omitting the field leaves the persisted overrides untouched.
+    const untouched = history.transact(
+      transaction(
+        "doc",
+        [
+          {
+            kind: "set_presentation_style",
+            styleProfileId: "razavi-textbook-v1",
+          },
+        ],
+        1,
+      ),
+    );
+    expect(untouched).toMatchObject({ ok: true });
+    expect(history.document.presentation.styleOverrides).toEqual({
+      fontScale: 1.5,
+      wireStrokeScale: 0.75,
+    });
+
+    const revisionAfterUntouched = history.document.revision;
+    const cleared = history.transact(
+      transaction(
+        "doc",
+        [
+          {
+            kind: "set_presentation_style",
+            styleProfileId: "razavi-textbook-v1",
+            styleOverrides: null,
+          },
+        ],
+        revisionAfterUntouched,
+      ),
+    );
+    expect(cleared).toMatchObject({ ok: true, applied: true });
+    expect(history.document.presentation.styleOverrides).toBeUndefined();
+
+    const undone = history.transact(
+      transaction("doc", [{ kind: "undo" }], history.document.revision),
+    );
+    expect(undone).toMatchObject({ ok: true, applied: true });
+    expect(history.document.presentation.styleOverrides).toEqual({
+      fontScale: 1.5,
+      wireStrokeScale: 0.75,
+    });
+  });
+
+  it("rejects out-of-range style override factors", () => {
+    const document = createEmptyDocument("doc", "Presentation");
+    const history = new DocumentHistory(document);
+    const rejected = history.transact(
+      transaction("doc", [
+        {
+          kind: "set_presentation_style",
+          styleProfileId: "razavi-textbook-v1",
+          styleOverrides: { fontScale: 3 },
+        },
+      ]),
+    );
+    expect(rejected.ok).toBe(false);
+  });
+
   it("moves attached labels with an aligned instance atomically", () => {
     const document = createEmptyDocument("doc", "Presentation");
     document.instances = ["M1", "M2"].map((id, index) => ({

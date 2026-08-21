@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 20 and has
+geometric, and presentation facts. The current model is strict schema 21 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -160,6 +160,6 @@ ordinary Schematic edits inside one Project structural transaction. The
 Project's `structureRevision` protects this cross-Document boundary and the
 editor records it as one undoable structural commit.
 
-Persistence writes only schema 20. `packages/project-protocol` accepts schema
-19 through the bounded direct upgrade defined by ADR 0037, then supplies the
+Persistence writes only schema 21. `packages/project-protocol` accepts schema
+20 through the bounded direct upgrade defined by ADR 0038, then supplies the
 current model only; no compatibility shape enters `packages/model`.

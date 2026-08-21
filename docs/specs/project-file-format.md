@@ -2,16 +2,17 @@
 
 Status: `accepted`
 
-Current Project schema: `20`
+Current Project schema: `21`
 
 Primary owners: `packages/model` (current shape) and
 `packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
 `@icm/project-protocol` exposes `parseProject` and accepts Project schema 20
-and schema 19. Schema 19 advances directly to 20 by lifting each formal Cell
+and schema 20. Schema 20 advances directly to 21 by stamping the current
+version; the optional bounded `presentation.styleOverrides` object is new in 21
 terminal's singular marker ID into a one-element marker-ID array. Every reader
-returns the sole schema-20 in-memory Project shape; schema 18 and older and all future versions are
+returns the sole schema-21 in-memory Project shape; schema 19 and older and all future versions are
 rejected. There is no sequential migration registry or second in-memory Project
 shape.
 
@@ -64,8 +65,8 @@ shape.
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 19 or 20
--> direct v19-to-v20 upgrade when needed -> strict schema-20 validation -> open
+read text -> parse JSON -> require Project schema 20 or 21
+-> direct v20-to-v21 upgrade when needed -> strict schema-21 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   globalSchematicTypography,
   razaviTextbookProfile,
+  resolveDocumentStyleProfile,
   resolvePrimitiveStrokeWidth,
   resolveSchematicStyleProfile,
   strokeWidthForRole,
@@ -58,6 +59,72 @@ describe("schematic style profiles", () => {
   it("rejects an unknown persisted profile instead of substituting", () => {
     expect(() => resolveSchematicStyleProfile("unknown-profile")).toThrow(
       "Unknown schematic style profile",
+    );
+  });
+});
+
+describe("resolveDocumentStyleProfile", () => {
+  const presentation = (styleOverrides?: object) => ({
+    styleProfileId: "razavi-textbook-v1",
+    ...(styleOverrides ? { styleOverrides } : {}),
+  });
+
+  it("returns the base profile object itself without overrides", () => {
+    expect(resolveDocumentStyleProfile(presentation())).toBe(
+      razaviTextbookProfile,
+    );
+  });
+
+  it("composes each bounded scale independently over the base profile", () => {
+    const profile = resolveDocumentStyleProfile(
+      presentation({
+        fontScale: 1.5,
+        wireStrokeScale: 2,
+        symbolStrokeScale: 0.5,
+        annotationStrokeScale: 1.25,
+        junctionRadiusScale: 2,
+      }),
+    );
+    expect(profile.typography.annotationFontSize).toBeCloseTo(
+      razaviTextbookProfile.typography.annotationFontSize * 1.5,
+    );
+    expect(profile.typography.captionFontSize).toBeCloseTo(
+      razaviTextbookProfile.typography.captionFontSize * 1.5,
+    );
+    expect(profile.strokes.wire).toBeCloseTo(
+      razaviTextbookProfile.strokes.wire * 2,
+    );
+    expect(profile.strokes.emphasis).toBeCloseTo(
+      razaviTextbookProfile.strokes.emphasis * 0.5,
+    );
+    expect(profile.strokes.powerRail).toBeCloseTo(
+      razaviTextbookProfile.strokes.powerRail * 0.5,
+    );
+    expect(profile.strokes.annotation).toBeCloseTo(
+      razaviTextbookProfile.strokes.annotation * 1.25,
+    );
+    expect(profile.nodes.junctionRadius).toBeCloseTo(
+      razaviTextbookProfile.nodes.junctionRadius * 2,
+    );
+    // Untouched families keep their base values.
+    expect(profile.typography.subscriptScale).toBe(
+      razaviTextbookProfile.typography.subscriptScale,
+    );
+    expect(profile.lineCap).toBe(razaviTextbookProfile.lineCap);
+  });
+
+  it("treats absent factors as exactly one", () => {
+    const profile = resolveDocumentStyleProfile(presentation({ fontScale: 2 }));
+    expect(profile.strokes.wire).toBe(razaviTextbookProfile.strokes.wire);
+    expect(profile.nodes.junctionRadius).toBe(
+      razaviTextbookProfile.nodes.junctionRadius,
+    );
+  });
+
+  it("stays referentially stable for one persisted overrides object", () => {
+    const shared = presentation({ fontScale: 1.5 });
+    expect(resolveDocumentStyleProfile(shared)).toBe(
+      resolveDocumentStyleProfile(shared),
     );
   });
 });

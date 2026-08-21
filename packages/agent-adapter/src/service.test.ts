@@ -269,7 +269,7 @@ describe("current Agent Circuit API service", () => {
     // bounded Net provenance; this ceiling still guards
     // accidental projection bloat.
     expect(JSON.stringify(AgentCircuitRequestJsonSchema).length).toBeLessThan(
-      122_000,
+      130_000,
     );
     expect(JSON.stringify(AgentCircuitResponseJsonSchema).length).toBeLessThan(
       180_000,

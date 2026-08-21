@@ -2481,6 +2481,13 @@ export function executeTransaction(
       }
       case "set_presentation_style": {
         draft.presentation.styleProfileId = edit.styleProfileId;
+        if (edit.styleOverrides === null) {
+          delete draft.presentation.styleOverrides;
+        } else if (edit.styleOverrides !== undefined) {
+          draft.presentation.styleOverrides = structuredClone(
+            edit.styleOverrides,
+          );
+        }
         changedObjectIds.add(draft.id);
         break;
       }
