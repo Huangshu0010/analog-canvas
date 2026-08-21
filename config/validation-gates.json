@@ -51,6 +51,7 @@
       "config/agent-mcp-distribution.json",
       "packages/exporters/**",
       "scripts/export-golden.mjs",
+      "scripts/visual-golden.mjs",
       "scripts/package-*.mjs",
       "scripts/pwa-icons.mjs",
       "scripts/*release-smoke.mjs",
