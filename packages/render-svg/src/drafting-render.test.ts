@@ -1,4 +1,5 @@
 import { createEmptyDocument } from "@icm/model";
+import type { RichTextRun } from "@icm/model";
 import { resolveSchematicStyleProfile } from "@icm/derived";
 import { describe, expect, it } from "vitest";
 
@@ -338,5 +339,96 @@ describe("instance value fraction rendering", () => {
     // Fraction parts render three A+ levels (30%) above the subscript scale:
     // 15.116 × (0.76 × 1.3) ≈ 14.93px, roughly level with the reference label.
     expect(svg).toContain('font-size="14.93"');
+  });
+});
+
+describe("object-anchored drafting text centering", () => {
+  const CENTERED_CAP_BASELINE_RATIO = 0.35;
+
+  function labelDocument(runs: RichTextRun[], anchorKind: "object" | "free") {
+    const document = createEmptyDocument("doc", "Centered");
+    document.drafting = {
+      objects: [
+        {
+          id: "box-1",
+          kind: "rectangle",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 100, y: 60 } },
+          center: { x: 100, y: 60 },
+          width: 80,
+          height: 40,
+          rotation: 0,
+          lineStyle: "solid",
+        },
+        {
+          id: "label-1",
+          kind: "text",
+          locked: false,
+          zIndex: 0,
+          anchor:
+            anchorKind === "object"
+              ? {
+                  kind: "object",
+                  objectId: "box-1",
+                  localOffset: { x: 0, y: 0 },
+                  fallbackPosition: { x: 100, y: 60 },
+                }
+              : { kind: "free", position: { x: 100, y: 60 } },
+          content: { runs },
+          alignment: "middle",
+          rotation: 0,
+          typographyToken: "label",
+        },
+      ],
+    };
+    return document;
+  }
+
+  function textBaselineY(svg: string, objectId: string): number {
+    const match = svg.match(
+      new RegExp(`data-object-id="${objectId}"[^>]*\\by="([-0-9.]+)"`),
+    );
+    if (!match) throw new Error(`no <text> y for ${objectId}`);
+    return Number(match[1]);
+  }
+
+  it("centers a single-line label on the rectangle center", () => {
+    const document = labelDocument([{ kind: "text", value: "PFD" }], "object");
+    const svg = renderDocumentSvg(document, resolver);
+    const profile = resolveSchematicStyleProfile(
+      document.presentation.styleProfileId,
+    );
+    const fontSize = profile.typography.annotationFontSize;
+    expect(textBaselineY(svg, "label-1")).toBeCloseTo(
+      60 + CENTERED_CAP_BASELINE_RATIO * fontSize,
+    );
+    expect(svg).toContain('text-anchor="middle"');
+  });
+
+  it("shifts a multi-line label up by half the extra line steps", () => {
+    const document = labelDocument(
+      [
+        { kind: "text", value: "Clock Recovery" },
+        { kind: "line-break" },
+        { kind: "text", value: "Circuit" },
+      ],
+      "object",
+    );
+    const svg = renderDocumentSvg(document, resolver);
+    const profile = resolveSchematicStyleProfile(
+      document.presentation.styleProfileId,
+    );
+    const fontSize = profile.typography.annotationFontSize;
+    const lineStep = fontSize * profile.typography.lineHeight;
+    expect(textBaselineY(svg, "label-1")).toBeCloseTo(
+      60 - lineStep / 2 + CENTERED_CAP_BASELINE_RATIO * fontSize,
+    );
+  });
+
+  it("keeps free text on its first-line baseline unchanged", () => {
+    const document = labelDocument([{ kind: "text", value: "PFD" }], "free");
+    const svg = renderDocumentSvg(document, resolver);
+    expect(textBaselineY(svg, "label-1")).toBe(60);
   });
 });

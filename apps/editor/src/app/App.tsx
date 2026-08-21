@@ -226,6 +226,11 @@ import type {
 } from "../features/drafting/drafting-manipulation";
 import { DraftingCreatePreview } from "../features/drafting/drafting-create-preview";
 import {
+  proposeRectangleLabel,
+  rectangleInteriorAt,
+  rectangleLabelFor,
+} from "../features/drafting/rectangle-label";
+import {
   draftingPathData,
   quadraticMidpoint,
   quadraticTangentAngle,
@@ -8925,12 +8930,15 @@ export function App({
                 // deliberate double-click is an editing request. Look through
                 // the same point candidates for text instead of forcing users
                 // to Alt-cycle a route-attached label before editing it.
-                const annotationHit = rankCanvasHits(
+                const pointHits = rankCanvasHits(
                   event.currentTarget.ownerDocument.elementsFromPoint(
                     event.clientX,
                     event.clientY,
                   ),
-                ).find((hit) => hit.kind === "annotation");
+                );
+                const annotationHit = pointHits.find(
+                  (hit) => hit.kind === "annotation",
+                );
                 const annotation = annotationHit
                   ? document.annotations.find(
                       (candidate) => candidate.id === annotationHit.id,
@@ -8941,6 +8949,52 @@ export function App({
                   event.stopPropagation();
                   canvasDragSessionRef.current?.cancel();
                   beginAnnotationTextEditing(annotation);
+                  return;
+                }
+                // A double-click on empty space inside a drafting rectangle is
+                // the same editing intent aimed at the box: open its centered
+                // label, creating the anchored text on first use. Electrical
+                // geometry under the pointer keeps its own double-click
+                // meaning, so wires crossing a group frame never open a label.
+                const electricalHit = pointHits.some(
+                  (hit) =>
+                    hit.kind !== "annotation" &&
+                    hit.kind !== "instance-label" &&
+                    hit.kind !== "drafting",
+                );
+                const interiorPoint = pointFromClient(
+                  event.clientX,
+                  event.clientY,
+                  event.currentTarget,
+                );
+                const rectangle = electricalHit
+                  ? null
+                  : rectangleInteriorAt(document, resolver, interiorPoint);
+                if (rectangle) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  canvasDragSessionRef.current?.cancel();
+                  const existingLabel = rectangleLabelFor(
+                    document,
+                    rectangle.id,
+                  );
+                  if (existingLabel) {
+                    beginDraftingTextEditing(existingLabel);
+                    return;
+                  }
+                  uniqueSuffixCounter.current += 1;
+                  const label = proposeRectangleLabel(
+                    rectangle,
+                    `note-${uniqueSuffixCounter.current}`,
+                  );
+                  if (
+                    transact([
+                      { kind: "upsert_drafting_object", object: label },
+                    ]).ok
+                  ) {
+                    beginDraftingTextEditing(label);
+                    setStatus(`Editing label of ${rectangle.id}`);
+                  }
                   return;
                 }
               }

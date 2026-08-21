@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "id": "nand-gate",
+  "name": "NAND Gate",
+  "viewBox": {
+    "x": -44,
+    "y": -24,
+    "width": 88,
+    "height": 48
+  },
+  "pins": [
+    {
+      "name": "A",
+      "role": "input",
+      "at": {
+        "x": -40,
+        "y": -10
+      },
+      "direction": "west",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 20
+      }
+    },
+    {
+      "name": "B",
+      "role": "input",
+      "at": {
+        "x": -40,
+        "y": 10
+      },
+      "direction": "west",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 20
+      }
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "at": {
+        "x": 40,
+        "y": 0
+      },
+      "direction": "east",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 20
+      }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": {
+        "x": -40,
+        "y": -10
+      },
+      "to": {
+        "x": -24,
+        "y": -10
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": -40,
+        "y": 10
+      },
+      "to": {
+        "x": -24,
+        "y": 10
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "path",
+      "data": "M 0 -20 L -24 -20 L -24 20 L 0 20 A 20 20 0 0 0 0 -20 Z",
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "butt",
+        "lineJoin": "miter",
+        "miterLimit": 4
+      }
+    },
+    {
+      "kind": "circle",
+      "center": {
+        "x": 24,
+        "y": 0
+      },
+      "radius": 4,
+      "part": "negation-bubble",
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 28,
+        "y": 0
+      },
+      "to": {
+        "x": 40,
+        "y": 0
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    }
+  ],
+  "variants": []
+}

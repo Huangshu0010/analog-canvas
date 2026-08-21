@@ -890,3 +890,117 @@ test("drawing Properties unlocks a protected drawing and Delete overrides its lo
   await clickCommand(page, "Edit", "Delete");
   await expect(drawing).toHaveCount(0);
 });
+
+test("double-click inside a rectangle writes a centered, anchored label", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("r");
+  await clickCreate(page, { x: 220, y: 220 }, { x: 380, y: 320 });
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  const hit = page.getByTestId(/^drafting-hit-rectangle-/);
+  const screenCenter = async (): Promise<{ x: number; y: number }> => {
+    const center = await hit.first().evaluate((element) => {
+      const polygon = element as SVGPolygonElement;
+      const matrix = polygon.getScreenCTM();
+      if (!matrix || polygon.points.numberOfItems !== 4) return null;
+      const logicalCenter = Array.from({ length: 4 }, (_, index) =>
+        polygon.points.getItem(index),
+      ).reduce(
+        (sum, point) => ({ x: sum.x + point.x / 4, y: sum.y + point.y / 4 }),
+        { x: 0, y: 0 },
+      );
+      const screen = new DOMPoint(
+        logicalCenter.x,
+        logicalCenter.y,
+      ).matrixTransform(matrix);
+      return { x: screen.x, y: screen.y };
+    });
+    if (!center) throw new Error("rectangle center is not measurable");
+    return center;
+  };
+
+  const center = await screenCenter();
+  await page.mouse.dblclick(center.x, center.y);
+  const editor = page.getByRole("textbox", { name: "Canvas text editor" });
+  await expect(editor).toBeVisible();
+  await page.keyboard.type("PFD");
+  await page.keyboard.press("Escape");
+
+  const label = page.locator('[data-kind="draft-text"]');
+  await expect(label).toHaveCount(1);
+  await expect(label).toHaveAttribute("text-anchor", "middle");
+  await expect(label).toContainText("PFD");
+
+  // The painted label centers on the rectangle's logical center: x on the
+  // center exactly, baseline 0.35 em below for optical cap centering.
+  const readGeometry = async () =>
+    page.evaluate(() => {
+      const polygon = document.querySelector(
+        '[data-kind="draft-rectangle"]',
+      ) as SVGPolygonElement | null;
+      const text = document.querySelector(
+        '[data-kind="draft-text"]',
+      ) as SVGTextElement | null;
+      if (!polygon || !text || polygon.points.numberOfItems !== 4) return null;
+      const logicalCenter = Array.from({ length: 4 }, (_, index) =>
+        polygon.points.getItem(index),
+      ).reduce(
+        (sum, point) => ({ x: sum.x + point.x / 4, y: sum.y + point.y / 4 }),
+        { x: 0, y: 0 },
+      );
+      return {
+        center: logicalCenter,
+        x: Number(text.getAttribute("x")),
+        y: Number(text.getAttribute("y")),
+      };
+    });
+  const geometry = await readGeometry();
+  if (!geometry) throw new Error("label geometry is not measurable");
+  expect(geometry.x).toBeCloseTo(geometry.center.x, 5);
+  expect(geometry.y).toBeCloseTo(geometry.center.y + 0.35 * 15.116, 1);
+
+  // Re-entering editing reuses the same label instead of stacking a second.
+  await page.mouse.dblclick(center.x, center.y);
+  await expect(editor).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(label).toHaveCount(1);
+
+  // Resizing the rectangle re-centers the label automatically.
+  const edge = await hit.first().evaluate((element) => {
+    const polygon = element as SVGPolygonElement;
+    const matrix = polygon.getScreenCTM();
+    if (!matrix || polygon.points.numberOfItems < 2) return null;
+    const first = polygon.points.getItem(0);
+    const second = polygon.points.getItem(1);
+    const midpoint = new DOMPoint(
+      (first.x + second.x) / 2,
+      (first.y + second.y) / 2,
+    ).matrixTransform(matrix);
+    return { x: midpoint.x, y: midpoint.y };
+  });
+  if (!edge) throw new Error("rectangle hit target is not measurable");
+  await page.mouse.click(edge.x, edge.y);
+  await dragLocator(page.getByTestId(/^draft-handle-corner-0-/), {
+    x: -40,
+    y: -20,
+  });
+  const resized = await readGeometry();
+  if (!resized) throw new Error("resized geometry is not measurable");
+  expect(resized.x).toBeCloseTo(resized.center.x, 5);
+  expect(resized.y).toBeCloseTo(resized.center.y + 0.35 * 15.116, 1);
+
+  // An untouched empty label vanishes on commit instead of persisting.
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("r");
+  await clickCreate(page, { x: 430, y: 220 }, { x: 560, y: 300 });
+  const canvas = page.getByTestId("schematic-canvas");
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Schematic canvas is not measurable");
+  await page.mouse.dblclick(box.x + 495, box.y + 260);
+  await expect(editor).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(editor).toHaveCount(0);
+  await expect(page.locator('[data-kind="draft-text"]')).toHaveCount(1);
+});

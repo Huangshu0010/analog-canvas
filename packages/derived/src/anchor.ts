@@ -173,5 +173,12 @@ function findObjectPlacement(
     (candidate) => candidate.id === objectId,
   );
   if (junction) return junction.position;
+  // A drafting rectangle anchors dependents (e.g. its centered label) at its
+  // persisted center. Other drafting kinds stay unresolved so anchor
+  // resolution cannot recurse through derived drafting geometry.
+  const drafting = document.drafting?.objects.find(
+    (candidate) => candidate.id === objectId,
+  );
+  if (drafting?.kind === "rectangle") return drafting.center;
   return null;
 }

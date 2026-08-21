@@ -13,6 +13,30 @@ export const razaviSymbolCatalogIdentity = {
 
 export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
   {
+    symbolId: "and-gate",
+    name: "AND Gate",
+    category: "logic",
+    reviewStatus: "reviewed",
+    pinOrder: ["A", "B", "Y"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+    assetPath: "and-gate.symbol.json",
+    assetHash:
+      "5f250c89d83e078ef856dc3525b1f045041a548e4e0ae934ffead28af1914b57",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+  },
+  {
     symbolId: "capacitor",
     name: "Capacitor",
     category: "passive",
@@ -66,6 +90,31 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
         "fixtures/visual-reference/razavi-reference-v1/closed-switch-vector-source.json",
       converterPath: "scripts/generate-razavi-common-assets.mjs",
       converterVersion: 1,
+    },
+  },
+  {
+    symbolId: "comparator",
+    name: "Comparator",
+    category: "analog-block",
+    reviewStatus: "reviewed",
+    pinOrder: ["IN+", "IN-", "OUT"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Textbook comparator block; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
+    assetPath: "comparator.symbol.json",
+    assetHash:
+      "af71a4819813b3d325d43e5d654d4f0599967c53cd2e66490310436b0b0643cb",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json",
     },
   },
   {
@@ -229,6 +278,54 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
   },
   {
+    symbolId: "inverter",
+    name: "Inverter",
+    category: "logic",
+    reviewStatus: "reviewed",
+    pinOrder: ["A", "Y"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+    assetPath: "inverter.symbol.json",
+    assetHash:
+      "2f93576529dab328557311e448f0dbc70a9c4c35898b88e5281fd44363184046",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+  },
+  {
+    symbolId: "nand-gate",
+    name: "NAND Gate",
+    category: "logic",
+    reviewStatus: "reviewed",
+    pinOrder: ["A", "B", "Y"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+    assetPath: "nand-gate.symbol.json",
+    assetHash:
+      "da04780ea84b0e495d59ecb4f76159c0b84303c1d560f67e0c902bb14e4814ad",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+  },
+  {
     symbolId: "nmos",
     name: "NMOS",
     category: "transistor",
@@ -249,6 +346,30 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "nmos.symbol.json",
     assetHash:
       "ed4a97e6d6192f83e24a20d29a311858bfe45d19b1b3810cbc3af903f5b99b87",
+  },
+  {
+    symbolId: "nor-gate",
+    name: "NOR Gate",
+    category: "logic",
+    reviewStatus: "reviewed",
+    pinOrder: ["A", "B", "Y"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+    assetPath: "nor-gate.symbol.json",
+    assetHash:
+      "3898bb81070142e6dc9c56df277300973e7ca0c27ab8c2d5b56313902df34d75",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
   },
   {
     symbolId: "npn",
@@ -314,6 +435,30 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
         "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
       converterPath: "scripts/generate-razavi-opamp-asset.mjs",
       converterVersion: 1,
+    },
+  },
+  {
+    symbolId: "or-gate",
+    name: "OR Gate",
+    category: "logic",
+    reviewStatus: "reviewed",
+    pinOrder: ["A", "B", "Y"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+    assetPath: "or-gate.symbol.json",
+    assetHash:
+      "c7dbc84e59a3d04dff00c4aeb62194247b3af740cde1cda9a1b93351e2093b60",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
     },
   },
   {
@@ -569,6 +714,119 @@ export const razaviSemanticPrimitives: readonly RazaviSemanticPrimitiveEntry[] =
 export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
   {
     schemaVersion: 1,
+    id: "and-gate",
+    name: "AND Gate",
+    viewBox: {
+      x: -44,
+      y: -24,
+      width: 88,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "A",
+        role: "input",
+        at: {
+          x: -40,
+          y: -10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "B",
+        role: "input",
+        at: {
+          x: -40,
+          y: 10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "Y",
+        role: "output",
+        at: {
+          x: 40,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: -10,
+        },
+        to: {
+          x: -24,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: 10,
+        },
+        to: {
+          x: -24,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M 0 -20 L -24 -20 L -24 20 L 0 20 A 20 20 0 0 0 0 -20 Z",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: 0,
+        },
+        to: {
+          x: 40,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
     id: "capacitor",
     name: "Capacitor",
     viewBox: {
@@ -789,6 +1047,177 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           lineCap: "butt",
           lineJoin: "miter",
         },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "comparator",
+    name: "Comparator",
+    viewBox: {
+      x: -54,
+      y: -28,
+      width: 98,
+      height: 56,
+    },
+    pins: [
+      {
+        name: "IN+",
+        role: "non-inverting-input",
+        at: {
+          x: -50,
+          y: 10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "IN-",
+        role: "inverting-input",
+        at: {
+          x: -50,
+          y: -10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "OUT",
+        role: "output",
+        at: {
+          x: 40,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -50,
+          y: -10,
+        },
+        to: {
+          x: -26.952962,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -50,
+          y: 10,
+        },
+        to: {
+          x: -26.797909,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 23.202091,
+          y: 0,
+        },
+        to: {
+          x: 40,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M -26.7979 -24.9983 L -26.7979 25 L 23.2021 0 Z",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -18.047038,
+          y: 8.749129,
+        },
+        to: {
+          x: -18.047038,
+          y: 16.249129,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -21.796167,
+          y: 12.5,
+        },
+        to: {
+          x: -14.296167,
+          y: 12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -21.796167,
+          y: -12.5,
+        },
+        to: {
+          x: -14.296167,
+          y: -12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M -8 7 L 0 7 L 0 -7 L 8 -7",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+        part: "hysteresis-step",
       },
     ],
     variants: [],
@@ -1296,6 +1725,231 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
   },
   {
     schemaVersion: 1,
+    id: "inverter",
+    name: "Inverter",
+    viewBox: {
+      x: -44,
+      y: -24,
+      width: 88,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "A",
+        role: "input",
+        at: {
+          x: -40,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "Y",
+        role: "output",
+        at: {
+          x: 40,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: 0,
+        },
+        to: {
+          x: -20,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M -20 -20 L -20 20 L 16 0 Z",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "circle",
+        center: {
+          x: 20,
+          y: 0,
+        },
+        radius: 4,
+        part: "negation-bubble",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 24,
+          y: 0,
+        },
+        to: {
+          x: 40,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "nand-gate",
+    name: "NAND Gate",
+    viewBox: {
+      x: -44,
+      y: -24,
+      width: 88,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "A",
+        role: "input",
+        at: {
+          x: -40,
+          y: -10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "B",
+        role: "input",
+        at: {
+          x: -40,
+          y: 10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "Y",
+        role: "output",
+        at: {
+          x: 40,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: -10,
+        },
+        to: {
+          x: -24,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: 10,
+        },
+        to: {
+          x: -24,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M 0 -20 L -24 -20 L -24 20 L 0 20 A 20 20 0 0 0 0 -20 Z",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "circle",
+        center: {
+          x: 24,
+          y: 0,
+        },
+        radius: 4,
+        part: "negation-bubble",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 28,
+          y: 0,
+        },
+        to: {
+          x: 40,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
     id: "nmos",
     name: "NMOS",
     viewBox: {
@@ -1586,6 +2240,133 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     defaultVariantId: "textbook-3terminal",
+  },
+  {
+    schemaVersion: 1,
+    id: "nor-gate",
+    name: "NOR Gate",
+    viewBox: {
+      x: -44,
+      y: -24,
+      width: 88,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "A",
+        role: "input",
+        at: {
+          x: -40,
+          y: -10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "B",
+        role: "input",
+        at: {
+          x: -40,
+          y: 10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "Y",
+        role: "output",
+        at: {
+          x: 40,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: -10,
+        },
+        to: {
+          x: -19,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: 10,
+        },
+        to: {
+          x: -19,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M -24 -20 Q -14 0 -24 20 Q 4 20 20 0 Q 4 -20 -24 -20 Z",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "circle",
+        center: {
+          x: 24,
+          y: 0,
+        },
+        radius: 4,
+        part: "negation-bubble",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 28,
+          y: 0,
+        },
+        to: {
+          x: 40,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
   },
   {
     schemaVersion: 1,
@@ -1904,6 +2685,119 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         to: {
           x: -14.296167,
           y: -12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "or-gate",
+    name: "OR Gate",
+    viewBox: {
+      x: -44,
+      y: -24,
+      width: 88,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "A",
+        role: "input",
+        at: {
+          x: -40,
+          y: -10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "B",
+        role: "input",
+        at: {
+          x: -40,
+          y: 10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "Y",
+        role: "output",
+        at: {
+          x: 40,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: -10,
+        },
+        to: {
+          x: -19,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: 10,
+        },
+        to: {
+          x: -19,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M -24 -20 Q -14 0 -24 20 Q 4 20 20 0 Q 4 -20 -24 -20 Z",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: 0,
+        },
+        to: {
+          x: 40,
+          y: 0,
         },
         style: {
           strokeRole: "normal",

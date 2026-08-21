@@ -8,6 +8,34 @@ export const agentRazaviAuthoringCatalog = {
   },
   symbols: [
     {
+      symbolId: "and-gate",
+      name: "AND Gate",
+      category: "logic",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "A",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "B",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "Y",
+          role: "output",
+          direction: "east",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
+    {
       symbolId: "capacitor",
       name: "Capacitor",
       category: "passive",
@@ -45,6 +73,34 @@ export const agentRazaviAuthoringCatalog = {
         {
           name: "2",
           role: "passive",
+          direction: "east",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
+    {
+      symbolId: "comparator",
+      name: "Comparator",
+      category: "analog-block",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "IN+",
+          role: "non-inverting-input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "IN-",
+          role: "inverting-input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "OUT",
+          role: "output",
           direction: "east",
           visibility: "visible",
         },
@@ -156,6 +212,56 @@ export const agentRazaviAuthoringCatalog = {
       variants: [],
     },
     {
+      symbolId: "inverter",
+      name: "Inverter",
+      category: "logic",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "A",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "Y",
+          role: "output",
+          direction: "east",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
+    {
+      symbolId: "nand-gate",
+      name: "NAND Gate",
+      category: "logic",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "A",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "B",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "Y",
+          role: "output",
+          direction: "east",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
+    {
       symbolId: "nmos",
       name: "NMOS",
       category: "transistor",
@@ -193,6 +299,34 @@ export const agentRazaviAuthoringCatalog = {
           hiddenPinNames: ["B"],
         },
       ],
+    },
+    {
+      symbolId: "nor-gate",
+      name: "NOR Gate",
+      category: "logic",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "A",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "B",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "Y",
+          role: "output",
+          direction: "east",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
     },
     {
       symbolId: "npn",
@@ -243,6 +377,34 @@ export const agentRazaviAuthoringCatalog = {
         },
         {
           name: "OUT",
+          role: "output",
+          direction: "east",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
+    {
+      symbolId: "or-gate",
+      name: "OR Gate",
+      category: "logic",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "A",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "B",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "Y",
           role: "output",
           direction: "east",
           visibility: "visible",

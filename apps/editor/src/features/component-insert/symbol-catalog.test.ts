@@ -22,6 +22,12 @@ describe("component insertion catalog", () => {
     expect(symbolCategory("capacitor")).toBe("Passives");
     expect(symbolCategory("variable-resistor")).toBe("Passives");
     expect(symbolCategory("opamp")).toBe("Analog Blocks");
+    expect(symbolCategory("comparator")).toBe("Analog Blocks");
+    expect(symbolCategory("inverter")).toBe("Logic Gates");
+    expect(symbolCategory("and-gate")).toBe("Logic Gates");
+    expect(symbolCategory("or-gate")).toBe("Logic Gates");
+    expect(symbolCategory("nand-gate")).toBe("Logic Gates");
+    expect(symbolCategory("nor-gate")).toBe("Logic Gates");
     expect(symbolCategory("npn")).toBe("Transistors");
     expect(symbolCategory("diode")).toBe("Passives");
     expect(symbolCategory("ideal-switch")).toBe("Switches");
