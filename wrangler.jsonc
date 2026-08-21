@@ -29,6 +29,10 @@
         "name": "GALLERY",
         "class_name": "GalleryDO",
       },
+      {
+        "name": "AUTH",
+        "class_name": "AuthDO",
+      },
     ],
   },
   "migrations": [
@@ -43,6 +47,10 @@
     {
       "tag": "v3",
       "new_sqlite_classes": ["GalleryDO"],
+    },
+    {
+      "tag": "v4",
+      "new_sqlite_classes": ["AuthDO"],
     },
   ],
   "observability": {

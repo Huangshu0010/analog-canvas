@@ -14,10 +14,12 @@ import {
   type AgentSessionNamespaceLike,
 } from "./agent-session";
 import { routeGalleryRequest, type GalleryNamespaceLike } from "./gallery";
+import { routeAuthRequest, type AuthNamespaceLike } from "./auth";
 
 export { AnalyticsDO } from "./analytics";
 export { AgentSessionDO } from "./agent-session";
 export { GalleryDO } from "./gallery";
+export { AuthDO } from "./auth";
 
 type Env = {
   ANALYTICS: DurableObjectNamespaceLike;
@@ -27,6 +29,14 @@ type Env = {
   AGENT_ALLOWED_ORIGIN?: string;
   GALLERY: GalleryNamespaceLike;
   GALLERY_ADMIN_TOKEN?: string;
+  AUTH: AuthNamespaceLike;
+  GH_OAUTH_CLIENT_ID?: string;
+  GH_OAUTH_CLIENT_SECRET?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  RESEND_API_KEY?: string;
+  AUTH_EMAIL_FROM?: string;
+  ADMIN_EMAILS?: string;
 };
 
 type RequestCf = {
@@ -88,6 +98,9 @@ export default {
 
     const agentResponse = await routeAgentSessionRequest(request, env);
     if (agentResponse) return agentResponse;
+
+    const authResponse = await routeAuthRequest(request, env);
+    if (authResponse) return authResponse;
 
     const galleryResponse = await routeGalleryRequest(request, env);
     if (galleryResponse) return galleryResponse;
