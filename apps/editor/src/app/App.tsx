@@ -5248,6 +5248,27 @@ export function App({
     }
   }
 
+  function updateSelectedReference(value: string): void {
+    if (!selectedInstance?.netlist) return;
+    const reference = value.trim();
+    if (!reference) {
+      setStatus("Netlist reference cannot be empty");
+      return;
+    }
+    if (reference === selectedInstance.netlist.reference) return;
+    if (
+      transact([
+        {
+          kind: "set_instance_reference",
+          instanceId: selectedInstance.id,
+          reference,
+        },
+      ]).ok
+    ) {
+      setStatus(`Set netlist reference to ${reference}`);
+    }
+  }
+
   /*
    * Text sessions use one persistence proposal for both annotation and
    * drafting owners. The tagged target keeps their typed edit differences at
@@ -7470,20 +7491,34 @@ export function App({
                   >
                     <div className="property-section-heading">Identity</div>
                     <dl className="component-readonly-fields">
+                      {selectedInstance.netlist ? (
+                        <div>
+                          <dt>Netlist reference</dt>
+                          <dd>
+                            <input
+                              key={`${selectedInstance.id}-${document.revision}-netlist-reference`}
+                              aria-label="Component netlist reference"
+                              defaultValue={selectedInstance.netlist.reference}
+                              onBlur={(event) =>
+                                updateSelectedReference(
+                                  event.currentTarget.value,
+                                )
+                              }
+                            />
+                          </dd>
+                        </div>
+                      ) : null}
                       <div>
-                        <dt>Schematic name</dt>
+                        <dt>Schematic alias</dt>
                         <dd>
                           <input
                             key={`${selectedInstance.id}-${document.revision}-schematic-name`}
-                            aria-label="Component schematic name"
+                            aria-label="Component schematic alias"
                             defaultValue={flattenRichText(
                               selectedInstance.schematicName ??
-                                semanticTextDocument(
-                                  selectedInstance.netlist?.reference ??
-                                    selectedInstance.id,
-                                  "instance-label",
-                                ),
+                                defaultDraftTextDocument(""),
                             )}
+                            placeholder="Optional display alias"
                             onBlur={(event) =>
                               updateSelectedSchematicName(
                                 event.currentTarget.value,

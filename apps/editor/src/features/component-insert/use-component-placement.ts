@@ -19,7 +19,7 @@ import {
   hierarchyReferencePolicy,
   nextReference,
 } from "@icm/devices";
-import { defaultDraftTextDocument, semanticTextDocument } from "@icm/model";
+import { semanticTextDocument } from "@icm/model";
 import type {
   CircuitProject,
   Point,
@@ -37,10 +37,7 @@ import {
 } from "./placement-connectivity";
 import { planVddRailEdits } from "./vdd-rail";
 import { vddPowerLabelAnnotation } from "./vdd-power-label";
-import {
-  defaultInstanceLabel,
-  defaultInstanceValue,
-} from "../wiring/route-interaction-geometry";
+import { defaultInstanceDisplayAnnotations } from "../instance-display/default-instance-display";
 import {
   initialInstanceNetlist,
   nextInstanceDesignator,
@@ -129,6 +126,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.document,
       symbolId,
       placementRequest.parameters,
+      placementRequest.referenceText ?? undefined,
     );
     const instance = {
       id,
@@ -141,30 +139,16 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       },
       ...(netlist ? { netlist } : {}),
     };
-    const defaultLabel = defaultInstanceLabel(
+    const displayAnnotations = defaultInstanceDisplayAnnotations(
       options.document,
       instance,
       options.resolver,
       options.styleProfile,
+      {
+        showDesignator: placementRequest.showReference,
+        showValue: placementRequest.showValue,
+      },
     );
-    const instanceLabel =
-      placementRequest.showReference && defaultLabel
-        ? {
-            ...defaultLabel,
-            binding: {
-              kind: "instance-designator" as const,
-              instanceId: instance.id,
-            },
-          }
-        : null;
-    const instanceValue = placementRequest.showValue
-      ? defaultInstanceValue(
-          options.document,
-          instance,
-          options.resolver,
-          options.styleProfile,
-        )
-      : null;
     const contact = proposePlacementContact(
       options.document,
       options.resolver,
@@ -233,22 +217,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
               },
             ]
           : []),
-        ...(instanceLabel
-          ? [
-              {
-                kind: "upsert_schematic_annotation" as const,
-                annotation: instanceLabel,
-              },
-            ]
-          : []),
-        ...(instanceValue
-          ? [
-              {
-                kind: "upsert_schematic_annotation" as const,
-                annotation: instanceValue,
-              },
-            ]
-          : []),
+        ...displayAnnotations.map((annotation) => ({
+          kind: "upsert_schematic_annotation" as const,
+          annotation,
+        })),
       ],
       { contact, standalonePower },
       { preserveInteraction: true },
@@ -285,10 +257,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return;
     }
     const id = nextInstanceDesignator(options.document, symbolId);
-    const reference = nextReference(
-      createReferenceIndex(options.document),
-      hierarchyReferencePolicy,
-    );
+    const reference =
+      placementRequest.referenceText ??
+      nextReference(
+        createReferenceIndex(options.document),
+        hierarchyReferencePolicy,
+      );
     if (!reference) {
       options.setStatus("Cannot allocate a hierarchy reference");
       return;
@@ -303,36 +277,23 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       },
       reference,
     );
-    const defaultLabel = defaultInstanceLabel(
+    const annotations = defaultInstanceDisplayAnnotations(
       options.document,
       instance,
       options.resolver,
       options.styleProfile,
+      {
+        showDesignator: placementRequest.showReference,
+        masterName: placementRequest.cellName,
+      },
     );
-    const instanceValue = defaultLabel
-      ? (() => {
-          // The Cell display name is literal presentation text. It is not an
-          // electrical component value and must not inherit the reference
-          // binding from the label template.
-          const { binding: _binding, ...literalLabel } = defaultLabel;
-          return {
-            ...literalLabel,
-            id: `instance-value-${instance.id}`,
-            kind: "instance-value" as const,
-            content: defaultDraftTextDocument(placementRequest.cellName),
-          };
-        })()
-      : null;
     const committed = options.transactProject(
       "place-cell-instance",
       planPlaceCellInstance(
         options.project,
         options.document.id,
         instance,
-        [instanceValue].filter(
-          (annotation): annotation is NonNullable<typeof annotation> =>
-            annotation !== null,
-        ),
+        annotations,
       ),
     );
     if (!committed) return;
@@ -361,10 +322,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return;
     }
     const id = nextInstanceDesignator(options.document, symbolId);
-    const reference = nextReference(
-      createReferenceIndex(options.document),
-      hierarchyReferencePolicy,
-    );
+    const reference =
+      placementRequest.referenceText ??
+      nextReference(
+        createReferenceIndex(options.document),
+        hierarchyReferencePolicy,
+      );
     if (!reference) {
       options.setStatus("Cannot allocate an external-subcircuit reference");
       return;
@@ -379,6 +342,16 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       },
       reference,
     );
+    const annotations = defaultInstanceDisplayAnnotations(
+      options.document,
+      instance,
+      options.resolver,
+      options.styleProfile,
+      {
+        showDesignator: placementRequest.showReference,
+        masterName: definition.name,
+      },
+    );
     if (
       !options.transactProject(
         "place-external-subcircuit-instance",
@@ -386,6 +359,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           options.project,
           options.document.id,
           instance,
+          annotations,
         ),
       )
     )
@@ -423,11 +397,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         mirror: options.componentPlacementMirror,
       },
     };
-    const annotation = defaultInstanceLabel(
+    const annotations = defaultInstanceDisplayAnnotations(
       options.document,
       instance,
       options.resolver,
       options.styleProfile,
+      { formalTerminalId: `terminal-${id.toLowerCase()}` },
     );
     const contact = proposePlacementContact(
       options.document,
@@ -484,14 +459,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           direction: placementRequest.direction,
           interfaceInstanceId: id,
         },
-        ...(annotation
+        ...(annotations[0]
           ? {
               annotation: {
-                ...annotation,
-                binding: {
-                  kind: "cell-terminal-name" as const,
-                  terminalId: `terminal-${id.toLowerCase()}`,
-                },
+                ...annotations[0],
               },
             }
           : {}),

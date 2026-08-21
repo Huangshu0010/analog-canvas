@@ -17,8 +17,8 @@ test("edits compatible selected instances through the explicit Instance Table", 
   await clickCommand(page, "Netlist", "Instance Table…");
   const table = page.getByRole("dialog", { name: "Instance Table" });
   await expect(table).toBeVisible();
-  await expect(table.getByText("M1", { exact: true })).toBeVisible();
-  await expect(table.getByText("M2", { exact: true })).toBeVisible();
+  await expect(table.getByRole("button", { name: "M1" })).toBeVisible();
+  await expect(table.getByRole("button", { name: "M2" })).toBeVisible();
   await table.getByRole("button", { name: "Select visible" }).click();
   await table.getByLabel("Parameter name").fill("l");
   await table.getByLabel("Batch value").fill("120n");

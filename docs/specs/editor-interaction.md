@@ -193,11 +193,14 @@ without requiring an Alt cycle.
 ## Text and presentation
 
 Every visible editable label is one persisted RichText annotation. Component
-insertion creates an `instance-label` only when reference display is requested,
-and an `instance-value` only when value display is requested and the device
-parameters have a display projection.
-The renderer never synthesizes text from Instance IDs and no empty suppressor
-label exists. Reference label display is a Properties toggle for one or many
+insertion uses one default-display policy: exportable devices receive an
+`instance-designator` label when reference display is requested; internal Cells
+and external subcircuits additionally receive their Cell/master presentation;
+formal Ports receive only `cell-terminal-name`; and parameter values use
+`instance-value` when requested and displayable. Properties exposes the
+electrical Netlist Reference separately from the presentation-only Schematic
+Alias. The renderer never synthesizes text from Instance IDs and no empty
+suppressor label exists. Reference label display is a Properties toggle for one or many
 selected components: hiding sets the annotation's optional `visible: false`
 flag, which renderers and hit/marquee surfaces skip while the annotation stays
 in the Project, so hiding is recoverable and a missing label can be re-created

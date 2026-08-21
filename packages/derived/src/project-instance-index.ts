@@ -4,7 +4,11 @@ import {
   referenceIssuesForInstance,
   type ReferenceIssue,
 } from "@icm/devices";
-import type { CircuitProject, InstanceNetlistBinding } from "@icm/model";
+import {
+  flattenRichText,
+  type CircuitProject,
+  type InstanceNetlistBinding,
+} from "@icm/model";
 
 import type { ProjectConnectivityIndex } from "./connectivity-index.js";
 import { findHierarchyPaths } from "./hierarchy-navigation.js";
@@ -21,6 +25,8 @@ export interface ProjectInstanceRow {
   readonly documentName: string;
   readonly instanceId: string;
   readonly reference?: string;
+  readonly schematicName?: string;
+  readonly masterName?: string;
   readonly symbolId: string;
   readonly deviceClass?: string;
   readonly binding?: InstanceNetlistBinding;
@@ -44,12 +50,36 @@ function rowMatches(row: ProjectInstanceRow, query: string): boolean {
     row.documentId,
     row.instanceId,
     row.reference,
+    row.schematicName,
+    row.masterName,
     row.symbolId,
     row.deviceClass,
     row.binding?.kind,
     ...(row.binding?.kind === "model" ? [row.binding.name] : []),
     ...Object.entries(row.parameters).flatMap(([name, value]) => [name, value]),
   ].some((value) => value?.toLowerCase().includes(normalized));
+}
+
+function masterNameFor(
+  project: CircuitProject,
+  binding: InstanceNetlistBinding | undefined,
+): string | undefined {
+  if (!binding) return undefined;
+  switch (binding.kind) {
+    case "model":
+    case "unresolved-subcircuit":
+      return binding.name;
+    case "external-subcircuit":
+      return project.externalSubcircuitDefinitions.find(
+        (definition) => definition.id === binding.definitionId,
+      )?.name;
+    case "subcircuit":
+      return project.documents.find(
+        (document) => document.id === binding.childDocumentId,
+      )?.netlist?.name;
+    case "primitive":
+      return binding.deviceClass;
+  }
 }
 
 /**
@@ -73,6 +103,7 @@ export function buildProjectInstanceIndex(
         : [];
       return document.instances.map((instance): ProjectInstanceRow => {
         const descriptor = deviceDescriptor(instance.symbolId);
+        const masterName = masterNameFor(project, instance.netlist?.binding);
         return {
           key: `${document.id}\u0000${instance.id}`,
           documentId: document.id,
@@ -81,6 +112,10 @@ export function buildProjectInstanceIndex(
           ...(instance.netlist?.reference
             ? { reference: instance.netlist.reference }
             : {}),
+          ...(instance.schematicName
+            ? { schematicName: flattenRichText(instance.schematicName) }
+            : {}),
+          ...(masterName ? { masterName } : {}),
           symbolId: instance.symbolId,
           ...(descriptor ? { deviceClass: descriptor.deviceClass } : {}),
           ...(instance.netlist?.binding

@@ -310,6 +310,7 @@ export function InsertComponentDialog({
       return;
     }
     if (selected.kind === "cell") {
+      const trimmedReference = referenceText.trim();
       onApply({
         kind: "cell",
         symbolId: selected.symbol.id,
@@ -318,13 +319,14 @@ export function InsertComponentDialog({
         cellName: selected.cellName ?? selected.symbol.name,
         parameters: {},
         initialRotation,
-        showReference: false,
-        referenceText: null,
+        showReference,
+        referenceText: trimmedReference === "" ? null : trimmedReference,
         showValue: true,
       });
       return;
     }
     if (selected.kind === "external-subcircuit") {
+      const trimmedReference = referenceText.trim();
       onApply({
         kind: "external-subcircuit",
         symbolId: selected.symbol.id,
@@ -333,8 +335,8 @@ export function InsertComponentDialog({
         masterName: selected.masterName ?? selected.symbol.name,
         parameters: {},
         initialRotation,
-        showReference: false,
-        referenceText: null,
+        showReference,
+        referenceText: trimmedReference === "" ? null : trimmedReference,
         showValue: true,
       });
       return;
@@ -524,11 +526,7 @@ export function InsertComponentDialog({
                     <option value="270">270°</option>
                   </select>
                 </label>
-                {selected?.kind === "cell" ? (
-                  <p className="insert-cell-label-note">
-                    Cell label: {selected.cellName ?? selected.symbol.name}
-                  </p>
-                ) : selectedIsPort ? (
+                {selectedIsPort ? (
                   <p className="insert-cell-label-note">
                     Port name and direction can be edited after placement.
                   </p>

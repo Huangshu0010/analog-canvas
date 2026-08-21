@@ -2733,7 +2733,12 @@ test("exports structural SPICE and Spectre netlists while exposing instance auth
   const properties = page.getByRole("complementary", { name: "Properties" });
   await expect(properties.getByLabel("Cell netlist name")).toHaveCount(0);
   await expect(properties.getByLabel("Cell netlist port order")).toHaveCount(0);
-  await expect(properties.getByLabel("Component schematic name")).toBeVisible();
+  await expect(
+    properties.getByLabel("Component netlist reference"),
+  ).toBeVisible();
+  await expect(
+    properties.getByLabel("Component schematic alias"),
+  ).toBeVisible();
   await expect(properties.getByLabel("Component model target")).toBeVisible();
   await expect(properties.getByText(/^Model:/u)).toHaveCount(0);
 });
