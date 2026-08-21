@@ -180,7 +180,7 @@ Q2 collector base emitter QPREF
     );
   });
 
-  it("imports reviewed inductors with the PDF-derived Razavi symbol", async () => {
+  it("imports reviewed inductors with the scale-reconciled Razavi symbol", async () => {
     const entry = resolve(
       process.cwd(),
       "netlists/rlc-broadband-50-to-200-match/circuit.spi",
@@ -192,7 +192,7 @@ Q2 collector base emitter QPREF
     expect(imported.successful).toBe(true);
     expect(
       imported.project?.documents[0]?.instances
-        .filter((instance) => instance.symbolId === "inductor")
+        .filter((instance) => instance.symbolId === "inductor-compact")
         .map((instance) => instance.netlist?.reference),
     ).toEqual(["L1", "L2"]);
   });
