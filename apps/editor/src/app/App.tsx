@@ -27,8 +27,7 @@ import {
   planCreateCell,
   planDeleteCell,
   planRenameCell,
-  planRemoveCellTerminal,
-  planRemoveCellTerminals,
+  planRemoveCellTerminalMarkers,
   planRenameCellTerminal,
   planReorderCellTerminal,
   planSetCellSymbolPresentation,
@@ -1009,16 +1008,16 @@ export function App({
       if (anchor.kind !== "object") return false;
       const interfaceInstanceId = anchor.objectId;
       return (
-        document.netlist?.terminals.some(
-          (terminal) => terminal.interfaceInstanceId === interfaceInstanceId,
+        document.netlist?.terminals.some((terminal) =>
+          terminal.interfaceInstanceIds.includes(interfaceInstanceId),
         ) === true
       );
     },
     commitCellPortAnnotation: (annotation, name) => {
       if (annotation.anchor.kind !== "object") return false;
       const interfaceInstanceId = annotation.anchor.objectId;
-      const terminal = document.netlist?.terminals.find(
-        (candidate) => candidate.interfaceInstanceId === interfaceInstanceId,
+      const terminal = document.netlist?.terminals.find((candidate) =>
+        candidate.interfaceInstanceIds.includes(interfaceInstanceId),
       );
       if (!terminal) return false;
       try {
@@ -1509,6 +1508,20 @@ export function App({
     copyPlacement,
     getInteractionKind: () => getCurrentInteractionState().kind,
     transact,
+    transactProjectDocument: (transactionId, edits) => {
+      const committed = commitStructure(transactionId, [
+        {
+          kind: "transact_document",
+          documentId: document.id,
+          expectedRevision: document.revision,
+          edits: [...edits],
+        },
+      ]);
+      return {
+        ok: committed,
+        revision: committed ? document.revision + 1 : document.revision,
+      };
+    },
     setStatus,
     setSelectedEndpoint,
     resetSelection,
@@ -2141,8 +2154,8 @@ export function App({
   }
 
   const selectedFormalTerminal = selectedInstance
-    ? document.netlist?.terminals.find(
-        (terminal) => terminal.interfaceInstanceId === selectedInstance.id,
+    ? document.netlist?.terminals.find((terminal) =>
+        terminal.interfaceInstanceIds.includes(selectedInstance.id),
       )
     : undefined;
   const selectedPortNet =
@@ -2187,22 +2200,26 @@ export function App({
   }
 
   function deleteSelectedFormalPort(): void {
-    if (!selectedFormalTerminal) return;
+    if (!selectedFormalTerminal || !selectedInstance) return;
     try {
-      const edits = planRemoveCellTerminal(
+      const edits = planRemoveCellTerminalMarkers(
         project,
         document.id,
-        selectedFormalTerminal.id,
+        [selectedInstance.id],
         proposeConnectedInstanceDeletion(
           document,
           resolver,
-          [selectedFormalTerminal.interfaceInstanceId],
+          [selectedInstance.id],
           ++uniqueSuffixCounter.current,
         ),
       );
       if (commitStructure("delete-cell-port", edits)) {
         resetSelection();
-        setStatus(`Deleted formal port ${selectedFormalTerminal.name}`);
+        setStatus(
+          selectedFormalTerminal.interfaceInstanceIds.length > 1
+            ? `Deleted formal port marker ${selectedFormalTerminal.name}`
+            : `Deleted formal port ${selectedFormalTerminal.name}`,
+        );
       }
     } catch (error) {
       setStatus(
@@ -2214,7 +2231,9 @@ export function App({
   function deleteCurrentSelection(): void {
     const formalTerminals = (document.netlist?.terminals ?? []).filter(
       (terminal) =>
-        visualSelection.instanceIds.includes(terminal.interfaceInstanceId),
+        terminal.interfaceInstanceIds.some((instanceId) =>
+          visualSelection.instanceIds.includes(instanceId),
+        ),
     );
     if (formalTerminals.length === 0) {
       deleteSelectionFromSelection();
@@ -2222,18 +2241,29 @@ export function App({
     }
     const protectedTerminalIds = new Set(
       formalTerminals
-        .filter((terminal) =>
-          Boolean(findCellTerminalCaller(project, document.id, terminal.name)),
+        .filter(
+          (terminal) =>
+            terminal.interfaceInstanceIds.every((instanceId) =>
+              visualSelection.instanceIds.includes(instanceId),
+            ) &&
+            Boolean(
+              findCellTerminalCaller(project, document.id, terminal.name),
+            ),
         )
         .map((terminal) => terminal.id),
     );
-    const removableTerminals = formalTerminals.filter(
-      (terminal) => !protectedTerminalIds.has(terminal.id),
+    const selectedFormalMarkerIds = formalTerminals.flatMap((terminal) =>
+      terminal.interfaceInstanceIds.filter((instanceId) =>
+        visualSelection.instanceIds.includes(instanceId),
+      ),
     );
     const protectedInstanceIds = new Set(
       formalTerminals
         .filter((terminal) => protectedTerminalIds.has(terminal.id))
-        .map((terminal) => terminal.interfaceInstanceId),
+        .flatMap((terminal) => terminal.interfaceInstanceIds),
+    );
+    const removableMarkerIds = selectedFormalMarkerIds.filter(
+      (instanceId) => !protectedInstanceIds.has(instanceId),
     );
     const deletionSelection = {
       ...visualSelection,
@@ -2257,14 +2287,14 @@ export function App({
         deletionSelection,
         ++uniqueSuffixCounter.current,
       );
-      if (removableTerminals.length > 0) {
+      if (removableMarkerIds.length > 0) {
         if (
           commitStructure(
             "delete-cell-port-selection",
-            planRemoveCellTerminals(
+            planRemoveCellTerminalMarkers(
               project,
               document.id,
-              removableTerminals.map((terminal) => terminal.id),
+              removableMarkerIds,
               deletionEdits,
             ),
           )
@@ -3830,8 +3860,8 @@ export function App({
       if (transact(edits).ok) {
         resetSelection();
         const returnedFormalPort = instanceIds.some((instanceId) =>
-          document.netlist?.terminals.some(
-            (terminal) => terminal.interfaceInstanceId === instanceId,
+          document.netlist?.terminals.some((terminal) =>
+            terminal.interfaceInstanceIds.includes(instanceId),
           ),
         );
         setStatus(
@@ -3848,8 +3878,8 @@ export function App({
   function placementTrayIdentity(
     instance: SchematicDocument["instances"][number],
   ): string {
-    const formalName = document.netlist?.terminals.find(
-      (terminal) => terminal.interfaceInstanceId === instance.id,
+    const formalName = document.netlist?.terminals.find((terminal) =>
+      terminal.interfaceInstanceIds.includes(instance.id),
     )?.name;
     const netPortName =
       instance.symbolId === "port" || instance.symbolId === "port-filled"

@@ -11,18 +11,42 @@ release, generated-artifact, and visual checks in their existing scripts.
 
 ## Layers
 
-| Layer | Purpose | Typical location |
-| --- | --- | --- |
-| Static and generated | types, formatting, documentation links, generated-output drift | root scripts and `ci:static` |
-| Unit | pure algorithms, value boundaries, deterministic transformations | adjacent `*.test.ts` |
-| Module contract | one package's public input/output, including rejection cases | package test beside the public boundary |
-| Cross-module contract | one fact interpreted consistently across package boundaries | owning boundary package, named for the fact |
-| Browser workflow | a user-visible flow that cannot be proved below the browser | `apps/editor/e2e/` |
-| Release and golden | built product, artifacts, visual reference, packaging | root scripts and release checks |
+| Layer                 | Purpose                                                          | Typical location                            |
+| --------------------- | ---------------------------------------------------------------- | ------------------------------------------- |
+| Static and generated  | types, formatting, documentation links, generated-output drift   | root scripts and `ci:static`                |
+| Unit                  | pure algorithms, value boundaries, deterministic transformations | adjacent `*.test.ts`                        |
+| Module contract       | one package's public input/output, including rejection cases     | package test beside the public boundary     |
+| Cross-module contract | one fact interpreted consistently across package boundaries      | owning boundary package, named for the fact |
+| Browser workflow      | a user-visible flow that cannot be proved below the browser      | `apps/editor/e2e/`                          |
+| Release and golden    | built product, artifacts, visual reference, packaging            | root scripts and release checks             |
 
 Use the cheapest layer that can prove the behavior. Keep one primary contract
 test per behavior; add a higher-layer test only when it proves wiring or a real
 user path that the lower layer cannot prove.
+
+## Advisory gate planning
+
+Before expensive validation, inspect the real commands selected for the
+change:
+
+```powershell
+pnpm gate:plan -- --path packages/model/src/schema/document.ts
+pnpm gate:plan -- --base origin/main
+pnpm gate:preflight -- --base origin/main
+pnpm gate:affected -- --base origin/main
+```
+
+The versioned catalog at `config/validation-gates.json` maps repository paths
+to preflight, affected, and final gates. Unknown non-documentation paths and
+changes to gate policy select the conservative branch/full fallback. In this
+advisory phase, the plan does not skip `pnpm gate:full` or any required GitHub
+check; it makes the expected validation surface visible before those checks
+consume minutes.
+
+`gate:preflight` verifies the plan's Gate Review and runs cheap structural
+contracts. `gate:affected` runs the catalog's bounded unit, focused browser,
+release, or branch checks. Review the printed reasons before execution; update
+the target plan if the real diff materially changes the selection.
 
 ## Change discipline
 

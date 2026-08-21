@@ -42,6 +42,18 @@ is credible:
 Add test rationale or broader-suite justification only when it is not obvious
 from the changed behavior and risk.
 
+## Gate Review
+
+- Decision: `<affected | full | no-runtime-impact>`
+- Early gates: `<cheap checks that must run before expensive validation>`
+- Affected gates: `<focused unit, module, browser, or release checks>`
+- Final gates: `<the final delivery gate or why none applies>`
+- Platform risks: `<Linux, browser, generated-artifact, or release-only risks>`
+
+Generate an advisory plan from intended paths before editing when practical,
+then regenerate it from the real diff before delivery. A gate-policy change or
+an unclassified implementation path requires the full fallback.
+
 ## Test Impact
 
 - Decision: `<tests-updated | no-test-change>`

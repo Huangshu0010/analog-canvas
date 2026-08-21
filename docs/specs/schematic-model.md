@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 19 and has
+geometric, and presentation facts. The current model is strict schema 20 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -44,8 +44,10 @@ migration. Invalid coordinates are rejected with their data path.
 - `Junction` owns explicit branch/anchor geometry.
 - `NoConnect` targets one terminal only and cannot overlap Net membership.
 - `Document.netlist.terminals` is the ordered formal Cell interface. Each
-  terminal has a stable ID, name, direction, Net ID, and an
-  `interfaceInstanceId` that points to its ordinary canvas Port Instance.
+  terminal has a stable ID, name, direction, Net ID, and a non-empty
+  `interfaceInstanceIds` array pointing to its ordinary canvas Port marker
+  Instances. Repeated markers are views of one terminal, not duplicate formal
+  pins.
 
 Canvas interface markers `port` and `port-filled` are ordinary single-pin
 Instances with pin `P`; their electrical membership and Route endpoints are
@@ -158,6 +160,6 @@ ordinary Schematic edits inside one Project structural transaction. The
 Project's `structureRevision` protects this cross-Document boundary and the
 editor records it as one undoable structural commit.
 
-Persistence writes only schema 19. `packages/project-protocol` accepts schema
-18 through the bounded direct upgrade defined by ADR 0034, then supplies the
+Persistence writes only schema 20. `packages/project-protocol` accepts schema
+19 through the bounded direct upgrade defined by ADR 0037, then supplies the
 current model only; no compatibility shape enters `packages/model`.

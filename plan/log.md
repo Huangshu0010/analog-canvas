@@ -3960,6 +3960,35 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   165 unit files / 990 tests, all builds/release checks, and 169 browser tests.
 - Commit status: ready to commit on `codex/vdd-named-power-hotfix`.
 
+## 2026-08-21 - Advisory validation gate planning
+
+- Changed areas: added a versioned validation-gate catalog, explainable diff
+  planner, executable preflight/affected commands, target-plan Gate Review,
+  shared changed-path collection, and an advisory GitHub Actions summary;
+  existing required jobs and the canonical full delivery gate remain intact.
+- Validation: planner/governance tests (2 files / 16 tests), representative
+  path plans, `pnpm gate:preflight`, `pnpm gate:affected` (166 files / 1001
+  tests, builds and production smoke), frozen install, and final canonical
+  `pnpm ci:check` (166 files / 1002 tests, all build/release checks, 169 browser
+  tests) passed, plus diff/status checks.
+- Commit status: committed on `codex/gate-planning-preflight`; mainline
+  integration is tracked by the branch PR.
+
+## 2026-08-22 - Repeated Formal Port markers
+
+- Changed areas: advanced Project persistence to schema 20; let one formal
+  Cell terminal own multiple ordinary Port markers on one Net; routed Formal
+  marker copy through the existing Project structural transaction; and made
+  subset deletion retain the interface while final deletion keeps caller
+  protection.
+- Validation: 149 focused cross-layer tests, 63 Agent-adapter tests, the full
+  hierarchy browser suite, generated Agent/MCP checks, test-impact,
+  `pnpm verify:branch` (165 files / 992 tests plus builds and production
+  smoke), and canonical `pnpm ci:check` with 170 browser tests passed.
+- Latest-Main integration: preserved the variable-resistor child Cell from
+  PR 138 and updated its two formal marker fields to schema 20.
+- Commit status: ready to commit on `codex/named-power-bulk-semantics`.
+
 ## 2026-08-21 - Two-terminal variable resistor component
 
 - Changed areas: added a reviewed variable-resistor Symbol that composes the

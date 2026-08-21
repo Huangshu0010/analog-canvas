@@ -870,7 +870,9 @@ function extractCell(
   }
   const instances: DesignNetlistInstance[] = [];
   const interfaceInstanceIds = new Set(
-    document.netlist.terminals.map((terminal) => terminal.interfaceInstanceId),
+    document.netlist.terminals.flatMap(
+      (terminal) => terminal.interfaceInstanceIds,
+    ),
   );
   for (const instance of [...document.instances].sort((a, b) => {
     const left = a.netlist?.reference ?? a.id;

@@ -22,6 +22,12 @@ Before starting a target:
 3. Identify the target owner, goal, expected files, shared dependencies, and
    validation surface.
 4. Read `README.md`, `plan/README.md`, and any closer domain instructions.
+5. Review validation intent before editing:
+   - Run `pnpm gate:plan -- --path <expected-path>` for the expected owned
+     paths when practical.
+   - Expand the selected commands and identify platform, release, generated-
+     artifact, and golden-state assumptions.
+   - Record the decision under `## Gate Review` in the target plan.
 
 ## Before Editing
 
@@ -51,6 +57,14 @@ the owned set without updating the plan first.
 - Protect shared contracts, generated artifacts, binary assets, and user-owned
   work unless the plan explicitly claims them.
 - Update the plan before expanding scope or taking on a new dependency.
+- Regenerate the advisory plan from the real diff with
+  `pnpm gate:plan -- --base <base-ref>` before expensive validation. If the
+  actual selection differs materially from the recorded Gate Review, update
+  the plan before proceeding.
+- Run `pnpm gate:preflight -- --base <base-ref>` before affected browser,
+  build, release, or complete gates. Use
+  `pnpm gate:affected -- --base <base-ref>` as the normal automated development
+  validation after focused implementation checks.
 - Prefer the smallest deterministic validation that covers changed behavior,
   direct dependencies, and credible failure risks.
 - Add tests when behavior changes, a regression needs protection, or a
@@ -73,6 +87,9 @@ the owned set without updating the plan first.
 - Use `pnpm verify:branch` when a completed branch crosses enough workspace
   boundaries to justify static checks, all unit tests, one build, and the
   production smoke check. It is not the mainline delivery gate.
+- Gate planning is advisory in this phase. It does not authorize skipping the
+  canonical mainline gate or any required GitHub check. Gate-policy changes and
+  unclassified non-documentation paths require the full fallback.
 - Record unresolved questions in the plan or a review note.
 
 ## Circuit Asset Rules

@@ -578,7 +578,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           name: formalName,
           netId,
           direction: placementRequest.direction,
-          interfaceInstanceId: id,
+          interfaceInstanceIds: [id],
         },
         ...(annotations[0]
           ? {

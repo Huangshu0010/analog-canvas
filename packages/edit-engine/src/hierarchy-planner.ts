@@ -253,7 +253,7 @@ export function planCreateCellPort(
   const document = requireDocument(project, documentId);
   if (!document.netlist)
     throw new Error(`Cell has no interface: ${documentId}`);
-  if (input.instance.id !== input.terminal.interfaceInstanceId) {
+  if (!input.terminal.interfaceInstanceIds.includes(input.instance.id)) {
     throw new Error("Cell terminal must reference the placed Port Instance");
   }
   if (
@@ -603,7 +603,7 @@ export function planRenameCellTerminal(
       (annotation) =>
         annotation.kind === "instance-label" &&
         annotation.anchor.kind === "object" &&
-        annotation.anchor.objectId === terminal.interfaceInstanceId,
+        terminal.interfaceInstanceIds.includes(annotation.anchor.objectId),
     )
     .flatMap((annotation) => {
       if (annotation.binding?.kind === "cell-terminal-name") {
@@ -753,7 +753,7 @@ export function planExposePortInstance(
     name: string;
     netId: string;
     direction: "input" | "output" | "inout" | "passive";
-    interfaceInstanceId: string;
+    interfaceInstanceIds: string[];
   },
 ): ProjectStructureEdit[] {
   const document = project.documents.find((item) => item.id === documentId);
@@ -780,6 +780,65 @@ export function planRemoveCellTerminal(
     [terminalId],
     instanceDeletionEdits,
   );
+}
+
+/**
+ * Removes selected visual markers while retaining their shared formal
+ * terminal whenever another marker survives. Removing the final marker keeps
+ * the existing structural safety rule: referenced caller pins must be removed
+ * or reconciled first.
+ */
+export function planRemoveCellTerminalMarkers(
+  project: CircuitProject,
+  documentId: string,
+  markerInstanceIds: readonly string[],
+  instanceDeletionEdits: DocumentEdits,
+): ProjectStructureEdit[] {
+  const document = requireDocument(project, documentId);
+  if (!document.netlist)
+    throw new Error(`Cell has no interface: ${documentId}`);
+  const selected = new Set(markerInstanceIds);
+  if (selected.size === 0) return [];
+  const terminalEdits: DocumentEdits = [];
+  const matched = new Set<string>();
+  for (const terminal of document.netlist.terminals) {
+    const removed = terminal.interfaceInstanceIds.filter((instanceId) =>
+      selected.has(instanceId),
+    );
+    if (removed.length === 0) continue;
+    removed.forEach((instanceId) => matched.add(instanceId));
+    const remaining = terminal.interfaceInstanceIds.filter(
+      (instanceId) => !selected.has(instanceId),
+    );
+    if (remaining.length > 0) {
+      terminalEdits.push({
+        kind: "update_cell_terminal",
+        terminalId: terminal.id,
+        interfaceInstanceIds: remaining,
+      });
+      continue;
+    }
+    const caller = findCellTerminalCaller(project, documentId, terminal.name);
+    if (caller) {
+      throw new Error(
+        `Cell terminal ${terminal.name} is still referenced by ${caller.parent.id}.${caller.instance.id}`,
+      );
+    }
+    terminalEdits.push({
+      kind: "remove_cell_terminal",
+      terminalId: terminal.id,
+    });
+  }
+  const unknown = [...selected].find((instanceId) => !matched.has(instanceId));
+  if (unknown) {
+    throw new Error(`Formal Port marker does not exist: ${unknown}`);
+  }
+  return [
+    transactDocument(project, documentId, [
+      ...terminalEdits,
+      ...instanceDeletionEdits,
+    ]),
+  ];
 }
 
 /**
@@ -815,7 +874,7 @@ export function planRemoveCellTerminals(
     return terminal;
   });
   const terminalInstanceIds = new Set(
-    terminals.map((terminal) => terminal.interfaceInstanceId),
+    terminals.flatMap((terminal) => terminal.interfaceInstanceIds),
   );
   const terminalNames = new Set(terminals.map((terminal) => terminal.name));
   const edits: Extract<
@@ -852,14 +911,16 @@ export function planRemoveCellTerminals(
     )
   ) {
     for (const terminal of terminals) {
-      edits.push({
-        kind: "disconnect_endpoint",
-        endpoint: {
-          kind: "terminal",
-          instanceId: terminal.interfaceInstanceId,
-          pinName: "P",
-        },
-      });
+      for (const instanceId of terminal.interfaceInstanceIds) {
+        edits.push({
+          kind: "disconnect_endpoint",
+          endpoint: {
+            kind: "terminal",
+            instanceId,
+            pinName: "P",
+          },
+        });
+      }
     }
   }
   edits.push(
@@ -882,10 +943,12 @@ export function planRemoveCellTerminals(
     })),
     ...(instanceDeletionEdits
       ? []
-      : terminals.map((terminal) => ({
-          kind: "remove_instance" as const,
-          instanceId: terminal.interfaceInstanceId,
-        }))),
+      : terminals.flatMap((terminal) =>
+          terminal.interfaceInstanceIds.map((instanceId) => ({
+            kind: "remove_instance" as const,
+            instanceId,
+          })),
+        )),
   );
   const structureEdits: ProjectStructureEdit[] = [
     {

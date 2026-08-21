@@ -73,6 +73,10 @@ The top-Cell formal interface and non-emitting Free Net Port decision is
 [`0034-top-cell-formal-port-and-free-port-export.md`](0034-top-cell-formal-port-and-free-port-export.md).
 The imported-Net provenance and derived routing-guidance decision is
 [`0035-imported-net-routing-guidance.md`](0035-imported-net-routing-guidance.md).
+The named-power, Power Rail, and MOS bulk-default decision is
+[`0036-named-power-and-mos-bulk-semantics.md`](0036-named-power-and-mos-bulk-semantics.md).
+The repeated formal-Port marker and schema-20 decision is
+[`0037-repeated-formal-port-markers.md`](0037-repeated-formal-port-markers.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 
