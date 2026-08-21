@@ -3787,3 +3787,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   execution, workspace build, and production preview smoke passed.
 - Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
   the current branch HEAD.
+
+## 2026-08-21 - Imported Reference default display
+
+- Changed areas: made Tray placement, canvas drag/drop, and Place all
+  materialize only missing default Reference projections; retained imported
+  netlist references are now visibly rendered when first placed.
+- Validation: focused editor contracts (3 files / 18 tests), SPICE
+  import-and-place browser regression (1 test), typecheck, format,
+  test-impact, and diff checks passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  the current branch HEAD.

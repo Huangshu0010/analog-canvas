@@ -2649,6 +2649,36 @@ X2 OUT IN EXT_MASTER l=1u nf=4
   expect(spice).toContain("X2 OUT IN EXT_MASTER l=1u nf=4");
 });
 
+test("shows imported instance references after Place all", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("spice-files").setInputFiles({
+    name: "circuit.spi",
+    mimeType: "application/x-spice",
+    buffer: Buffer.from(`
+.subckt top IN OUT
+R7 IN OUT 10k
+.ends top
+`),
+  });
+
+  await expect(page.getByTestId("status")).toContainText(
+    "Imported 1 Documents",
+  );
+  await page
+    .getByRole("region", { name: "Placement Tray" })
+    .getByRole("button", { name: "Place all" })
+    .click();
+  await expect(
+    page
+      .getByTestId("schematic-canvas")
+      .locator("text")
+      .filter({ hasText: "R7" }),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R7"),
+  ).toBeVisible();
+});
+
 test("requires warning review before exporting generated NoConnect nodes", async ({
   page,
 }) => {

@@ -37,7 +37,10 @@ import {
 } from "./placement-connectivity";
 import { planVddRailEdits } from "./vdd-rail";
 import { vddPowerLabelAnnotation } from "./vdd-power-label";
-import { defaultInstanceDisplayAnnotations } from "../instance-display/default-instance-display";
+import {
+  defaultInstanceDisplayAnnotations,
+  missingDefaultInstanceDisplayAnnotations,
+} from "../instance-display/default-instance-display";
 import {
   initialInstanceNetlist,
   nextInstanceDesignator,
@@ -248,16 +251,23 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.cancelAllTransientInteraction();
       return;
     }
+    const placement = {
+      position,
+      rotation: options.componentPlacementRotation,
+      mirror: options.componentPlacementMirror,
+    };
+    const displayAnnotations = missingDefaultInstanceDisplayAnnotations(
+      options.document,
+      { ...instance, placement },
+      options.resolver,
+      options.styleProfile,
+    );
     const result = options.transact([
-      {
-        kind: "place_instance",
-        instanceId,
-        placement: {
-          position,
-          rotation: options.componentPlacementRotation,
-          mirror: options.componentPlacementMirror,
-        },
-      },
+      { kind: "place_instance", instanceId, placement },
+      ...displayAnnotations.map((annotation) => ({
+        kind: "upsert_schematic_annotation" as const,
+        annotation,
+      })),
     ]);
     if (!result.ok) return;
     options.selectOnly("instance", [instanceId]);

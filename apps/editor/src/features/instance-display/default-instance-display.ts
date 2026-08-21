@@ -91,6 +91,59 @@ export function defaultInstanceDisplayAnnotations(
   return annotations;
 }
 
+/**
+ * Materialize only the default visual labels a retained Instance lacks when it
+ * enters the canvas. Imported SPICE starts in the Placement Tray, so this
+ * keeps its already-imported Reference visible without replacing a label the
+ * user has already positioned, hidden, or edited.
+ */
+export function missingDefaultInstanceDisplayAnnotations(
+  document: SchematicDocument,
+  instance: Instance,
+  resolver: SymbolResolver,
+  styleProfile: SchematicStyleProfile,
+): readonly Annotation[] {
+  if (!instance.placement) return [];
+  const formalTerminalId = document.netlist?.terminals.find(
+    (terminal) => terminal.interfaceInstanceId === instance.id,
+  )?.id;
+  return defaultInstanceDisplayAnnotations(
+    document,
+    instance,
+    resolver,
+    styleProfile,
+    formalTerminalId ? { formalTerminalId } : {},
+  ).filter(
+    (candidate) =>
+      !document.annotations.some((existing) =>
+        isSameDefaultProjection(existing, candidate),
+      ),
+  );
+}
+
+function isSameDefaultProjection(
+  existing: Annotation,
+  candidate: Annotation,
+): boolean {
+  if (existing.id === candidate.id) return true;
+  const existingBinding = existing.binding;
+  const candidateBinding = candidate.binding;
+  if (!existingBinding || !candidateBinding) return false;
+  if (
+    existingBinding.kind === "instance-designator" &&
+    candidateBinding.kind === "instance-designator"
+  ) {
+    return existingBinding.instanceId === candidateBinding.instanceId;
+  }
+  if (
+    existingBinding.kind === "cell-terminal-name" &&
+    candidateBinding.kind === "cell-terminal-name"
+  ) {
+    return existingBinding.terminalId === candidateBinding.terminalId;
+  }
+  return false;
+}
+
 function defaultMasterNameAnnotation(
   document: SchematicDocument,
   instance: Instance,

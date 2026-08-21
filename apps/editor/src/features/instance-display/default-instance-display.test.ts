@@ -3,7 +3,10 @@ import { createEmptyDocument } from "@icm/model";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
-import { defaultInstanceDisplayAnnotations } from "./default-instance-display";
+import {
+  defaultInstanceDisplayAnnotations,
+  missingDefaultInstanceDisplayAnnotations,
+} from "./default-instance-display";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
@@ -81,5 +84,45 @@ describe("default instance display annotations", () => {
         binding: { kind: "cell-terminal-name", terminalId: "terminal-input" },
       }),
     ]);
+  });
+
+  it("materializes an imported reference once when a retained Instance is placed", () => {
+    const document = createEmptyDocument("main", "Main");
+    const instance = {
+      id: "imported-resistor-opaque-id",
+      symbolId: "resistor",
+      schematicReference: "R7",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+      netlist: { reference: "R7", parameters: { value: "10k" } },
+    };
+
+    const missing = missingDefaultInstanceDisplayAnnotations(
+      document,
+      instance,
+      resolver,
+      resolveSchematicStyleProfile(document.presentation.styleProfileId),
+    );
+    expect(missing).toEqual([
+      expect.objectContaining({
+        binding: {
+          kind: "instance-designator",
+          instanceId: "imported-resistor-opaque-id",
+        },
+      }),
+    ]);
+
+    document.annotations.push(...missing);
+    expect(
+      missingDefaultInstanceDisplayAnnotations(
+        document,
+        instance,
+        resolver,
+        resolveSchematicStyleProfile(document.presentation.styleProfileId),
+      ),
+    ).toEqual([]);
   });
 });

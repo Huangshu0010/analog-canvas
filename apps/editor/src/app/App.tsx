@@ -158,6 +158,7 @@ import {
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
 import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
+import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
 import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
 import { vddPowerLabelAnnotation } from "../features/component-insert/vdd-power-label";
@@ -3671,20 +3672,36 @@ export function App({
     if (!instanceId) {
       return;
     }
+    const placement = {
+      position: pointFromClient(
+        event.clientX,
+        event.clientY,
+        event.currentTarget,
+      ),
+      rotation: 0 as const,
+      mirror: "none" as const,
+    };
+    const instance = document.instances.find(
+      (candidate) => candidate.id === instanceId,
+    );
+    const displayAnnotations = instance
+      ? missingDefaultInstanceDisplayAnnotations(
+          document,
+          { ...instance, placement },
+          resolver,
+          styleProfile,
+        )
+      : [];
     transact([
       {
         kind: "place_instance",
         instanceId,
-        placement: {
-          position: pointFromClient(
-            event.clientX,
-            event.clientY,
-            event.currentTarget,
-          ),
-          rotation: 0,
-          mirror: "none",
-        },
+        placement,
       },
+      ...displayAnnotations.map((annotation) => ({
+        kind: "upsert_schematic_annotation" as const,
+        annotation,
+      })),
     ]);
     selectOnly("instance", [instanceId]);
   }
@@ -3695,7 +3712,23 @@ export function App({
       setStatus("The Placement Tray is empty");
       return;
     }
-    if (transact(edits).ok) {
+    const displayEdits = edits.flatMap((edit) => {
+      if (edit.kind !== "place_instance") return [];
+      const instance = document.instances.find(
+        (candidate) => candidate.id === edit.instanceId,
+      );
+      if (!instance) return [];
+      return missingDefaultInstanceDisplayAnnotations(
+        document,
+        { ...instance, placement: edit.placement },
+        resolver,
+        styleProfile,
+      ).map((annotation) => ({
+        kind: "upsert_schematic_annotation" as const,
+        annotation,
+      }));
+    });
+    if (transact([...edits, ...displayEdits]).ok) {
       resetSelection();
       setStatus(
         `Placed ${edits.length} retained ${edits.length === 1 ? "Instance" : "Instances"} in a deterministic canvas grid`,
