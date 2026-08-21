@@ -25,7 +25,7 @@ export function EditorHelpDialog({
       >
         <header className="help-dialog-header">
           <div>
-            <p className="help-kicker">Interactive Circuit Maker</p>
+            <p className="help-kicker">Analog Canvas</p>
             <h2 id="help-title">Help</h2>
           </div>
           <button
@@ -41,9 +41,9 @@ export function EditorHelpDialog({
           <section id="help-introduction" className="help-introduction">
             <p className="help-section-label">Introduction</p>
             <p>
-              Interactive Circuit Maker is a browser-based schematic editor.
-              Import SPICE or open a project, edit the circuit on the canvas,
-              then export an editable project or drawing file.
+              Analog Canvas is a browser-based schematic editor. Import SPICE or
+              open a project, edit the circuit on the canvas, then export an
+              editable project or drawing file.
             </p>
           </section>
           <nav className="help-index" aria-label="Help sections">

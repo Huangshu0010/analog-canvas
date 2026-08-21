@@ -1,6 +1,6 @@
 {
-  "name": "Interactive Circuit Maker",
-  "short_name": "Circuit Maker",
+  "name": "Analog Canvas",
+  "short_name": "Analog Canvas",
   "description": "Local-first circuit schematic editor",
   "id": "./",
   "start_url": "./",

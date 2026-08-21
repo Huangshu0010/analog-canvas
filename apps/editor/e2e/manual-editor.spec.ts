@@ -3037,7 +3037,7 @@ test("keeps the production command surface compact and publishes PWA metadata", 
   expect(
     await (await page.request.get("/manifest.webmanifest")).json(),
   ).toMatchObject({
-    name: "Interactive Circuit Maker",
+    name: "Analog Canvas",
     display: "standalone",
   });
 });
@@ -3168,7 +3168,7 @@ test("dismisses a command menu on outside click or Escape", async ({
   const fileMenu = await openMenu(page, "File");
   await expect(fileMenu).toHaveAttribute("open", "");
 
-  await page.getByRole("heading", { name: "Circuit Maker" }).click();
+  await page.getByRole("heading", { name: "Analog Canvas" }).click();
   await expect(fileMenu).not.toHaveAttribute("open", "");
 
   await openMenu(page, "File");

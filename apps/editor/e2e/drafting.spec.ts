@@ -235,7 +235,7 @@ test("fits drafting text with F using an integer grid camera", async ({
   expect(camera.every((value) => Number.isInteger(value))).toBe(true);
   expect(camera.every((value) => value % 10 === 0)).toBe(true);
   await expect(
-    page.getByRole("heading", { name: "Circuit Maker" }),
+    page.getByRole("heading", { name: "Analog Canvas" }),
   ).toBeVisible();
 });
 

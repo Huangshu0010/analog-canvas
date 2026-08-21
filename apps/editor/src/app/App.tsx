@@ -198,6 +198,8 @@ import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
 import { NetlistPreflightDialog } from "../features/netlist-export/netlist-preflight-dialog";
 import { parseProject } from "@icm/project-protocol";
 import { StyleDialog } from "../features/editor-shell/style-dialog";
+import { PublishGalleryDialog } from "../features/editor-shell/publish-gallery-dialog";
+import { publishProjectToGallery } from "../features/editor-shell/gallery-publish";
 import {
   createUserExamplesStore,
   type UserExampleSummary,
@@ -604,6 +606,7 @@ export function App({
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
   const [netlistPreflightOpen, setNetlistPreflightOpen] = useState(false);
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const [publishGalleryOpen, setPublishGalleryOpen] = useState(false);
   const userExamplesStore = useRef(createUserExamplesStore());
   const [userExamples, setUserExamples] = useState<UserExampleSummary[]>([]);
   const [instanceTableOpen, setInstanceTableOpen] = useState(false);
@@ -6801,7 +6804,7 @@ export function App({
               <span className="app-brand-mark" aria-hidden="true" />
             </a>
             <div className="app-brand-copy">
-              <h1 title="Interactive Circuit Maker">Circuit Maker</h1>
+              <h1 title="Analog Canvas">Analog Canvas</h1>
               <p title={`${project.name} / ${document.name}`}>
                 {project.name} /{" "}
                 <span data-testid="active-document-name">{document.name}</span>
@@ -6862,6 +6865,14 @@ export function App({
                     onClick={() => void saveCurrentProjectAsExample()}
                   >
                     Save as Example
+                  </button>
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded={publishGalleryOpen}
+                    onClick={() => setPublishGalleryOpen(true)}
+                  >
+                    Publish to Gallery…
                   </button>
                   <span className="command-group-label">Export</span>
                   <button
@@ -7155,6 +7166,15 @@ export function App({
             aria-label="Cell navigation"
             data-testid="cell-navigation"
           >
+            <a
+              className="toolbar-gallery-link"
+              href="/"
+              title="Back to the gallery"
+              aria-label="Back to the gallery feed"
+              data-testid="toolbar-gallery-link"
+            >
+              ← Gallery
+            </a>
             <button
               type="button"
               onClick={returnToParentDocument}
@@ -7409,6 +7429,17 @@ export function App({
             }
           }}
           onClose={() => setStyleDialogOpen(false)}
+        />
+      ) : null}
+      {publishGalleryOpen ? (
+        <PublishGalleryDialog
+          defaultName={project.name}
+          publish={(fields) => publishProjectToGallery(project, fields)}
+          onPublished={({ name }) => {
+            setPublishGalleryOpen(false);
+            setStatus(`Published "${name}" to the gallery`);
+          }}
+          onClose={() => setPublishGalleryOpen(false)}
         />
       ) : null}
       {publicAgentUiEnabled ? (
