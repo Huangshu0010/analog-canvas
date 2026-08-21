@@ -45,14 +45,14 @@ export function planInstanceDeletion(
 
   return [
     ...planRoutedTerminalDetachment(document, resolver, selected, sequence),
-    ...planTerminalDisconnections(document, selected),
-    ...planNoConnectRemovals(document, selected),
     ...[...instanceOwnedAnnotationIds(document, selected)].map(
       (annotationId): SchematicEdit => ({
         kind: "remove_schematic_annotation",
         annotationId,
       }),
     ),
+    ...planTerminalDisconnections(document, selected),
+    ...planNoConnectRemovals(document, selected),
     ...planLayoutReferenceRemoval(document, selected),
     ...instancesById(document, selected).map((instance): SchematicEdit => ({
       kind: "remove_instance",

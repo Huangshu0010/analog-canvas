@@ -3883,3 +3883,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `pnpm ci:check` passed with 162 unit files / 975 tests, all workspace builds,
   release/MCP smoke checks, and 167 browser tests.
 - Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.
+## 2026-08-21 - Free Net Port lifecycle
+
+- Changed areas: reused the deterministic named-Net planner for Free Port
+  insertion; pruned an unreachable local Net only after its final endpoint,
+  display label, and all durable references have gone; and repaired the
+  browser insertion helper for the separate Port setup dialog.
+- Validation: focused lifecycle/named-Net tests (9 tests), three targeted
+  browser Port flows, workspace typecheck, Prettier, test-impact, and diff
+  checks passed.
+- Commit status: pending on `codex/insert-unification`.

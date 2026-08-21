@@ -7,6 +7,7 @@ import {
   planInstanceDeletion,
   planInstanceUnplacement,
 } from "./instance-lifecycle.js";
+import type { SchematicEdit } from "./edit-schema.js";
 import { executeTransaction } from "./transaction.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
@@ -98,10 +99,7 @@ function lifecycleDocument() {
   return document;
 }
 
-function transaction(
-  documentId: string,
-  edits: ReturnType<typeof planInstanceDeletion>,
-) {
+function transaction(documentId: string, edits: readonly SchematicEdit[]) {
   return {
     transactionId: "instance-lifecycle",
     documentId,
@@ -258,6 +256,111 @@ describe("Instance lifecycle planning", () => {
             to: { kind: "terminal", instanceId: "R2", pinName: "1" },
           },
         ],
+      },
+    });
+  });
+
+  it("prunes the final unreferenced local Free Port Net with its Port", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+    });
+    document.nets.push({
+      id: "net-port-p1",
+      name: "BUS",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    document.annotations.push({
+      id: "instance-label-P1",
+      kind: "net-label",
+      binding: { kind: "net-name", netId: "net-port-p1" },
+      netId: "net-port-p1",
+      anchor: {
+        kind: "object",
+        objectId: "P1",
+        localOffset: { x: 10, y: 0 },
+        fallbackPosition: { x: 110, y: 100 },
+      },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+
+    const result = executeTransaction(
+      document,
+      transaction(
+        document.id,
+        planInstanceDeletion(document, resolver, ["P1"], 6),
+      ),
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: { instances: [], nets: [], annotations: [] },
+    });
+  });
+
+  it("rejects disconnecting a formal Cell interface Net", () => {
+    const document = createEmptyDocument("document-child", "Child");
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+    });
+    document.nets.push({
+      id: "net-vin",
+      name: "VIN",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    document.netlist = {
+      name: "Child",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-vin",
+          name: "VIN",
+          netId: "net-vin",
+          direction: "input",
+          interfaceInstanceId: "P1",
+        },
+      ],
+    };
+
+    const result = executeTransaction(
+      document,
+      transaction(document.id, [
+        {
+          kind: "disconnect_endpoint",
+          endpoint: { kind: "terminal", instanceId: "P1", pinName: "P" },
+        },
+      ]),
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      document: {
+        nets: [
+          {
+            id: "net-vin",
+            name: "VIN",
+            terminals: [{ instanceId: "P1", pinName: "P" }],
+          },
+        ],
+        netlist: { terminals: [{ id: "terminal-vin", netId: "net-vin" }] },
       },
     });
   });

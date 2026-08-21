@@ -7,6 +7,7 @@ import type {
   WireSource,
 } from "@icm/edit-engine";
 import {
+  planEnsureNamedNet,
   createHierarchyInstance,
   createExternalSubcircuitInstance,
   planCreateCellPort,
@@ -592,15 +593,38 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       connectedNet?.name?.trim() ||
       nextFreePortNetName(options.document);
     const baseNetId = `net-port-${id.toLowerCase()}`;
-    let netId = contact.netId ?? baseNetId;
+    let candidateNetId = contact.netId ?? baseNetId;
     let netSuffix = 2;
     while (
       !contact.netId &&
-      options.document.nets.some((net) => net.id.toLowerCase() === netId)
+      options.document.nets.some(
+        (net) => net.id.toLowerCase() === candidateNetId,
+      )
     ) {
-      netId = `${baseNetId}-${netSuffix}`;
+      candidateNetId = `${baseNetId}-${netSuffix}`;
       netSuffix += 1;
     }
+    // The contact planner can reserve a Net that does not exist yet. Model
+    // that pending candidate before asking the name-first planner whether an
+    // existing same-name Net should absorb it.
+    const namedNetDocument = structuredClone(options.document);
+    if (!namedNetDocument.nets.some((net) => net.id === candidateNetId)) {
+      namedNetDocument.nets.push({
+        id: candidateNetId,
+        scope: "local",
+        powerDomain: "none",
+        terminals: [],
+      });
+    }
+    const namedNetPlan = planEnsureNamedNet(namedNetDocument, {
+      candidateNetId,
+      name,
+    });
+    if (!namedNetPlan.ok) {
+      options.setStatus(namedNetPlan.message);
+      return;
+    }
+    const netId = namedNetPlan.netId;
     const label = defaultInstanceDisplayAnnotations(
       options.document,
       instance,
@@ -629,19 +653,11 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
                 instanceId: id,
                 pinName: "P",
               },
-              newNetId: netId,
+              newNetId: candidateNetId,
               newNetName: name,
             },
           ]),
-      ...(contact.netId && connectedNet?.name !== name
-        ? [
-            {
-              kind: "set_net_name" as const,
-              netId: contact.netId,
-              name,
-            },
-          ]
-        : []),
+      ...namedNetPlan.edits,
       {
         kind: "upsert_schematic_annotation",
         annotation: {

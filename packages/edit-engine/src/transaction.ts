@@ -124,6 +124,49 @@ function ensureDraftingLayer(draft: SchematicDocument): void {
   }
 }
 
+/**
+ * A local Net with no electrical or authored presentation reachability is
+ * implementation debris, not a reusable electrical object. This is called
+ * immediately after the final endpoint is disconnected so a later
+ * `remove_instance` cannot retain a stale Port designator through its Net.
+ *
+ * Deliberately retain named labels, geometry, formal interfaces, layout
+ * references, global Nets, and MOS-default references. Those are all durable
+ * authoring intent even when the Net currently has no ordinary terminal.
+ */
+function pruneUnreachableLocalNet(
+  draft: SchematicDocument,
+  netId: string,
+  changedObjectIds: Set<string>,
+): void {
+  const net = draft.nets.find((candidate) => candidate.id === netId);
+  if (!net || net.scope !== "local" || net.terminals.length > 0) return;
+  if (
+    draft.routes.some((route) => route.netId === netId) ||
+    draft.junctions.some((junction) => junction.netId === netId) ||
+    draft.netlist?.terminals.some((terminal) => terminal.netId === netId) ||
+    draft.annotations.some(
+      (annotation) =>
+        annotation.netId === netId ||
+        (annotation.binding?.kind === "net-name" &&
+          annotation.binding.netId === netId),
+    ) ||
+    draft.layoutGroups.some((group) => group.objectIds.includes(netId)) ||
+    draft.constraints.some((constraint) =>
+      constraint.objectIds.includes(netId),
+    ) ||
+    draft.instances.some(
+      (instance) => instance.mosBulkBinding?.netId === netId,
+    ) ||
+    draft.mosBulkDefaults?.nmosNetId === netId ||
+    draft.mosBulkDefaults?.pmosNetId === netId
+  ) {
+    return;
+  }
+  draft.nets = draft.nets.filter((candidate) => candidate.id !== netId);
+  changedObjectIds.add(netId);
+}
+
 export function executeTransaction(
   document: SchematicDocument,
   input: EditTransaction | unknown,
@@ -2444,6 +2487,7 @@ export function executeTransaction(
           }
         }
         changedObjectIds.add(owner.id);
+        pruneUnreachableLocalNet(draft, owner.id, changedObjectIds);
         connectivityChanged = true;
         break;
       }

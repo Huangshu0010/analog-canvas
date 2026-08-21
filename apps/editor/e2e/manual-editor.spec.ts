@@ -58,10 +58,12 @@ async function placeComponent(
     const dialog = page.getByRole("dialog", { name: "Insert Component" });
     await dialog.getByLabel("Component search").fill(symbolId);
     await dialog.getByTestId(`insert-component-${symbolId}`).click();
-    await dialog
-      .getByLabel("New Net Port name")
-      .fill(symbolId === "port" ? "NET_HOLLOW" : "NET_FILLED");
     await dialog.getByRole("button", { name: "Apply" }).click();
+    const portDialog = page.getByRole("dialog", { name: "Place Net Port" });
+    await portDialog
+      .getByLabel("Net name")
+      .fill(symbolId === "port" ? "NET_HOLLOW" : "NET_FILLED");
+    await portDialog.getByRole("button", { name: "Place" }).click();
   } else {
     await chooseComponent(page, symbolId);
   }
@@ -481,6 +483,61 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
     ),
   ).toBeVisible();
   await page.keyboard.press("Escape");
+});
+
+test("Free Net Ports merge by name and release their final Net lifecycle", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const canvas = page.getByTestId("schematic-canvas");
+
+  const placeNamedPort = async (
+    name: string,
+    position: { x: number; y: number },
+  ) => {
+    await page.keyboard.press("p");
+    const dialog = page.getByRole("dialog", { name: "Place Net Port" });
+    await dialog.getByLabel("Net name").fill(name);
+    await dialog.getByRole("button", { name: "Place" }).click();
+    await canvas.click({ position });
+    await page.keyboard.press("Escape");
+  };
+
+  await placeNamedPort("BUS", { x: 260, y: 180 });
+  await placeNamedPort("bus", { x: 460, y: 180 });
+
+  let saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as {
+    documents: Array<{
+      nets: Array<{
+        name?: string;
+        terminals: Array<{ instanceId: string; pinName: string }>;
+      }>;
+    }>;
+  };
+  expect(saved.documents[0]!.nets).toEqual([
+    expect.objectContaining({
+      name: "BUS",
+      terminals: expect.arrayContaining([
+        { instanceId: "P1", pinName: "P" },
+        { instanceId: "P2", pinName: "P" },
+      ]),
+    }),
+  ]);
+
+  await page.getByTestId("hit-P1").click();
+  await page.keyboard.press("Delete");
+  await page.getByTestId("hit-P2").click();
+  await page.keyboard.press("Delete");
+
+  saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as typeof saved;
+  expect(saved.documents[0]!.nets).toEqual([]);
+
+  await placeNamedPort("BUS", { x: 360, y: 260 });
+  await expect(page.getByTestId("hit-P1")).toBeVisible();
 });
 
 test("Ctrl+D deselects without allowing browser bookmarking", async ({
