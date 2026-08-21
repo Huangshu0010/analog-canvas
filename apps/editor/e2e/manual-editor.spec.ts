@@ -1829,13 +1829,14 @@ test("Properties toggles reference label visibility for one or many components",
     page.getByTestId("annotation-hit-instance-label-R1"),
   ).toHaveCount(1);
 
-  // Marquee both components and toggle the whole group.
+  // Marquee both components and toggle the whole group. The left-to-right
+  // window requires FULL coverage, so sweep well past both symbol bodies.
   const canvas = page.getByTestId("schematic-canvas");
   const box = await canvas.boundingBox();
   if (!box) throw new Error("Canvas is not measurable");
-  await page.mouse.move(box.x + 200, box.y + 80);
+  await page.mouse.move(box.x + 120, box.y + 40);
   await page.mouse.down();
-  await page.mouse.move(box.x + 620, box.y + 320, { steps: 6 });
+  await page.mouse.move(box.x + 700, box.y + 340, { steps: 6 });
   await page.mouse.up();
   const groupToggle = page.getByRole("checkbox", {
     name: "Reference",
@@ -3448,4 +3449,60 @@ test("filters and navigates locator-backed visual diagnostics", async ({
   await expect(page.getByTestId("status")).toContainText(
     "VISUAL VISUAL_SYMBOL_OVERLAP",
   );
+});
+
+test("directional marquee: window needs full coverage, crossing selects on touch", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await chooseComponent(page, "resistor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 420, y: 260 } });
+  await page.keyboard.press("Escape");
+  const hit = page.getByTestId("hit-R1");
+  const bounds = await hit.boundingBox();
+  if (!bounds) throw new Error("Placed resistor is not measurable");
+
+  // Left-to-right window covering only the upper half: nothing is selected.
+  const partial = {
+    left: bounds.x - 20,
+    top: bounds.y - 20,
+    right: bounds.x + bounds.width + 20,
+    middle: bounds.y + bounds.height / 2,
+  };
+  await page.mouse.move(partial.left, partial.top);
+  await page.mouse.down();
+  await page.mouse.move(partial.right, partial.middle, { steps: 4 });
+  await expect(page.getByTestId("selection-box")).toHaveClass(
+    "selection-box selection-box--window",
+  );
+  await page.mouse.up();
+  await expect(page.getByTestId("status")).toContainText("Selection cleared");
+
+  // The same rectangle dragged right-to-left is a crossing and selects R1.
+  await page.mouse.move(partial.right, partial.top);
+  await page.mouse.down();
+  await page.mouse.move(partial.left, partial.middle, { steps: 4 });
+  await expect(page.getByTestId("selection-box")).toHaveClass(
+    "selection-box selection-box--crossing",
+  );
+  await page.mouse.up();
+  await expect(page.getByTestId("status")).toContainText(/Selected \d+ object/);
+
+  // A left-to-right window swallowing the whole symbol selects it too.
+  await page.mouse.move(bounds.x - 30, bounds.y - 30);
+  await page.mouse.down();
+  await page.mouse.move(
+    bounds.x + bounds.width + 30,
+    bounds.y + bounds.height + 30,
+    { steps: 4 },
+  );
+  await page.mouse.up();
+  await expect(page.getByTestId("status")).toContainText(/Selected \d+ object/);
+
+  // Marquee sweeps are gestures: they must never start a native browser text
+  // selection over the SVG labels (the old distant-label highlight bug).
+  expect(
+    await page.evaluate(() => window.getSelection()?.toString() ?? ""),
+  ).toBe("");
 });

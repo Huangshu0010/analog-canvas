@@ -7,6 +7,8 @@ import {
   normalizedRect,
   pointInRect,
   polylineBounds,
+  polylineInRect,
+  rectContainsRect,
   rectangleBoundaryIntersectsRect,
   rectsIntersect,
   rotatePointByDegrees,
@@ -103,5 +105,54 @@ describe("canvas geometry primitives", () => {
       width: 1,
       height: 1,
     });
+  });
+});
+
+describe("rectContainsRect", () => {
+  const outer = { x: 0, y: 0, width: 100, height: 50 };
+
+  it("accepts full containment, boundary inclusive", () => {
+    expect(
+      rectContainsRect(outer, { x: 10, y: 10, width: 20, height: 20 }),
+    ).toBe(true);
+    expect(
+      rectContainsRect(outer, { x: 0, y: 0, width: 100, height: 50 }),
+    ).toBe(true);
+  });
+
+  it("rejects partial overlap and disjoint rectangles", () => {
+    expect(
+      rectContainsRect(outer, { x: 90, y: 10, width: 20, height: 10 }),
+    ).toBe(false);
+    expect(
+      rectContainsRect(outer, { x: 200, y: 0, width: 10, height: 10 }),
+    ).toBe(false);
+  });
+});
+
+describe("polylineInRect", () => {
+  const rect = { x: 0, y: 0, width: 100, height: 50 };
+
+  it("requires every vertex inside", () => {
+    expect(
+      polylineInRect(
+        [
+          { x: 10, y: 10 },
+          { x: 90, y: 10 },
+          { x: 90, y: 40 },
+        ],
+        rect,
+      ),
+    ).toBe(true);
+    expect(
+      polylineInRect(
+        [
+          { x: 10, y: 10 },
+          { x: 120, y: 10 },
+        ],
+        rect,
+      ),
+    ).toBe(false);
+    expect(polylineInRect([], rect)).toBe(false);
   });
 });

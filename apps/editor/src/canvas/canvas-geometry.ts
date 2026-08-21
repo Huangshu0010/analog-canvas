@@ -81,6 +81,22 @@ export function pointInRect(point: Point, rect: Rect): boolean {
   );
 }
 
+/** True when `inner` lies entirely inside `outer` (boundary inclusive). */
+export function rectContainsRect(outer: Rect, inner: Rect): boolean {
+  return (
+    inner.x >= outer.x &&
+    inner.y >= outer.y &&
+    inner.x + inner.width <= outer.x + outer.width &&
+    inner.y + inner.height <= outer.y + outer.height
+  );
+}
+
+/** True when every vertex — and therefore, for an axis-aligned rectangle,
+ * every segment of the polyline — lies inside the rectangle. */
+export function polylineInRect(points: readonly Point[], rect: Rect): boolean {
+  return points.length > 0 && points.every((point) => pointInRect(point, rect));
+}
+
 export function segmentIntersectsRect(
   from: Point,
   to: Point,
