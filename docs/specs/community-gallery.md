@@ -68,8 +68,11 @@ set, and rotation is one GitHub-secret update plus a deploy run):
 
 ## Retention and privacy
 
-Entries are public content; the recycle bin is the moderation mechanism
-(publish-first by owner decision). Submitter identity is a salted hash of
+Entries are public content; in the shipped G1 surface only the admin can
+publish and the recycle bin is the takedown mechanism. The decided end
+state (roadmap G3) is review-then-publish: ordinary submissions wait in a
+pending queue for the owner or appointed moderators, and a rejection may
+carry an optional reason. Submitter identity is a salted hash of
 the connecting IP used only for the daily quota; no account data exists in
 Phase G1. Sign-in, per-user ownership, and owner-scoped editing arrive in
 Phases G2–G3 as recorded in the roadmap.

@@ -2,12 +2,15 @@
 
 Status: `active`
 
-Owner direction (2026-08-21): the site opens as a full-screen gallery feed
-(Pinterest-style tiles of example circuits); every circuit is openable and
-editable; ordinary users may modify only their own published entries while
-the site owner is super-admin over all content; publishing requires signing
-in with Google or email, while anonymous visitors can browse and use
-everything read-only.
+Owner direction (2026-08-21, refined the same day): the site opens as a
+full-screen gallery feed (Pinterest-style tiles of example circuits); every
+circuit is openable and editable; ordinary users may modify only their own
+entries while the site owner is super-admin over all content; signing in
+works with any single credential — GitHub, Google, or plain email — and
+users can rename their own display name; publishing requires sign-in AND
+review: submissions enter a pending queue that the owner, or reviewers the
+owner appoints, approve or reject (rejection carries an optional reason);
+anonymous visitors browse and use everything read-only.
 
 This roadmap frames the cross-module outcome; each phase lands as its own
 bounded target under `plan/` with the normal delivery gate. The normative
@@ -21,7 +24,8 @@ server contract lives in
   nothing client-authored is ever stored or served as markup.
 - Public read API: list, entry, preview image. Publishing exists but is
   admin-token-gated until real sign-in lands (anonymous upload stays
-  impossible from day one, which is the end-state rule anyway).
+  impossible from day one; admin-published entries go live directly — the
+  end-state review queue for ordinary users arrives in G3).
 - Admin API (bearer `GALLERY_ADMIN_TOKEN`): recycle (soft, restorable),
   restore, hard-delete from the bin only, recycled list, and batch
   re-serialization that keeps long-lived entries inside the rolling schema
@@ -39,32 +43,45 @@ editor behavior reachable at `/editor` unchanged.
 
 ## Phase G2 — Accounts and sign-in
 
-- `AuthDO` (users, sessions): Google OAuth code flow on the worker plus
-  email magic-link sign-in behind a mail-provider credential; HttpOnly
+- `AuthDO` (users, sessions): GitHub and Google OAuth code flows on the
+  worker plus email magic-link sign-in behind a mail-provider credential —
+  any one credential signs a user in, no passwords stored; HttpOnly
   session cookie; sign-in UI on the feed and in the editor chrome.
+- Profile basics: users can rename their own display name (shown on their
+  tiles); identities from different providers stay distinct accounts in
+  G2 (linking is a later refinement).
 - Super-admin role assigned automatically to the owner's sign-in identity
   (`ADMIN_EMAILS` secret), replacing bearer-token administration in the UI.
 - External prerequisites the owner must provision (Claude cannot create
-  accounts or handle credentials): a Google OAuth client
-  (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` secrets), `ADMIN_EMAILS`, and
-  — for email sign-in — a transactional mail provider key; email sign-in
-  ships dark until its secret exists.
+  accounts or handle credentials): a GitHub OAuth App
+  (`GITHUB_OAUTH_CLIENT_ID`/`GITHUB_OAUTH_CLIENT_SECRET`), a Google OAuth
+  client (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`), `ADMIN_EMAILS`, and
+  — for email sign-in — a transactional mail provider key; each provider
+  ships dark until its secrets exist.
 
-Acceptance: sign in/out round-trips on the deployed site; the owner's
-account sees admin affordances; no credential material ever transits or is
-stored beyond the provider contract.
+Acceptance: sign in/out round-trips on the deployed site with any single
+provider; display-name edits stick; the owner's account sees admin
+affordances; no credential material ever transits or is stored beyond the
+provider contract.
 
-## Phase G3 — Ownership and editing
+## Phase G3 — Ownership, review, and editing
 
-- Publishing requires a session; entries record their owner; owners can
-  update or recycle their own entries ("modify my content"), the
-  super-admin can do so for any entry.
-- Editor gains "publish to gallery / update my tile" against the signed-in
+- Publishing requires a session; a submission enters a `pending` queue
+  instead of going live. The super-admin — or reviewers the super-admin
+  appoints (a `moderator` role) — approves it to `public` or rejects it
+  with an optional reason shown to the submitter.
+- Entries record their owner; owners can update or withdraw their own
+  entries (an update to an approved entry re-enters review), the
+  super-admin and moderators can act on any entry; the recycle bin remains
+  the post-approval takedown path.
+- Editor gains "submit to gallery / update my tile" against the signed-in
   identity; anonymous visitors keep full read-and-local-edit freedom
   without any way to write back.
 
-Acceptance: two ordinary accounts cannot touch each other's tiles; the
-admin can; anonymous writes are impossible at the API, not just the UI.
+Acceptance: an ordinary submission is invisible publicly until approved;
+rejection stores and surfaces its optional reason; two ordinary accounts
+cannot touch each other's tiles while moderators and the admin can;
+anonymous writes are impossible at the API, not just the UI.
 
 ## Phase G4 — Feed experience
 
