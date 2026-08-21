@@ -21,7 +21,7 @@ describe("shapes quick-place", () => {
       }),
     );
 
-    expect(symbols).toHaveLength(19);
+    expect(symbols).toHaveLength(20);
     expect(markup).toContain("All devices");
     expect(markup.match(/data-testid="shapes-chip-/g)).toHaveLength(
       symbols.length,
@@ -35,7 +35,7 @@ describe("shapes quick-place", () => {
     ).toEqual([
       ["Transistors", 4],
       ["Analog Blocks", 2],
-      ["Passives", 4],
+      ["Passives", 5],
       ["Sources", 2],
       ["Switches", 2],
       ["Power and Ports", 5],
@@ -63,8 +63,10 @@ describe("shapes quick-place", () => {
     expect(markup.match(/class="shapes-category-header"/g)).toHaveLength(6);
     expect(markup).toContain('aria-label="Place Independent Voltage Source"');
     expect(markup).toContain('title="Place Capacitor"');
+    expect(markup).toContain('aria-label="Place Variable Resistor"');
     expect(markup).toContain(">V Src</span>");
     expect(markup).toContain(">Cap</span>");
+    expect(markup).toContain(">Var Res</span>");
     expect(markup).not.toContain('data-testid="shapes-example-');
   });
 

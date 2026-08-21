@@ -3971,4 +3971,22 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   hierarchy browser suite, generated Agent/MCP checks, test-impact,
   `pnpm verify:branch` (165 files / 992 tests plus builds and production
   smoke), and canonical `pnpm ci:check` with 170 browser tests passed.
+- Latest-Main integration: preserved the variable-resistor child Cell from
+  PR 138 and updated its two formal marker fields to schema 20.
 - Commit status: ready to commit on `codex/named-power-bulk-semantics`.
+
+## 2026-08-21 - Two-terminal variable resistor component
+
+- Changed areas: added a reviewed variable-resistor Symbol that composes the
+  existing vertical resistor body with one diagonal adjustment arrow; exposed
+  it as a two-port Passive whose first placement creates one reusable
+  parameterized child Cell; and bound instances as `X` calls so export emits a
+  real `.subckt` body rather than a parent-level resistor primitive. Runtime
+  and Agent catalogs were regenerated; Library coverage was brought in sync,
+  and the gate's rich-text selection was made cross-platform.
+- Validation: focused tests (8 files / 58 tests), hierarchy/export rerun (2
+  tests), repaired overbar E2E, symbol/Agent/MCP generated checks, typecheck,
+  test-impact, docs and diff checks, plus canonical `pnpm ci:check` (166 unit
+  files / 995 tests, all builds and release checks, 169 browser tests) passed.
+- Commit status: completed on `codex/variable-resistor` across the feature,
+  subcircuit, and final gate-closure commits.

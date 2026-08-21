@@ -43,6 +43,11 @@ import {
 import { planVddRailEdits } from "./vdd-rail";
 import { vddPowerLabelAnnotation } from "./vdd-power-label";
 import {
+  bindVariableResistorInstance,
+  resolveVariableResistorCell,
+  VARIABLE_RESISTOR_SYMBOL_ID,
+} from "./variable-resistor-cell";
+import {
   defaultInstanceDisplayAnnotations,
   missingDefaultInstanceDisplayAnnotations,
 } from "../instance-display/default-instance-display";
@@ -147,6 +152,14 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     placementRequest: PendingComponentPlacement,
   ): void => {
     if (placementRequest.kind !== "symbol") return;
+    const variableResistorCell =
+      symbolId === VARIABLE_RESISTOR_SYMBOL_ID
+        ? resolveVariableResistorCell(options.project)
+        : null;
+    if (variableResistorCell?.document.id === options.document.id) {
+      options.setStatus("Cannot place Variable Resistor inside its own Cell");
+      return;
+    }
     const id = nextInstanceDesignator(options.document, symbolId);
     const symbolVariantId = defaultRazaviSymbolVariantId(symbolId);
     const netlist = initialInstanceNetlist(
@@ -155,7 +168,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       placementRequest.parameters,
       placementRequest.referenceText ?? undefined,
     );
-    const instance = {
+    const authoredInstance = {
       id,
       symbolId,
       schematicReference:
@@ -168,6 +181,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       },
       ...(netlist ? { netlist } : {}),
     };
+    const instance = variableResistorCell
+      ? bindVariableResistorInstance(
+          authoredInstance,
+          variableResistorCell.document.id,
+        )
+      : authoredInstance;
     const displayAnnotations = defaultInstanceDisplayAnnotations(
       options.document,
       instance,
@@ -228,33 +247,53 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           ),
       });
     }
-    const result = options.transactConnectivity(
-      "connect_without_wire",
-      [
-        { kind: "add_instance", instance },
-        ...contact.edits,
-        ...standalonePower.edits,
-        ...razaviManualBulkConnectionEdits(
-          projectedDocument,
-          projectedDocument.instances,
-        ),
-        ...(vddPowerLabel
-          ? [
-              {
-                kind: "upsert_schematic_annotation" as const,
-                annotation: vddPowerLabel,
-              },
-            ]
-          : []),
-        ...displayAnnotations.map((annotation) => ({
-          kind: "upsert_schematic_annotation" as const,
-          annotation,
-        })),
-      ],
-      { contact, standalonePower },
-      { preserveInteraction: true },
-    );
-    if (!result?.ok) return;
+    const placementEdits: SchematicEdit[] = [
+      { kind: "add_instance", instance },
+      ...contact.edits,
+      ...standalonePower.edits,
+      ...razaviManualBulkConnectionEdits(
+        projectedDocument,
+        projectedDocument.instances,
+      ),
+      ...(vddPowerLabel
+        ? [
+            {
+              kind: "upsert_schematic_annotation" as const,
+              annotation: vddPowerLabel,
+            },
+          ]
+        : []),
+      ...displayAnnotations.map((annotation) => ({
+        kind: "upsert_schematic_annotation" as const,
+        annotation,
+      })),
+    ];
+    const committed = variableResistorCell
+      ? options.transactProject("place-variable-resistor-instance", [
+          ...(variableResistorCell.created
+            ? [
+                {
+                  kind: "add_document" as const,
+                  document: variableResistorCell.document,
+                },
+              ]
+            : []),
+          {
+            kind: "transact_document",
+            documentId: options.document.id,
+            expectedRevision: options.document.revision,
+            edits: placementEdits,
+          },
+        ])
+      : Boolean(
+          options.transactConnectivity(
+            "connect_without_wire",
+            placementEdits,
+            { contact, standalonePower },
+            { preserveInteraction: true },
+          )?.ok,
+        );
+    if (!committed) return;
     options.selectOnly("instance", [id]);
     options.setComponentPreviewPoint(position);
     options.setStatus(

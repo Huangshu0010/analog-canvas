@@ -21,7 +21,15 @@ export function symbolCategory(symbolId: string): string {
   if (["nmos", "pmos", "npn", "pnp"].includes(symbolId)) {
     return "Transistors";
   }
-  if (["resistor", "capacitor", "inductor", "diode"].includes(symbolId)) {
+  if (
+    [
+      "resistor",
+      "variable-resistor",
+      "capacitor",
+      "inductor",
+      "diode",
+    ].includes(symbolId)
+  ) {
     return "Passives";
   }
   if (["opamp", "voltage-amplifier"].includes(symbolId)) {

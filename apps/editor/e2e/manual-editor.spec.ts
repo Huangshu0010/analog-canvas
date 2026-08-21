@@ -1703,7 +1703,7 @@ test("keeps literal text line breaks and overbars visible while editing", async 
   await clickCommand(page, "Draw", "Text");
   const editor = page.getByRole("textbox", { name: "Canvas text editor" });
   await editor.fill("Vx");
-  await editor.press("Control+a");
+  await editor.press("ControlOrMeta+A");
   await page.getByRole("button", { name: "Overbar" }).click();
   await expect(editor.locator('[data-rich-text-style="overbar"]')).toHaveCSS(
     "text-decoration-line",
@@ -1713,7 +1713,7 @@ test("keeps literal text line breaks and overbars visible while editing", async 
   await expect(editor.locator('[data-rich-text-style="overbar"]')).toHaveCount(
     0,
   );
-  await editor.press("Control+a");
+  await editor.press("ControlOrMeta+A");
   await page.getByRole("button", { name: "Overbar" }).click();
   await editor.press("End");
   await editor.press("Enter");

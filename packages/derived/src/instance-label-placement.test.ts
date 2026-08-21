@@ -112,6 +112,10 @@ describe("instance label placement", () => {
       position: { x: 120, y: 110 },
       alignment: "start",
     });
+    expect(placedDefaultLabel("variable-resistor")).toMatchObject({
+      position: { x: 130, y: 110 },
+      alignment: "start",
+    });
     expect(placedDefaultLabel("voltage-source")).toMatchObject({
       position: { x: 120, y: 110 },
       alignment: "start",

@@ -20,11 +20,21 @@ describe("component insertion catalog", () => {
       "resistor",
     ]);
     expect(symbolCategory("capacitor")).toBe("Passives");
+    expect(symbolCategory("variable-resistor")).toBe("Passives");
     expect(symbolCategory("opamp")).toBe("Analog Blocks");
     expect(symbolCategory("npn")).toBe("Transistors");
     expect(symbolCategory("diode")).toBe("Passives");
     expect(symbolCategory("ideal-switch")).toBe("Switches");
     expect(symbolCategory("closed-switch")).toBe("Switches");
+  });
+
+  it("offers the two-terminal variable resistor as a searchable passive", () => {
+    const symbols = flattenComponentCatalog(
+      componentCatalog("razavi-textbook-v1", "variable resistor"),
+    );
+
+    expect(symbols.map((symbol) => symbol.id)).toEqual(["variable-resistor"]);
+    expect(symbols[0]?.pins.map((pin) => pin.name)).toEqual(["P1", "P2"]);
   });
 
   it("searches canonical names and ids without exposing retired MOS entries", () => {

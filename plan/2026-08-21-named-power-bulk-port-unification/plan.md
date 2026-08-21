@@ -103,3 +103,8 @@ Validation passed: 149 focused cross-layer tests, 63 Agent-adapter tests, the
 11-test hierarchy browser suite, generated Agent/MCP checks, test-impact,
 `pnpm verify:branch` (165 files / 992 tests plus builds and production smoke),
 and the clean mainline `pnpm ci:check` including 170 browser tests.
+
+Before PR checks, latest Main added the variable-resistor child-Cell producer.
+The merge retained that feature and mechanically updated its two formal
+terminal markers to schema 20; its focused Cell/export test covers the
+integration.

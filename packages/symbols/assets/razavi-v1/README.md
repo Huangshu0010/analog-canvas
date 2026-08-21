@@ -14,7 +14,7 @@ The product set is exactly the reviewed, Reference-calibrated entries:
 
 - `nmos`, `pmos`, and `ground`;
 - `voltage-source`, `current-source`;
-- `resistor`, `capacitor`, `port`, and `port-filled`.
+- `resistor`, `variable-resistor`, `capacitor`, `port`, and `port-filled`.
 
 `nmos` and `pmos` are the only MOS asset IDs. Their default visual variant is
 `textbook-3terminal`; explicit bulk-capable variants remain properties of the
