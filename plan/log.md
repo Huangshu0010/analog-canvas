@@ -4049,3 +4049,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   markdown links, test-impact, and diff checks passed.
 - Commit status: completed on `claude/marquee-window-crossing`; mainline
   merge gated on the remote required checks.
+
+## 2026-08-21 - Junction dots ignore collinear overlapping arms
+
+- Changed areas: `contactRequiresJunctionDot` counts distinct route-arm
+  directions (terminals keep per-pin counting), removing the phantom dot a
+  duplicate overlapping route painted at a wired pin; connectivity spec dot
+  clause sharpened; first direct contact-evidence test suite added.
+- Validation: new contact.test.ts (6 tests), derived + render-svg suites,
+  typecheck, prettier, markdown links, test-impact, and diff checks passed;
+  behavior confirmed live in the editor.
+- Commit status: completed on `claude/junction-dot-collinear-arms`; mainline
+  merge gated on the remote required checks.
