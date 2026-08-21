@@ -10,6 +10,18 @@ importers:
       "@icm/agent-adapter":
         specifier: workspace:*
         version: link:packages/agent-adapter
+      "@icm/model":
+        specifier: workspace:*
+        version: link:packages/model
+      "@icm/project-protocol":
+        specifier: workspace:*
+        version: link:packages/project-protocol
+      "@icm/render-svg":
+        specifier: workspace:*
+        version: link:packages/render-svg
+      "@icm/symbols":
+        specifier: workspace:*
+        version: link:packages/symbols
     devDependencies:
       "@playwright/test":
         specifier: 1.62.1

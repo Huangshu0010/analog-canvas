@@ -67,7 +67,7 @@ async function placePort(
 
 test("keeps direct Cell commands in one hierarchy row", async ({ page }) => {
   await page.setViewportSize({ width: 420, height: 700 });
-  await page.goto("/");
+  await page.goto("/editor");
   const toolbar = page.locator('.toolbar-row[aria-label="Document hierarchy"]');
   await expect(
     page.getByRole("button", { name: "Manage Cells…" }),
@@ -86,7 +86,7 @@ test("keeps direct Cell commands in one hierarchy row", async ({ page }) => {
 });
 
 test("creates and deletes an unreferenced reusable Cell", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await createCell(page, "ReusableStage");
 
   await expect(page.getByTestId("document-count")).toHaveText("2");
@@ -114,7 +114,7 @@ test("creates and deletes an unreferenced reusable Cell", async ({ page }) => {
 });
 
 test("manages Cell rename and lists callers", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await createCell(page, "ReusableStage");
   await page
     .getByTestId("cell-navigation")
@@ -148,7 +148,7 @@ test("manages Cell rename and lists callers", async ({ page }) => {
 });
 
 test("declares and places a Cell Port on a new local Net", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await createCell(page, "ReusableStage");
 
   const canvas = page.getByTestId("schematic-canvas");
@@ -309,7 +309,7 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
 test("declares a top Formal Cell Pin and exports the top interface", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placePort(page, {
     role: "cell-terminal",
     name: "VIN",
@@ -339,7 +339,7 @@ test("copies and independently deletes repeated Formal Cell Pin markers", async 
     window.localStorage.clear();
     window.sessionStorage.clear();
   });
-  await page.goto("/");
+  await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
   await placePort(page, {
     role: "cell-terminal",
@@ -393,7 +393,7 @@ test("copies and independently deletes repeated Formal Cell Pin markers", async 
 test("places a free Net Port whose rich label edits the Net name", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placePort(page, {
     role: "net-port",
     name: "VIN",
@@ -434,7 +434,7 @@ test("places a free Net Port whose rich label edits the Net name", async ({
 test("returns a formal Cell Port to the Tray without deleting its interface", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await createCell(page, "ReusableStage");
   const canvas = page.getByTestId("schematic-canvas");
   await placePort(page, {
@@ -474,7 +474,7 @@ test("returns a formal Cell Port to the Tray without deleting its interface", as
 test("authors formal Cell parameters without entering Cell Symbol Layout", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await createCell(page, "ReusableStage");
   await placePort(page, {
     role: "cell-terminal",
@@ -506,7 +506,7 @@ test("authors formal Cell parameters without entering Cell Symbol Layout", async
 test("deletes a wired child Cell Port through the ordinary instance path", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await createCell(page, "ReusableStage");
   const canvas = page.getByTestId("schematic-canvas");
   await placePort(page, {
@@ -524,7 +524,7 @@ test("deletes a wired child Cell Port through the ordinary instance path", async
 test("places an existing Cell and blocks deleting its shared definition", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await createCell(page, "ReusableStage");
   await page
     .getByTestId("cell-navigation")

@@ -4135,6 +4135,32 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Commit status: completed on `claude/example-promotion`; mainline merge
   gated on the remote required checks.
 
+## 2026-08-21 - Community gallery phase G1 (public feed foundation)
+
+- Changed areas: new `GalleryDO` + `/api/gallery*` Worker surface
+  (publish-first storage with admin recycle bin, bin-only hard delete,
+  hashed-IP quotas, rolling-window re-serialization, server-rendered
+  previews); site lands on a full-screen gallery feed at `/` with the
+  editor at `/editor` and entry deep links at `/g/<id>`; bundled examples
+  double as starter tiles; new community-gallery spec and platform roadmap
+  (G1-G4); root workspace deps for the Worker with hand-maintained
+  lockfile links.
+- Validation: worker suite on in-memory SQLite (8 contracts), feed
+  component tests, new gallery Playwright spec, complete Playwright suite
+  (179 passed) after the `/editor` landing sweep, typecheck, prettier,
+  markdown links, test-impact, diff checks.
+- Commit status: completed on `claude/community-gallery`; mainline merge
+  gated on the remote required checks.
+
+## 2026-08-22 - Bundled tiles only while the gallery is empty
+
+- Changed areas: gallery feed gates its bundled starter tiles on the
+  community list being empty, removing the duplicated wall after the first
+  real entries; populated-feed e2e expectation flipped.
+- Validation: gallery Playwright spec (4 passed), feed unit tests,
+  typecheck, prettier, test-impact, diff checks.
+- Commit status: completed on `claude/gallery-bundled-fallback`; mainline
+
 ## 2026-08-22 - Editor UI declutter and adjustable-passive fixes
 
 - Changed areas: Library drops the Recent fold and renames the virtual VDD

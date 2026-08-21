@@ -5,7 +5,7 @@ import { chooseComponent } from "./editor-fixtures.js";
 test("keeps editor chrome typography from suppressing SVG italics", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
 
   await chooseComponent(page, "resistor");
   await page
@@ -26,7 +26,7 @@ test("keeps editor chrome typography from suppressing SVG italics", async ({
 });
 
 test("dismisses Help with Escape or a backdrop pointer", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const help = page.getByRole("dialog", { name: "Help" });
 
   await page.getByRole("button", { name: "Help" }).click();
@@ -41,7 +41,7 @@ test("dismisses Help with Escape or a backdrop pointer", async ({ page }) => {
 });
 
 test("opens About with the version and repository link", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByRole("button", { name: "About" }).click();
 
   const about = page.getByRole("dialog", { name: "About" });

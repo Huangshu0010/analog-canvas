@@ -5,7 +5,7 @@ import { chooseComponent, clickCommand } from "./editor-fixtures.js";
 test("edits compatible selected instances through the explicit Instance Table", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "nmos");
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 220, y: 180 } });

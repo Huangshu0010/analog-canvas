@@ -196,6 +196,7 @@ import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
 import { NetlistPreflightDialog } from "../features/netlist-export/netlist-preflight-dialog";
+import { parseProject } from "@icm/project-protocol";
 import { StyleDialog } from "../features/editor-shell/style-dialog";
 import {
   createUserExamplesStore,
@@ -207,6 +208,7 @@ import {
 } from "../features/selection/delete-selection";
 import {
   createLibraryExampleProject,
+  libraryProjectExamples,
   type LibraryProjectExample,
 } from "../examples/library-examples";
 import { useDocumentController } from "../document/document-controller";
@@ -437,12 +439,15 @@ export interface AppProps {
   visitStats?: { pv: number; uv: number } | null;
   /** Test/staging seam; production defaults to a human-only editor. */
   publicAgentUiEnabled?: boolean;
+  /** `/g/<id>` deep link: load this gallery entry after boot. */
+  initialGalleryEntryId?: string | null;
 }
 
 export function App({
   project: initialProject,
   visitStats,
   publicAgentUiEnabled = PUBLIC_AGENT_UI_ENABLED,
+  initialGalleryEntryId = null,
 }: AppProps) {
   const [preparedInitialProject] = useState(
     () =>
@@ -1737,6 +1742,58 @@ export function App({
     showLeftPanel("examples");
     void refreshUserExamples();
   }
+
+  // Landing-page deep links: `/g/<id>` opens a published gallery entry and
+  // `/editor?example=<id>` opens a bundled example. Both replace the fresh
+  // boot Project only; ordinary sessions never re-run these.
+  const bootTargetHandled = useRef(false);
+  useEffect(() => {
+    if (bootTargetHandled.current) return;
+    bootTargetHandled.current = true;
+    const exampleId = new URLSearchParams(window.location.search).get(
+      "example",
+    );
+    if (initialGalleryEntryId) {
+      void (async () => {
+        try {
+          const response = await fetch(
+            `/api/gallery/${initialGalleryEntryId}`,
+            { credentials: "same-origin" },
+          );
+          if (!response.ok) {
+            setStatus("This gallery entry is unavailable");
+            return;
+          }
+          const payload = (await response.json()) as {
+            entry?: { name?: string };
+            projectText?: string;
+          };
+          if (!payload.projectText) {
+            setStatus("This gallery entry is unavailable");
+            return;
+          }
+          const galleryProject = parseProject(payload.projectText);
+          replaceActiveProject(galleryProject);
+          setStatus(
+            `Opened gallery circuit: ${payload.entry?.name ?? galleryProject.name}`,
+          );
+        } catch {
+          setStatus("This gallery entry is unavailable");
+        }
+      })();
+      return;
+    }
+    if (exampleId) {
+      const exampleProject = createLibraryExampleProject(exampleId);
+      const example = libraryProjectExamples.find(
+        (candidate) => candidate.id === exampleId,
+      );
+      if (exampleProject && example) {
+        replaceActiveProject(exampleProject);
+        setStatus(`Opened example: ${example.name}`);
+      }
+    }
+  }, [initialGalleryEntryId]);
 
   async function refreshUserExamples(): Promise<void> {
     const outcome = await userExamplesStore.current.list();
@@ -6735,7 +6792,14 @@ export function App({
       <header className="app-chrome">
         <div className="app-chrome-main">
           <div className="app-brand">
-            <span className="app-brand-mark" aria-hidden="true" />
+            <a
+              className="gallery-home-link"
+              href="/"
+              aria-label="Back to the gallery"
+              title="Back to the gallery"
+            >
+              <span className="app-brand-mark" aria-hidden="true" />
+            </a>
             <div className="app-brand-copy">
               <h1 title="Interactive Circuit Maker">Circuit Maker</h1>
               <p title={`${project.name} / ${document.name}`}>

@@ -13,9 +13,11 @@ import {
   routeAgentSessionRequest,
   type AgentSessionNamespaceLike,
 } from "./agent-session";
+import { routeGalleryRequest, type GalleryNamespaceLike } from "./gallery";
 
 export { AnalyticsDO } from "./analytics";
 export { AgentSessionDO } from "./agent-session";
+export { GalleryDO } from "./gallery";
 
 type Env = {
   ANALYTICS: DurableObjectNamespaceLike;
@@ -23,6 +25,8 @@ type Env = {
   ANALYTICS_KEY: string | undefined;
   AGENT_SESSION: AgentSessionNamespaceLike;
   AGENT_ALLOWED_ORIGIN?: string;
+  GALLERY: GalleryNamespaceLike;
+  GALLERY_ADMIN_TOKEN?: string;
 };
 
 type RequestCf = {
@@ -84,6 +88,9 @@ export default {
 
     const agentResponse = await routeAgentSessionRequest(request, env);
     if (agentResponse) return agentResponse;
+
+    const galleryResponse = await routeGalleryRequest(request, env);
+    if (galleryResponse) return galleryResponse;
 
     if (url.pathname === "/api/track" && request.method === "POST") {
       return trackPageView(request, env);
