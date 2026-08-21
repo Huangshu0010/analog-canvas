@@ -4,6 +4,26 @@
   "version": 1,
   "entries": [
     {
+      "symbolId": "and-gate",
+      "name": "AND Gate",
+      "category": "logic",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["A", "B", "Y"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+      "assetPath": "and-gate.symbol.json",
+      "assetHash": "5f250c89d83e078ef856dc3525b1f045041a548e4e0ae934ffead28af1914b57",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      }
+    },
+    {
       "symbolId": "capacitor",
       "name": "Capacitor",
       "category": "passive",
@@ -48,6 +68,27 @@
         "referencePath": "fixtures/visual-reference/razavi-reference-v1/closed-switch-vector-source.json",
         "converterPath": "scripts/generate-razavi-common-assets.mjs",
         "converterVersion": 1
+      }
+    },
+    {
+      "symbolId": "comparator",
+      "name": "Comparator",
+      "category": "analog-block",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["IN+", "IN-", "OUT"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Textbook comparator block; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
+      "assetPath": "comparator.symbol.json",
+      "assetHash": "af71a4819813b3d325d43e5d654d4f0599967c53cd2e66490310436b0b0643cb",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json"
       }
     },
     {
@@ -185,6 +226,46 @@
       }
     },
     {
+      "symbolId": "inverter",
+      "name": "Inverter",
+      "category": "logic",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["A", "Y"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+      "assetPath": "inverter.symbol.json",
+      "assetHash": "2f93576529dab328557311e448f0dbc70a9c4c35898b88e5281fd44363184046",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      }
+    },
+    {
+      "symbolId": "nand-gate",
+      "name": "NAND Gate",
+      "category": "logic",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["A", "B", "Y"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+      "assetPath": "nand-gate.symbol.json",
+      "assetHash": "da04780ea84b0e495d59ecb4f76159c0b84303c1d560f67e0c902bb14e4814ad",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      }
+    },
+    {
       "symbolId": "nmos",
       "name": "NMOS",
       "category": "transistor",
@@ -202,6 +283,26 @@
       "automaticMappings": ["spice:M:nmos", "pdk:model-type:nmos"],
       "assetPath": "nmos.symbol.json",
       "assetHash": "ed4a97e6d6192f83e24a20d29a311858bfe45d19b1b3810cbc3af903f5b99b87"
+    },
+    {
+      "symbolId": "nor-gate",
+      "name": "NOR Gate",
+      "category": "logic",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["A", "B", "Y"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+      "assetPath": "nor-gate.symbol.json",
+      "assetHash": "3898bb81070142e6dc9c56df277300973e7ca0c27ab8c2d5b56313902df34d75",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      }
     },
     {
       "symbolId": "npn",
@@ -256,6 +357,26 @@
         "referencePath": "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
         "converterPath": "scripts/generate-razavi-opamp-asset.mjs",
         "converterVersion": 1
+      }
+    },
+    {
+      "symbolId": "or-gate",
+      "name": "OR Gate",
+      "category": "logic",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["A", "B", "Y"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+      "assetPath": "or-gate.symbol.json",
+      "assetHash": "c7dbc84e59a3d04dff00c4aeb62194247b3af740cde1cda9a1b93351e2093b60",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
       }
     },
     {

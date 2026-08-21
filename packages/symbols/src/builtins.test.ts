@@ -7,16 +7,22 @@ import { InMemorySymbolResolver } from "./resolver.js";
 import { SYMBOL_CONNECTION_GRID, SymbolDefinitionSchema } from "./schema.js";
 
 const PRODUCT_IDS = [
+  "and-gate",
   "capacitor",
   "closed-switch",
+  "comparator",
   "current-source",
   "diode",
   "ground",
   "ideal-switch",
   "inductor",
+  "inverter",
+  "nand-gate",
   "nmos",
+  "nor-gate",
   "npn",
   "opamp",
+  "or-gate",
   "pmos",
   "pnp",
   "port",

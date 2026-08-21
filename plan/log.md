@@ -3990,3 +3990,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   and diff checks passed.
 - Commit status: completed on `claude/block-diagram-authoring` at the
   user's direction; mainline merge gated on the remote required checks.
+
+## 2026-08-21 - Logic-gate and comparator symbol family
+
+- Changed areas: added six reviewed behavioral block Symbols on the op-amp
+  mechanism (inverter, AND, OR, NAND, NOR in a new Logic Gates palette
+  category; comparator in Analog Blocks) with hand-composed Razavi-style
+  assets, catalog entries with manual-only netlist reasons, regenerated
+  runtime/Agent/MCP catalogs, shapes-panel labels, and updated
+  count/coverage contracts including the browser Library suite.
+- Validation: symbol/Agent/MCP/agent-api generator checks, focused unit
+  tests (20 files / 103 tests incl. a new family contract test), full
+  component-insert Playwright suite (21 passed), repository typecheck,
+  test-impact, and diff checks passed; all six symbols placed and visually
+  inspected in the running editor.
+- Commit status: completed on `claude/block-diagram-authoring` at the
+  user's direction; mainline merge gated on the remote required checks.

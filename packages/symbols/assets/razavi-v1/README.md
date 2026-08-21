@@ -14,7 +14,9 @@ The product set is exactly the reviewed, Reference-calibrated entries:
 
 - `nmos`, `pmos`, and `ground`;
 - `voltage-source`, `current-source`;
-- `resistor`, `variable-resistor`, `capacitor`, `port`, and `port-filled`.
+- `resistor`, `variable-resistor`, `capacitor`, `port`, and `port-filled`;
+- the behavioral block family `inverter`, `and-gate`, `or-gate`, `nand-gate`,
+  `nor-gate`, and `comparator` (manual-only netlist mapping, like `opamp`).
 
 `nmos` and `pmos` are the only MOS asset IDs. Their default visual variant is
 `textbook-3terminal`; explicit bulk-capable variants remain properties of the

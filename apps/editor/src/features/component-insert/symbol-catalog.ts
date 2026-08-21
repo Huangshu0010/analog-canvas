@@ -6,6 +6,7 @@ import { vddRailPreviewSymbol } from "./vdd-rail-preview-symbol";
 const CATEGORY_ORDER = [
   "Transistors",
   "Analog Blocks",
+  "Logic Gates",
   "Passives",
   "Sources",
   "Switches",
@@ -32,8 +33,15 @@ export function symbolCategory(symbolId: string): string {
   ) {
     return "Passives";
   }
-  if (["opamp", "voltage-amplifier"].includes(symbolId)) {
+  if (["opamp", "voltage-amplifier", "comparator"].includes(symbolId)) {
     return "Analog Blocks";
+  }
+  if (
+    ["inverter", "and-gate", "or-gate", "nand-gate", "nor-gate"].includes(
+      symbolId,
+    )
+  ) {
+    return "Logic Gates";
   }
   if (["voltage-source", "current-source"].includes(symbolId)) {
     return "Sources";

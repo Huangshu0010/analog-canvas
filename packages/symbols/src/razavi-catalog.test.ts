@@ -120,16 +120,22 @@ describe("Razavi symbol catalog", () => {
         entry.visualAuthority.kind,
       ]),
     ).toEqual([
+      ["and-gate", "reviewed", "razavi-reference-v1"],
       ["capacitor", "reviewed", "razavi-reference-v1"],
       ["closed-switch", "reviewed", "razavi-reference-v1"],
+      ["comparator", "reviewed", "razavi-reference-v1"],
       ["current-source", "reviewed", "razavi-reference-v1"],
       ["diode", "reviewed", "razavi-reference-v1"],
       ["ground", "reviewed", "razavi-reference-v1"],
       ["ideal-switch", "reviewed", "razavi-reference-v1"],
       ["inductor", "reviewed", "razavi-reference-v1"],
+      ["inverter", "reviewed", "razavi-reference-v1"],
+      ["nand-gate", "reviewed", "razavi-reference-v1"],
       ["nmos", "reviewed", "razavi-reference-v1"],
+      ["nor-gate", "reviewed", "razavi-reference-v1"],
       ["npn", "reviewed", "razavi-reference-v1"],
       ["opamp", "reviewed", "razavi-reference-v1"],
+      ["or-gate", "reviewed", "razavi-reference-v1"],
       ["pmos", "reviewed", "razavi-reference-v1"],
       ["pnp", "reviewed", "razavi-reference-v1"],
       ["port", "reviewed", "razavi-reference-v1"],
@@ -186,7 +192,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(19);
+    expect(razaviCatalogSymbols).toHaveLength(25);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -198,16 +204,22 @@ describe("Razavi symbol catalog", () => {
 
   it("lists only reviewed Reference-calibrated assets in the product library", () => {
     expect(razaviProductSymbols.map((symbol) => symbol.id)).toEqual([
+      "and-gate",
       "capacitor",
       "closed-switch",
+      "comparator",
       "current-source",
       "diode",
       "ground",
       "ideal-switch",
       "inductor",
+      "inverter",
+      "nand-gate",
       "nmos",
+      "nor-gate",
       "npn",
       "opamp",
+      "or-gate",
       "pmos",
       "pnp",
       "port",
@@ -925,5 +937,45 @@ describe("Razavi symbol catalog", () => {
     expect(
       razaviCatalogSymbols.some((symbol) => symbol.id === "junction-dot"),
     ).toBe(false);
+  });
+});
+
+describe("logic-gate and comparator family", () => {
+  const twoInputGates = ["and-gate", "or-gate", "nand-gate", "nor-gate"];
+  const invertingShapes = new Set(["inverter", "nand-gate", "nor-gate"]);
+  const family = ["inverter", ...twoInputGates, "comparator"];
+
+  it("keeps gate pin identities and the comparator op-amp pinout", () => {
+    expect(
+      requireRazaviCatalogSymbol("inverter").pins.map((pin) => pin.name),
+    ).toEqual(["A", "Y"]);
+    for (const symbolId of twoInputGates) {
+      expect(
+        requireRazaviCatalogSymbol(symbolId).pins.map((pin) => pin.name),
+      ).toEqual(["A", "B", "Y"]);
+    }
+    expect(
+      requireRazaviCatalogSymbol("comparator").pins.map((pin) => pin.name),
+    ).toEqual(["IN+", "IN-", "OUT"]);
+  });
+
+  it("draws a negation bubble only on inverting shapes", () => {
+    for (const symbolId of family) {
+      const bubbles = requireRazaviCatalogSymbol(symbolId).primitives.filter(
+        (primitive) =>
+          primitive.kind === "circle" && primitive.part === "negation-bubble",
+      );
+      expect(bubbles).toHaveLength(invertingShapes.has(symbolId) ? 1 : 0);
+    }
+  });
+
+  it("stays manual-only for netlist mapping like the op-amp", () => {
+    for (const symbolId of family) {
+      const entry = getRazaviCatalogEntry(symbolId);
+      expect(entry?.palette).toBe(true);
+      expect(entry?.reviewStatus).toBe("reviewed");
+      expect(entry?.automaticMappings).toEqual([]);
+      expect(entry?.manualOnlyReason).toBeTruthy();
+    }
   });
 });
