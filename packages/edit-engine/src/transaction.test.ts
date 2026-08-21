@@ -60,6 +60,37 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
+  it("marks a Net created by manual connection as authored", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push(
+      { id: "A", symbolId: "port", placement: null },
+      { id: "B", symbolId: "port", placement: null },
+    );
+
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "connect_endpoints",
+            from: { kind: "terminal", instanceId: "A", pinName: "P" },
+            to: { kind: "terminal", instanceId: "B", pinName: "P" },
+            newNetId: "net-authored",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        nets: [expect.objectContaining({ origin: { kind: "authored" } })],
+      },
+    });
+  });
+
   it("updates a Port schematic reference without creating a netlist record", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
@@ -516,6 +547,7 @@ describe("Edit Transaction envelope", () => {
       scope: "global",
       powerDomain: "ground",
       terminals: [{ instanceId: "M1", pinName: "B" }],
+      origin: { kind: "authored" },
     });
 
     const overridden = executeTransaction(
@@ -585,7 +617,7 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
-  it("keeps imported flightline guidance through placement and Wire, then dismisses it for a Net Label", () => {
+  it("keeps imported Net routing intent through placement, Wire, and Net Labels", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.sourceBinding = {
       cellName: "main",
@@ -595,7 +627,15 @@ describe("Edit Transaction envelope", () => {
         end: { offset: 1, line: 1, column: 2 },
       },
     };
-    document.flightlineGuidance = "active";
+    document.nets.push({
+      id: "net-ab",
+      scope: "local",
+      terminals: [
+        { instanceId: "A", pinName: "P" },
+        { instanceId: "B", pinName: "P" },
+      ],
+      origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+    });
     document.instances.push(
       {
         id: "A",
@@ -633,7 +673,13 @@ describe("Edit Transaction envelope", () => {
     );
     expect(placed).toMatchObject({
       ok: true,
-      document: { flightlineGuidance: "active" },
+      document: {
+        nets: [
+          expect.objectContaining({
+            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+          }),
+        ],
+      },
     });
     if (!placed.ok) return;
 
@@ -650,7 +696,13 @@ describe("Edit Transaction envelope", () => {
     });
     expect(moved).toMatchObject({
       ok: true,
-      document: { flightlineGuidance: "dismissed" },
+      document: {
+        nets: [
+          expect.objectContaining({
+            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+          }),
+        ],
+      },
     });
 
     const wired = executeTransaction(
@@ -659,12 +711,6 @@ describe("Edit Transaction envelope", () => {
         ...transaction(placed.document.revision),
         transactionId: "transaction-wire",
         edits: [
-          {
-            kind: "connect_endpoints",
-            from: { kind: "terminal", instanceId: "A", pinName: "P" },
-            to: { kind: "terminal", instanceId: "B", pinName: "P" },
-            newNetId: "net-ab",
-          },
           {
             kind: "set_route_points",
             routeId: "route-ab",
@@ -680,7 +726,13 @@ describe("Edit Transaction envelope", () => {
     );
     expect(wired).toMatchObject({
       ok: true,
-      document: { flightlineGuidance: "active" },
+      document: {
+        nets: [
+          expect.objectContaining({
+            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+          }),
+        ],
+      },
     });
     if (!wired.ok) return;
 
@@ -705,7 +757,13 @@ describe("Edit Transaction envelope", () => {
     });
     expect(labelled).toMatchObject({
       ok: true,
-      document: { flightlineGuidance: "dismissed" },
+      document: {
+        nets: [
+          expect.objectContaining({
+            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+          }),
+        ],
+      },
     });
   });
 

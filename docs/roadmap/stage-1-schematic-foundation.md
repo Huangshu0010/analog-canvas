@@ -45,17 +45,17 @@ source preservation 和文本 round-trip 属于阶段二；阶段一只对其交
 
 ## 3. 权威边界
 
-| Concern | 唯一权威 | 非权威投影或派生 |
-| --- | --- | --- |
-| emitting Instance 网表身份 | `Instance.netlist.reference` | canonical Reference projection；其他 attached label 仅属 presentation |
-| 器件/模型/子电路目标 | `Instance.netlist.binding` | Properties 文本、导入 provenance |
-| Instance 参数 | `Instance.netlist.parameters` | canonical Value projection、hand-edited attached text、表格单元格 |
-| Device/interface pin order | built-in Device Descriptor、internal child formal interface，或 S6 external black-box interface | Symbol 绘制顺序、import source-position mapping |
-| Cell engineering/netlist name | Cell Document 的 `Document.netlist.name` | Cell 的 `Document.name` 严格同步投影 |
-| Cell interface | `Document.netlist.terminals` | child Port marker 与 parent Cell Symbol |
-| Net identity 与 membership | `Net.id` 及 terminal/port membership | Net label、Wire、Flightline |
-| 可见 Wire | persisted Route + canonical resolved geometry | hit target、selection overlay、highlight |
-| 网表可导出性 | `analyzeDesignNetlist(Project)` 返回的 IR + diagnostics | Preflight UI、阶段二 exporter 与成功下载提示 |
+| Concern                       | 唯一权威                                                                                        | 非权威投影或派生                                                      |
+| ----------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| emitting Instance 网表身份    | `Instance.netlist.reference`                                                                    | canonical Reference projection；其他 attached label 仅属 presentation |
+| 器件/模型/子电路目标          | `Instance.netlist.binding`                                                                      | Properties 文本、导入 provenance                                      |
+| Instance 参数                 | `Instance.netlist.parameters`                                                                   | canonical Value projection、hand-edited attached text、表格单元格     |
+| Device/interface pin order    | built-in Device Descriptor、internal child formal interface，或 S6 external black-box interface | Symbol 绘制顺序、import source-position mapping                       |
+| Cell engineering/netlist name | Cell Document 的 `Document.netlist.name`                                                        | Cell 的 `Document.name` 严格同步投影                                  |
+| Cell interface                | `Document.netlist.terminals`                                                                    | child Port marker 与 parent Cell Symbol                               |
+| Net identity 与 membership    | `Net.id` 及 terminal/port membership                                                            | Net label、Wire、Flightline                                           |
+| 可见 Wire                     | persisted Route + canonical resolved geometry                                                   | hit target、selection overlay、highlight                              |
+| 网表可导出性                  | `analyzeDesignNetlist(Project)` 返回的 IR + diagnostics                                         | Preflight UI、阶段二 exporter 与成功下载提示                          |
 
 所有人工作用必须通过现有 typed Edit Engine。Properties、Instance Table、编号器、
 Wire planner 和 Preflight 不得直接修改 Project JSON，也不得从 SVG、annotation 文本
@@ -495,23 +495,23 @@ diagnostics
 typed low-level edits
 ```
 
-`merge_nets`、`connect_endpoints`、`set_route_points`、`cut_connection`、`make_flightline` 和
+`merge_nets`、`connect_endpoints`、`set_route_points`、`cut_connection`、`remove_route_geometry` 和
 `disconnect_endpoint` 等继续作为 Edit Engine building blocks，但产品 UI 不再直接拼装它们。
 Preview 与 pointer-up/command commit 消费同一 proposal；相关 revision 改变使 proposal 失效，不能
 在 commit 时走另一条算法重算。
 
 #### S5.3 当前 GUI 行为的兼容映射
 
-| 当前用户动作 | 统一后的显式 intent | 必须保持的可见结果 |
-| --- | --- | --- |
-| terminal/Junction/Route contact 之间画 Wire | `draw_wire` / `attach_endpoint_to_wire` | 当前 Net merge、Route、Junction、NoConnect 清除和 preview 结果不变 |
-| 移动器件让两个 Pin 吸附接触 | `connect_without_wire` | 继续无 Wire 建立连接，移动和连接仍为一次 Undo |
-| 删除普通选中 Wire/Junction geometry | `remove_wire_geometry` | 继续保留 logical Net membership，并在需要时显示 Flightline |
-| 删除当前 explicit `bulk-dashed` connection | GUI adapter 显式提交 `remove_bulk_override` | 继续断开 B override 并恢复当前 configured/default bulk policy |
-| Disconnect Endpoint，选择是否移除相邻 Route | `disconnect_endpoint` 及显式 geometry option | 当前两种命令结果和状态提示不变 |
-| 编辑/新增 Net Label | `rename_or_merge_named_net` | 当前命名、同名 Net merge、anchor、selection 和 Undo 结果不变 |
-| 移动 selection | `move_connected_selection` | 内部 Routes/Junctions/annotations 平移，只有边界 Wire stretch |
-| 几何 Crossing | 无 connect intent | 继续永不因相交自动连接 |
+| 当前用户动作                                | 统一后的显式 intent                          | 必须保持的可见结果                                                 |
+| ------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------ |
+| terminal/Junction/Route contact 之间画 Wire | `draw_wire` / `attach_endpoint_to_wire`      | 当前 Net merge、Route、Junction、NoConnect 清除和 preview 结果不变 |
+| 移动器件让两个 Pin 吸附接触                 | `connect_without_wire`                       | 继续无 Wire 建立连接，移动和连接仍为一次 Undo                      |
+| 删除普通选中 Wire/Junction geometry         | `remove_wire_geometry`                       | 继续保留 logical Net membership，并在需要时显示 Flightline         |
+| 删除当前 explicit `bulk-dashed` connection  | GUI adapter 显式提交 `remove_bulk_override`  | 继续断开 B override 并恢复当前 configured/default bulk policy      |
+| Disconnect Endpoint，选择是否移除相邻 Route | `disconnect_endpoint` 及显式 geometry option | 当前两种命令结果和状态提示不变                                     |
+| 编辑/新增 Net Label                         | `rename_or_merge_named_net`                  | 当前命名、同名 Net merge、anchor、selection 和 Undo 结果不变       |
+| 移动 selection                              | `move_connected_selection`                   | 内部 Routes/Junctions/annotations 平移，只有边界 Wire stretch      |
+| 几何 Crossing                               | 无 connect intent                            | 继续永不因相交自动连接                                             |
 
 explicit bulk 的既有删除结果因此保留，但 electrical side effect 由 GUI adapter 选择的明确
 `remove_bulk_override` intent 表达，不再由低层 `Route.presentation` 在通用删除 edit 中隐式
@@ -883,23 +883,23 @@ Project with duplicate Reference, missing model binding/name and stale Cell inte
 
 ## 9. 风险与处理
 
-| 风险 | 处理 |
-| --- | --- |
-| 删除旧 property branch 被误解为重做 Properties GUI | 数据协议与 GUI 兼容边界分开；typed writer 替换但现有即时字段/Discard/toggle 保持 |
-| hand-edited annotation 被误当工程事实或为其过度建模 | derived canonical classifier；Canvas text 只属 presentation，Stage 1 不持久化 managed/detached flag |
-| arbitrary parameters 绕过 descriptor required rules | 保存全部显式参数；descriptor 仅拥有 known/required/display policy |
-| 大批量超过 edit-array 上限或产生部分提交 | 先交付 bounded bulk edit；一次用户命令对应原子 Project history entry 和 Undo，保留真实 revision 语义 |
-| 多次 schema bump 使上一发布版跌出 N-1 窗口 | S0 一次冻结并最终发布完整 schema-14；分 target 实施不形成多个公开 current versions |
-| 编号依赖 DOM、ID/Reference 偶合或当前数组顺序 | 单一 ReferencePolicy/Index、per-Cell placement/stable-ID 排序与 preview |
-| 协议统一意外改变当前 GUI 行为 | producer-by-producer characterization；gesture adapter 保持相同 Project delta、状态与 Undo |
-| Wire 改造破坏已经稳定的 connectivity | 复用 canonical index/geometry，由显式 intent adapter 对照迁移每个 producer |
-| visual pin layout 被误当作 netlist terminal order | presentation 只保存 side/offset/body；formal array order 单独 author，双方不互相反推 |
-| imported Instance terminal mapping 被提升为 external interface | external definition 是共享权威；Instance mapping 继续只是只读 source evidence |
-| hierarchy binding 同时保存 ID 与可漂移 name | resolved binding 只保存 definition ID；name 只由 definition 派生，unresolved 才保存 name |
-| external subcircuit 被错误解释为 PDK/model | 只保存 target、ordered pins 和 raw parameters，不判断物理模型 |
-| Preflight、extraction 与 exporter 各自检查一遍 | 单一 `analyzeDesignNetlist(Project)` 产出 IR + diagnostics；printer 只做边界防御校验 |
-| Stage 2 方言需求反向污染 Project | 所有 text/source/dialect evidence 留在 parser/printer/provenance 边界 |
-| Stage 1 范围膨胀到仿真或 Bus | 以本文件 Non-goals 和 IR exit gate 拒绝扩张，另立 roadmap |
+| 风险                                                           | 处理                                                                                                 |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 删除旧 property branch 被误解为重做 Properties GUI             | 数据协议与 GUI 兼容边界分开；typed writer 替换但现有即时字段/Discard/toggle 保持                     |
+| hand-edited annotation 被误当工程事实或为其过度建模            | derived canonical classifier；Canvas text 只属 presentation，Stage 1 不持久化 managed/detached flag  |
+| arbitrary parameters 绕过 descriptor required rules            | 保存全部显式参数；descriptor 仅拥有 known/required/display policy                                    |
+| 大批量超过 edit-array 上限或产生部分提交                       | 先交付 bounded bulk edit；一次用户命令对应原子 Project history entry 和 Undo，保留真实 revision 语义 |
+| 多次 schema bump 使上一发布版跌出 N-1 窗口                     | S0 一次冻结并最终发布完整 schema-14；分 target 实施不形成多个公开 current versions                   |
+| 编号依赖 DOM、ID/Reference 偶合或当前数组顺序                  | 单一 ReferencePolicy/Index、per-Cell placement/stable-ID 排序与 preview                              |
+| 协议统一意外改变当前 GUI 行为                                  | producer-by-producer characterization；gesture adapter 保持相同 Project delta、状态与 Undo           |
+| Wire 改造破坏已经稳定的 connectivity                           | 复用 canonical index/geometry，由显式 intent adapter 对照迁移每个 producer                           |
+| visual pin layout 被误当作 netlist terminal order              | presentation 只保存 side/offset/body；formal array order 单独 author，双方不互相反推                 |
+| imported Instance terminal mapping 被提升为 external interface | external definition 是共享权威；Instance mapping 继续只是只读 source evidence                        |
+| hierarchy binding 同时保存 ID 与可漂移 name                    | resolved binding 只保存 definition ID；name 只由 definition 派生，unresolved 才保存 name             |
+| external subcircuit 被错误解释为 PDK/model                     | 只保存 target、ordered pins 和 raw parameters，不判断物理模型                                        |
+| Preflight、extraction 与 exporter 各自检查一遍                 | 单一 `analyzeDesignNetlist(Project)` 产出 IR + diagnostics；printer 只做边界防御校验                 |
+| Stage 2 方言需求反向污染 Project                               | 所有 text/source/dialect evidence 留在 parser/printer/provenance 边界                                |
+| Stage 1 范围膨胀到仿真或 Bus                                   | 以本文件 Non-goals 和 IR exit gate 拒绝扩张，另立 roadmap                                            |
 
 ## 10. 阶段一 Exit Gate
 

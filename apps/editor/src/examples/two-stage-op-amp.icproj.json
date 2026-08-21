@@ -435,6 +435,9 @@
         {
           "id": "net-global-vdd",
           "name": "VDD",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "none",
           "scope": "global",
           "terminals": []
@@ -442,6 +445,9 @@
         {
           "id": "net-contact-gnd11",
           "name": "0",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "ground",
           "scope": "global",
           "terminals": [
@@ -457,6 +463,9 @@
         },
         {
           "id": "net-ui-1",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "none",
           "scope": "local",
           "terminals": [
@@ -476,6 +485,9 @@
         },
         {
           "id": "net-contact-p13",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "none",
           "scope": "local",
           "terminals": [
@@ -507,6 +519,9 @@
         },
         {
           "id": "net-split-f9c443f2edef6e67",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "none",
           "scope": "local",
           "terminals": [
@@ -685,7 +700,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "source": {
     "dialect": "none",
     "entry": null,

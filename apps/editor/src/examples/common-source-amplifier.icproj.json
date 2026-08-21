@@ -874,6 +874,9 @@
         {
           "id": "net-global-0",
           "name": "0",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "ground",
           "scope": "global",
           "terminals": [
@@ -893,6 +896,9 @@
         },
         {
           "id": "net-ui-4",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "ground",
           "scope": "global",
           "terminals": [
@@ -908,6 +914,9 @@
         },
         {
           "id": "net-ui-5",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "none",
           "scope": "local",
           "terminals": [
@@ -923,6 +932,9 @@
         },
         {
           "id": "net-ui-9",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "ground",
           "scope": "global",
           "terminals": [
@@ -938,6 +950,9 @@
         },
         {
           "id": "net-split-315c27b4f6e1c409",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "ground",
           "scope": "global",
           "terminals": [
@@ -962,6 +977,9 @@
         {
           "id": "net-power-vdd7",
           "name": "VDD",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "vdd",
           "scope": "global",
           "terminals": [
@@ -981,6 +999,9 @@
         },
         {
           "id": "net-split-1143160ec6fc8d88",
+          "origin": {
+            "kind": "authored"
+          },
           "powerDomain": "none",
           "scope": "local",
           "terminals": [
@@ -1272,7 +1293,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "source": {
     "dialect": "none",
     "entry": null,

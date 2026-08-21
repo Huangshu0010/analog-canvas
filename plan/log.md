@@ -3920,3 +3920,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   preview smoke) passed.
 - Commit status: integrated as `dff2568c` on `codex/insert-unification`; plan
   close-out pending commit.
+
+## 2026-08-21 - Imported Net routing guidance
+
+- Changed areas: advanced Project persistence to schema 19; replaced
+  document-wide flightline dismissal with per-Net `authored`/`spice-import`
+  provenance; extracted a pure routing-guidance MST; renamed the geometry-only
+  route mutation to `remove_route_geometry`; and added focused/all/hidden
+  imported-guidance display with per-Net highlight suppression.
+- Validation: focused schema/protocol/SPICE/derived/edit-engine tests,
+  imported guidance browser tests (5), complete workspace unit-test execution
+  after schema-baseline updates, typecheck, static/doc/reference checks,
+  generated Agent/MCP artifact checks, workspace build, production preview
+  smoke, test-impact, and diff checks passed.
+- Commit status: committed on `codex/spice-import-routing-guidance` as
+  `60ff3692`; stacked coordination is tracked separately.

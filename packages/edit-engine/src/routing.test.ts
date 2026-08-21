@@ -1752,7 +1752,7 @@ describe("routing Edit Engine", () => {
         locked,
         transaction(locked.id, 0, [
           {
-            kind: "make_flightline",
+            kind: "remove_route_geometry",
             routeId: "route-h",
           },
         ]),
@@ -1782,7 +1782,7 @@ describe("routing Edit Engine", () => {
     const result = executeTransaction(
       document,
       transaction(document.id, 0, [
-        { kind: "make_flightline", routeId: "route-h" },
+        { kind: "remove_route_geometry", routeId: "route-h" },
       ]),
       context,
     );

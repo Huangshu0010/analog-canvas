@@ -56,50 +56,6 @@ export function snapPointToDocumentGrid(point: Point, grid: number): Point {
   };
 }
 
-/**
- * Source synchronization and routing guidance have different lifetimes. An
- * imported Document starts with dashed guidance active; placing its initially
- * unplaced symbols or committing ordinary Wire must not dismiss the remaining
- * imported Nets. Deliberate presentation/geometry interventions do dismiss it
- * so a manually revised drawing is never repopulated with inferred guidance.
- */
-export function transactionDismissesFlightlineGuidance(
-  document: SchematicDocument,
-  edits: readonly SchematicEdit[],
-): boolean {
-  if (!document.sourceBinding || document.flightlineGuidance === "dismissed") {
-    return false;
-  }
-  const isWireCommit = edits.some((edit) => edit.kind === "connect_endpoints");
-  return edits.some((edit) => {
-    switch (edit.kind) {
-      case "upsert_schematic_annotation":
-        return edit.annotation.kind === "net-label";
-      case "remove_schematic_annotation":
-        return (
-          document.annotations.find(
-            (annotation) => annotation.id === edit.annotationId,
-          )?.kind === "net-label"
-        );
-      case "move_instance":
-      case "rotate_instance":
-      case "mirror_instance":
-      case "align_instances":
-      case "move_junction":
-      case "cut_connection":
-      case "make_flightline":
-        return true;
-      case "set_route_points":
-      case "route_orthogonal":
-      case "add_junction":
-      case "attach_endpoint_to_route":
-        return !isWireCommit;
-      default:
-        return false;
-    }
-  });
-}
-
 export function isHistoryEdit(
   edit: SchematicEdit,
 ): edit is Extract<SchematicEdit, { kind: "undo" | "redo" }> {

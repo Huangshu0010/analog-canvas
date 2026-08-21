@@ -66,7 +66,7 @@ for readability; these groups do not create separate mutation endpoints:
   `set_cell_formal_parameters`;
 - Route/Junction/connectivity: `set_route_points`, `route_orthogonal`,
   `add_junction`, `attach_endpoint_to_route`, `remove_junction`,
-  `move_junction`, `make_flightline`, `cut_connection`, `connect_endpoints`,
+  `move_junction`, `remove_route_geometry`, `cut_connection`, `connect_endpoints`,
   `disconnect_endpoint`;
 - Net/power/MOS: `add_power_rail`, `merge_nets`, `set_net_name`,
   `set_net_power_domain`, `set_mos_bulk_defaults`,
@@ -240,9 +240,9 @@ Phase 8 topology operations have these preconditions:
   electrical split. Newly orphaned Junction endpoints of the deleted branch
   are removed, an empty local Net is removed, and attached annotations follow
   the normal unresolved-anchor fallback rule.
-- `make_flightline` remains the explicit geometry-only operation: it removes a
-  Route while preserving its logical Net membership. It is intended for
-  advanced rerouting clients, not ordinary Delete.
+- `remove_route_geometry` is the explicit geometry-only operation: it removes
+  a Route while preserving logical Net membership. It supports advanced
+  rerouting without conflating a persisted mutation with derived guidance.
 - symbol and Instance edits honor the same locked layout groups/constraints as
   instance transforms and reject the complete transaction on conflict.
 

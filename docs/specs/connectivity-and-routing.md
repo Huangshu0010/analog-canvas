@@ -54,6 +54,26 @@ VDD markers on that Net do not require a drawn trunk or matching label and do
 not produce a flightline. Named local Nets still require route, contact, or
 label evidence for their visible connectivity.
 
+## Imported routing guidance
+
+SPICE import creates electrical membership before drawing. Only a Net whose
+persisted `origin.kind` is `spice-import` is eligible for derived routing
+guidance. `deriveRoutingGuidance` is a pure, device-neutral minimum-spanning
+tree over current visible components supplied by the connectivity adapter: it
+does not read symbols, MOS/Bulk semantics, SPICE records, labels, or editor
+state. Symbol pin visibility, implicit terminals, and named-global-Net
+exemptions are adapter policy before this calculation.
+
+A guide is transient presentation, never a Route, Junction, or electrical
+contact. A guide click starts the ordinary Wire interaction. Label, geometry,
+or transform edits cannot dismiss guidance; the current graph simply yields a
+new result. `remove_route_geometry` retains Net membership and therefore
+re-exposes unresolved imported components. A normal connection cut may split
+an authored local Net but must retain imported membership. The editor may show
+focused, all, or hidden imported guides; Net highlight suppresses only the
+highlighted Net's guides. Unplaced endpoints remain in the Placement Tray and
+do not receive invented page coordinates.
+
 ## Derived read models
 
 `ProjectConnectivityIndex` is the shared logical/routed connectivity view.

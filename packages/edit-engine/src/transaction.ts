@@ -77,7 +77,6 @@ import {
   isHistoryEdit,
   schemaDiagnostics,
   snapPointToDocumentGrid,
-  transactionDismissesFlightlineGuidance,
 } from "./transaction-preflight.js";
 import {
   rejectTransaction,
@@ -110,6 +109,25 @@ function referencePolicyFailure(
       return `Reference ${issue.reference} does not match this component prefix`;
     case "DUPLICATE_REFERENCE":
       return `Reference ${issue.reference} is already used by ${issue.otherInstanceId}`;
+  }
+}
+
+function mergeNetOrigins(
+  target: SchematicDocument["nets"][number],
+  source: SchematicDocument["nets"][number],
+): void {
+  const sourceNetIds = [target, source].flatMap((net) =>
+    net.origin?.kind === "spice-import" ? net.origin.sourceNetIds : [],
+  );
+  if (sourceNetIds.length > 0) {
+    target.origin = {
+      kind: "spice-import",
+      sourceNetIds: [...new Set(sourceNetIds)].sort((left, right) =>
+        left.localeCompare(right, "en"),
+      ),
+    };
+  } else if (!target.origin) {
+    target.origin = { kind: "authored" };
   }
 }
 
@@ -1489,6 +1507,7 @@ export function executeTransaction(
             scope: "local",
             powerDomain: "none",
             terminals: [],
+            origin: { kind: "authored" },
           });
           changedObjectIds.add(edit.netId);
         }
@@ -1746,7 +1765,7 @@ export function executeTransaction(
         changedObjectIds.add(junction.id);
         break;
       }
-      case "make_flightline": {
+      case "remove_route_geometry": {
         const routeIndex = draft.routes.findIndex(
           (route) => route.id === edit.routeId,
         );
@@ -1794,7 +1813,8 @@ export function executeTransaction(
           );
         }
         const beforeGroups = netEndpointGroups(draft, net.id);
-        const preserveLogicalNet = beforeGroups.length > 1;
+        const preserveLogicalNet =
+          beforeGroups.length > 1 || net.origin?.kind === "spice-import";
 
         const candidateOrphanJunctionIds = new Set(
           [route.from, route.to].flatMap((endpoint) =>
@@ -1837,7 +1857,11 @@ export function executeTransaction(
         }
 
         const groups = netEndpointGroups(draft, net.id);
-        if (groups.length === 0 && net.scope === "local") {
+        if (
+          groups.length === 0 &&
+          net.scope === "local" &&
+          net.origin?.kind !== "spice-import"
+        ) {
           draft.nets = draft.nets.filter(
             (candidate) => candidate.id !== net.id,
           );
@@ -1907,6 +1931,7 @@ export function executeTransaction(
               scope: "local",
               powerDomain: net.powerDomain ?? "none",
               terminals: terminalsFor(groupNetId),
+              ...(net.origin ? { origin: structuredClone(net.origin) } : {}),
             });
             changedObjectIds.add(groupNetId);
           }
@@ -1988,6 +2013,7 @@ export function executeTransaction(
             scope: edit.newNetScope ?? "local",
             powerDomain: "none",
             terminals: [],
+            origin: { kind: "authored" },
           });
           changedObjectIds.add(netId);
         }
@@ -2064,6 +2090,7 @@ export function executeTransaction(
             scope: "global",
             powerDomain: edit.domain,
             terminals: [],
+            origin: { kind: "authored" },
           });
         }
         draft.junctions.push(
@@ -2167,6 +2194,7 @@ export function executeTransaction(
         if ((target.powerDomain ?? "none") === "none") {
           target.powerDomain = source.powerDomain ?? "none";
         }
+        mergeNetOrigins(target, source);
         for (const instance of draft.instances) {
           if (instance.mosBulkBinding?.netId === source.id) {
             instance.mosBulkBinding.netId = target.id;
@@ -2375,6 +2403,7 @@ export function executeTransaction(
               scope: "global",
               powerDomain: name === "0" ? "ground" : "vdd",
               terminals: [],
+              origin: { kind: "authored" },
             };
             draft.nets.push(target);
             changedObjectIds.add(id);
@@ -2830,9 +2859,6 @@ export function executeTransaction(
     draft.sourceStatus = "connectivity-modified";
   } else if (geometryChanged && draft.sourceStatus === "in-sync") {
     draft.sourceStatus = "geometry-only-changed";
-  }
-  if (transactionDismissesFlightlineGuidance(document, transaction.edits)) {
-    draft.flightlineGuidance = "dismissed";
   }
   draft.revision = proposedRevision;
 

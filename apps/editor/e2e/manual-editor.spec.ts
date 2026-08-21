@@ -15,6 +15,14 @@ import {
   recoveryProjectTexts,
 } from "./editor-fixtures.js";
 
+function markRoutingDemoNetsImported(
+  project: ReturnType<typeof createRoutingDemoProject>,
+): void {
+  for (const net of project.documents[0]!.nets) {
+    net.origin = { kind: "spice-import", sourceNetIds: [net.id] };
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await emulateDownloadOnlyBrowser(page);
 });
@@ -816,11 +824,12 @@ test("keeps Wire active for consecutive independent routes until Escape", async 
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
-test("hides flightlines after manually deleting an imported Route", async ({
+test("re-derives guidance after manually deleting an imported Route", async ({
   page,
 }) => {
   const project = createRoutingDemoProject();
   const document = project.documents[0]!;
+  markRoutingDemoNetsImported(project);
   document.sourceBinding = {
     cellName: "routing_demo",
     sourceRef: {
@@ -847,7 +856,7 @@ test("hides flightlines after manually deleting an imported Route", async ({
   });
 
   await clickRoute(page, "route-imported-partial");
-  await expect(page.getByTestId("flightline")).toHaveCount(2);
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
   await page.keyboard.press("Delete");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
   await expect(page.getByTestId("status")).toContainText(
@@ -857,13 +866,14 @@ test("hides flightlines after manually deleting an imported Route", async ({
   await expect(page.getByTestId("source-status")).toHaveText(
     "geometry-only-changed",
   );
-  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(3);
 });
 
 test("keeps remaining imported flightlines after routing one guided connection", async ({
   page,
 }) => {
   const project = createRoutingDemoProject();
+  markRoutingDemoNetsImported(project);
   project.documents[0]!.sourceBinding = {
     cellName: "routing_demo",
     sourceRef: {
@@ -893,10 +903,11 @@ test("keeps remaining imported flightlines after routing one guided connection",
   await expect(page.getByTestId("flightline")).toHaveCount(2);
 });
 
-test("hides imported flightlines while a Net is highlighted", async ({
+test("suppresses only the highlighted imported Net guidance", async ({
   page,
 }) => {
   const project = createRoutingDemoProject();
+  markRoutingDemoNetsImported(project);
   project.documents[0]!.routes.push({
     id: "route-imported-h",
     netId: "net-h",
@@ -922,13 +933,16 @@ test("hides imported flightlines while a Net is highlighted", async ({
 
   await expect(page.getByTestId("flightline")).toHaveCount(2);
   await clickRoute(page, "route-imported-h");
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "All", exact: true }).click();
   await expect(page.getByTestId("flightline")).toHaveCount(2);
   await page.keyboard.press("h");
   await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
     "data-net-id",
     "net-h",
   );
-  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
   await page.keyboard.press("h");
   await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
   await expect(page.getByTestId("flightline")).toHaveCount(2);

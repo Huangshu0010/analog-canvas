@@ -216,8 +216,12 @@ export const MoveJunctionEditSchema = z.strictObject({
   junctionId: StableIdSchema,
   position: PointSchema,
 });
-export const MakeFlightlineEditSchema = z.strictObject({
-  kind: z.literal("make_flightline"),
+/**
+ * Removes only the rendered Route geometry.  The Net's electrical membership
+ * is retained, so imported routing guidance can be derived again if needed.
+ */
+export const RemoveRouteGeometryEditSchema = z.strictObject({
+  kind: z.literal("remove_route_geometry"),
   routeId: StableIdSchema,
 });
 export const CutConnectionEditSchema = z.strictObject({
@@ -368,7 +372,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   AttachEndpointToRouteEditSchema,
   RemoveJunctionEditSchema,
   MoveJunctionEditSchema,
-  MakeFlightlineEditSchema,
+  RemoveRouteGeometryEditSchema,
   CutConnectionEditSchema,
   ConnectEndpointsEditSchema,
   AddPowerRailEditSchema,

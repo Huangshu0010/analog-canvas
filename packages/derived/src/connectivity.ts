@@ -11,6 +11,11 @@ import {
 import { deriveDocumentContactEvidence } from "./contact.js";
 import { resolveNetLabelBindings } from "./net-label.js";
 import { resolveAnnotationText } from "./annotation-text.js";
+import {
+  deriveRoutingGuidance,
+  type NetGuidanceGraph,
+  type RoutingGuide,
+} from "./routing-guidance.js";
 
 export interface VisibleConnectivityNode {
   key: string;
@@ -31,15 +36,8 @@ export interface VisibleNetConnectivity {
   components: RoutedComponent[];
 }
 
-export interface Flightline {
-  id: string;
-  netId: string;
-  from: RouteEndpoint;
-  to: RouteEndpoint;
-  fromPoint: Point;
-  toPoint: Point;
-  distance: number;
-}
+/** @deprecated Use RoutingGuide for new consumers. */
+export type Flightline = RoutingGuide;
 
 class DisjointSet {
   readonly #parent = new Map<string, string>();
@@ -191,10 +189,6 @@ export function deriveVisibleConnectivity(
     .map((net) => deriveNetConnectivity(document, resolver, net));
 }
 
-function straightLineDistance(left: Point, right: Point): number {
-  return Math.hypot(left.x - right.x, left.y - right.y);
-}
-
 function flightlineNodePriority(
   document: SchematicDocument,
   node: VisibleConnectivityNode,
@@ -213,92 +207,63 @@ function flightlineNodePriority(
   return junction?.role === "route-anchor" && degree <= 1 ? 0 : 2;
 }
 
+function guidanceGraphForNet(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  net: Net,
+): NetGuidanceGraph | null {
+  // A named global Net is already an explicit semantic bridge. Multiple
+  // Ground/VDD markers may intentionally have no visible trunk between them.
+  if (net.scope === "global" && net.name) return null;
+  const components = deriveNetConnectivity(document, resolver, net)
+    .components.map((component) => ({
+      id: component.id,
+      nodes: component.nodes.flatMap((node) =>
+        node.point === null
+          ? []
+          : [
+              {
+                key: node.key,
+                endpoint: node.endpoint,
+                point: node.point,
+                priority: flightlineNodePriority(document, node),
+              },
+            ],
+      ),
+    }))
+    .filter((component) => component.nodes.length > 0);
+  return { netId: net.id, components };
+}
+
+/**
+ * Compatibility adapter for callers that need visible-guidance candidates for
+ * every Net. Product UI should use deriveImportedRoutingGuidance instead.
+ */
 export function deriveFlightlines(
   document: SchematicDocument,
   resolver: SymbolResolver,
 ): Flightline[] {
-  const result: Flightline[] = [];
-  for (const net of [...document.nets].sort((left, right) =>
-    left.id.localeCompare(right.id, "en"),
-  )) {
-    // A named global Net is already an explicit semantic bridge. Multiple
-    // Ground/VDD markers may intentionally have no visible trunk between them;
-    // a flightline would wrongly describe that representation as incomplete.
-    if (net.scope === "global" && net.name) continue;
-    const components = deriveNetConnectivity(document, resolver, net)
-      .components.map((component) => ({
-        ...component,
-        nodes: component.nodes.filter(
-          (node): node is VisibleConnectivityNode & { point: Point } =>
-            node.point !== null,
-        ),
-      }))
-      .filter((component) => component.nodes.length > 0);
-    if (components.length < 2) continue;
-    const edges: Array<{
-      fromComponentId: string;
-      toComponentId: string;
-      from: VisibleConnectivityNode & { point: Point };
-      to: VisibleConnectivityNode & { point: Point };
-      distance: number;
-      priority: number;
-    }> = [];
-    for (let left = 0; left < components.length; left += 1) {
-      for (let right = left + 1; right < components.length; right += 1) {
-        const fromComponent = components[left]!;
-        const toComponent = components[right]!;
-        const best = fromComponent.nodes
-          .flatMap((from) =>
-            toComponent.nodes.map((to) => ({
-              from,
-              to,
-              distance: straightLineDistance(from.point, to.point),
-              priority:
-                flightlineNodePriority(document, from) +
-                flightlineNodePriority(document, to),
-            })),
-          )
-          .sort(
-            (leftCandidate, rightCandidate) =>
-              leftCandidate.distance - rightCandidate.distance ||
-              leftCandidate.priority - rightCandidate.priority ||
-              leftCandidate.from.key.localeCompare(
-                rightCandidate.from.key,
-                "en",
-              ) ||
-              leftCandidate.to.key.localeCompare(rightCandidate.to.key, "en"),
-          )[0]!;
-        edges.push({
-          fromComponentId: fromComponent.id,
-          toComponentId: toComponent.id,
-          ...best,
-        });
-      }
-    }
-    edges.sort(
-      (left, right) =>
-        left.distance - right.distance ||
-        left.priority - right.priority ||
-        left.from.key.localeCompare(right.from.key, "en") ||
-        left.to.key.localeCompare(right.to.key, "en"),
-    );
-    const sets = new DisjointSet();
-    for (const component of components) sets.add(component.id);
-    for (const edge of edges) {
-      if (sets.find(edge.fromComponentId) === sets.find(edge.toComponentId)) {
-        continue;
-      }
-      sets.union(edge.fromComponentId, edge.toComponentId);
-      result.push({
-        id: deriveStableId("flightline", net.id, edge.from.key, edge.to.key),
-        netId: net.id,
-        from: edge.from.endpoint,
-        to: edge.to.endpoint,
-        fromPoint: edge.from.point,
-        toPoint: edge.to.point,
-        distance: edge.distance,
-      });
-    }
-  }
-  return result;
+  return [...document.nets]
+    .sort((left, right) => left.id.localeCompare(right.id, "en"))
+    .flatMap((net) => {
+      const graph = guidanceGraphForNet(document, resolver, net);
+      return graph ? deriveRoutingGuidance(graph) : [];
+    });
+}
+
+/**
+ * Routing assistance for topology imported from SPICE. Hand-authored Nets are
+ * deliberately excluded even when they share a source-bound Document.
+ */
+export function deriveImportedRoutingGuidance(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+): RoutingGuide[] {
+  return [...document.nets]
+    .filter((net) => net.origin?.kind === "spice-import")
+    .sort((left, right) => left.id.localeCompare(right.id, "en"))
+    .flatMap((net) => {
+      const graph = guidanceGraphForNet(document, resolver, net);
+      return graph ? deriveRoutingGuidance(graph) : [];
+    });
 }

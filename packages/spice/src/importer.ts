@@ -333,6 +333,7 @@ function importDocument(
     id: net.id,
     name: net.name,
     scope: net.scope,
+    origin: { kind: "spice-import", sourceNetIds: [net.id] },
     terminals: visibleInstances
       .filter((instance) => importedInstanceById.has(instance.id))
       .flatMap((instance) =>
@@ -378,7 +379,6 @@ function importDocument(
     revision: 0,
     sourceBinding: { cellName: cell.name, sourceRef: cell.sourceRef },
     sourceStatus: "in-sync",
-    flightlineGuidance: "active",
     netlist: {
       name: cell.name,
       terminals: formalTerminals,

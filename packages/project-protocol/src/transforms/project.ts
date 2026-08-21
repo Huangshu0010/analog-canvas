@@ -14,8 +14,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * The rolling migration makes RichText schematic labels the default instance
- * projection. Formal Cell Ports instead project only their terminal name.
+ * Schema-19 makes imported routing intent explicit per Net and retires the
+ * persisted document-wide flightline dismissal switch. Existing source-bound
+ * Nets are conservatively retained as imported topology; all other Nets are
+ * authored. Current connectivity remains authoritative after migration.
  */
 export function upgradePreviousProject(
   raw: Record<string, unknown>,
@@ -24,6 +26,17 @@ export function upgradePreviousProject(
   const documents = Array.isArray(project.documents) ? project.documents : [];
   for (const rawDocument of documents) {
     if (!isRecord(rawDocument)) continue;
+    const imported = isRecord(rawDocument.sourceBinding);
+    const nets = Array.isArray(rawDocument.nets) ? rawDocument.nets : [];
+    for (const rawNet of nets) {
+      if (!isRecord(rawNet) || typeof rawNet.id !== "string") continue;
+      if (!isRecord(rawNet.origin)) {
+        rawNet.origin = imported
+          ? { kind: "spice-import", sourceNetIds: [rawNet.id] }
+          : { kind: "authored" };
+      }
+    }
+    delete rawDocument.flightlineGuidance;
     const instances = Array.isArray(rawDocument.instances)
       ? rawDocument.instances
       : [];

@@ -87,6 +87,7 @@ describe("component placement electrical contacts", () => {
       scope: "global",
       powerDomain: "ground",
       terminals: [{ instanceId: "GND1", pinName: "0" }],
+      origin: { kind: "authored" },
     });
   });
 
@@ -194,6 +195,7 @@ describe("component placement electrical contacts", () => {
       scope: "global",
       powerDomain: "vdd",
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
+      origin: { kind: "authored" },
     });
   });
 

@@ -25,12 +25,6 @@ export const SourceBindingSchema = z.strictObject({
   cellName: z.string().min(1),
   sourceRef: SourceSpanSchema,
 });
-/**
- * Imported SPICE topology can remain electrically authoritative after manual
- * placement and partial routing. This state owns only the optional dashed
- * routing guidance; it must not be inferred from source synchronization.
- */
-export const FlightlineGuidanceSchema = z.enum(["active", "dismissed"]);
 export const CellNetlistTerminalSchema = z.strictObject({
   id: StableIdSchema,
   name: NetlistIdentifierSchema,
@@ -61,7 +55,6 @@ const SchematicDocumentBaseSchema = z.strictObject({
     "geometry-only-changed",
     "connectivity-modified",
   ]),
-  flightlineGuidance: FlightlineGuidanceSchema.optional(),
   netlist: CellNetlistInterfaceSchema.optional(),
   instances: z.array(InstanceSchema),
   nets: z.array(NetSchema),

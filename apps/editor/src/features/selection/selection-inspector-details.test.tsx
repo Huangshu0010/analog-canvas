@@ -148,7 +148,7 @@ describe("selection inspector details", () => {
         routes: [],
         junctions: [],
         virtualEdges: [],
-        flightlines: [],
+        routingGuidance: [],
       },
       highlights: [
         {
@@ -158,7 +158,7 @@ describe("selection inspector details", () => {
           routes: [],
           junctions: [],
           virtualEdges: [],
-          flightlines: [],
+          routingGuidance: [],
         },
         {
           documentId: "document-child",
@@ -167,7 +167,7 @@ describe("selection inspector details", () => {
           routes: [],
           junctions: [],
           virtualEdges: [],
-          flightlines: [],
+          routingGuidance: [],
         },
       ],
       hops: [
@@ -211,7 +211,7 @@ describe("selection inspector details", () => {
         routes: [],
         junctions: [],
         virtualEdges: [],
-        flightlines: [],
+        routingGuidance: [],
       },
       highlights: [],
       hops: [

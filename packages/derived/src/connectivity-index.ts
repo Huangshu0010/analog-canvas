@@ -8,11 +8,11 @@ import type {
 import type { SymbolResolver } from "@icm/symbols";
 
 import {
-  deriveFlightlines,
+  deriveImportedRoutingGuidance,
   deriveNetConnectivity,
-  type Flightline,
   type RoutedComponent,
 } from "./connectivity.js";
+import type { RoutingGuide } from "./routing-guidance.js";
 import { endpointKey, isVisibleEndpoint, netEndpoints } from "./endpoint.js";
 import { directObjectLocator, type ObjectLocator } from "./object-locator.js";
 import { resolveNetLabelBindings } from "./net-label.js";
@@ -24,11 +24,11 @@ import {
 
 /**
  * Unified read-only connectivity index (ADR 0013). Single source of
- * connectivity truth for flightline overlay, net highlight, cross-Cell trace,
+ * connectivity truth for routing guidance, net highlight, cross-Cell trace,
  * project search, and ERC. Never persisted, exported, or mutated by GUI state.
  *
  * This first implementation is an additive facade over the existing tested
- * `derive*` primitives, plus the partition-invariant flightline id
+ * `derive*` primitives, plus the partition-invariant routing-guidance id
  * normalization (ADR 0013 / WP-R0 finding), typed virtual edges, hierarchy
  * edges, and a project object index. Production consumers keep using the old
  * helpers until the R10 migration proves parity and switches them.
@@ -54,8 +54,8 @@ export interface NetConnectivityRecord {
   routes: readonly string[];
   junctions: readonly string[];
   virtualEdges: readonly VirtualConnectivityEdge[];
-  /** Flightlines with partition-invariant id/direction (ADR 0013). */
-  flightlines: readonly Flightline[];
+  /** Imported routing guidance with partition-invariant id/direction. */
+  routingGuidance: readonly RoutingGuide[];
 }
 
 export interface DocumentConnectivityIndex {
@@ -128,12 +128,12 @@ const documentIndexCache = new WeakMap<
 >();
 
 /**
- * Returns a flightline whose `from`/`to` are ordered by `endpointKey` and whose
- * `id` is recomputed from the ordered keys, so the same logical flightline
+ * Returns routing guidance whose `from`/`to` are ordered by `endpointKey` and
+ * whose `id` is recomputed from the ordered keys, so the same logical guide
  * yields the same id regardless of how the visible wire is partitioned into
  * Routes (ADR 0013; resolves the WP-R0 partition-sensitivity finding).
  */
-function normalizeFlightline(line: Flightline): Flightline {
+function normalizeRoutingGuidance(line: RoutingGuide): RoutingGuide {
   const swap =
     endpointKey(line.from).localeCompare(endpointKey(line.to), "en") > 0;
   const from = swap ? line.to : line.from;
@@ -142,7 +142,7 @@ function normalizeFlightline(line: Flightline): Flightline {
   const toPoint = swap ? line.fromPoint : line.toPoint;
   return {
     id: deriveStableId(
-      "flightline",
+      "routing-guidance",
       line.netId,
       endpointKey(from),
       endpointKey(to),
@@ -171,11 +171,11 @@ function buildDocumentIndex(
     }
   }
 
-  const flightlinesByNet = new Map<string, Flightline[]>();
-  for (const line of deriveFlightlines(document, resolver)) {
-    const lines = flightlinesByNet.get(line.netId) ?? [];
-    lines.push(normalizeFlightline(line));
-    flightlinesByNet.set(line.netId, lines);
+  const routingGuidanceByNet = new Map<string, RoutingGuide[]>();
+  for (const line of deriveImportedRoutingGuidance(document, resolver)) {
+    const lines = routingGuidanceByNet.get(line.netId) ?? [];
+    lines.push(normalizeRoutingGuidance(line));
+    routingGuidanceByNet.set(line.netId, lines);
   }
 
   const nets = new Map<string, NetConnectivityRecord>();
@@ -188,7 +188,7 @@ function buildDocumentIndex(
         document,
         resolver,
         net,
-        flightlinesByNet.get(net.id) ?? [],
+        routingGuidanceByNet.get(net.id) ?? [],
       ),
     );
   }
@@ -212,7 +212,7 @@ function buildNetRecord(
   document: SchematicDocument,
   resolver: SymbolResolver,
   net: Net,
-  flightlines: readonly Flightline[],
+  routingGuidance: readonly RoutingGuide[],
 ): NetConnectivityRecord {
   const logicalEndpoints: EndpointRef[] = [
     ...net.terminals.map((terminal) =>
@@ -250,7 +250,7 @@ function buildNetRecord(
     routes,
     junctions,
     virtualEdges,
-    flightlines,
+    routingGuidance,
   };
 }
 

@@ -51,7 +51,13 @@ Q2 collector base emitter QPREF
       name: "__flat__",
       terminals: [],
     });
-    expect(imported.project?.documents[0]?.flightlineGuidance).toBe("active");
+    expect(imported.project?.documents[0]?.nets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          origin: expect.objectContaining({ kind: "spice-import" }),
+        }),
+      ]),
+    );
     expect(
       imported.project?.documents[0]?.instances.map((instance) => [
         instance.netlist?.reference,

@@ -2,18 +2,16 @@
 
 Status: `accepted`
 
-Current Project schema: `18`
+Current Project schema: `19`
 
 Primary owners: `packages/model` (current shape) and
 `packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`@icm/project-protocol` exposes `parseProject` and accepts Project schema 18
-and schema 17. Schema 17 advances directly to 18 by converting ordinary
-default designator projections to RichText schematic-label projections and
-removing the redundant schematic Reference/designator projection from formal
-Cell Ports. Every reader returns the sole schema-18 in-memory Project shape;
-schema 16 and older and all future versions are
+`@icm/project-protocol` exposes `parseProject` and accepts Project schema 19
+and schema 18. Schema 18 advances directly to 19 by adding explicit Net routing
+origin and retiring document-wide flightline display state. Every reader
+returns the sole schema-19 in-memory Project shape; schema 17 and older and all future versions are
 rejected. There is no sequential migration registry or second in-memory Project
 shape.
 
@@ -38,6 +36,9 @@ shape.
   `P`; their connectivity is stored only in `Net.terminals` and ordinary
   terminal Route endpoints.
 - `Net.terminals` is the electrical membership authority.
+- `Net.origin` records whether the membership came from SPICE import or from
+  authoring. It is the sole persisted eligibility policy for derived routing
+  guidance; it does not itself make a visible connection.
 - Route endpoints are terminal or Junction references only.
 - `Net.powerDomain` explicitly records `none`, `vdd`, `ground`, or diagnostic
   `conflict`; canonical authoring verifies this persisted role after matching
@@ -62,8 +63,8 @@ shape.
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 17 or 18
--> direct v17-to-v18 upgrade when needed -> strict schema-18 validation -> open
+read text -> parse JSON -> require Project schema 18 or 19
+-> direct v18-to-v19 upgrade when needed -> strict schema-19 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```
 
@@ -73,7 +74,7 @@ after explicit human approval in the editor.
 
 A migrated formal file is marked as needing save. The editor does not silently
 overwrite the source selected through the browser file input. Browser recovery
-records may be canonicalized to v18 only after a successful validated write.
+records may be canonicalized to v19 only after a successful validated write.
 
 Project entry does not repair duplicate canonical supply Nets (`0` or `VDD`).
 Duplicate folded Net names are invalid input and remain a blocking diagnostic
@@ -82,7 +83,7 @@ until the author explicitly renames or merges the Nets.
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in
 `fixtures/projects/compatibility-corpus.json`; its accepted entries must all be
-already canonical Project schema 18. The rejected corpus names expected
+already canonical Project schema 19. The rejected corpus names expected
 validation failures.
 
 Viewport, selection, undo history, canvas overlays, Agent credentials,
