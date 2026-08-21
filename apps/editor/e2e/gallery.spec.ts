@@ -93,10 +93,13 @@ test("File > Publish to Gallery posts the live Project with the passphrase", asy
   page,
 }) => {
   const posted: { authorization: string | null; body: string }[] = [];
-  await page.route("**/api/gallery", (route) => {
-    if (route.request().method() !== "POST") {
-      return route.fulfill({ json: { entries: [], nextCursor: null } });
-    }
+  // The real submissions endpoint is /api/gallery/submissions — the mock
+  // matches it exactly so a client posting anywhere else fails this test.
+  await page.route("**/api/gallery", (route) =>
+    route.fulfill({ json: { entries: [], nextCursor: null } }),
+  );
+  await page.route("**/api/gallery/submissions", (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
     posted.push({
       authorization: route.request().headers()["authorization"] ?? null,
       body: route.request().postData() ?? "",
