@@ -119,6 +119,9 @@ test("returns a component to the Placement Tray and places the retained Instance
   ).toContainText("1 retained");
   await expect(page.getByTestId("unplaced-R1")).toContainText("R1 · resistor");
   await expect(page.getByTestId("hit-R1")).toHaveCount(0);
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R1"),
+  ).toHaveCount(0);
 
   await page
     .getByRole("button", { name: "Place R1 · resistor from tray" })
@@ -128,6 +131,9 @@ test("returns a component to the Placement Tray and places the retained Instance
   await canvas.click({ position: { x: 480, y: 260 } });
 
   await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R1"),
+  ).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Placement Tray" }),
   ).toContainText("0 retained");
@@ -482,7 +488,7 @@ test("carries a manual Value through placement and Q property editing", async ({
     page.getByRole("button", { name: "Discard changes" }),
   ).toHaveCount(0);
   await expect(page.getByLabel("Component identity")).toContainText(
-    "Netlist referenceSchematic aliasSymbolresistorDevice classresistor",
+    "Schematic labelNetlist referenceSymbolresistorDevice classresistor",
   );
   const netlistReference = page.getByLabel("Component netlist reference");
   await expect(netlistReference).toHaveValue("R1");
@@ -490,10 +496,10 @@ test("carries a manual Value through placement and Q property editing", async ({
   await netlistReference.press("Tab");
   await expect(page.getByTestId("revision")).toHaveText("4");
   await expect(netlistReference).toHaveValue("R7");
-  const schematicAlias = page.getByLabel("Component schematic alias");
-  await expect(schematicAlias).toHaveValue("");
-  await schematicAlias.fill("Input resistor");
-  await schematicAlias.press("Tab");
+  const schematicLabel = page.getByLabel("Component schematic label");
+  await expect(schematicLabel).toHaveValue("R1");
+  await schematicLabel.fill("Input resistor");
+  await schematicLabel.press("Tab");
   await expect(page.getByTestId("revision")).toHaveText("5");
   await page
     .locator("summary")

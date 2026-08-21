@@ -85,6 +85,49 @@ describe("Edit Transaction envelope", () => {
     expect(result.document.instances[0]).not.toHaveProperty("netlist");
   });
 
+  it("rejects a schematic reference on a formal Cell Port", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "port-object",
+      symbolId: "port",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-vout",
+      scope: "local",
+      terminals: [{ instanceId: "port-object", pinName: "P" }],
+    });
+    document.netlist = {
+      name: "Child",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-vout",
+          name: "Vout",
+          netId: "net-vout",
+          direction: "output",
+          interfaceInstanceId: "port-object",
+        },
+      ],
+    };
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "set_instance_schematic_reference",
+          instanceId: "port-object",
+          reference: "P1",
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+  });
+
   it("enforces the same layout lock before placing a retained Instance", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({

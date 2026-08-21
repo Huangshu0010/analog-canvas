@@ -68,42 +68,70 @@ describe("Project persistence", () => {
     }
   });
 
-  it("upgrades schema-16 Instances with schematic references", () => {
+  it("upgrades schema-17 default labels and formal Ports to their schema-18 identities", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     );
-    source.schemaVersion = 16;
-    source.documents[0].instances.push(
-      {
-        id: "R-object",
-        symbolId: "resistor",
-        placement: null,
-        netlist: { reference: "R7", parameters: {} },
-      },
-      {
-        id: "M-object",
-        symbolId: "nmos",
-        placement: null,
-        netlist: { reference: "M3", parameters: {} },
-        schematicName: { runs: [{ kind: "text", value: "Input pair" }] },
-      },
-    );
+    source.schemaVersion = 17;
+    source.documents[0].instances.push({
+      id: "P-object",
+      symbolId: "port",
+      schematicReference: "P1",
+      placement: null,
+    });
+    source.documents[0].instances.push({
+      id: "opaque-resistor-id",
+      symbolId: "resistor",
+      schematicReference: "R7",
+      placement: null,
+      netlist: { reference: "R7", parameters: {} },
+    });
+    source.documents[0].netlist = {
+      name: "Child",
+      terminals: [
+        {
+          id: "terminal-vout",
+          name: "Vout",
+          netId: "net-vout",
+          direction: "output",
+          interfaceInstanceId: "P-object",
+        },
+      ],
+      formalParameters: [],
+    };
+    source.documents[0].nets.push({
+      id: "net-vout",
+      scope: "local",
+      terminals: [{ instanceId: "P-object", pinName: "P" }],
+    });
     source.documents[0].annotations.push(
       {
-        id: "reference-R",
+        id: "reference-P",
         kind: "instance-label",
-        binding: { kind: "instance-designator", instanceId: "R-object" },
+        binding: { kind: "instance-designator", instanceId: "P-object" },
         anchor: { kind: "free", position: { x: 0, y: 0 } },
         alignment: "start",
         rotation: 0,
         locked: false,
       },
       {
-        id: "reference-M",
+        id: "reference-R7",
         kind: "instance-label",
         binding: {
-          kind: "instance-schematic-name",
-          instanceId: "M-object",
+          kind: "instance-designator",
+          instanceId: "opaque-resistor-id",
+        },
+        anchor: { kind: "free", position: { x: 40, y: 0 } },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
+      },
+      {
+        id: "terminal-name",
+        kind: "instance-label",
+        binding: {
+          kind: "cell-terminal-name",
+          terminalId: "terminal-vout",
         },
         anchor: { kind: "free", position: { x: 20, y: 0 } },
         alignment: "start",
@@ -114,29 +142,31 @@ describe("Project persistence", () => {
 
     const migrated = parseProjectWithMetadata(JSON.stringify(source));
     expect(migrated).toMatchObject({
-      sourceSchemaVersion: 16,
+      sourceSchemaVersion: 17,
       migrated: true,
-      project: { schemaVersion: 17 },
+      project: { schemaVersion: 18 },
     });
     expect(
       migrated.project.documents[0]!.annotations.map(
         (annotation) => annotation.binding,
       ),
     ).toEqual([
-      { kind: "instance-designator", instanceId: "R-object" },
-      { kind: "instance-schematic-name", instanceId: "M-object" },
+      { kind: "cell-terminal-name", terminalId: "terminal-vout" },
+      { kind: "instance-schematic-name", instanceId: "opaque-resistor-id" },
     ]);
-    expect(migrated.project.documents[0]!.instances).toMatchObject([
-      { id: "R-object", schematicReference: "R7" },
-      { id: "M-object", schematicReference: "M3" },
-    ]);
+    expect(migrated.project.documents[0]!.instances[0]).toMatchObject({
+      id: "P-object",
+    });
+    expect(migrated.project.documents[0]!.instances[0]).not.toHaveProperty(
+      "schematicReference",
+    );
   });
 
   it("lets an upgraded previous Project author and persist current content", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     );
-    source.schemaVersion = 16;
+    source.schemaVersion = 17;
     const project = parseProject(JSON.stringify(source));
     project.documents[0]!.annotations.push({
       id: "value-fraction",
@@ -157,7 +187,7 @@ describe("Project persistence", () => {
     });
 
     const reopened = parseProject(serializeProject(project));
-    expect(reopened.schemaVersion).toBe(17);
+    expect(reopened.schemaVersion).toBe(18);
     expect(
       reopened.documents[0]!.annotations[0]?.content!.runs[0],
     ).toMatchObject({ kind: "fraction" });
@@ -167,9 +197,9 @@ describe("Project persistence", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/must be 16 or 17/);
+    ).toThrow(/must be 17 or 18/);
     expect(() =>
-      parseProject(JSON.stringify({ ...project, schemaVersion: 14 })),
-    ).toThrow(/must be 16 or 17/);
+      parseProject(JSON.stringify({ ...project, schemaVersion: 16 })),
+    ).toThrow(/must be 17 or 18/);
   });
 });

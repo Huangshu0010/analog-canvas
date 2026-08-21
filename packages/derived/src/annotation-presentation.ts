@@ -31,6 +31,40 @@ export interface AnnotationPresentation {
   readonly bounds: DerivedRect;
 }
 
+/**
+ * Shared canvas/export visibility policy for persisted annotations. A retained
+ * Instance keeps its object-anchored labels for a later re-placement, but its
+ * labels are not floating drawing objects while the Instance is in the Tray.
+ * Formal Cell Ports use their terminal name as their sole visible identity.
+ */
+export function isSchematicAnnotationVisible(
+  document: SchematicDocument,
+  annotation: Annotation,
+): boolean {
+  if (annotation.visible === false) return false;
+  const anchoredInstanceId =
+    annotation.anchor.kind === "object"
+      ? annotation.anchor.objectId
+      : undefined;
+  if (
+    anchoredInstanceId !== undefined &&
+    document.instances.some(
+      (instance) =>
+        instance.id === anchoredInstanceId && instance.placement === null,
+    )
+  ) {
+    return false;
+  }
+  const binding = annotation.binding;
+  return !(
+    (binding?.kind === "instance-designator" ||
+      binding?.kind === "instance-schematic-name") &&
+    document.netlist?.terminals.some(
+      (terminal) => terminal.interfaceInstanceId === binding.instanceId,
+    )
+  );
+}
+
 export function resolveAnnotationPresentation(
   document: SchematicDocument,
   resolver: SymbolResolver,

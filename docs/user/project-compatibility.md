@@ -1,20 +1,23 @@
 # Project File Compatibility
 
-The released Project schema version is `17`. It retains schematic-only
+The released Project schema version is `18`. It retains schematic-only
 hierarchy integrity, a Project structural revision, stable formal Cell ports,
 and definition-level Cell symbol presentation. It also has one typed Instance
 netlist authority, formal Cell parameters, and Project-local external
 subcircuit definitions with stable ordered terminal identities and directions.
-Every Instance also has an independent schematic Reference, including Ports. A
-canonical v17 file can be opened, saved, reopened, and saved again without
+Every ordinary Instance has one RichText schematic label, initially derived
+from its internal schematic or netlist reference until the user edits it. A
+formal Cell Port is instead identified by its terminal name, such as `Vout`. A
+canonical v18 file can be opened, saved, reopened, and saved again without
 byte drift.
 
-Schema v16 is accepted through one direct upgrade to v17. It receives a
-schematic Reference for every Instance: emitting instances retain their netlist
-reference and Ports receive deterministic `P#` references. The next save writes
-v17. The original file is never overwritten silently. Schema v15 and older,
-and versions newer than v17, are rejected; there is no accumulating migration
-registry.
+Schema v17 is accepted through one direct upgrade to v18. The upgrade converts
+ordinary default designator labels into RichText schematic-label projections,
+then removes the redundant `P#` schematic Reference/designator label from each
+formal Cell Port; its stable `Instance.id` and terminal name remain unchanged.
+The next save writes v18. The original file is never overwritten silently. Schema v16
+and older, and versions newer than v18, are rejected; there is no accumulating
+migration registry.
 
 The canonical-current corpus at
 [`fixtures/projects/compatibility-corpus.json`](../../fixtures/projects/compatibility-corpus.json)
@@ -26,7 +29,7 @@ Retired fields such as first-class
 
 An incompatible Project is rejected before it can replace the current browser
 Project. Conversion, when needed, is an explicit external operation that must
-produce and validate a complete v17 candidate before a human chooses to load it.
+produce and validate a complete v18 candidate before a human chooses to load it.
 
 The editor never silently merges duplicate canonical Ground (`0`) or VDD Nets.
 Duplicate folded Net names are invalid and remain diagnostics until the author

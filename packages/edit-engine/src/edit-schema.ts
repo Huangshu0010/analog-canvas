@@ -95,7 +95,7 @@ export const SetInstanceSchematicReferenceEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   reference: z.string().min(1).max(128),
 });
-/** Update only the user-visible, RichText schematic alias. */
+/** Update the default user-visible, RichText schematic label. */
 export const SetInstanceSchematicNameEditSchema = z.strictObject({
   kind: z.literal("set_instance_schematic_name"),
   instanceId: StableIdSchema,

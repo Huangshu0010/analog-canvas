@@ -26,7 +26,7 @@ export function resolveAnnotationText(
         (candidate) => candidate.id === binding.instanceId,
       );
       return semanticTextDocument(
-        instance?.schematicReference ?? instance?.netlist?.reference ?? "",
+        instance?.netlist?.reference ?? "",
         "instance-label",
       );
     }
@@ -34,7 +34,13 @@ export function resolveAnnotationText(
       const instance = document.instances.find(
         (candidate) => candidate.id === binding.instanceId,
       );
-      return instance?.schematicName ?? EMPTY_TEXT;
+      return (
+        instance?.schematicName ??
+        semanticTextDocument(
+          instance?.schematicReference ?? instance?.netlist?.reference ?? "",
+          "instance-label",
+        )
+      );
     }
     case "instance-master-name": {
       const instance = document.instances.find(

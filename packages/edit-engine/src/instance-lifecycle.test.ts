@@ -62,7 +62,7 @@ function lifecycleDocument() {
     {
       id: "label-r1",
       kind: "instance-label",
-      binding: { kind: "instance-designator", instanceId: "R1" },
+      binding: { kind: "instance-schematic-name", instanceId: "R1" },
       anchor: {
         kind: "object",
         objectId: "R1",
@@ -117,7 +117,6 @@ describe("Instance lifecycle planning", () => {
     document.instances.push({
       id: "P1",
       symbolId: "port",
-      schematicReference: "P1",
       placement: {
         position: { x: 80, y: 100 },
         rotation: 0,

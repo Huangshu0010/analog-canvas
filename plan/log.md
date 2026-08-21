@@ -3798,3 +3798,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   test-impact, and diff checks passed.
 - Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
   the current branch HEAD.
+
+## 2026-08-21 - Rich schematic label authority and formal Port presentation
+
+- Changed areas: corrected schema-18 default instance labels to bind RichText
+  `schematicName` rather than the emitted designator; retained a
+  schematic/netlist-only fallback with no internal-ID display; made the
+  designator optional/read-only; reduced Properties to one Schematic label
+  entry; and tightened formal Cell Ports to their terminal-name-only
+  projection. The v17 reader migration preserves ordinary label placement while
+  rebinding it and removes redundant formal-Port projections.
+- Validation: focused unit contracts (9 files / 78 tests), focused Playwright
+  lifecycle/import/property flows (5 tests), workspace typecheck, Prettier,
+  Markdown-link validation, test-impact, and diff checks passed.
+- Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.

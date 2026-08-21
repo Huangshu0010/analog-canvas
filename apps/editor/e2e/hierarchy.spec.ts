@@ -271,8 +271,11 @@ test("returns a formal Cell Port to the Tray without deleting its interface", as
   await canvas.click({ position: { x: 300, y: 180 } });
   await page.keyboard.press("Escape");
   await expect(
-    page.getByTestId("annotation-hit-instance-reference-P1"),
+    page.getByTestId("annotation-hit-instance-label-P1"),
   ).toBeVisible();
+  await expect(
+    page.getByTestId("annotation-hit-instance-reference-P1"),
+  ).toHaveCount(0);
   await page.getByTestId("hit-P1").click();
   const shelf = page.getByTestId("selection-shelf");
   if ((await shelf.getAttribute("aria-expanded")) === "false") {

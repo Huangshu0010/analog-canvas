@@ -8,12 +8,13 @@ import { describe, expect, it } from "vitest";
 import { resolveAnnotationText } from "./annotation-text.js";
 
 describe("bound annotation text", () => {
-  it("separates the electrical designator from the user-owned schematic name", () => {
+  it("uses RichText schematicName for the default label and keeps the designator separate", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "M1",
       symbolId: "nmos",
       placement: null,
+      schematicReference: "M_SCHEMATIC",
       netlist: { reference: "M_INTERNAL", parameters: {} },
       schematicName: {
         runs: [
@@ -50,6 +51,37 @@ describe("bound annotation text", () => {
       }),
     ).toEqual(document.instances[0]!.schematicName);
     expect(document.instances[0]!.netlist!.reference).toBe("M_INTERNAL");
+  });
+
+  it("falls back from an unmaterialized schematic label without exposing the object ID", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "opaque-object-id",
+      symbolId: "resistor",
+      placement: null,
+      schematicReference: "R7",
+      netlist: { reference: "R_NETLIST", parameters: {} },
+    });
+    const annotation = {
+      id: "instance-label-R7",
+      kind: "instance-label" as const,
+      binding: {
+        kind: "instance-schematic-name" as const,
+        instanceId: "opaque-object-id",
+      },
+      anchor: { kind: "free" as const, position: { x: 0, y: 0 } },
+      alignment: "start" as const,
+      rotation: 0 as const,
+      locked: false,
+    };
+
+    expect(resolveAnnotationText(document, annotation)).toEqual(
+      semanticTextDocument("R7", "instance-label"),
+    );
+    delete document.instances[0]!.schematicReference;
+    expect(resolveAnnotationText(document, annotation)).toEqual(
+      semanticTextDocument("R_NETLIST", "instance-label"),
+    );
   });
 
   it("projects a Net name without touching its movable route anchor", () => {

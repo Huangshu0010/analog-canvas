@@ -15,6 +15,7 @@ import {
 type Instance = SchematicDocument["instances"][number];
 
 export interface DefaultInstanceDisplayOptions {
+  /** Show the default user-facing schematic label. */
   readonly showDesignator?: boolean;
   readonly showValue?: boolean;
   readonly masterName?: string;
@@ -33,39 +34,35 @@ export function defaultInstanceDisplayAnnotations(
   options: DefaultInstanceDisplayOptions = {},
 ): readonly Annotation[] {
   const annotations: Annotation[] = [];
-  const designator = defaultInstanceLabel(
-    document,
-    instance,
-    resolver,
-    styleProfile,
-  );
-  if (options.showDesignator !== false && designator) {
-    annotations.push({
-      ...designator,
-      ...(options.formalTerminalId
-        ? { id: `instance-reference-${instance.id}` }
-        : {}),
-      binding: { kind: "instance-designator", instanceId: instance.id },
-    });
-  }
   if (options.formalTerminalId) {
     const terminalName = defaultInstanceLabel(
       document,
       instance,
       resolver,
       styleProfile,
-      "value",
     );
     if (terminalName) {
       annotations.push({
         ...terminalName,
-        id: `instance-label-${instance.id}`,
         binding: {
           kind: "cell-terminal-name",
           terminalId: options.formalTerminalId,
         },
       });
     }
+    return annotations;
+  }
+  const label = defaultInstanceLabel(
+    document,
+    instance,
+    resolver,
+    styleProfile,
+  );
+  if (options.showDesignator !== false && label) {
+    annotations.push({
+      ...label,
+      binding: { kind: "instance-schematic-name", instanceId: instance.id },
+    });
   }
   if (options.masterName) {
     const master = defaultMasterNameAnnotation(
@@ -130,8 +127,8 @@ function isSameDefaultProjection(
   const candidateBinding = candidate.binding;
   if (!existingBinding || !candidateBinding) return false;
   if (
-    existingBinding.kind === "instance-designator" &&
-    candidateBinding.kind === "instance-designator"
+    existingBinding.kind === "instance-schematic-name" &&
+    candidateBinding.kind === "instance-schematic-name"
   ) {
     return existingBinding.instanceId === candidateBinding.instanceId;
   }

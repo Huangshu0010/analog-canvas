@@ -98,8 +98,11 @@ rename them.
 Canvas `port` and `port-filled` symbols are ordinary single-pin Instances; they
 do not define or reorder the formal cell interface. A hierarchy instance uses
 its bound child Document and that child's explicit private interface.
-Ports have an independent canvas `schematicReference` such as `P1`, but no
-`Instance.netlist.reference` because they do not emit an instance line.
+Non-formal Ports may retain an internal `schematicReference` such as `P1`, but
+no `Instance.netlist.reference` because they do not emit an instance line.
+Their visible label is the RichText schematic label, initially derived from
+that reference. A formal Cell Port uses its ordered terminal name such as
+`Vout` as its sole visible identity and has no schematic Reference.
 
 Every manually inserted device receives an explicit reference. References are
 unique per cell and have the prefix required by their device definition. Model-

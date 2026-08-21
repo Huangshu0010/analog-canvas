@@ -63,6 +63,9 @@ netlist-invariance decision is
 [`0030-instance-identity-and-placement-lifecycle.md`](0030-instance-identity-and-placement-lifecycle.md).
 The schematic-reference and unified Port lifecycle decision is
 [`0031-schematic-reference-and-port-lifecycle.md`](0031-schematic-reference-and-port-lifecycle.md).
+The formal-Port terminal-name display and retained-annotation visibility
+decision is
+[`0032-formal-port-display-and-retained-annotations.md`](0032-formal-port-display-and-retained-annotations.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

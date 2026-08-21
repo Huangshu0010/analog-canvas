@@ -37,12 +37,12 @@ export const AnnotationKindSchema = z.enum([
  */
 export const AnnotationTextBindingSchema = z.discriminatedUnion("kind", [
   z.strictObject({
-    /** The schematic-facing instance reference, never the internal object ID. */
+    /** Optional, read-only emitted network designator; never an object ID. */
     kind: z.literal("instance-designator"),
     instanceId: StableIdSchema,
   }),
   z.strictObject({
-    /** The user-owned RichText alias shown only on this schematic. */
+    /** The default user-owned RichText schematic label. */
     kind: z.literal("instance-schematic-name"),
     instanceId: StableIdSchema,
   }),

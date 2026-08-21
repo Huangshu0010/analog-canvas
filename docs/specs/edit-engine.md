@@ -91,8 +91,9 @@ is not another `SchematicEdit` member.
 `set_instance_reference`, `set_instance_binding`, and
 `patch_instance_netlist_parameters` are the ordinary field writers for an
 existing netlist record. `set_instance_schematic_reference` changes the visible
-Reference for any Instance, including a non-emitting Port, without changing
-netlist output. `set_instance_schematic_name` instead changes the user-owned
+Reference for any non-formal Instance, including a non-emitting Port, without
+changing netlist output; formal Cell Ports use their terminal name and reject
+this edit. `set_instance_schematic_name` instead changes the user-owned
 RichText alias shown on a schematic. `bulk_patch_instance_netlist` is the
 bounded, atomic multi-instance netlist form. `set_instance_netlist` remains
 the whole-record operation for object initialization, import, and bounded

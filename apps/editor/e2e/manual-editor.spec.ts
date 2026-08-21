@@ -2675,6 +2675,18 @@ R7 IN OUT 10k
       .filter({ hasText: "R7" }),
   ).toBeVisible();
   await expect(
+    page
+      .getByTestId("schematic-canvas")
+      .locator("text")
+      .filter({ hasText: "OUT" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByTestId("schematic-canvas")
+      .locator("text")
+      .filter({ hasText: "P1" }),
+  ).toHaveCount(0);
+  await expect(
     page.getByTestId("annotation-hit-instance-label-R7"),
   ).toBeVisible();
 });
@@ -2767,7 +2779,7 @@ test("exports structural SPICE and Spectre netlists while exposing instance auth
     properties.getByLabel("Component netlist reference"),
   ).toBeVisible();
   await expect(
-    properties.getByLabel("Component schematic alias"),
+    properties.getByLabel("Component schematic label"),
   ).toBeVisible();
   await expect(properties.getByLabel("Component model target")).toBeVisible();
   await expect(properties.getByText(/^Model:/u)).toHaveCount(0);

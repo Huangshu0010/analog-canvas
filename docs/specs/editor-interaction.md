@@ -30,9 +30,10 @@ gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.
 
 There is no separate Cell Interface authoring surface. A child Cell Port shows
-its ordinary schematic Reference and a separate object-anchored terminal-name
-annotation; normal Properties own direction. Annotation rename reconciles
-callers by stable terminal identity.
+only its object-anchored terminal-name annotation in the normal Reference slot;
+its stable Instance ID is not drawn and it has no schematic Reference. Normal
+Properties own direction. Annotation rename reconciles callers by stable
+terminal identity.
 Ordinary Delete reuses the normal instance/route deletion proposal: it retains
 wire geometry by replacing affected terminal endpoints with Junctions, then
 removes electrical memberships, NoConnects, owned labels, layout references,
@@ -43,9 +44,10 @@ The **Placement Tray** is the only retained-unplaced presentation surface. A
 tray item may be dragged, entered into the ordinary placement cursor, or placed
 with **Place all** into a deterministic starter grid in the current view.
 **Return to tray** and **Return all** use the same lifecycle planner and retain
-electrical facts; permanent Delete remains a separate action. Formal Cell Ports
-use the same return path: the Cell interface remains present while the Port is
-retained in the Tray.
+electrical facts; permanent Delete remains a separate action. Object-anchored
+labels are retained with an unplaced Instance but are neither rendered nor
+hit-testable until re-placement. Formal Cell Ports use the same return path:
+the Cell interface remains present while the Port is retained in the Tray.
 Definition-level pin placement data remains compatible, while
 new interfaces use deterministic direction-aware automatic layout.
 
@@ -205,14 +207,17 @@ without requiring an Alt cycle.
 ## Text and presentation
 
 Every visible editable label is one persisted RichText annotation. Component
-insertion uses one default-display policy: exportable devices receive an
-`instance-designator` label when reference display is requested; internal Cells
-and external subcircuits additionally receive their Cell/master presentation;
-formal Ports receive only `cell-terminal-name`; and parameter values use
-`instance-value` when requested and displayable. Properties exposes the
-electrical Netlist Reference separately from the presentation-only Schematic
-Alias. The renderer never synthesizes text from Instance IDs and no empty
-suppressor label exists. Reference label display is a Properties toggle for one or many
+insertion uses one default-display policy: ordinary instances receive an
+`instance-schematic-name` label, which uses RichText `schematicName` and
+otherwise falls back only to `schematicReference` or `netlist.reference`.
+Internal Cells and external subcircuits additionally receive their
+Cell/master presentation; formal Ports receive only `cell-terminal-name`; and
+parameter values use `instance-value` when requested and displayable.
+`instance-designator` is an explicitly requested, read-only network-ID
+projection, never the default editable label. Properties exposes one
+Schematic label field; RichText canvas editing materializes `schematicName`.
+The renderer never synthesizes text from Instance IDs and no empty suppressor
+label exists. Reference label display is a Properties toggle for one or many
 selected components: hiding sets the annotation's optional `visible: false`
 flag, which renderers and hit/marquee surfaces skip while the annotation stays
 in the Project, so hiding is recoverable and a missing label can be re-created
@@ -241,8 +246,8 @@ no electrical meaning.
 Open, demo load, restore, and human-approved staged import replace the entire
 Project through one replacement boundary; they are not Edit Engine
 transactions. Replacement cancels pending recovery for the outgoing Project
-and terminates its Agent session. A complete schema-16 Project may be upgraded
-at the read boundary and then enters the editor only as schema-17; migrated
+and terminates its Agent session. A complete schema-17 Project may be upgraded
+at the read boundary and then enters the editor only as schema-18; migrated
 files are marked as needing save.
 
 Selection, viewport, active tool, previews, Agent tokens, and approval UI are

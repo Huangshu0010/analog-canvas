@@ -25,7 +25,7 @@ describe("editor document helpers", () => {
     document.annotations.push({
       id: "label-R1",
       kind: "instance-label",
-      binding: { kind: "instance-designator", instanceId: "R1" },
+      binding: { kind: "instance-schematic-name", instanceId: "R1" },
       anchor: {
         kind: "object",
         objectId: "R1",
@@ -42,7 +42,7 @@ describe("editor document helpers", () => {
     expect(instanceLabelAnnotationFor(document, "R2")).toBeUndefined();
   });
 
-  it("does not confuse a master label with a designator", () => {
+  it("does not confuse a master label with a schematic label", () => {
     const document = createEmptyDocument("doc", "Doc");
     document.annotations.push({
       id: "master-R1",

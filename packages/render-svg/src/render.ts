@@ -15,6 +15,7 @@ import {
   resolveEndpointPoint,
   resolveDocumentRoutingGeometry,
   resolveAnnotationPresentation,
+  isSchematicAnnotationVisible,
   resolveAnnotationText,
   resolveSchematicStyleProfile,
   resolveRouteAttachment,
@@ -450,6 +451,7 @@ function deriveBounds(
     });
   }
   for (const annotation of document.annotations) {
+    if (!isSchematicAnnotationVisible(document, annotation)) continue;
     const presentation = resolveAnnotationPresentation(
       document,
       resolver,
@@ -645,7 +647,7 @@ export function buildSvgScene(
     })
     .join("");
   const annotations = [...document.annotations]
-    .filter((annotation) => annotation.visible !== false)
+    .filter((annotation) => isSchematicAnnotationVisible(document, annotation))
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map((annotation) => {
       const content = resolveAnnotationText(document, annotation);

@@ -11,7 +11,7 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("default instance display annotations", () => {
-  it("creates an electrical designator and master label for an external call", () => {
+  it("creates a RichText schematic label and master label for an external call", () => {
     const document = createEmptyDocument("main", "Main");
     const instance = {
       id: "opaque-import-id",
@@ -42,7 +42,7 @@ describe("default instance display annotations", () => {
       {
         kind: "instance-label",
         binding: {
-          kind: "instance-designator",
+          kind: "instance-schematic-name",
           instanceId: "opaque-import-id",
         },
       },
@@ -53,12 +53,11 @@ describe("default instance display annotations", () => {
     ]);
   });
 
-  it("shows the Port reference and formal terminal name separately", () => {
+  it("shows a formal Port terminal name as its only visible identity", () => {
     const document = createEmptyDocument("main", "Main");
     const instance = {
       id: "derived-internal-port-id",
       symbolId: "port",
-      schematicReference: "P1",
       placement: {
         position: { x: 100, y: 100 },
         rotation: 0 as const,
@@ -74,12 +73,6 @@ describe("default instance display annotations", () => {
     );
 
     expect(annotations).toEqual([
-      expect.objectContaining({
-        binding: {
-          kind: "instance-designator",
-          instanceId: "derived-internal-port-id",
-        },
-      }),
       expect.objectContaining({
         binding: { kind: "cell-terminal-name", terminalId: "terminal-input" },
       }),
@@ -109,7 +102,7 @@ describe("default instance display annotations", () => {
     expect(missing).toEqual([
       expect.objectContaining({
         binding: {
-          kind: "instance-designator",
+          kind: "instance-schematic-name",
           instanceId: "imported-resistor-opaque-id",
         },
       }),

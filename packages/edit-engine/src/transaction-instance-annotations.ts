@@ -149,7 +149,7 @@ export function refreshInstanceReferenceAnnotation(
 }
 
 /**
- * A reference or value label is renderer-managed only while it exactly agrees
+ * A value label is renderer-managed only while it exactly agrees
  * with the current canonical default for its slot. A user-moved label remains
  * an authored object-relative vector and must not be pulled back onto the
  * automatic side when its instance is rotated or mirrored.

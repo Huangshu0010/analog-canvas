@@ -902,6 +902,18 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
+        if (
+          draft.netlist?.terminals.some(
+            (terminal) => terminal.interfaceInstanceId === instance.id,
+          )
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "A formal Cell Port is identified by its Cell terminal name, not a schematic reference",
+            [],
+            [instance.id],
+          );
+        }
         if (instance.schematicReference === edit.reference) {
           return rejectAt(
             "EDIT_PRECONDITION",
@@ -929,7 +941,7 @@ export function executeTransaction(
         changedObjectIds.add(instance.id);
         for (const annotation of draft.annotations) {
           if (
-            annotation.binding?.kind === "instance-designator" &&
+            annotation.binding?.kind === "instance-schematic-name" &&
             annotation.binding.instanceId === instance.id
           ) {
             changedObjectIds.add(annotation.id);

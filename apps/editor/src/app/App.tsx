@@ -63,6 +63,7 @@ import {
   findHierarchyPath,
   findHierarchyPaths,
   isMosBulkTerminal,
+  isSchematicAnnotationVisible,
   isVisibleEndpoint,
   resolveEndpointPoint,
   resolveDraftingObjectGeometry,
@@ -5375,27 +5376,6 @@ export function App({
     }
   }
 
-  function updateSelectedSchematicReference(value: string): void {
-    if (!selectedInstance) return;
-    const reference = value.trim();
-    if (!reference) {
-      setStatus("Schematic reference cannot be empty");
-      return;
-    }
-    if (reference === selectedInstance.schematicReference) return;
-    if (
-      transact([
-        {
-          kind: "set_instance_schematic_reference",
-          instanceId: selectedInstance.id,
-          reference,
-        },
-      ]).ok
-    ) {
-      setStatus(`Set schematic reference to ${reference}`);
-    }
-  }
-
   /*
    * Text sessions use one persistence proposal for both annotation and
    * drafting owners. The tagged target keeps their typed edit differences at
@@ -5861,7 +5841,7 @@ export function App({
           annotationIds: document.annotations
             .filter(
               (annotation) =>
-                annotation.visible !== false &&
+                isSchematicAnnotationVisible(document, annotation) &&
                 rectsIntersect(
                   annotationHitBox(
                     document,
@@ -7618,23 +7598,31 @@ export function App({
                   >
                     <div className="property-section-heading">Identity</div>
                     <dl className="component-readonly-fields">
-                      <div>
-                        <dt>Schematic reference</dt>
-                        <dd>
-                          <input
-                            key={`${selectedInstance.id}-${document.revision}-schematic-reference`}
-                            aria-label="Component schematic reference"
-                            defaultValue={
-                              selectedInstance.schematicReference ?? ""
-                            }
-                            onBlur={(event) =>
-                              updateSelectedSchematicReference(
-                                event.currentTarget.value,
-                              )
-                            }
-                          />
-                        </dd>
-                      </div>
+                      {!selectedFormalTerminal ? (
+                        <div>
+                          <dt>Schematic label</dt>
+                          <dd>
+                            <input
+                              key={`${selectedInstance.id}-${document.revision}-schematic-label`}
+                              aria-label="Component schematic label"
+                              defaultValue={flattenRichText(
+                                selectedInstance.schematicName ??
+                                  defaultDraftTextDocument(
+                                    selectedInstance.schematicReference ??
+                                      selectedInstance.netlist?.reference ??
+                                      "",
+                                  ),
+                              )}
+                              placeholder="Schematic label"
+                              onBlur={(event) =>
+                                updateSelectedSchematicName(
+                                  event.currentTarget.value,
+                                )
+                              }
+                            />
+                          </dd>
+                        </div>
+                      ) : null}
                       {selectedInstance.netlist ? (
                         <div>
                           <dt>Netlist reference</dt>
@@ -7652,25 +7640,6 @@ export function App({
                           </dd>
                         </div>
                       ) : null}
-                      <div>
-                        <dt>Schematic alias</dt>
-                        <dd>
-                          <input
-                            key={`${selectedInstance.id}-${document.revision}-schematic-name`}
-                            aria-label="Component schematic alias"
-                            defaultValue={flattenRichText(
-                              selectedInstance.schematicName ??
-                                defaultDraftTextDocument(""),
-                            )}
-                            placeholder="Optional display alias"
-                            onBlur={(event) =>
-                              updateSelectedSchematicName(
-                                event.currentTarget.value,
-                              )
-                            }
-                          />
-                        </dd>
-                      </div>
                       <div>
                         <dt>Symbol</dt>
                         <dd>{selectedInstance.symbolId}</dd>
@@ -9460,7 +9429,9 @@ export function App({
                 );
               })}
               {document.annotations
-                .filter((annotation) => annotation.visible !== false)
+                .filter((annotation) =>
+                  isSchematicAnnotationVisible(document, annotation),
+                )
                 .map((annotation) => {
                   const anchor = annotationAnchor(
                     document,

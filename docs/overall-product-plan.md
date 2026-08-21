@@ -60,7 +60,7 @@ revision, lock, or transaction invariants.
   than guessed.
 - Routes describe visible geometry; they may stretch locally during movement
   without changing logical connectivity.
-- A Project is a canonical schema-17 JSON file. Browser recovery is an
+- A Project is a canonical schema-18 JSON file. Browser recovery is an
   origin-local, non-authoritative copy.
 - Visual variants may change presentation but never remove electrical terminal
   semantics. The Razavi raster manifest is the sole visual authority; Visio/VSS

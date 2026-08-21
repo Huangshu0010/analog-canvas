@@ -22,8 +22,8 @@ describe("Project protocol documentation", () => {
       ["docs/specs/project-file-format.md", `Project schema: \`${version}\``],
       ["docs/specs/editor-interaction.md", `schema-${version}`],
       [
-        "docs/adr/0031-schematic-reference-and-port-lifecycle.md",
-        `Project schema ${version} adds`,
+        "docs/adr/0032-formal-port-display-and-retained-annotations.md",
+        `Project schema ${version} makes`,
       ],
       [
         "docs/user/project-compatibility.md",

@@ -105,16 +105,16 @@ export const InstanceSchema = z
     mosBulkBinding: MosBulkBindingSchema.optional(),
     placement: PlacementSchema.nullable(),
     /**
-     * The schematic-facing instance reference. This is intentionally separate
-     * from the optional emitted SPICE/Spectre designator so non-emitting
-     * presentation objects, including Ports, still have a stable reference.
+     * Internal, stable schematic reference used for lifecycle and as an
+     * initial label fallback. It is intentionally separate from the optional
+     * emitted SPICE/Spectre designator and is never an object identity.
      */
     schematicReference: NetlistIdentifierSchema.optional(),
     netlist: InstanceNetlistDataSchema.optional(),
     /**
-     * User-owned schematic alias. Unlike `netlist.reference`, this RichText
-     * source is presentation-only: it may be repeated, formatted, and changed
-     * without modifying the electrical/export identity.
+     * User-owned RichText schematic label. This is the default visible label;
+     * it may be repeated, formatted, and changed without modifying the
+     * electrical/export identity.
      */
     schematicName: RichTextDocumentSchema.optional(),
   })

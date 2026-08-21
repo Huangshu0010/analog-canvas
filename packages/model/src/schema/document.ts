@@ -395,7 +395,23 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       netlistReferences.add(reference);
     }
     const schematicReferences = new Set<string>();
+    const formalPortInstanceIds = new Set(
+      (document.netlist?.terminals ?? []).map(
+        (terminal) => terminal.interfaceInstanceId,
+      ),
+    );
     for (const [instanceIndex, instance] of document.instances.entries()) {
+      if (
+        formalPortInstanceIds.has(instance.id) &&
+        instance.schematicReference !== undefined
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "A formal Cell Port is identified by its Cell terminal name, not a schematic reference",
+          path: ["instances", instanceIndex, "schematicReference"],
+        });
+      }
       const reference = instance.schematicReference?.toLowerCase();
       if (!reference) continue;
       if (schematicReferences.has(reference)) {
@@ -406,6 +422,24 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
         });
       }
       schematicReferences.add(reference);
+    }
+    for (const [
+      annotationIndex,
+      annotation,
+    ] of document.annotations.entries()) {
+      const binding = annotation.binding;
+      if (
+        (binding?.kind === "instance-designator" ||
+          binding?.kind === "instance-schematic-name") &&
+        formalPortInstanceIds.has(binding.instanceId)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "A formal Cell Port projects only its Cell terminal name annotation",
+          path: ["annotations", annotationIndex, "binding"],
+        });
+      }
     }
     for (const [instanceIndex, instance] of document.instances.entries()) {
       const binding = instance.mosBulkBinding;

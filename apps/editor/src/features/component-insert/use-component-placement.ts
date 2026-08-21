@@ -429,7 +429,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     const instance = {
       id,
       symbolId,
-      schematicReference: id,
       placement: {
         position,
         rotation: options.componentPlacementRotation,
