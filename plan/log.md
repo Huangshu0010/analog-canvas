@@ -3728,3 +3728,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   release and production smoke checks, and 162 browser E2E tests.
 - Commit status: merged to `origin/main` through PR #134 as `51075420` after
   all GitHub Actions checks passed; local `main` is synchronized.
+
+## 2026-08-21 - Schema 16 instance identity protocol
+
+- Changed areas: advanced canonical Projects to schema 16; split ambiguous
+  instance labels into designator, schematic-name and master-name bindings;
+  replaced the rolling reader with a direct schema-15 migration; synchronized
+  recovery, fixtures, bundled examples, documentation, and ADR 0030.
+- Validation: focused model/project-protocol/derived/editor contracts (12 files
+  / 102 tests), typecheck, format, docs, test-impact, and diff checks passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  `d70c84bc`.

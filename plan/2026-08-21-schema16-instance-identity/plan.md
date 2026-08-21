@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -90,4 +90,15 @@ feat(protocol): separate instance display identities
 
 ## Outcome
 
-To be completed with actual changed areas, validation, and commit evidence.
+Schema 16 now separates electrical designators, schematic aliases and master
+labels, and no current writer or renderer may use `instance-reference` or an
+internal Instance ID as a visible fallback. The rolling reader accepts schema
+15 only as input, mapping each legacy reference label to the source that
+preserves its old rendered text. Canonical fixtures, browser recovery, bundled
+examples, specs and ADR 0030 now use schema 16.
+
+Validation passed: focused model/project-protocol/derived/editor contracts
+(12 files / 102 tests), `pnpm typecheck`, `pnpm docs:check`,
+`pnpm format:check`, `pnpm test:impact -- --base origin/main`, and
+`git diff --check`. Implementation committed as `d70c84bc`
+(`feat(protocol): separate instance display identities`).
