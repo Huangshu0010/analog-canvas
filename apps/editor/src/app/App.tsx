@@ -158,7 +158,10 @@ import {
   ComponentPlacementPreview,
   InsertComponentDialog,
 } from "../features/component-insert/insert-component-dialog";
-import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
+import {
+  cellInsertLaunch,
+  fullInsertLaunch,
+} from "../features/component-insert/insert-launch";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
 import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
@@ -1409,17 +1412,16 @@ export function App({
     : undefined;
   const {
     beginRetainedInstancePlacement: beginRetainedInstancePlacementFromHook,
-    beginInsertedComponentPlacement: beginInsertedComponentPlacementFromHook,
     cancelComponentInsert: cancelComponentInsertFromHook,
     commitPendingPlacementAt: commitPendingPlacementAtFromHook,
     closeInsertDialog: closeInsertDialogFromHook,
-    cellInsertOnly,
     insertDialogOpen,
     insertInitialSelectionId,
-    openInsertComponentDialog: openInsertComponentDialogFromHook,
+    insertScope,
     recentSymbolIds,
     rotatePendingComponent: rotatePendingComponentFromHook,
     mirrorPendingComponent: mirrorPendingComponentFromHook,
+    startInsert: startInsertFromHook,
   } = useComponentPlacement({
     recentStorageKey: RECENT_COMPONENTS_STORAGE_KEY,
     document,
@@ -1832,7 +1834,7 @@ export function App({
       setStatus("Create another Cell before placing a hierarchical Instance");
       return;
     }
-    openInsertComponentDialogFromHook(true);
+    startInsertFromHook(cellInsertLaunch());
     setStatus("Choose a Cell, then place it on the canvas");
   }
 
@@ -6444,10 +6446,10 @@ export function App({
           reverseSelectedCurrentArrow();
           return;
         case "open-component-insert":
-          openInsertComponentDialogFromHook();
+          startInsertFromHook(fullInsertLaunch());
           return;
         case "place-port": {
-          openInsertComponentDialogFromHook(false, "port");
+          startInsertFromHook(fullInsertLaunch("port"));
           return;
         }
         case "rotate-placement":
@@ -6863,7 +6865,7 @@ export function App({
                 <div className="command-popover">
                   <button
                     type="button"
-                    onClick={() => openInsertComponentDialogFromHook()}
+                    onClick={() => startInsertFromHook(fullInsertLaunch())}
                   >
                     <ToolIcon name="insert" />
                     Insert component (I)
@@ -7148,10 +7150,10 @@ export function App({
         recentSymbolIds={recentSymbolIds}
         cells={cellInsertCandidates}
         externalDefinitions={externalSubcircuitInsertCandidates}
-        cellOnly={cellInsertOnly}
+        scope={insertScope}
         allowFormalPort={document.id !== project.topDocumentId}
         initialSelectionId={insertInitialSelectionId}
-        onApply={beginInsertedComponentPlacementFromHook}
+        onApply={(request) => startInsertFromHook({ kind: "quick", request })}
         onCancel={cancelComponentInsertFromHook}
       />
       <CellManagerDialog
@@ -7385,18 +7387,7 @@ export function App({
             styleProfileId={document.presentation.styleProfileId}
             recentSymbolIds={recentSymbolIds}
             open={visibleLibraryPanelOpen}
-            onOpenInsert={openInsertComponentDialogFromHook}
-            onQuickPlace={(request) => {
-              if (
-                request.kind === "symbol" &&
-                (request.symbolId === "port" ||
-                  request.symbolId === "port-filled")
-              ) {
-                openInsertComponentDialogFromHook(false, request.symbolId);
-                return;
-              }
-              beginInsertedComponentPlacementFromHook(request);
-            }}
+            onStartInsert={startInsertFromHook}
           />
         ) : (
           <ExamplesPanel

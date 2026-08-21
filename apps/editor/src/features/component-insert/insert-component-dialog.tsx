@@ -11,6 +11,7 @@ import {
 } from "./component-parameters";
 import { componentCatalog, findPaletteSymbol } from "./symbol-catalog";
 import type { ComponentInsertRequest } from "./component-insert-request";
+import type { InsertScope } from "./insert-launch";
 import { DisplayToggle } from "./display-toggle";
 import { SymbolArtwork } from "./symbol-artwork";
 
@@ -22,7 +23,7 @@ export interface InsertComponentDialogProps {
   recentSymbolIds: readonly string[];
   cells: readonly CellInsertCandidate[];
   externalDefinitions?: readonly ExternalSubcircuitInsertCandidate[];
-  cellOnly?: boolean;
+  scope?: InsertScope;
   allowFormalPort?: boolean;
   initialSelectionId?: string | null;
   onApply(request: ComponentInsertRequest): void;
@@ -101,15 +102,20 @@ export function InsertComponentDialog({
   recentSymbolIds,
   cells,
   externalDefinitions = [],
-  cellOnly = false,
+  scope = "all",
   allowFormalPort = false,
   initialSelectionId = null,
   onApply,
   onCancel,
 }: InsertComponentDialogProps) {
+  const cellsOnly = scope === "cells";
+  const pickerNoun = cellsOnly ? "Cell" : "Component";
+  const dialogTitle = cellsOnly
+    ? "Place Hierarchical Cell"
+    : "Insert Component";
   const initialChoices = useMemo<InsertChoice[]>(
     () => [
-      ...(cellOnly
+      ...(cellsOnly
         ? []
         : componentCatalog(styleProfileId, "", recentSymbolIds).flatMap(
             (group) =>
@@ -126,7 +132,7 @@ export function InsertComponentDialog({
         childDocumentId: cell.childDocumentId,
         cellName: cell.cellName,
       })),
-      ...(cellOnly
+      ...(cellsOnly
         ? []
         : externalDefinitions.map((definition) => ({
             key: `external:${definition.definitionId}`,
@@ -136,7 +142,7 @@ export function InsertComponentDialog({
             masterName: definition.masterName,
           }))),
     ],
-    [cellOnly, cells, externalDefinitions, recentSymbolIds, styleProfileId],
+    [cellsOnly, cells, externalDefinitions, recentSymbolIds, styleProfileId],
   );
   const [query, setQuery] = useState("");
   const [pickerOpen, setPickerOpen] = useState(true);
@@ -177,7 +183,7 @@ export function InsertComponentDialog({
         childDocumentId: cell.childDocumentId,
         cellName: cell.cellName,
       }));
-    const externalChoices = (cellOnly ? [] : externalDefinitions)
+    const externalChoices = (cellsOnly ? [] : externalDefinitions)
       .filter((definition) => {
         const normalized = query.trim().toLowerCase();
         return (
@@ -195,7 +201,7 @@ export function InsertComponentDialog({
         masterName: definition.masterName,
       }));
     return [
-      ...(cellOnly
+      ...(cellsOnly
         ? []
         : componentCatalog(styleProfileId, query, recentSymbolIds).map(
             (group) => ({
@@ -215,7 +221,7 @@ export function InsertComponentDialog({
         : []),
     ];
   }, [
-    cellOnly,
+    cellsOnly,
     cells,
     externalDefinitions,
     query,
@@ -445,22 +451,25 @@ export function InsertComponentDialog({
       >
         <header className="insert-dialog-header">
           <div>
-            <p>Place device</p>
-            <h2 id="insert-component-title">Insert Component</h2>
+            <p>{cellsOnly ? "Place reusable design" : "Place device"}</p>
+            <h2 id="insert-component-title">{dialogTitle}</h2>
           </div>
-          <kbd>I</kbd>
+          {cellsOnly ? null : <kbd>I</kbd>}
         </header>
 
         <div className="insert-dialog-body">
-          <aside className="insert-control-column" aria-label="Device setup">
+          <aside
+            className="insert-control-column"
+            aria-label={`${pickerNoun} setup`}
+          >
             <section className="insert-component-picker">
               <label className="insert-search-field">
-                <span>Component</span>
+                <span>{pickerNoun}</span>
                 <div className="insert-picker-input-row">
                   <input
                     ref={inputRef}
                     role="combobox"
-                    aria-label="Component search"
+                    aria-label={`${pickerNoun} search`}
                     aria-autocomplete="list"
                     aria-expanded={pickerOpen}
                     aria-controls="insert-component-options"
@@ -473,7 +482,7 @@ export function InsertComponentDialog({
                     placeholder={
                       selected
                         ? `${selected.cellName ?? selected.symbol.name} · ${selected.symbol.id}`
-                        : "Search component"
+                        : `Search ${pickerNoun.toLowerCase()}`
                     }
                     onChange={(event) => {
                       setQuery(event.currentTarget.value);
@@ -485,8 +494,8 @@ export function InsertComponentDialog({
                     className="insert-picker-toggle"
                     aria-label={
                       pickerOpen
-                        ? "Collapse component list"
-                        : "Expand component list"
+                        ? `Collapse ${pickerNoun.toLowerCase()} list`
+                        : `Expand ${pickerNoun.toLowerCase()} list`
                     }
                     aria-expanded={pickerOpen}
                     onClick={() => setPickerOpen((current) => !current)}
@@ -500,7 +509,7 @@ export function InsertComponentDialog({
                   id="insert-component-options"
                   className="insert-component-options"
                   role="listbox"
-                  aria-label="Component choices"
+                  aria-label={`${pickerNoun} choices`}
                 >
                   {groups.map((group) => (
                     <section
@@ -531,7 +540,9 @@ export function InsertComponentDialog({
                     </section>
                   ))}
                   {choices.length === 0 ? (
-                    <p className="insert-no-results">No matching components</p>
+                    <p className="insert-no-results">
+                      No matching {pickerNoun.toLowerCase()}s
+                    </p>
                   ) : null}
                 </div>
               ) : null}

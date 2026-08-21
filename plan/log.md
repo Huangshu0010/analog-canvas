@@ -1,5 +1,17 @@
 # Maintenance Log
 
+## 2026-08-21 - Unified Insert and Library orchestration
+
+- Changed areas: introduced an editor-local `InsertLaunch` contract with
+  explicit all-candidate and Cell-only scopes; unified Library, Insert,
+  keyboard, Port, Cell, and dialog-confirmation entry points; and made the
+  Cell picker visibly scoped without changing persisted or Engine protocols.
+- Validation: focused unit contracts (3 files / 9 tests), focused Library
+  browser flows (3 tests), Cell scope-reset browser regression, typecheck,
+  format, test-impact, and diff checks passed.
+- Commit status: committed on `codex/insert-unification` at the current branch
+  HEAD.
+
 ## 2026-08-20 - External subcircuit definition authoring
 
 - Changed areas: schema-15 project external interfaces and migration; stable

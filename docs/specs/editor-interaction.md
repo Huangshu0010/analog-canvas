@@ -25,6 +25,16 @@ Net membership, and one stable formal terminal through the Project structural
 transaction. A top-level Port remains an ordinary electrical component. Every
 parent block therefore observes a child Cell interface revision without a later
 expose step.
+
+Library, the `I` shortcut, and **Place Cell** are entry views over one
+editor-local insert controller. Their request is either an `all` picker (the
+full component catalog, Cells, and supported external masters), a `cells`
+picker, or a quick request for an already chosen Symbol. The controller clears
+the previous picker scope before it starts placement, then delegates to the
+existing component, Cell, Port, external-master, or VDD-rail planner. This is
+an editor interaction boundary only: it does not add a persisted project type,
+an Edit Engine operation, or an Agent API endpoint.
+
 Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.

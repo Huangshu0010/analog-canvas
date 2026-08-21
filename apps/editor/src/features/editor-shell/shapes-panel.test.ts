@@ -17,8 +17,7 @@ describe("shapes quick-place", () => {
         styleProfileId: "razavi",
         recentSymbolIds: [],
         open: true,
-        onOpenInsert: () => undefined,
-        onQuickPlace: () => undefined,
+        onStartInsert: () => undefined,
       }),
     );
 

@@ -27,7 +27,12 @@ import type {
 } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import type { ComponentInsertRequest } from "./insert-component-dialog";
+import type { ComponentInsertRequest } from "./component-insert-request";
+import type {
+  InsertLaunch,
+  InsertPickerLaunch,
+  InsertScope,
+} from "./insert-launch";
 import {
   powerConnectionForSymbol,
   proposePlacementContact,
@@ -101,7 +106,7 @@ export interface UseComponentPlacementOptions {
 /** Flat owner of component/VDD placement, dialog recents, and its transactions. */
 export function useComponentPlacement(options: UseComponentPlacementOptions) {
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
-  const [cellInsertOnly, setCellInsertOnly] = useState(false);
+  const [insertScope, setInsertScope] = useState<InsertScope>("all");
   const [insertInitialSelectionId, setInsertInitialSelectionId] = useState<
     string | null
   >(null);
@@ -689,12 +694,13 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     options.setStatus(`Added VDD rail ${instanceId}`);
   };
 
-  const openInsertComponentDialog = (
-    cellOnly = false,
-    initialSelectionId: string | null = null,
-  ): void => {
+  const openInsertPicker = ({
+    scope = "all",
+    initialSelectionId = null,
+  }: InsertPickerLaunch): void => {
+    const cellOnly = scope === "cells";
     options.cancelAllTransientInteraction();
-    setCellInsertOnly(cellOnly);
+    setInsertScope(scope);
     setInsertInitialSelectionId(initialSelectionId);
     setInsertDialogOpen(true);
     options.setStatus(
@@ -722,7 +728,8 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     options.clearTransientCanvasState();
     options.paintSnapGuides([]);
     setInsertDialogOpen(false);
-    setCellInsertOnly(false);
+    setInsertScope("all");
+    setInsertInitialSelectionId(null);
     if (request.kind === "vdd-rail") {
       options.beginVddRailInteraction();
       options.setStatus("Place VDD Rail: click the first end · Esc cancels");
@@ -760,16 +767,26 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     );
   };
 
+  const startInsert = (launch: InsertLaunch): void => {
+    if (launch.kind === "quick") {
+      beginInsertedComponentPlacement(launch.request);
+      return;
+    }
+    openInsertPicker(launch);
+  };
+
   const cancelComponentInsert = (): void => {
     setInsertDialogOpen(false);
-    setCellInsertOnly(false);
+    setInsertScope("all");
+    setInsertInitialSelectionId(null);
     options.cancelAllTransientInteraction();
     options.setStatus("Component insertion cancelled");
   };
 
   const closeInsertDialog = (): void => {
     setInsertDialogOpen(false);
-    setCellInsertOnly(false);
+    setInsertScope("all");
+    setInsertInitialSelectionId(null);
   };
 
   const rotatePendingComponent = (delta: 90 | -90): void => {
@@ -865,16 +882,15 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
 
   return {
     beginRetainedInstancePlacement,
-    beginInsertedComponentPlacement,
     cancelComponentInsert,
-    cellInsertOnly,
     closeInsertDialog,
     commitPendingPlacementAt,
     insertDialogOpen,
     insertInitialSelectionId,
+    insertScope,
     mirrorPendingComponent,
-    openInsertComponentDialog,
     recentSymbolIds,
     rotatePendingComponent,
+    startInsert,
   };
 }

@@ -114,7 +114,7 @@ test("manages Cell rename and lists callers", async ({ page }) => {
     .getByRole("button", { name: "Top", exact: true })
     .click();
   await runCellCommand(page, "Place Cell");
-  const insert = page.getByRole("dialog", { name: "Insert Component" });
+  const insert = page.getByRole("dialog", { name: "Place Hierarchical Cell" });
   await insert.getByRole("option", { name: /ReusableStage/u }).click();
   await insert.getByRole("button", { name: "Apply" }).click();
   await page
@@ -199,7 +199,9 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
     .getByTestId("cell-command-menu")
     .getByRole("button", { name: "Place Cell" })
     .click();
-  const insertDialog = page.getByRole("dialog", { name: "Insert Component" });
+  const insertDialog = page.getByRole("dialog", {
+    name: "Place Hierarchical Cell",
+  });
   await insertDialog.getByRole("option", { name: /ReusableStage/u }).click();
   await insertDialog.getByRole("button", { name: "Apply" }).click();
   await canvas.click({ position: { x: 420, y: 180 } });
@@ -444,11 +446,21 @@ test("places an existing Cell and blocks deleting its shared definition", async 
     .click();
 
   await runCellCommand(page, "Place Cell");
-  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  const dialog = page.getByRole("dialog", { name: "Place Hierarchical Cell" });
   await expect(dialog.getByText("Cells", { exact: true })).toBeVisible();
   await expect(dialog.getByTestId("insert-component-nmos")).toHaveCount(0);
-  await dialog.getByRole("option", { name: /ReusableStage/u }).click();
-  await dialog.getByRole("button", { name: "Apply" }).click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("i");
+  const fullInsert = page.getByRole("dialog", { name: "Insert Component" });
+  await expect(fullInsert.getByTestId("insert-component-nmos")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await runCellCommand(page, "Place Cell");
+  const cellDialog = page.getByRole("dialog", {
+    name: "Place Hierarchical Cell",
+  });
+  await cellDialog.getByRole("option", { name: /ReusableStage/u }).click();
+  await cellDialog.getByRole("button", { name: "Apply" }).click();
 
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.hover({ position: { x: 360, y: 230 } });

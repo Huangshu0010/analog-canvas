@@ -55,7 +55,7 @@ describe("InsertComponentDialog", () => {
     ).toBe("");
   });
 
-  it("lists hierarchy Cells beside library symbols", () => {
+  it("makes Cell placement an explicitly filtered picker", () => {
     const symbol = builtInSymbols.find(
       (candidate) => candidate.id === "resistor",
     )!;
@@ -64,7 +64,7 @@ describe("InsertComponentDialog", () => {
         open
         styleProfileId="razavi-textbook-v1"
         recentSymbolIds={[]}
-        cellOnly
+        scope="cells"
         cells={[
           {
             childDocumentId: "document-amplifier",
@@ -78,7 +78,10 @@ describe("InsertComponentDialog", () => {
     );
 
     expect(markup).toContain(">Cells</h3>");
+    expect(markup).toContain("Place Hierarchical Cell");
+    expect(markup).toContain('aria-label="Cell search"');
     expect(markup).toContain('data-testid="insert-cell-document-amplifier"');
+    expect(markup).not.toContain('data-testid="insert-component-nmos"');
     expect(markup).toContain(">Amplifier</span>");
     expect(markup).toContain('aria-label="Reference name"');
   });
