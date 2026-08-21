@@ -5,7 +5,9 @@ import {
   describePublishOutcome,
   forgetOnUnauthorized,
   publishProjectToGallery,
+  rememberedPublishAuthor,
   rememberedPublishToken,
+  rememberPublishAuthor,
   rememberPublishToken,
 } from "./gallery-publish";
 
@@ -109,6 +111,18 @@ describe("publish passphrase session memory", () => {
       true,
     );
     expect(rememberedPublishToken(storage)).toBe("");
+    expect(storage.map.size).toBe(0);
+  });
+});
+
+describe("publish author memory", () => {
+  it("prefills the last-used byline and forgets a cleared one", () => {
+    const storage = memoryStorage();
+    expect(rememberedPublishAuthor(storage)).toBe("");
+    rememberPublishAuthor("  Token Zhang  ", storage);
+    expect(rememberedPublishAuthor(storage)).toBe("Token Zhang");
+    rememberPublishAuthor("   ", storage);
+    expect(rememberedPublishAuthor(storage)).toBe("");
     expect(storage.map.size).toBe(0);
   });
 });

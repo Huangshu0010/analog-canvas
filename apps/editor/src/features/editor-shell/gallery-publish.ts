@@ -96,6 +96,7 @@ export function describePublishOutcome(outcome: GalleryPublishOutcome): string {
 }
 
 const TOKEN_STORAGE_KEY = "icm.gallery-publish-token.v1";
+const AUTHOR_STORAGE_KEY = "icm.gallery-publish-author.v1";
 
 type TokenStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -104,6 +105,39 @@ function sessionStorageOrNull(): TokenStorage | null {
     return window.sessionStorage;
   } catch {
     return null;
+  }
+}
+
+function localStorageOrNull(): TokenStorage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+/** The author byline used last time, prefill for the next publish. */
+export function rememberedPublishAuthor(
+  storage: TokenStorage | null = localStorageOrNull(),
+): string {
+  try {
+    return storage?.getItem(AUTHOR_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** Remember (non-empty) or forget (empty) the author byline. */
+export function rememberPublishAuthor(
+  author: string,
+  storage: TokenStorage | null = localStorageOrNull(),
+): void {
+  try {
+    const trimmed = author.trim();
+    if (trimmed) storage?.setItem(AUTHOR_STORAGE_KEY, trimmed);
+    else storage?.removeItem(AUTHOR_STORAGE_KEY);
+  } catch {
+    // Local storage may be unavailable; the byline is just not remembered.
   }
 }
 
