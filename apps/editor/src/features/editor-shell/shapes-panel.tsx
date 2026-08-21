@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { ComponentInsertRequest } from "../component-insert/component-insert-request";
 import {
   fullInsertLaunch,
+  portSetupLaunch,
   type InsertLaunch,
 } from "../component-insert/insert-launch";
 import { SymbolArtwork } from "../component-insert/symbol-artwork";
@@ -94,7 +95,7 @@ export function ShapesPanel({
 
   function placeSymbol(symbolId: string): void {
     if (symbolId === "port" || symbolId === "port-filled") {
-      onStartInsert(fullInsertLaunch(symbolId));
+      onStartInsert(portSetupLaunch(symbolId));
       return;
     }
     const request = quickPlaceRequest(styleProfileId, symbolId);

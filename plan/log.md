@@ -1,5 +1,17 @@
 # Maintenance Log
 
+## 2026-08-21 - Separate compact Port Setup from generic Insert
+
+- Changed areas: moved Port role/name/direction out of the generic Insert
+  control grid into a dedicated compact dialog; routed P, Library, and full
+  Insert Port choices through one editor-local setup intent while retaining the
+  existing placement planners.
+- Validation: focused dialog/launch/Library unit contracts (4 files / 12
+  tests), focused Port shortcut browser workflow, typecheck, format,
+  test-impact, and diff checks passed.
+- Commit status: committed on `codex/insert-unification` at the current branch
+  HEAD; push pending after one transient GitHub TLS handshake failure.
+
 ## 2026-08-21 - Complete unnamed Free Net Port placement
 
 - Changed areas: made isolated Free Net Port placement allocate the first

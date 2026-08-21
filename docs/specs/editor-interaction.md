@@ -35,6 +35,16 @@ existing component, Cell, Port, external-master, or VDD-rail planner. This is
 an editor interaction boundary only: it does not add a persisted project type,
 an Edit Engine operation, or an Agent API endpoint.
 
+Port entry is intentionally a separate compact setup surface, not a mode of
+the generic Insert dialog. `P`, Library Port choices, and selecting either Port
+symbol from full Insert enter the same editor-local Port Setup intent before
+the ordinary placement cursor starts. At the top level, a Net name is optional:
+an isolated Port receives the first unused `NET<n>` name, while a named contact
+or explicit text takes precedence. In a child Cell, Port Setup exposes the
+formal-pin facts (name and direction) required before the interface transaction
+can commit. This separation is presentation-only and retains the same typed
+Port planners.
+
 Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.

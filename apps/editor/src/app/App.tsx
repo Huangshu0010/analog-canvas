@@ -161,7 +161,9 @@ import {
 import {
   cellInsertLaunch,
   fullInsertLaunch,
+  portSetupLaunch,
 } from "../features/component-insert/insert-launch";
+import { PortSetupDialog } from "../features/component-insert/port-setup-dialog";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
 import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
@@ -1413,6 +1415,7 @@ export function App({
   const {
     beginRetainedInstancePlacement: beginRetainedInstancePlacementFromHook,
     cancelComponentInsert: cancelComponentInsertFromHook,
+    cancelPortSetup: cancelPortSetupFromHook,
     commitPendingPlacementAt: commitPendingPlacementAtFromHook,
     closeInsertDialog: closeInsertDialogFromHook,
     insertDialogOpen,
@@ -1421,6 +1424,8 @@ export function App({
     recentSymbolIds,
     rotatePendingComponent: rotatePendingComponentFromHook,
     mirrorPendingComponent: mirrorPendingComponentFromHook,
+    portSetupOpen,
+    portSetupSymbolId,
     startInsert: startInsertFromHook,
   } = useComponentPlacement({
     recentStorageKey: RECENT_COMPONENTS_STORAGE_KEY,
@@ -6449,7 +6454,7 @@ export function App({
           startInsertFromHook(fullInsertLaunch());
           return;
         case "place-port": {
-          startInsertFromHook(fullInsertLaunch("port"));
+          startInsertFromHook(portSetupLaunch());
           return;
         }
         case "rotate-placement":
@@ -7151,10 +7156,19 @@ export function App({
         cells={cellInsertCandidates}
         externalDefinitions={externalSubcircuitInsertCandidates}
         scope={insertScope}
-        allowFormalPort={document.id !== project.topDocumentId}
         initialSelectionId={insertInitialSelectionId}
         onApply={(request) => startInsertFromHook({ kind: "quick", request })}
+        onConfigurePort={(symbolId) =>
+          startInsertFromHook(portSetupLaunch(symbolId))
+        }
         onCancel={cancelComponentInsertFromHook}
+      />
+      <PortSetupDialog
+        open={portSetupOpen}
+        symbolId={portSetupSymbolId}
+        allowFormalPort={document.id !== project.topDocumentId}
+        onApply={(request) => startInsertFromHook({ kind: "quick", request })}
+        onCancel={cancelPortSetupFromHook}
       />
       <CellManagerDialog
         open={cellManagerOpen}

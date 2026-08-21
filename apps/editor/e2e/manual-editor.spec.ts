@@ -464,9 +464,10 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
   await page.goto("/");
   const canvas = page.getByTestId("schematic-canvas");
   await page.keyboard.press("p");
-  const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  await expect(dialog.getByLabel("Port role")).toHaveValue("net-port");
-  await dialog.getByRole("button", { name: "Apply" }).click();
+  const dialog = page.getByRole("dialog", { name: "Place Net Port" });
+  await expect(dialog).toHaveClass(/port-setup-dialog/u);
+  await expect(dialog.getByLabel("Net name")).toHaveValue("");
+  await dialog.getByRole("button", { name: "Place" }).click();
   await canvas.hover({ position: { x: 320, y: 180 } });
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 320, y: 180 } });
