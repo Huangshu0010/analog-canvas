@@ -55,9 +55,25 @@ jobs:
         run: |
           base="$BEFORE_SHA"
           if [[ "$EVENT_NAME" == "pull_request" ]]; then base="$BASE_SHA"; fi
+          if [[ -z "$base" || "$base" =~ ^0+$ ]] || ! git rev-parse --verify "$base^{commit}" >/dev/null 2>&1; then
+            base="$(git rev-parse HEAD^)"
+          fi
           node scripts/check-test-impact.mjs --base "$base"
       - name: Check local Markdown links
         run: node scripts/check-markdown-links.mjs
+      - name: Publish advisory gate plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        shell: bash
+        run: |
+          base="$BEFORE_SHA"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then base="$BASE_SHA"; fi
+          if [[ -z "$base" || "$base" =~ ^0+$ ]] || ! git rev-parse --verify "$base^{commit}" >/dev/null 2>&1; then
+            base="$(git rev-parse HEAD^)"
+          fi
+          node scripts/gate-plan.mjs --base "$base" --github-summary
 
   static:
     name: Static contracts

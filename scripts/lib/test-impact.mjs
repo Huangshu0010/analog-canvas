@@ -45,6 +45,28 @@ export function readTestImpact(text) {
   return { valid: true, decision };
 }
 
+export function readGateReview(text) {
+  const section = text.match(
+    /^## Gate Review\s*$([\s\S]*?)(?=^##\s|(?![\s\S]))/mu,
+  );
+  if (!section) return null;
+  const body = section[1];
+  const decision = body.match(
+    /^-\s*Decision:\s*(affected|full|no-runtime-impact)\s*$/mu,
+  )?.[1];
+  if (!decision) return { valid: false, reason: "missing Decision" };
+  if (!/^-\s*Early gates:\s*\S/mu.test(body)) {
+    return { valid: false, reason: "missing Early gates" };
+  }
+  if (!/^-\s*Affected gates:\s*\S/mu.test(body)) {
+    return { valid: false, reason: "missing Affected gates" };
+  }
+  if (!/^-\s*Final gates:\s*\S/mu.test(body)) {
+    return { valid: false, reason: "missing Final gates" };
+  }
+  return { valid: true, decision };
+}
+
 /**
  * Decide whether a production-code diff records an auditable test decision.
  * This intentionally does not require a changed test file for cosmetic or
@@ -95,5 +117,30 @@ export function assessTestImpact(paths, planDocuments) {
       testPaths.length > 0
         ? "Changed tests require Test Impact Decision: tests-updated."
         : "Implementation changes without tests require Test Impact Decision: no-test-change plus evidence.",
+  };
+}
+
+export function assessGateReview(planDocuments) {
+  const reviews = planDocuments.map(({ path, text }) => ({
+    path,
+    review: readGateReview(text),
+  }));
+  const invalid = reviews.find(({ review }) => review && !review.valid);
+  if (invalid) {
+    return {
+      ok: false,
+      message: `${invalid.path}: invalid Gate Review (${invalid.review.reason}).`,
+    };
+  }
+  if (!reviews.some(({ review }) => review?.valid)) {
+    return {
+      ok: false,
+      message:
+        "Non-documentation changes require a changed target plan with a Gate Review section.",
+    };
+  }
+  return {
+    ok: true,
+    message: "The target plan records an explicit Gate Review.",
   };
 }
