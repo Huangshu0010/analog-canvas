@@ -345,10 +345,7 @@ describe("instance value fraction rendering", () => {
 describe("object-anchored drafting text centering", () => {
   const CENTERED_CAP_BASELINE_RATIO = 0.35;
 
-  function labelDocument(
-    runs: RichTextRun[],
-    anchorKind: "object" | "free",
-  ) {
+  function labelDocument(runs: RichTextRun[], anchorKind: "object" | "free") {
     const document = createEmptyDocument("doc", "Centered");
     document.drafting = {
       objects: [
@@ -397,10 +394,7 @@ describe("object-anchored drafting text centering", () => {
   }
 
   it("centers a single-line label on the rectangle center", () => {
-    const document = labelDocument(
-      [{ kind: "text", value: "PFD" }],
-      "object",
-    );
+    const document = labelDocument([{ kind: "text", value: "PFD" }], "object");
     const svg = renderDocumentSvg(document, resolver);
     const profile = resolveSchematicStyleProfile(
       document.presentation.styleProfileId,

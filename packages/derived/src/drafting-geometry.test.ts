@@ -98,7 +98,10 @@ describe("object-anchored drafting text on rectangles", () => {
       localOffset: { x: 10, y: -5 },
       fallbackPosition: { x: 0, y: 0 },
     };
-    const document = documentWith([rectangle("box-1", { x: 100, y: 60 }), label]);
+    const document = documentWith([
+      rectangle("box-1", { x: 100, y: 60 }),
+      label,
+    ]);
     const geometry = resolveDraftingObjectGeometry(document, resolver, label);
     if (geometry.kind !== "text") throw new Error("expected text geometry");
     expect(geometry.position).toEqual({ x: 110, y: 55 });

@@ -41,15 +41,21 @@ function documentWith(objects: DraftingObject[]): SchematicDocument {
 
 describe("rectangleInteriorAt", () => {
   it("finds the rectangle containing the point, boundary inclusive", () => {
-    const document = documentWith([rectangle("box-1", { x: 100, y: 60 }, 80, 40)]);
+    const document = documentWith([
+      rectangle("box-1", { x: 100, y: 60 }, 80, 40),
+    ]);
     expect(rectangleInteriorAt(document, resolver, { x: 100, y: 60 })?.id).toBe(
       "box-1",
     );
     expect(rectangleInteriorAt(document, resolver, { x: 60, y: 60 })?.id).toBe(
       "box-1",
     );
-    expect(rectangleInteriorAt(document, resolver, { x: 141, y: 60 })).toBeNull();
-    expect(rectangleInteriorAt(document, resolver, { x: 100, y: 81 })).toBeNull();
+    expect(
+      rectangleInteriorAt(document, resolver, { x: 141, y: 60 }),
+    ).toBeNull();
+    expect(
+      rectangleInteriorAt(document, resolver, { x: 100, y: 81 }),
+    ).toBeNull();
   });
 
   it("prefers the smallest containing rectangle for nested boxes", () => {

@@ -1,9 +1,5 @@
 import { resolveDraftingObjectGeometry } from "@icm/derived";
-import type {
-  DraftingObject,
-  Point,
-  SchematicDocument,
-} from "@icm/model";
+import type { DraftingObject, Point, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 export type DraftingRectangle = Extract<DraftingObject, { kind: "rectangle" }>;
