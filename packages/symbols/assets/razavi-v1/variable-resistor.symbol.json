@@ -10,7 +10,7 @@
   },
   "pins": [
     {
-      "name": "1",
+      "name": "P1",
       "role": "passive",
       "at": {
         "x": 0,
@@ -23,7 +23,7 @@
       }
     },
     {
-      "name": "2",
+      "name": "P2",
       "role": "passive",
       "at": {
         "x": 0,

@@ -28,12 +28,12 @@ describe("built-in device registry", () => {
     });
   });
 
-  it("models the variable resistor as the same two-terminal resistor primitive", () => {
+  it("models the variable resistor as a two-terminal child Cell", () => {
     expect(deviceDescriptor("variable-resistor")).toMatchObject({
       deviceClass: "resistor",
-      referencePrefix: "R",
-      pinOrder: ["1", "2"],
-      targetPolicy: "builtin",
+      referencePrefix: "X",
+      pinOrder: ["P1", "P2"],
+      targetPolicy: "child-cell",
       parameters: [{ name: "value", required: true, displayRole: "value" }],
     });
   });

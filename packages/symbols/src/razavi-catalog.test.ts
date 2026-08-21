@@ -228,7 +228,7 @@ describe("Razavi symbol catalog", () => {
   it("keeps the variable resistor electrically two-terminal with one diagonal adjustment arrow", () => {
     const symbol = requireRazaviCatalogSymbol("variable-resistor");
 
-    expect(symbol.pins.map((pin) => pin.name)).toEqual(["1", "2"]);
+    expect(symbol.pins.map((pin) => pin.name)).toEqual(["P1", "P2"]);
     expect(symbol.primitives).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

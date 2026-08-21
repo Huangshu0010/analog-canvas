@@ -379,13 +379,13 @@ export const agentRazaviAuthoringCatalog = {
       labelVisibility: "shown",
       pins: [
         {
-          name: "1",
+          name: "P1",
           role: "passive",
           direction: "north",
           visibility: "visible",
         },
         {
-          name: "2",
+          name: "P2",
           role: "passive",
           direction: "south",
           visibility: "visible",

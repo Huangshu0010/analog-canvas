@@ -4,9 +4,9 @@ export const variableResistorDevice = {
   id: "variable-resistor",
   symbolId: "variable-resistor",
   deviceClass: "resistor",
-  referencePrefix: "R",
-  pinOrder: ["1", "2"],
-  targetPolicy: "builtin",
+  referencePrefix: "X",
+  pinOrder: ["P1", "P2"],
+  targetPolicy: "child-cell",
   parameters: [
     {
       name: "value",

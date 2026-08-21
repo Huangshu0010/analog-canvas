@@ -34,7 +34,7 @@ describe("component insertion catalog", () => {
     );
 
     expect(symbols.map((symbol) => symbol.id)).toEqual(["variable-resistor"]);
-    expect(symbols[0]?.pins.map((pin) => pin.name)).toEqual(["1", "2"]);
+    expect(symbols[0]?.pins.map((pin) => pin.name)).toEqual(["P1", "P2"]);
   });
 
   it("searches canonical names and ids without exposing retired MOS entries", () => {

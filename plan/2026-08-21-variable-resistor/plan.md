@@ -8,9 +8,10 @@ experience: none
 ## Goal
 
 Add a palette-visible two-terminal variable resistor that reuses the existing
-resistor body and overlays one diagonal adjustment arrow. It remains
-electrically and in exported SPICE/Spectre netlists an ordinary resistor; the
-arrow is presentation, not a third terminal.
+resistor body and overlays one diagonal adjustment arrow. The arrow is
+presentation, not a third terminal. Each placed instance is a hierarchical
+`X` block bound to one project-local generated child Cell, so export contains
+a real `.subckt` body rather than flattening it into a parent-level resistor.
 
 ## State and Ownership
 
@@ -29,6 +30,8 @@ catalog adapters, target record, and maintenance log.
 - `packages/devices/src/`
 - `packages/derived/src/instance-label-placement*`
 - `apps/editor/src/features/component-insert/symbol-catalog*`
+- `apps/editor/src/features/component-insert/use-component-placement.ts`
+- `apps/editor/src/features/component-insert/variable-resistor-cell*`
 - `apps/editor/src/features/netlist-export/netlist-authoring.test.ts`
 - `packages/agent-adapter/src/agent-authoring-catalog.generated.ts`
 - `apps/mcp-server/src/resources.generated.ts`
@@ -45,12 +48,15 @@ user's explicit two-terminal visual direction.
 
 1. Add a two-pin `variable-resistor` Symbol by composing the calibrated
    resistor body with a diagonal arrow shaft and head.
-2. Register it as a resistor-class device with the existing `R` reference and
-   required resistance value semantics.
-3. Expose it in Passives, preserve side-label behavior, and regenerate the
+2. Register its authoring fields as a child-Cell-backed device with an `X`
+   reference and required resistance value semantics.
+3. On first placement, atomically create one reusable project-local child Cell
+   containing a parameterized ordinary resistor, two formal ports, and visible
+   internal routes; bind every placed custom-artwork instance to that Cell.
+4. Expose it in Passives, preserve side-label behavior, and regenerate the
    runtime and Agent catalogs.
-4. Add focused contracts for the visible arrow, two-pin identity, palette
-   discovery, reference allocation, and resistor netlist binding.
+5. Add focused contracts for the visible arrow, two-pin identity, palette
+   discovery, hierarchy reuse, and emitted `X`/`.subckt` netlist behavior.
 
 ## Validation
 
@@ -67,14 +73,15 @@ user's explicit two-terminal visual direction.
 
 - Decision: tests-updated
 - Contracts: two electrical pins; diagonal arrow presentation; palette
-  classification/search; resistor-class value/reference/netlist behavior;
-  generated catalog parity
+  classification/search; one reusable child Cell; `X` reference and
+  subcircuit binding; generated catalog parity
 - Primary checks: `packages/symbols/src/razavi-catalog.test.ts`,
   `packages/symbols/src/builtins.test.ts`,
   `packages/devices/src/registry.test.ts`,
   `packages/derived/src/instance-label-placement.test.ts`,
   `apps/editor/src/features/component-insert/symbol-catalog.test.ts`, and
-  `apps/editor/src/features/netlist-export/netlist-authoring.test.ts`
+  `apps/editor/src/features/netlist-export/netlist-authoring.test.ts`, and
+  `apps/editor/src/features/component-insert/variable-resistor-cell.test.ts`
 
 ## Commit Intent
 
@@ -86,14 +93,13 @@ feat: add variable resistor component
 
 ## Outcome
 
-Added a reviewed, palette-visible `variable-resistor` with the existing
-two-terminal resistor body plus one diagonal adjustment arrow. It shares the
-ordinary resistor's `R` reference, required resistance value, and
-SPICE/Spectre primitive binding; structural SPICE import remains mapped only
-to the canonical plain resistor because it cannot preserve this visual choice.
-Runtime and Agent catalogs were regenerated. Seven focused test files passed
-(56 tests), the final netlist-authoring rerun passed (6 tests), and symbol,
-Agent/MCP generation checks, typecheck, test-impact, dependency-ordered editor
-production build, and diff checks passed. A direct editor-only build initially
-observed stale pre-pull netlist output; rebuilding the declared editor
-dependency graph refreshed it and passed.
+Added a reviewed two-terminal `variable-resistor` with one diagonal adjustment
+arrow and `P1`/`P2` block ports. The first placement atomically creates one
+project-local `VariableResistor` child Cell containing two formal ports, a
+parameterized ordinary resistor, and visible routes; every placed custom
+symbol binds to that same Cell with an `X` reference. Export therefore emits a
+real `.subckt VariableResistor`, its internal `R1`, and parent `X…` calls.
+Runtime and Agent catalogs were regenerated. Eight focused test files passed
+(58 tests), the final hierarchy/export contract rerun passed (2 tests), and
+symbol, Agent/MCP generation checks, typecheck, test-impact,
+dependency-ordered editor production build, docs, and diff checks passed.

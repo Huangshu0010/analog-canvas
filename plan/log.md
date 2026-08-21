@@ -3964,9 +3964,11 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 
 - Changed areas: added a reviewed variable-resistor Symbol that composes the
   existing vertical resistor body with one diagonal adjustment arrow; exposed
-  it as a two-pin Passive with shared resistor reference, value, label, and
-  SPICE/Spectre primitive semantics; regenerated runtime and Agent catalogs.
-- Validation: focused tests (7 files / 56 tests), final netlist-authoring rerun
-  (6 tests), symbol/Agent/MCP generated checks, typecheck, test-impact,
-  dependency-ordered editor production build, and diff checks passed.
+  it as a two-port Passive whose first placement creates one reusable
+  parameterized child Cell; and bound instances as `X` calls so export emits a
+  real `.subckt` body rather than a parent-level resistor primitive. Runtime
+  and Agent catalogs were regenerated.
+- Validation: focused tests (8 files / 58 tests), final hierarchy/export rerun
+  (2 tests), symbol/Agent/MCP generated checks, typecheck, test-impact,
+  dependency-ordered editor production build, docs, and diff checks passed.
 - Commit status: ready to commit on `codex/variable-resistor`.

@@ -28,7 +28,7 @@ describe("netlist authoring", () => {
       },
     );
     expect(nextInstanceReference(document, "resistor")).toBe("R2");
-    expect(nextInstanceReference(document, "variable-resistor")).toBe("R2");
+    expect(nextInstanceReference(document, "variable-resistor")).toBe("X1");
     expect(nextInstanceReference(document, "nmos")).toBe("M1");
   });
 
@@ -55,7 +55,7 @@ describe("netlist authoring", () => {
       },
     );
     expect(nextInstanceDesignator(document, "resistor")).toBe("R2");
-    expect(nextInstanceDesignator(document, "variable-resistor")).toBe("R2");
+    expect(nextInstanceDesignator(document, "variable-resistor")).toBe("X1");
     expect(nextInstanceDesignator(document, "nmos")).toBe("M2");
     // nmos and pmos share the M prefix; neither call mutates the document.
     expect(nextInstanceDesignator(document, "pmos")).toBe("M2");
@@ -94,8 +94,7 @@ describe("netlist authoring", () => {
     expect(
       initialInstanceNetlist(document, "variable-resistor", { value: "25k" }),
     ).toEqual({
-      reference: "R1",
-      binding: { kind: "primitive", deviceClass: "resistor" },
+      reference: "X1",
       parameters: { value: "25k" },
     });
     expect(
