@@ -83,7 +83,7 @@ test.beforeEach(async ({ page }) => {
 test("startup banner opens the dialog and restore forks a working copy", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")
@@ -114,7 +114,7 @@ test("startup banner opens the dialog and restore forks a working copy", async (
 test("a damaged latest copy restores the previous generation", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")
@@ -178,7 +178,7 @@ test("a damaged latest copy restores the previous generation", async ({
 test("a newer-schema copy is downloadable but not restorable", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const futureText = JSON.stringify({
     ...JSON.parse(fixtureText),
     schemaVersion: 99,
@@ -223,7 +223,7 @@ test("a newer-schema copy is downloadable but not restorable", async ({
 test("deleting one session keeps the other project's copy", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")
@@ -261,7 +261,7 @@ test("deleting one session keeps the other project's copy", async ({
 });
 
 test("dialog closes with Escape and keeps focus labels", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")
@@ -293,7 +293,7 @@ test("storage failure shows a persistent warning with a direct download", async 
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")

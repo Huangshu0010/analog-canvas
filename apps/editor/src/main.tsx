@@ -19,6 +19,18 @@ const AnalyticsPage = lazy(() =>
   })),
 );
 
+const GalleryFeed = lazy(() =>
+  import("./components/gallery-feed").then((module) => ({
+    default: module.GalleryFeed,
+  })),
+);
+
+/** `/` is the gallery, `/editor` the editor, `/g/<id>` one gallery entry. */
+function galleryEntryIdOf(path: string): string | null {
+  const match = /^\/g\/([A-Za-z0-9-]{1,64})\/?$/.exec(path);
+  return match ? match[1]! : null;
+}
+
 function Root() {
   const path = window.location.pathname;
   const [stats, setStats] = useState<VisitStats | null>(null);
@@ -65,14 +77,26 @@ function Root() {
       });
   }, [path]);
 
-  return /^\/analytics\/?$/.test(path) ? (
-    <Suspense
-      fallback={<div className="analytics-loading">Loading analytics…</div>}
-    >
-      <AnalyticsPage />
-    </Suspense>
-  ) : (
-    <App visitStats={stats} />
+  if (/^\/analytics\/?$/.test(path)) {
+    return (
+      <Suspense
+        fallback={<div className="analytics-loading">Loading analytics…</div>}
+      >
+        <AnalyticsPage />
+      </Suspense>
+    );
+  }
+  if (/^\/?$/.test(path)) {
+    return (
+      <Suspense
+        fallback={<div className="analytics-loading">Loading gallery…</div>}
+      >
+        <GalleryFeed />
+      </Suspense>
+    );
+  }
+  return (
+    <App visitStats={stats} initialGalleryEntryId={galleryEntryIdOf(path)} />
   );
 }
 

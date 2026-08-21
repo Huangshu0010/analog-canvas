@@ -11,7 +11,7 @@ import {
 test("blocks destructive browser refresh shortcuts and uses the stronger grid", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await expect(page.locator(".canvas-grid-dot").first()).toHaveCSS(
     "fill",
     "rgb(196, 199, 201)",
@@ -48,7 +48,7 @@ test("blocks destructive browser refresh shortcuts and uses the stronger grid", 
 test("mirrors component and copy placement previews before their commits", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
 
   const canvas = page.getByTestId("schematic-canvas");
@@ -83,7 +83,7 @@ test("mirrors component and copy placement previews before their commits", async
 test("writes a manual netlist reference into the placed Instance", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("resistor");
@@ -103,7 +103,7 @@ test("writes a manual netlist reference into the placed Instance", async ({
 test("returns a component to the Placement Tray and places the retained Instance again", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 320, y: 220 } });
@@ -155,7 +155,7 @@ test("returns a component to the Placement Tray and places the retained Instance
 test("refreshes explicitly only after flushing and automatically restoring recovery", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")
@@ -185,7 +185,7 @@ test("refreshes explicitly only after flushing and automatically restoring recov
 test("inserts from the master-detail dialog with keyboard and live placement preview", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await expect(page.getByTestId("canvas-empty-state")).toBeVisible();
 
   await page.keyboard.press("i");
@@ -246,7 +246,7 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
 
 test("places a named power rail from I", async ({ page }) => {
   await emulateDownloadOnlyBrowser(page);
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("vdd");
@@ -297,7 +297,7 @@ test("places the VDD power-port device as the default VDD entry", async ({
   page,
 }) => {
   await emulateDownloadOnlyBrowser(page);
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("vdd");
@@ -364,7 +364,7 @@ test("places the VDD power-port device as the default VDD entry", async ({
 test("reopens I and starts Copy from retained selection without stacking modes", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 360, y: 230 } });
@@ -392,7 +392,7 @@ test("reopens I and starts Copy from retained selection without stacking modes",
 test("publishes placement cancellation synchronously before rapid Copy", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
   const symbols = ["nmos", "pmos", "resistor"] as const;
 
@@ -430,7 +430,7 @@ test("publishes placement cancellation synchronously before rapid Copy", async (
 test("copies a MOS whose bulk belongs to a shared supply Net", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
 
   await chooseComponent(page, "nmos");
@@ -454,7 +454,7 @@ test("copies a MOS whose bulk belongs to a shared supply Net", async ({
 test("carries a manual Value through placement and Q property editing", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("resistor");
@@ -550,7 +550,7 @@ test("carries a manual Value through placement and Q property editing", async ({
 test("keeps the workspace inside the viewport and exposes low-interference zoom controls", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
 
   expect(
     await page.evaluate(() => ({
@@ -581,7 +581,7 @@ test("keeps preview fixed while picking from the always-open catalog", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1100, height: 720 });
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
 
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
@@ -642,7 +642,7 @@ test("keeps preview fixed while picking from the always-open catalog", async ({
 test("places MOS parameters and orientation without a hidden-label suppressor", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
 
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
@@ -703,7 +703,7 @@ test("places MOS parameters and orientation without a hidden-label suppressor", 
 test("keeps component placement active across independent canvas commits", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("resistor");
@@ -732,7 +732,7 @@ test("shows the complete foldable categorized Library, quick-places a device, an
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 720 });
-  await page.goto("/");
+  await page.goto("/editor");
   const panel = page.getByTestId("shapes-library-panel");
   const canvas = page.getByTestId("schematic-canvas");
   const libraryChips = panel.locator('[data-testid^="shapes-chip-"]');
@@ -920,7 +920,7 @@ test("opens named full-width Project examples from the left tool rail", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 720 });
-  await page.goto("/");
+  await page.goto("/editor");
 
   const libraryToggle = page.getByTestId("library-toggle");
   const examplesToggle = page.getByTestId("examples-toggle");
@@ -969,7 +969,7 @@ test("keeps a usable canvas while toggling Library at the narrow breakpoint", as
   page,
 }) => {
   await page.setViewportSize({ width: 720, height: 720 });
-  await page.goto("/");
+  await page.goto("/editor");
 
   const chrome = page.locator(".app-chrome-main");
   const analytics = page.getByRole("link", { name: "Open visitor analytics" });
@@ -1035,7 +1035,7 @@ test("keeps a usable canvas while toggling Library at the narrow breakpoint", as
 test("double-clicking a placed device opens Properties for editing", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("resistor");
@@ -1064,7 +1064,7 @@ test("double-clicking a placed device opens Properties for editing", async ({
 test("Library rail folds the sidebar; Insert and title open the catalog", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const panel = page.getByTestId("shapes-library-panel");
   await expect(panel).toHaveAttribute("data-open", "true");
 
@@ -1094,7 +1094,7 @@ test("Library rail folds the sidebar; Insert and title open the catalog", async 
 test("double-clicking a catalog item applies it immediately", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByTestId("insert-component-resistor").dblclick();

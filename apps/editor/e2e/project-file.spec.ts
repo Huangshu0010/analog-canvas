@@ -18,7 +18,7 @@ test.beforeEach(async ({ page }) => {
 test("downloads the canonical Project when File System Access is unavailable", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")
@@ -50,7 +50,7 @@ test("upgrades the previous Project schema and saves it as current", async ({
   const previousVersion = CURRENT_PROJECT_SCHEMA_VERSION - 1;
   source.schemaVersion = previousVersion;
 
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("project-file").setInputFiles({
     name: `minimal-v${previousVersion}.icproj.json`,
     mimeType: "application/json",
@@ -85,7 +85,7 @@ test("reports a confirmed File System Access save", async ({ page }) => {
         }),
       });
   });
-  await page.goto("/");
+  await page.goto("/editor");
   const fileMenu = await openMenu(page, "File");
   await fileMenu.getByRole("button", { name: "Save Project" }).click();
   await expect(page.getByTestId("status")).toContainText(
@@ -111,7 +111,7 @@ test("falls back to download when the save location is denied", async ({
         throw new DOMException("location denied", "NotAllowedError");
       };
   });
-  await page.goto("/");
+  await page.goto("/editor");
   const bytes = await downloadBytes(page, "File", "Save Project");
   expect(JSON.parse(bytes.toString("utf8")).schemaVersion).toBe(
     CURRENT_PROJECT_SCHEMA_VERSION,
@@ -135,7 +135,7 @@ test("keeps the Project and recovery intact when the save stream fails", async (
         }),
       });
   });
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")
@@ -158,7 +158,7 @@ test("keeps the Project and recovery intact when the save stream fails", async (
 test("keeps the Project unchanged when an opened file is rejected", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")
@@ -192,7 +192,7 @@ test("protects dirty work before opening a replacement", async ({ page }) => {
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")
@@ -246,7 +246,7 @@ test("offers a download from the replacement guard", async ({ page }) => {
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")

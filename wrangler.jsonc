@@ -25,6 +25,10 @@
         "name": "AGENT_SESSION",
         "class_name": "AgentSessionDO",
       },
+      {
+        "name": "GALLERY",
+        "class_name": "GalleryDO",
+      },
     ],
   },
   "migrations": [
@@ -35,6 +39,10 @@
     {
       "tag": "v2",
       "new_sqlite_classes": ["AgentSessionDO"],
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["GalleryDO"],
     },
   ],
   "observability": {

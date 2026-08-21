@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 test("a render crash shows the recovery screen instead of a blank page", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await expect(page.getByTestId("schematic-canvas")).toBeVisible();
 
   // Arm the DEV-only render crash probe and force one more App render.
@@ -37,7 +37,7 @@ test("a render crash shows the recovery screen instead of a blank page", async (
 test("a scene build failure degrades to the last good view and recovers", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   await page
     .getByTestId("schematic-canvas")

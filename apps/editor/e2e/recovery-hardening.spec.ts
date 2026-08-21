@@ -47,7 +47,7 @@ test.beforeEach(async ({ page }) => {
 test("a hard renderer crash restores the latest committed Project", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeResistor(page, 360, 230);
   await expect(page.getByTestId("revision")).toHaveText("1");
   await expect
@@ -67,7 +67,7 @@ test("a hard renderer crash restores the latest committed Project", async ({
   await page.close({ runBeforeUnload: false });
   const revived = await page.context().newPage();
   await emulateDownloadOnlyBrowser(revived);
-  await revived.goto("/");
+  await revived.goto("/editor");
 
   await restoreThroughDialog(revived, "revision 2");
   await expect(revived.getByTestId("revision")).toHaveText("2");
@@ -81,12 +81,12 @@ test("simultaneous tabs keep separate working copies", async ({ context }) => {
   await emulateDownloadOnlyBrowser(pageA);
   await emulateDownloadOnlyBrowser(pageB);
 
-  await pageA.goto("/");
+  await pageA.goto("/editor");
   await placeResistor(pageA, 360, 230);
   await placeResistor(pageA, 500, 230);
   await expect(pageA.getByTestId("revision")).toHaveText("2");
 
-  await pageB.goto("/");
+  await pageB.goto("/editor");
   await chooseComponent(pageB, "nmos");
   await pageB
     .getByTestId("schematic-canvas")
@@ -183,7 +183,7 @@ test("quota-exceeded keeps the editor alive with a persistent warning", async ({
       return request;
     }) as IDBFactory["open"];
   });
-  await page.goto("/");
+  await page.goto("/editor");
   await placeResistor(page, 360, 230);
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -206,7 +206,7 @@ test("quota-exceeded keeps the editor alive with a persistent warning", async ({
 });
 
 test("no Project data enters Cache Storage", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeResistor(page, 360, 230);
   await expect(page.getByTestId("revision")).toHaveText("1");
   await expect
