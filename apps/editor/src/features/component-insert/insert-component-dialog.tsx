@@ -145,7 +145,6 @@ export function InsertComponentDialog({
     [cellsOnly, cells, externalDefinitions, recentSymbolIds, styleProfileId],
   );
   const [query, setQuery] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(true);
   const [selectedId, setSelectedId] = useState(
     () => initialChoices[0]?.key ?? null,
   );
@@ -253,7 +252,6 @@ export function InsertComponentDialog({
   useEffect(() => {
     if (!open) return;
     setQuery("");
-    setPickerOpen(true);
     setSelectedId(
       initialSelectionId &&
         initialChoices.some((choice) => choice.key === initialSelectionId)
@@ -300,13 +298,13 @@ export function InsertComponentDialog({
     );
     const next = (index + offset + choices.length) % choices.length;
     setSelectedId(choices[next]!.key);
-    setPickerOpen(true);
   };
 
+  // Selecting never folds the list away: the catalog stays in place so the
+  // next pick is one click, not an expand-then-click.
   const selectChoice = (key: string): void => {
     setSelectedId(key);
     setQuery("");
-    setPickerOpen(false);
   };
 
   const rotatePreview = (): void => {
@@ -425,11 +423,9 @@ export function InsertComponentDialog({
             selectOffset(-1);
           } else if (event.key === "Home") {
             event.preventDefault();
-            setPickerOpen(true);
             setSelectedId(choices[0]?.key ?? null);
           } else if (event.key === "End") {
             event.preventDefault();
-            setPickerOpen(true);
             setSelectedId(choices.at(-1)?.key ?? null);
           }
         }}
@@ -456,7 +452,7 @@ export function InsertComponentDialog({
                     role="combobox"
                     aria-label={`${pickerNoun} search`}
                     aria-autocomplete="list"
-                    aria-expanded={pickerOpen}
+                    aria-expanded={true}
                     aria-controls="insert-component-options"
                     aria-activedescendant={
                       selected
@@ -469,27 +465,11 @@ export function InsertComponentDialog({
                         ? `${selected.cellName ?? selected.symbol.name} · ${selected.symbol.id}`
                         : `Search ${pickerNoun.toLowerCase()}`
                     }
-                    onChange={(event) => {
-                      setQuery(event.currentTarget.value);
-                      setPickerOpen(true);
-                    }}
+                    onChange={(event) => setQuery(event.currentTarget.value)}
                   />
-                  <button
-                    type="button"
-                    className="insert-picker-toggle"
-                    aria-label={
-                      pickerOpen
-                        ? `Collapse ${pickerNoun.toLowerCase()} list`
-                        : `Expand ${pickerNoun.toLowerCase()} list`
-                    }
-                    aria-expanded={pickerOpen}
-                    onClick={() => setPickerOpen((current) => !current)}
-                  >
-                    {pickerOpen ? "⌃" : "⌄"}
-                  </button>
                 </div>
               </label>
-              {pickerOpen ? (
+              {
                 <div
                   id="insert-component-options"
                   className="insert-component-options"
@@ -515,6 +495,11 @@ export function InsertComponentDialog({
                               : `insert-component-${choice.symbol.id}`
                           }
                           onClick={() => selectChoice(choice.key)}
+                          onDoubleClick={() => {
+                            // The first click of the pair already committed
+                            // this selection; the second applies it.
+                            apply();
+                          }}
                         >
                           <span>{choice.cellName ?? choice.symbol.name}</span>
                           <small>
@@ -530,7 +515,7 @@ export function InsertComponentDialog({
                     </p>
                   ) : null}
                 </div>
-              ) : null}
+              }
             </section>
 
             {selectedIsVddRail ? (

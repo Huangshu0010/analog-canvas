@@ -577,7 +577,7 @@ test("keeps the workspace inside the viewport and exposes low-interference zoom 
     .toBeLessThan(canvasBefore?.width ?? 0);
 });
 
-test("keeps preview fixed while the compact catalog expands and collapses", async ({
+test("keeps preview fixed while picking from the always-open catalog", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1100, height: 720 });
@@ -588,9 +588,6 @@ test("keeps preview fixed while the compact catalog expands and collapses", asyn
   const artwork = dialog.locator(".insert-symbol-artwork");
   const cancel = dialog.getByRole("button", { name: "Cancel" });
   const apply = dialog.getByRole("button", { name: "Apply" });
-  const toggle = dialog.getByRole("button", {
-    name: "Collapse component list",
-  });
 
   const measure = () =>
     dialog.evaluate((element) => {
@@ -624,11 +621,14 @@ test("keeps preview fixed while the compact catalog expands and collapses", asyn
     await options.evaluate((element) => getComputedStyle(element).overflowY),
   ).toBe("auto");
 
-  await toggle.click();
-  await expect(options).toHaveCount(0);
-  await dialog.getByRole("button", { name: "Expand component list" }).click();
-  await expect(options).toBeVisible();
+  // The catalog is permanently open: no collapse control exists, and picking
+  // an item keeps the list in place for the next pick.
+  await expect(
+    dialog.getByRole("button", { name: "Collapse component list" }),
+  ).toHaveCount(0);
   await dialog.getByTestId("insert-component-inductor").click();
+  await expect(options).toBeVisible();
+  await expect(dialog.getByTestId("insert-component-resistor")).toBeVisible();
   const after = await measure();
   expect(after.dialog.height).toBeCloseTo(before.dialog.height, 0);
   expect(after.preview.width).toBeCloseTo(before.preview.width, 0);
@@ -1089,4 +1089,18 @@ test("Library rail folds the sidebar; Insert and title open the catalog", async 
   await expect(
     page.getByRole("dialog", { name: "Insert Component" }),
   ).toBeVisible();
+});
+
+test("double-clicking a catalog item applies it immediately", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByTestId("insert-component-resistor").dblclick();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByTestId("status")).toContainText(
+    "Place Resistor on the canvas",
+  );
+  await page.keyboard.press("Escape");
 });

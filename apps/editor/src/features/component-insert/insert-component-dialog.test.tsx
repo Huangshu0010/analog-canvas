@@ -22,7 +22,10 @@ describe("InsertComponentDialog", () => {
     expect(markup).toContain('role="combobox"');
     expect(markup).toContain('aria-label="Component search"');
     expect(markup).toContain('aria-expanded="true"');
-    expect(markup).toContain('aria-label="Collapse component list"');
+    // The catalog is permanently open: no collapse control exists and the
+    // listbox renders without any toggle interaction.
+    expect(markup).not.toContain("Collapse component list");
+    expect(markup).not.toContain("insert-picker-toggle");
     expect(markup).toContain('role="listbox"');
     expect(markup).toContain('class="insert-symbol-artwork"');
     expect(markup).toContain('aria-label="Component w"');
