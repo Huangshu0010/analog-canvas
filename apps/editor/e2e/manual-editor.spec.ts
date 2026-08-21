@@ -8,6 +8,7 @@ import { createRoutingDemoProject } from "../src/demos/routing-demo.js";
 import {
   chooseComponent,
   clickCommand,
+  clickDrawTool,
   downloadBytes,
   emulateDownloadOnlyBrowser,
   openMenu,
@@ -61,20 +62,7 @@ async function placeComponent(
   symbolId: string,
   position: { x: number; y: number },
 ): Promise<void> {
-  if (symbolId === "port" || symbolId === "port-filled") {
-    await page.keyboard.press("i");
-    const dialog = page.getByRole("dialog", { name: "Insert Component" });
-    await dialog.getByLabel("Component search").fill(symbolId);
-    await dialog.getByTestId(`insert-component-${symbolId}`).click();
-    await dialog.getByRole("button", { name: "Apply" }).click();
-    const portDialog = page.getByRole("dialog", { name: "Place Net Port" });
-    await portDialog
-      .getByLabel("Net name")
-      .fill(symbolId === "port" ? "NET_HOLLOW" : "NET_FILLED");
-    await portDialog.getByRole("button", { name: "Place" }).click();
-  } else {
-    await chooseComponent(page, symbolId);
-  }
+  await chooseComponent(page, symbolId);
   await page.getByTestId("schematic-canvas").click({ position });
   await page.keyboard.press("Escape");
 }
@@ -337,7 +325,7 @@ test("keeps a tapped VDD rail movable and stretchable as one supply bar", async 
   await canvas.click({ position: { x: 520, y: 120 } });
   await placeComponent(page, "resistor", { x: 360, y: 300 });
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await clickRoute(page, "route-vdd1-rail");
   await page.locator('[data-testid^="terminal-R"][data-testid$="-1"]').click();
   await page.keyboard.press("Escape");
@@ -474,10 +462,10 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
   await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
   await page.keyboard.press("p");
-  const dialog = page.getByRole("dialog", { name: "Place Net Port" });
-  await expect(dialog).toHaveClass(/port-setup-dialog/u);
-  await expect(dialog.getByLabel("Net name")).toHaveValue("");
-  await dialog.getByRole("button", { name: "Place" }).click();
+  // No setup dialog: the shortcut goes straight to the placement cursor.
+  await expect(
+    page.getByRole("dialog", { name: "Place Net Port" }),
+  ).toHaveCount(0);
   await canvas.hover({ position: { x: 320, y: 180 } });
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 320, y: 180 } });
@@ -508,11 +496,12 @@ test("Free Net Ports merge by name and release their final Net lifecycle", async
     position: { x: number; y: number },
   ) => {
     await page.keyboard.press("p");
-    const dialog = page.getByRole("dialog", { name: "Place Net Port" });
-    await dialog.getByLabel("Net name").fill(name);
-    await dialog.getByRole("button", { name: "Place" }).click();
     await canvas.click({ position });
     await page.keyboard.press("Escape");
+    await openSelectionShelf(page);
+    const nameField = page.getByLabel("Net Port name");
+    await nameField.fill(name);
+    await nameField.blur();
   };
 
   await placeNamedPort("BUS", { x: 260, y: 180 });
@@ -588,11 +577,11 @@ test("treats hollow and filled Ports as ordinary wired components", async ({
   await placeComponent(page, "port", { x: 260, y: 220 });
   await placeComponent(page, "port-filled", { x: 260, y: 300 });
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-P1-P").click();
   await page.getByTestId("terminal-R1-1").click();
   await page.keyboard.press("Escape");
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-P2-P").click();
   await page.getByTestId("terminal-R1-2").click();
   await page.keyboard.press("Escape");
@@ -652,7 +641,7 @@ test("authors components and connectivity manually from an empty canvas", async 
     "connectivity-modified",
   );
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-M1-G").click();
   await expect(page.getByTestId("revision")).toHaveText("3");
@@ -682,7 +671,7 @@ test("connects one MOS Gate to Drain without false contact ambiguity", async ({
 }) => {
   await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 480, y: 260 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-M1-G").click();
   await page.getByTestId("terminal-M1-D").click();
   await expect(page.getByTestId("status")).toContainText("Committed route");
@@ -699,7 +688,7 @@ test("keeps Wire input above labels and resolves a screen-tolerant route tap", a
   await placeComponent(page, "resistor", { x: 340, y: 220 });
   await placeComponent(page, "resistor", { x: 660, y: 220 });
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await expect(page.getByTestId("wire-input-plane")).toBeVisible();
   const label = page.getByTestId("annotation-hit-instance-label-R1");
   const labelBox = await label.boundingBox();
@@ -713,7 +702,7 @@ test("keeps Wire input above labels and resolves a screen-tolerant route tap", a
   );
   await page.keyboard.press("Escape");
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   const routeId = await onlyRouteId(page);
@@ -731,13 +720,13 @@ test("keeps a Wire source across repeated activation and cancels it after undo",
   await placeComponent(page, "resistor", { x: 340, y: 220 });
   await placeComponent(page, "resistor", { x: 660, y: 220 });
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.keyboard.press("w");
   await page.getByTestId("terminal-R2-1").click();
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-1").click();
   await page.keyboard.press("Control+z");
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
@@ -750,7 +739,7 @@ test("deletes a wire without exposing Unroute", async ({ page }) => {
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 340, y: 220 });
   await placeComponent(page, "resistor", { x: 660, y: 220 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await expect(page.getByTestId("active-tool")).toHaveText("wire");
@@ -780,7 +769,7 @@ test("adds and straightens an explicit jog on the selected wire segment", async 
   page,
 }) => {
   await page.goto("/editor");
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 300, y: 240 } });
   await canvas.dblclick({ position: { x: 600, y: 240 } });
@@ -815,7 +804,7 @@ test("keeps Wire active for consecutive independent routes until Escape", async 
   await placeComponent(page, "resistor", { x: 280, y: 360 });
   await placeComponent(page, "resistor", { x: 520, y: 360 });
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await expect(page.getByTestId("active-tool")).toHaveText("wire");
@@ -959,13 +948,13 @@ test("turns an off-axis tap near a route bend into an exact junction", async ({
   await placeComponent(page, "nmos", { x: 300, y: 260 });
   await placeComponent(page, "resistor", { x: 540, y: 160 });
   await placeComponent(page, "resistor", { x: 680, y: 360 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-M1-D").click();
   await page.getByTestId("terminal-R1-1").click();
   const points = await readRoutePoints(page, "route-ui-1");
   expect(points.length).toBeGreaterThanOrEqual(3);
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R2-1").click();
   await clickRouteVertexWithScreenOffset(page, "route-ui-1", 1, {
     x: 3,
@@ -1039,7 +1028,7 @@ test("places free wire bends and finishes at an arbitrary grid point", async ({
 }) => {
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 300, y: 200 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 500, y: 260 } });
@@ -1066,7 +1055,7 @@ test("reuses a free wire endpoint as a later wire source", async ({ page }) => {
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 300, y: 200 });
   await placeComponent(page, "resistor", { x: 600, y: 300 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page
     .getByTestId("schematic-canvas")
@@ -1074,7 +1063,7 @@ test("reuses a free wire endpoint as a later wire source", async ({ page }) => {
 
   const freeEnd = page.locator('[data-testid^="junction-junction-ui-"]');
   await expect(freeEnd).toHaveCount(1);
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await freeEnd.click();
   await page.getByTestId("terminal-R2-1").click();
 
@@ -1085,7 +1074,7 @@ test("reuses a free wire endpoint as a later wire source", async ({ page }) => {
 test("moves an isolated free wire as one route", async ({ page }) => {
   await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await canvas.click({ position: { x: 420, y: 220 } });
   await canvas.dblclick({ position: { x: 620, y: 300 } });
   await page.keyboard.press("Escape");
@@ -1119,7 +1108,7 @@ test("stretches the pointed segment of a selected attached wire", async ({
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 300, y: 220 });
   await placeComponent(page, "resistor", { x: 540, y: 220 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await page.keyboard.press("Escape");
@@ -1140,7 +1129,7 @@ test("keeps a BJT base connection as an ordinary solid wire", async ({
   await page.goto("/editor");
   await placeComponent(page, "npn", { x: 300, y: 220 });
   await placeComponent(page, "resistor", { x: 540, y: 220 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-Q1-B").click();
   await page.getByTestId("terminal-R1-1").click();
   await page.keyboard.press("Escape");
@@ -1162,7 +1151,7 @@ test("keeps direct device pin corners on-grid and deletes a selected junction", 
   await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 300, y: 260 });
   await placeComponent(page, "resistor", { x: 540, y: 160 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-M1-D").click();
   await page.getByTestId("terminal-R1-1").click();
 
@@ -1176,7 +1165,7 @@ test("keeps direct device pin corners on-grid and deletes a selected junction", 
     ),
   ).toBe(true);
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-M1-G").click();
   await page
     .getByTestId("schematic-canvas")
@@ -1207,7 +1196,7 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
   await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 320, y: 180 });
   await placeComponent(page, "nmos", { x: 320, y: 360 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-M1-S").click();
   await page.getByTestId("terminal-M2-D").click();
   await page.keyboard.press("Escape");
@@ -1232,7 +1221,7 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
     .click();
   await expect(page.getByTestId("instance-count")).toHaveText("4");
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-M2-S").click();
   await page
     .getByTestId("schematic-canvas")
@@ -1250,7 +1239,7 @@ test("moves a selected wire segment and deletes a connected component safely", a
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await page.keyboard.press("Escape");
@@ -1281,7 +1270,7 @@ test("previews a connected Wire while its Instance moves", async ({ page }) => {
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await page.keyboard.press("Escape");
@@ -1316,7 +1305,7 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await page.keyboard.press("Escape");
@@ -1381,10 +1370,10 @@ test("keeps an internal junction with the live group preview", async ({
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
   await placeComponent(page, "resistor", { x: 420, y: 420 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await clickRoute(page, "route-ui-1", 0.5, 0);
   await page.getByTestId("terminal-R3-1").click();
   await page.keyboard.press("Escape");
@@ -1416,7 +1405,7 @@ test("drags a current marker directly along and around its route", async ({
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await page.keyboard.press("Escape");
@@ -1471,7 +1460,7 @@ test("drags a current marker directly along and around its route", async ({
     projectBeforeSplit.documents[0].annotations.find(
       (annotation: { id: string }) => annotation.id === "current-1",
     );
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await clickRoute(page, "route-ui-1", 0.2, 0);
   await page.getByTestId("terminal-R3-1").click();
   const markerAfterSplit = await hit.boundingBox();
@@ -1590,7 +1579,7 @@ test("moves an explicitly selected attached label", async ({ page }) => {
 
 test("moves floating text after it is created", async ({ page }) => {
   await page.goto("/editor");
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   await page
     .getByRole("textbox", { name: "Canvas text editor" })
     .fill("Floating note");
@@ -1615,7 +1604,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 280, y: 180 });
   await placeComponent(page, "resistor", { x: 480, y: 180 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await page.keyboard.press("Escape");
@@ -1663,7 +1652,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
 
   await placeComponent(page, "resistor", { x: 280, y: 320 });
   await placeComponent(page, "resistor", { x: 480, y: 320 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R3-2").click();
   await page.getByTestId("terminal-R4-1").click();
   await page.keyboard.press("Escape");
@@ -1676,7 +1665,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await expect(page.getByTestId("net-count")).toHaveText("1");
   await expect(page.getByTestId("status")).toHaveText("Saved Net Label Vref");
 
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   const textInput = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
@@ -1700,7 +1689,7 @@ test("keeps literal text line breaks and overbars visible while editing", async 
   page,
 }) => {
   await page.goto("/editor");
-  await clickCommand(page, "Draw", "Text");
+  await clickDrawTool(page, "text");
   const editor = page.getByRole("textbox", { name: "Canvas text editor" });
   await editor.fill("Vx");
   await editor.press("ControlOrMeta+A");
@@ -1731,7 +1720,7 @@ test("L edits a selected route Net Label without opening Properties", async ({
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 280, y: 180 });
   await placeComponent(page, "resistor", { x: 480, y: 180 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await page.keyboard.press("Escape");
@@ -2099,7 +2088,7 @@ test("a dragged Net label re-anchors along its route and stays released", async 
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 280, y: 180 });
   await placeComponent(page, "resistor", { x: 520, y: 180 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await page.keyboard.press("Escape");
@@ -2476,16 +2465,16 @@ test("derives crossings and creates junctions only when a wire ends on a route",
     buffer: Buffer.from(JSON.stringify(createRoutingDemoProject())),
   });
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-A-P").click();
   await page.getByTestId("terminal-B-P").click();
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-C-P").click();
   await page.getByTestId("terminal-D-P").click();
   await expect(page.getByTestId("crossing-count")).toHaveText("1");
   await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(0);
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-E-P").click();
   await clickRoute(page, "route-ui-1", 0.5);
   await expect(page.getByTestId("status")).toContainText(
@@ -2494,7 +2483,7 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await expect(page.getByTestId("revision")).toHaveText("2");
   await page.keyboard.press("Escape");
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-E-P").click();
   await clickRouteWithScreenOffset(page, "route-ui-1", { x: 0, y: 5 }, 0.25);
   await expect(page.getByTestId("revision")).toHaveText("3");
@@ -2664,7 +2653,7 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
   );
   if (!screenPoints) throw new Error("Wire path is not measurable");
 
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.mouse.click(screenPoints[0]!.x, screenPoints[0]!.y);
   await page.mouse.dblclick(screenPoints[1]!.x, screenPoints[1]!.y);
 
@@ -3014,16 +3003,19 @@ test("keeps the production command surface compact and publishes PWA metadata", 
 }) => {
   await page.goto("/editor");
   const toolbar = page.getByRole("navigation", { name: "Editor commands" });
-  for (const label of ["File", "Edit", "Draw"]) {
+  for (const label of ["File", "Edit"]) {
     await expect(toolbar.locator("summary", { hasText: label })).toBeVisible();
   }
+  // Drawing tools live in the always-visible toolbar, not behind a menu.
+  await expect(toolbar.locator("summary", { hasText: "Draw" })).toHaveCount(0);
+  await expect(page.getByTestId("draw-toolbar")).toBeVisible();
   await expect(toolbar.locator("summary", { hasText: "More" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "View" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "Style" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "Export" })).toHaveCount(
     0,
   );
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await expect(page.getByTestId("active-tool")).toHaveText("wire");
   for (const obsolete of [
     "Select",
@@ -3056,7 +3048,7 @@ test("clears the active canvas atomically after confirmation and restores it wit
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 240 });
   await placeComponent(page, "resistor", { x: 560, y: 240 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await page.keyboard.press("Escape");
@@ -3221,7 +3213,7 @@ test("highlights the complete current-document Net from a selected route", async
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 380, y: 260 });
   await placeComponent(page, "resistor", { x: 600, y: 260 });
-  await clickCommand(page, "Draw", "Wire (W)");
+  await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   await page.keyboard.press("Escape");
@@ -3515,7 +3507,7 @@ test("Document style dialog scales fonts document-wide and resets", async ({
   const label = page.locator('[data-kind="instance-label"]').first();
   await expect(label).toHaveAttribute("font-size", "15.116");
 
-  await clickCommand(page, "Draw", "Document style…");
+  await clickDrawTool(page, "document-style");
   const dialog = page.getByTestId("document-style-dialog");
   await expect(dialog).toBeVisible();
   const reset = dialog.getByRole("button", {

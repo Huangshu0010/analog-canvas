@@ -13,7 +13,6 @@ describe("InsertComponentDialog", () => {
         recentSymbolIds={["nmos"]}
         cells={[]}
         onApply={() => undefined}
-        onConfigurePort={() => undefined}
         onCancel={() => undefined}
       />,
     );
@@ -53,7 +52,6 @@ describe("InsertComponentDialog", () => {
           recentSymbolIds={[]}
           cells={[]}
           onApply={() => undefined}
-          onConfigurePort={() => undefined}
           onCancel={() => undefined}
         />,
       ),
@@ -78,7 +76,6 @@ describe("InsertComponentDialog", () => {
           },
         ]}
         onApply={() => undefined}
-        onConfigurePort={() => undefined}
         onCancel={() => undefined}
       />,
     );

@@ -4160,4 +4160,26 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: gallery Playwright spec (4 passed), feed unit tests,
   typecheck, prettier, test-impact, diff checks.
 - Commit status: completed on `claude/gallery-bundled-fallback`; mainline
+
+## 2026-08-22 - Editor UI declutter and adjustable-passive fixes
+
+- Changed areas: Library drops the Recent fold and renames the virtual VDD
+  Rail entry to Power Rail; the Insert dialog stops echoing the selected
+  name; the floating startup recovery notice is gone (File menu keeps the
+  recovery entry); the Draw dropdown becomes an always-visible horizontal
+  toolbar and the left rail keeps only panel toggles; Inverter/NOR vertices
+  pull back by their miter overshoot so gate bodies stop spiking into the
+  negation bubbles; variable-resistor becomes an ordinary R primitive
+  (removing the generated child-Cell path that made it unplaceable inside
+  its own Cell) and gains variable-capacitor/variable-inductor siblings;
+  Port placement loses its setup modal, with the role carried by the Library
+  entry (new Cell Pin item) and names generated then edited on canvas;
+  Net Port rename now runs planEnsureNamedNet so same-name Ports join one
+  Net.
+- Validation: typecheck, full unit suite (172 files / 1063 tests), full
+  Playwright suite (175 passed), prettier, markdown links, references,
+  agent-kit/MCP/visual-golden drift checks; every changed interaction was
+  exercised in a running editor. pnpm is unavailable locally, so the
+  canonical ci:check is delegated to the remote required checks.
+- Commit status: four commits on `claude/editor-ui-declutter`; mainline
   merge gated on the remote required checks.

@@ -80,7 +80,7 @@ test.beforeEach(async ({ page }) => {
   await emulateDownloadOnlyBrowser(page);
 });
 
-test("startup banner opens the dialog and restore forks a working copy", async ({
+test("recovery stays reachable after reload and restore forks a working copy", async ({
   page,
 }) => {
   await page.goto("/editor");
@@ -95,13 +95,12 @@ test("startup banner opens the dialog and restore forks a working copy", async (
     .toContain('"revision": 1');
 
   await page.reload();
-  const banner = page.getByTestId("recovery-banner");
-  await expect(banner).toBeVisible();
-  await banner.getByRole("button", { name: "Recover recent work…" }).click();
+  // No startup notice covers the canvas; recovery is reachable on demand.
+  await expect(page.getByTestId("recovery-banner")).toHaveCount(0);
+  await clickCommand(page, "File", "Recover recent work…");
 
   const dialog = page.getByRole("dialog", { name: "Recover recent work" });
   await expect(dialog).toBeVisible();
-  await expect(banner).toBeHidden();
   await expect(dialog.getByTestId("recovery-session-card")).toHaveCount(1);
   await dialog.getByRole("button", { name: "Restore" }).click();
   await expect(dialog).toBeHidden();

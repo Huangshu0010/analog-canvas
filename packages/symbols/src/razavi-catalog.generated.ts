@@ -289,7 +289,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "inverter.symbol.json",
     assetHash:
-      "2f93576529dab328557311e448f0dbc70a9c4c35898b88e5281fd44363184046",
+      "e019a1a1326406ecb58136e1c5e950eb8c07427ad94cdb59021c2963e4d134b4",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -359,7 +359,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "nor-gate.symbol.json",
     assetHash:
-      "3898bb81070142e6dc9c56df277300973e7ca0c27ab8c2d5b56313902df34d75",
+      "221944c93a1d805f4bd9a86761208485c72b02316cdb60f76c677ed616c38422",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -572,6 +572,54 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "resistor.symbol.json",
     assetHash:
       "28c1b0fcbd541685dec951e05b1a1f1fe71a6aabf572c5b706143b377b7677c1",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json",
+    },
+  },
+  {
+    symbolId: "variable-capacitor",
+    name: "Variable Capacitor",
+    category: "passive",
+    reviewStatus: "reviewed",
+    pinOrder: ["P1", "P2"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Manually selected adjustable presentation; structural SPICE C does not preserve a distinct variable-capacitor symbol.",
+    assetPath: "variable-capacitor.symbol.json",
+    assetHash:
+      "feffb09d98cfeb5c5e6a29502112bb7bcfc3796f6654b7dcbb920036295f5a28",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json",
+    },
+  },
+  {
+    symbolId: "variable-inductor",
+    name: "Variable Inductor",
+    category: "passive",
+    reviewStatus: "reviewed",
+    pinOrder: ["P1", "P2"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Manually selected adjustable presentation; structural SPICE L does not preserve a distinct variable-inductor symbol.",
+    assetPath: "variable-inductor.symbol.json",
+    assetHash:
+      "019535aa483deb0c3f33e635c8b926f45d17d90533acafb27135c831e251dddb",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -1780,7 +1828,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -20 -20 L -20 20 L 16 0 Z",
+        data: "M -20 -20 L -20 20 L 13.65 0 Z",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -2327,7 +2375,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -24 -20 Q -14 0 -24 20 Q 4 20 20 0 Q 4 -20 -24 -20 Z",
+        data: "M -24 -20 Q -14 0 -24 20 Q 4 20 18.52 0 Q 4 -20 -24 -20 Z",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -3402,6 +3450,237 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           lineJoin: "miter",
           miterLimit: 12,
         },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "variable-capacitor",
+    name: "Variable Capacitor",
+    viewBox: {
+      x: -16,
+      y: -24,
+      width: 32,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "P1",
+        role: "passive",
+        at: {
+          x: 0,
+          y: -20,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "P2",
+        role: "passive",
+        at: {
+          x: 0,
+          y: 20,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: 8.05064,
+          y: -3.233605,
+        },
+        to: {
+          x: -8.05064,
+          y: -3.233605,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 8.05064,
+          y: 3.233605,
+        },
+        to: {
+          x: -8.05064,
+          y: 3.233605,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: -3.233605,
+        },
+        to: {
+          x: 0,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 3.233605,
+        },
+        to: {
+          x: 0,
+          y: 20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -12,
+          y: 12,
+        },
+        to: {
+          x: 9,
+          y: -9,
+        },
+        part: "adjustment-arrow-shaft",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: 12,
+            y: -12,
+          },
+          {
+            x: 6,
+            y: -10,
+          },
+          {
+            x: 10,
+            y: -6,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+        part: "adjustment-arrow-head",
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "variable-inductor",
+    name: "Variable Inductor",
+    viewBox: {
+      x: -16,
+      y: -32,
+      width: 32,
+      height: 64,
+    },
+    pins: [
+      {
+        name: "P1",
+        role: "passive",
+        at: {
+          x: 0,
+          y: -30,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "P2",
+        role: "passive",
+        at: {
+          x: 0,
+          y: 30,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "path",
+        data: "M 0 -30 L 0 -29.243 C 0 -29.243 0 -29.243 0 -27.3261 C 0 -25.4114 0 -21.5777 0 -19.663 C 0 -17.7462 0 -17.7462 0 -17.7462 C 0 -17.7462 0 -17.7462 1.86778 -17.3623 C 3.73333 -16.9785 7.46443 -16.2131 9.28089 -14.6801 C 11.0974 -13.147 10.9969 -10.8485 7.26583 -9.31325 C 3.5325 -7.78019 -3.83152 -7.01478 -7.51353 -8.16402 C -11.1955 -9.31325 -11.1955 -12.3816 -7.46443 -13.0801 C -3.7311 -13.7808 3.73333 -12.1138 7.53138 -9.58103 C 11.3317 -7.04826 11.4633 -3.64965 7.73222 -1.4159 C 3.99888 0.815621 -3.59944 1.88229 -7.39749 0.882566 C -11.1955 -0.117155 -11.1955 -3.18326 -7.39749 -3.94868 C -3.59944 -4.71632 3.99888 -3.18326 7.69874 -0.683961 C 11.3986 1.81534 11.1978 5.28089 7.39749 7.58159 C 3.59944 9.88006 -3.79805 11.0137 -7.49791 10.0474 C -11.1955 9.08117 -11.1955 6.01506 -7.49791 5.06443 C -3.79805 4.11604 3.59944 5.28089 7.33277 7.19777 C 11.0639 9.11464 11.1308 11.7813 9.29875 13.4974 C 7.46443 15.2134 3.73333 15.9788 1.86778 16.3626 C 0 16.7464 0 16.7464 0 16.7464 C 0 16.7464 0 16.7464 0 18.8285 C 0 20.9105 0 25.0767 0 27.1609 C 0 29.243 0 29.243 0 29.243 L 0 30",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -14,
+          y: 14,
+        },
+        to: {
+          x: 11,
+          y: -11,
+        },
+        part: "adjustment-arrow-shaft",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: 14,
+            y: -14,
+          },
+          {
+            x: 8,
+            y: -12,
+          },
+          {
+            x: 12,
+            y: -8,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+        part: "adjustment-arrow-head",
       },
     ],
     variants: [],

@@ -15,13 +15,12 @@ describe("shapes quick-place", () => {
     const markup = renderToStaticMarkup(
       createElement(ShapesPanel, {
         styleProfileId: "razavi",
-        recentSymbolIds: [],
         open: true,
         onStartInsert: () => undefined,
       }),
     );
 
-    expect(symbols).toHaveLength(26);
+    expect(symbols).toHaveLength(29);
     expect(markup).toContain("All devices");
     expect(markup.match(/data-testid="shapes-chip-/g)).toHaveLength(
       symbols.length,
@@ -36,10 +35,10 @@ describe("shapes quick-place", () => {
       ["Transistors", 4],
       ["Analog Blocks", 3],
       ["Logic Gates", 5],
-      ["Passives", 5],
+      ["Passives", 7],
       ["Sources", 2],
       ["Switches", 2],
-      ["Power and Ports", 5],
+      ["Power and Ports", 6],
     ]);
     const categoryTestIds = [
       "transistors",
@@ -95,8 +94,30 @@ describe("shapes quick-place", () => {
     expect(quickPlaceRequest("razavi", "vdd")).toEqual({
       kind: "vdd-rail",
       symbolId: "vdd",
-      symbolName: "VDD Rail",
+      symbolName: "Power Rail",
       netName: "VDD",
+    });
+  });
+
+  it("places both Port roles without a setup dialog", () => {
+    // ADR 0034 keeps the role explicit: the Library entry carries it, and the
+    // generated name is edited on the canvas afterwards.
+    expect(quickPlaceRequest("razavi", "port")).toMatchObject({
+      kind: "symbol",
+      symbolId: "port",
+      portRole: "net-port",
+      showReference: false,
+    });
+    expect(quickPlaceRequest("razavi", "port-filled")).toMatchObject({
+      symbolId: "port-filled",
+      portRole: "net-port",
+    });
+    expect(quickPlaceRequest("razavi", "cell-pin")).toMatchObject({
+      kind: "symbol",
+      symbolId: "port",
+      symbolName: "Cell Pin",
+      portRole: "cell-terminal",
+      portDirection: "passive",
     });
   });
 

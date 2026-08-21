@@ -7,6 +7,7 @@ export type ToolIconName =
   | "arrow"
   | "line"
   | "rectangle"
+  | "style"
   | "rotate"
   | "lock"
   | "zoom-in"
@@ -70,6 +71,14 @@ export function ToolIcon({ name }: { name: ToolIconName }) {
       {name === "line" ? <path d="M3 15L17 5" {...common} /> : null}
       {name === "rectangle" ? (
         <rect x="3" y="5" width="14" height="10" rx="1" {...common} />
+      ) : null}
+      {name === "style" ? (
+        <>
+          {/* Two labelled sliders: presentation settings, not a drawing tool. */}
+          <path d="M3 7h14M3 13h14" {...common} />
+          <circle cx="7.5" cy="7" r="2" fill="currentColor" />
+          <circle cx="12.5" cy="13" r="2" fill="currentColor" />
+        </>
       ) : null}
       {name === "rotate" ? (
         <>

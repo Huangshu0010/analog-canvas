@@ -534,6 +534,50 @@ export const agentRazaviAuthoringCatalog = {
       variants: [],
     },
     {
+      symbolId: "variable-capacitor",
+      name: "Variable Capacitor",
+      category: "passive",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "P1",
+          role: "passive",
+          direction: "north",
+          visibility: "visible",
+        },
+        {
+          name: "P2",
+          role: "passive",
+          direction: "south",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
+    {
+      symbolId: "variable-inductor",
+      name: "Variable Inductor",
+      category: "passive",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "P1",
+          role: "passive",
+          direction: "north",
+          visibility: "visible",
+        },
+        {
+          name: "P2",
+          role: "passive",
+          direction: "south",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
+    {
       symbolId: "variable-resistor",
       name: "Variable Resistor",
       category: "passive",

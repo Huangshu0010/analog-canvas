@@ -28,30 +28,41 @@ async function createCell(
   await editor.getByRole("button", { name: "Create" }).click();
 }
 
-async function beginPortPlacement(
+async function placePort(
   page: import("@playwright/test").Page,
   options: {
     role: "net-port" | "cell-terminal";
     name: string;
     direction?: "input" | "output" | "inout" | "passive";
+    position: { x: number; y: number };
   },
 ): Promise<void> {
-  await page.getByTestId("shapes-chip-port").click();
-  const dialog = page.locator(".port-setup-dialog");
-  await dialog
-    .getByLabel(
-      options.role === "cell-terminal" ? "Formal Cell Pin" : "Free Net Port",
-    )
-    .check();
-  await dialog
-    .getByLabel(options.role === "cell-terminal" ? "Terminal name" : "Net name")
-    .fill(options.name);
-  if (options.role === "cell-terminal") {
-    await dialog
-      .getByLabel("Cell Pin direction")
-      .selectOption(options.direction ?? "passive");
+  // Port placement has no setup dialog: the Library entry carries the role,
+  // the Instance takes a generated name, and naming happens afterwards.
+  const formal = options.role === "cell-terminal";
+  await page
+    .getByTestId(formal ? "shapes-chip-cell-pin" : "shapes-chip-port")
+    .click();
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: options.position });
+  await page.keyboard.press("Escape");
+  const shelf = page.getByTestId("selection-shelf");
+  const wasExpanded = (await shelf.getAttribute("aria-expanded")) === "true";
+  if (!wasExpanded) await shelf.click();
+  const nameField = page.getByLabel(
+    formal ? "Cell Port terminal name" : "Net Port name",
+  );
+  await nameField.fill(options.name);
+  await nameField.blur();
+  if (formal && options.direction) {
+    await page
+      .getByLabel("Cell Port direction")
+      .selectOption(options.direction);
   }
-  await dialog.getByRole("button", { name: "Place" }).click();
+  // Leave the shelf as the caller found it so its own assertions still drive
+  // the panel state.
+  if (!wasExpanded) await shelf.click();
 }
 
 test("keeps direct Cell commands in one hierarchy row", async ({ page }) => {
@@ -141,16 +152,12 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await createCell(page, "ReusableStage");
 
   const canvas = page.getByTestId("schematic-canvas");
-  await beginPortPlacement(page, {
+  await placePort(page, {
     role: "cell-terminal",
     name: "Vout",
     direction: "output",
+    position: { x: 300, y: 180 },
   });
-  await canvas.click({ position: { x: 300, y: 180 } });
-  await expect(page.getByTestId("status")).toContainText(
-    "Added Cell port Vout",
-  );
-  await page.keyboard.press("Escape");
   await expect(page.getByTestId("active-instance-count")).toHaveText("1");
 
   await page.getByTestId("selection-shelf").click();
@@ -303,16 +310,12 @@ test("declares a top Formal Cell Pin and exports the top interface", async ({
   page,
 }) => {
   await page.goto("/editor");
-  await beginPortPlacement(page, {
+  await placePort(page, {
     role: "cell-terminal",
     name: "VIN",
     direction: "input",
+    position: { x: 300, y: 180 },
   });
-  await page
-    .getByTestId("schematic-canvas")
-    .click({ position: { x: 300, y: 180 } });
-  await expect(page.getByTestId("status")).toContainText("Added Cell port VIN");
-  await page.keyboard.press("Escape");
   await page.getByTestId("hit-P1").click();
   const shelf = page.getByTestId("selection-shelf");
   if ((await shelf.getAttribute("aria-expanded")) === "false") {
@@ -338,14 +341,12 @@ test("copies and independently deletes repeated Formal Cell Pin markers", async 
   });
   await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
-  await beginPortPlacement(page, {
+  await placePort(page, {
     role: "cell-terminal",
     name: "VIN",
     direction: "input",
+    position: { x: 280, y: 180 },
   });
-  await canvas.click({ position: { x: 280, y: 180 } });
-  await expect(page.getByTestId("status")).toContainText("Added Cell port VIN");
-  await page.keyboard.press("Escape");
 
   await page.getByTestId("hit-P1").click();
   const shelf = page.getByTestId("selection-shelf");
@@ -393,14 +394,11 @@ test("places a free Net Port whose rich label edits the Net name", async ({
   page,
 }) => {
   await page.goto("/editor");
-  await beginPortPlacement(page, { role: "net-port", name: "VIN" });
-  await page
-    .getByTestId("schematic-canvas")
-    .click({ position: { x: 300, y: 180 } });
-  await expect(page.getByTestId("status")).toContainText(
-    "Added Free Net Port VIN",
-  );
-  await page.keyboard.press("Escape");
+  await placePort(page, {
+    role: "net-port",
+    name: "VIN",
+    position: { x: 300, y: 180 },
+  });
   await expect(
     page.getByTestId("annotation-hit-instance-reference-P1"),
   ).toHaveCount(0);
@@ -439,12 +437,11 @@ test("returns a formal Cell Port to the Tray without deleting its interface", as
   await page.goto("/editor");
   await createCell(page, "ReusableStage");
   const canvas = page.getByTestId("schematic-canvas");
-  await beginPortPlacement(page, {
+  await placePort(page, {
     role: "cell-terminal",
     name: "Vout",
+    position: { x: 300, y: 180 },
   });
-  await canvas.click({ position: { x: 300, y: 180 } });
-  await page.keyboard.press("Escape");
   await expect(
     page.getByTestId("annotation-hit-instance-label-P1"),
   ).toBeVisible();
@@ -479,14 +476,11 @@ test("authors formal Cell parameters without entering Cell Symbol Layout", async
 }) => {
   await page.goto("/editor");
   await createCell(page, "ReusableStage");
-  await beginPortPlacement(page, {
+  await placePort(page, {
     role: "cell-terminal",
     name: "Vout",
+    position: { x: 300, y: 180 },
   });
-  await page
-    .getByTestId("schematic-canvas")
-    .click({ position: { x: 300, y: 180 } });
-  await page.keyboard.press("Escape");
 
   await runCellCommand(page, "Manage Cells…");
   const dialog = page.getByRole("dialog", { name: "Cell Manager" });
@@ -515,12 +509,11 @@ test("deletes a wired child Cell Port through the ordinary instance path", async
   await page.goto("/editor");
   await createCell(page, "ReusableStage");
   const canvas = page.getByTestId("schematic-canvas");
-  await beginPortPlacement(page, {
+  await placePort(page, {
     role: "cell-terminal",
     name: "Vout",
+    position: { x: 300, y: 180 },
   });
-  await canvas.click({ position: { x: 300, y: 180 } });
-  await page.keyboard.press("Escape");
   await page.getByTestId("hit-P1").click();
   await page.keyboard.press("Delete");
   await expect(page.getByTestId("hit-P1")).toHaveCount(0);

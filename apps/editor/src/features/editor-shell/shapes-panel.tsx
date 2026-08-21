@@ -3,7 +3,6 @@ import { useState } from "react";
 import type { ComponentInsertRequest } from "../component-insert/component-insert-request";
 import {
   fullInsertLaunch,
-  portSetupLaunch,
   type InsertLaunch,
 } from "../component-insert/insert-launch";
 import { SymbolArtwork } from "../component-insert/symbol-artwork";
@@ -15,6 +14,7 @@ import {
 
 const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   capacitor: "Cap",
+  "cell-pin": "Cell Pin",
   "closed-switch": "Closed",
   "current-source": "I Src",
   "ideal-switch": "Open",
@@ -30,8 +30,10 @@ const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   pnp: "PNP",
   "port-filled": "Filled",
   resistor: "Res",
+  "variable-capacitor": "Var Cap",
+  "variable-inductor": "Var Ind",
   "variable-resistor": "Var Res",
-  vdd: "VDD",
+  vdd: "Rail",
   "vdd-port": "V Port",
   "voltage-amplifier": "V Amp",
   "voltage-source": "V Src",
@@ -55,8 +57,38 @@ export function quickPlaceRequest(
     return {
       kind: "vdd-rail",
       symbolId: "vdd",
-      symbolName: "VDD Rail",
+      symbolName: "Power Rail",
       netName: "VDD",
+    };
+  }
+  // ADR 0034 keeps both Port roles explicit. The Library entry carries that
+  // choice, so placement starts immediately and the generated name is edited
+  // on the canvas instead of in a setup dialog.
+  if (symbolId === "cell-pin") {
+    return {
+      kind: "symbol",
+      symbolId: "port",
+      symbolName: symbol.name,
+      parameters: {},
+      initialRotation: 0,
+      showReference: false,
+      referenceText: null,
+      showValue: false,
+      portRole: "cell-terminal",
+      portDirection: "passive",
+    };
+  }
+  if (symbolId === "port" || symbolId === "port-filled") {
+    return {
+      kind: "symbol",
+      symbolId,
+      symbolName: symbol.name,
+      parameters: {},
+      initialRotation: 0,
+      showReference: false,
+      referenceText: null,
+      showValue: false,
+      portRole: "net-port",
     };
   }
   return {
@@ -76,14 +108,12 @@ export function quickPlaceRequest(
 
 export interface ShapesPanelProps {
   styleProfileId: string;
-  recentSymbolIds: readonly string[];
   open: boolean;
   onStartInsert(launch: InsertLaunch): void;
 }
 
 export function ShapesPanel({
   styleProfileId,
-  recentSymbolIds,
   open,
   onStartInsert,
 }: ShapesPanelProps) {
@@ -96,16 +126,7 @@ export function ShapesPanel({
     () => new Set(libraryGroups.map((group) => group.category)),
   );
 
-  const recents = recentSymbolIds
-    .map((symbolId) => findPaletteSymbol(styleProfileId, symbolId))
-    .filter((symbol): symbol is NonNullable<typeof symbol> => Boolean(symbol))
-    .slice(0, 6);
-
   function placeSymbol(symbolId: string): void {
-    if (symbolId === "port" || symbolId === "port-filled") {
-      onStartInsert(portSetupLaunch(symbolId));
-      return;
-    }
     const request = quickPlaceRequest(styleProfileId, symbolId);
     if (request) onStartInsert({ kind: "quick", request });
   }
@@ -195,46 +216,6 @@ export function ShapesPanel({
                 </details>
               ))}
             </div>
-          </div>
-        </details>
-
-        <details
-          className="shapes-fold"
-          open={recents.length > 0}
-          data-testid="shapes-fold-recent"
-        >
-          <summary className="shapes-fold-summary">
-            <span className="shapes-fold-label">Recent</span>
-            <span className="shapes-fold-count">{recents.length}</span>
-          </summary>
-          <div className="shapes-fold-body">
-            {recents.length > 0 ? (
-              <div className="shapes-grid">
-                {recents.map((symbol) => (
-                  <button
-                    key={`recent-${symbol.id}`}
-                    type="button"
-                    className="shapes-chip"
-                    data-testid={`shapes-recent-${symbol.id}`}
-                    aria-label={`Place ${symbol.name}`}
-                    title={`Place ${symbol.name}`}
-                    onClick={() => placeSymbol(symbol.id)}
-                  >
-                    <SymbolArtwork
-                      symbol={symbol}
-                      className="shapes-chip-art"
-                      paddingRatio={0.04}
-                    />
-                    <span>{libraryLabel(symbol.id, symbol.name)}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="shapes-hint">
-                Recent parts appear here after you place something. Use Insert
-                for the full catalog with parameters.
-              </p>
-            )}
           </div>
         </details>
       </div>

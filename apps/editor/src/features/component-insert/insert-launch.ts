@@ -18,13 +18,7 @@ export interface QuickInsertLaunch {
   readonly request: ComponentInsertRequest;
 }
 
-export interface PortSetupLaunch {
-  readonly kind: "port-setup";
-  readonly symbolId: "port" | "port-filled";
-}
-
-export type InsertLaunch =
-  InsertPickerLaunch | QuickInsertLaunch | PortSetupLaunch;
+export type InsertLaunch = InsertPickerLaunch | QuickInsertLaunch;
 
 export function fullInsertLaunch(
   initialSelectionId: string | null = null,
@@ -34,10 +28,4 @@ export function fullInsertLaunch(
 
 export function cellInsertLaunch(): InsertPickerLaunch {
   return { kind: "picker", scope: "cells" };
-}
-
-export function portSetupLaunch(
-  symbolId: "port" | "port-filled" = "port",
-): PortSetupLaunch {
-  return { kind: "port-setup", symbolId };
 }
