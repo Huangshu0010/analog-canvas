@@ -135,6 +135,7 @@ describe("Razavi symbol catalog", () => {
       ["port", "reviewed", "razavi-reference-v1"],
       ["port-filled", "reviewed", "razavi-reference-v1"],
       ["resistor", "reviewed", "razavi-reference-v1"],
+      ["variable-resistor", "reviewed", "razavi-reference-v1"],
       ["vdd-port", "reviewed", "razavi-reference-v1"],
       ["voltage-amplifier", "reviewed", "razavi-reference-v1"],
       ["voltage-source", "reviewed", "razavi-reference-v1"],
@@ -185,7 +186,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(18);
+    expect(razaviCatalogSymbols).toHaveLength(19);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -212,6 +213,7 @@ describe("Razavi symbol catalog", () => {
       "port",
       "port-filled",
       "resistor",
+      "variable-resistor",
       "vdd-port",
       "voltage-amplifier",
       "voltage-source",
@@ -221,6 +223,27 @@ describe("Razavi symbol catalog", () => {
         razaviProductSymbols.some((symbol) => symbol.id === entry.symbolId),
       );
     }
+  });
+
+  it("keeps the variable resistor electrically two-terminal with one diagonal adjustment arrow", () => {
+    const symbol = requireRazaviCatalogSymbol("variable-resistor");
+
+    expect(symbol.pins.map((pin) => pin.name)).toEqual(["1", "2"]);
+    expect(symbol.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "line",
+          part: "adjustment-arrow-shaft",
+          from: expect.objectContaining({ x: -12, y: 12 }),
+          to: expect.objectContaining({ x: 9, y: -9 }),
+        }),
+        expect.objectContaining({
+          kind: "polygon",
+          part: "adjustment-arrow-head",
+          fill: "foreground",
+        }),
+      ]),
+    );
   });
 
   it("does not publish removed standalone three-terminal MOS or VDD assets", () => {

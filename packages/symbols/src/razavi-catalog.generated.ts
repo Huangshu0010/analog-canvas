@@ -439,6 +439,30 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
   },
   {
+    symbolId: "variable-resistor",
+    name: "Variable Resistor",
+    category: "passive",
+    reviewStatus: "reviewed",
+    pinOrder: ["1", "2"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Manually selected adjustable presentation; structural SPICE R does not preserve a distinct variable-resistor symbol.",
+    assetPath: "variable-resistor.symbol.json",
+    assetHash:
+      "11f05c2caf9f889a9d55a0fc4b9e61519371e8c4373b4e63bd943bf464ef336c",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json",
+    },
+  },
+  {
     symbolId: "vdd-port",
     name: "VDD Power Port",
     category: "power",
@@ -2484,6 +2508,95 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           lineJoin: "miter",
           miterLimit: 12,
         },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "variable-resistor",
+    name: "Variable Resistor",
+    viewBox: {
+      x: -16,
+      y: -24,
+      width: 32,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "1",
+        role: "passive",
+        at: {
+          x: 0,
+          y: -20,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "2",
+        role: "passive",
+        at: {
+          x: 0,
+          y: 20,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "path",
+        data: "M 0 -20 L 0 -8.72093 L 5.372093 -6.395349 L -4.604651 -4.069767 L 5.372093 -1.162791 L -4.988372 1.744186 L 5.372093 4.651163 L -4.604651 7.55814 L 0 8.72093 L 0 20",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 12,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -12,
+          y: 12,
+        },
+        to: {
+          x: 9,
+          y: -9,
+        },
+        part: "adjustment-arrow-shaft",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: 12,
+            y: -12,
+          },
+          {
+            x: 6,
+            y: -10,
+          },
+          {
+            x: 10,
+            y: -6,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+        part: "adjustment-arrow-head",
       },
     ],
     variants: [],

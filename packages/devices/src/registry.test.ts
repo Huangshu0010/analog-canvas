@@ -28,6 +28,16 @@ describe("built-in device registry", () => {
     });
   });
 
+  it("models the variable resistor as the same two-terminal resistor primitive", () => {
+    expect(deviceDescriptor("variable-resistor")).toMatchObject({
+      deviceClass: "resistor",
+      referencePrefix: "R",
+      pinOrder: ["1", "2"],
+      targetPolicy: "builtin",
+      parameters: [{ name: "value", required: true, displayRole: "value" }],
+    });
+  });
+
   it("keeps reviewed net markers non-emitting", () => {
     expect(deviceDescriptor("ground")).toMatchObject({
       deviceClass: "net-marker",

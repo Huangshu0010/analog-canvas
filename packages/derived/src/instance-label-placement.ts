@@ -28,6 +28,7 @@ export function instanceLabelRowOffset(
 
 const SIDE_LABEL_SYMBOLS = new Set([
   "resistor",
+  "variable-resistor",
   "capacitor",
   "inductor",
   "voltage-source",

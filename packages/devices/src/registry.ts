@@ -10,6 +10,7 @@ import {
   pmosDevice,
   pnpDevice,
   resistorDevice,
+  variableResistorDevice,
   vddPortDevice,
   voltageSourceDevice,
 } from "./descriptors/index.js";
@@ -39,6 +40,7 @@ export function defineDeviceRegistry(
 
 export const deviceRegistry = defineDeviceRegistry([
   resistorDevice,
+  variableResistorDevice,
   capacitorDevice,
   inductorDevice,
   nmosDevice,

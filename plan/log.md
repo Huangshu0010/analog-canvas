@@ -3959,3 +3959,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   test-impact and diff checks, plus canonical `pnpm ci:check` passed with
   165 unit files / 990 tests, all builds/release checks, and 169 browser tests.
 - Commit status: ready to commit on `codex/vdd-named-power-hotfix`.
+
+## 2026-08-21 - Two-terminal variable resistor component
+
+- Changed areas: added a reviewed variable-resistor Symbol that composes the
+  existing vertical resistor body with one diagonal adjustment arrow; exposed
+  it as a two-pin Passive with shared resistor reference, value, label, and
+  SPICE/Spectre primitive semantics; regenerated runtime and Agent catalogs.
+- Validation: focused tests (7 files / 56 tests), final netlist-authoring rerun
+  (6 tests), symbol/Agent/MCP generated checks, typecheck, test-impact,
+  dependency-ordered editor production build, and diff checks passed.
+- Commit status: ready to commit on `codex/variable-resistor`.
