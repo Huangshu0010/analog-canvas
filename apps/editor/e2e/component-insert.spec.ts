@@ -400,7 +400,7 @@ test("publishes placement cancellation synchronously before rapid Copy", async (
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "c" }));
   });
   await expect(
-    page.getByRole("heading", { name: "Circuit Maker" }),
+    page.getByRole("heading", { name: "Analog Canvas" }),
   ).toBeVisible();
 
   for (const [index, symbolId] of symbols.entries()) {
@@ -447,7 +447,7 @@ test("copies a MOS whose bulk belongs to a shared supply Net", async ({
   await canvas.click({ position: { x: 620, y: 340 } });
   await expect(page.getByTestId("hit-M3")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Circuit Maker" }),
+    page.getByRole("heading", { name: "Analog Canvas" }),
   ).toBeVisible();
 });
 

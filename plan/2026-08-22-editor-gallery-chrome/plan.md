@@ -76,3 +76,12 @@ help and about dialogs, page title, PWA manifest name/short name — now
 reads Analog Canvas, matching the gallery and the README product identity.
 Validation: gallery spec 4/4, App/component unit suites 18 passed,
 typecheck, prettier, test-impact, diff checks green.
+
+Follow-up on the same branch: the first CI run exposed five stale
+old-name assertions the rename sweep missed (`Circuit Maker` headings in
+`component-insert`/`drafting`/`manual-editor` specs, the manifest-name
+expectation, and `scripts/release-smoke.mjs`'s index-title check, whose
+failure printed "Editor shell is missing"). All five updated to Analog
+Canvas and re-verified locally (5 Playwright tests green). Deliberately
+untouched: netlist/PDF/agent-kit "Interactive Circuit Maker" strings —
+those are export and Agent contract text, not app chrome.
