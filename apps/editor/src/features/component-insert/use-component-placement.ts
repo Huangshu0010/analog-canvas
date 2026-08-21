@@ -58,6 +58,17 @@ import type { PendingComponentPlacement } from "../../interaction/interaction-st
 
 type TransactionResult = { ok: boolean; revision: number };
 
+function nextFreePortNetName(document: SchematicDocument): string {
+  const occupiedNames = new Set(
+    document.nets.flatMap((net) =>
+      net.name?.trim() ? [net.name.trim().toLowerCase()] : [],
+    ),
+  );
+  let ordinal = 1;
+  while (occupiedNames.has(`net${ordinal}`)) ordinal += 1;
+  return `NET${ordinal}`;
+}
+
 export interface UseComponentPlacementOptions {
   recentStorageKey: string;
   document: SchematicDocument;
@@ -573,13 +584,9 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       ? options.document.nets.find((net) => net.id === contact.netId)
       : undefined;
     const name =
-      placementRequest.portName?.trim() || connectedNet?.name?.trim();
-    if (!name) {
-      options.setStatus(
-        "A Free Net Port needs a Net name or a named Net contact",
-      );
-      return;
-    }
+      placementRequest.portName?.trim() ||
+      connectedNet?.name?.trim() ||
+      nextFreePortNetName(options.document);
     const baseNetId = `net-port-${id.toLowerCase()}`;
     let netId = contact.netId ?? baseNetId;
     let netSuffix = 2;

@@ -466,13 +466,15 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
   await page.keyboard.press("p");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await expect(dialog.getByLabel("Port role")).toHaveValue("net-port");
-  await dialog.getByLabel("New Net Port name").fill("PORT_IN");
   await dialog.getByRole("button", { name: "Apply" }).click();
   await canvas.hover({ position: { x: 320, y: 180 } });
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 320, y: 180 } });
-  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("status")).toContainText(
+    "Added Free Net Port NET1",
+  );
   await expect(page.getByTestId("hit-P1")).toBeVisible();
+  await page.keyboard.press("Escape");
 });
 
 test("Ctrl+D deselects without allowing browser bookmarking", async ({

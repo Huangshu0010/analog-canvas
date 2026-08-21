@@ -1,5 +1,15 @@
 # Maintenance Log
 
+## 2026-08-21 - Complete unnamed Free Net Port placement
+
+- Changed areas: made isolated Free Net Port placement allocate the first
+  unused `NET<n>` name instead of rejecting the click; preserved explicit and
+  named-contact precedence; added a `P` shortcut browser regression.
+- Validation: focused Port browser regression, typecheck, format,
+  test-impact, and diff checks passed.
+- Commit status: committed on `codex/insert-unification` at the current branch
+  HEAD.
+
 ## 2026-08-21 - Unified Insert and Library orchestration
 
 - Changed areas: introduced an editor-local `InsertLaunch` contract with
