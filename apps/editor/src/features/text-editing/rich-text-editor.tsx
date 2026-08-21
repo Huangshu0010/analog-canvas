@@ -473,7 +473,16 @@ export function RichTextEditor({
           role="textbox"
           aria-label="Canvas text editor"
           aria-multiline="true"
-          style={{ fontSize: `${15.116 * sizeScale}px` }}
+          style={{
+            fontSize: `${15.116 * sizeScale}px`,
+            // Mirror the committed alignment so centered labels edit centered.
+            textAlign:
+              alignment === "middle"
+                ? "center"
+                : alignment === "end"
+                  ? "right"
+                  : "left",
+          }}
           onInput={sync}
           onSelect={rememberSelection}
           onKeyUp={rememberSelection}

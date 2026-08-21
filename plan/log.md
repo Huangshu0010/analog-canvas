@@ -3975,3 +3975,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   files / 995 tests, all builds and release checks, 169 browser tests) passed.
 - Commit status: completed on `codex/variable-resistor` across the feature,
   subcircuit, and final gate-closure commits.
+
+## 2026-08-21 - Centered click-to-edit rectangle labels
+
+- Changed areas: object-anchor resolution now targets drafting rectangles
+  (`@icm/derived` anchor lookup); render-svg paints object-anchored drafting
+  text vertically centered on the resolved anchor; new editor
+  `features/drafting/rectangle-label` module plus canvas double-click flow
+  create/reopen one centered label per rectangle on empty interior space; the
+  inline rich-text editor mirrors the committed alignment.
+- Validation: focused unit tests (derived, render-svg, editor drafting and
+  text-editing: 31 files / 155 tests), full drafting Playwright suite (27
+  passed including the new scenario), repository typecheck, test-impact,
+  and diff checks passed.
+- Commit status: completed on `claude/block-diagram-authoring` at the
+  user's direction; mainline merge gated on the remote required checks.
