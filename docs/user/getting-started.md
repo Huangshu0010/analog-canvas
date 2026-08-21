@@ -16,8 +16,11 @@ palette-first manual authoring; no Project file needs to be opened first.
 ## Edit and connect
 
 - Use **+ Component** to search the categorized built-in library, choose a
-  symbol by its inline preview, and click the canvas to place it. Imported
-  unplaced instances may still be dragged onto the canvas.
+  symbol by its inline preview, and click the canvas to place it. The
+  **Placement Tray** keeps imported or returned Instances without deleting
+  their netlist facts: drag one to the canvas, select **Place…** for a cursor
+  placement, or use **Place all** for a deterministic starter grid. **Return
+  to tray** is reversible through Undo and is distinct from permanent Delete.
 - Click to select, `Shift`/`Ctrl`-click to extend the selection, or drag blank
   canvas to box-select. Dragging one selected instance moves the whole
   selection atomically.

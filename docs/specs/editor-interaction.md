@@ -37,6 +37,13 @@ wire geometry by replacing affected terminal endpoints with Junctions, then
 removes electrical memberships, NoConnects, owned labels, layout references,
 and the Instance in one transaction. The formal-terminal and caller projection
 is appended only by the Project transaction.
+
+The **Placement Tray** is the only retained-unplaced presentation surface. A
+tray item may be dragged, entered into the ordinary placement cursor, or placed
+with **Place all** into a deterministic starter grid in the current view.
+**Return to tray** and **Return all** use the same lifecycle planner and retain
+electrical facts; permanent Delete remains a separate action. Formal Cell Ports
+cannot be returned because their placement defines a stable interface marker.
 Definition-level pin placement data remains compatible, while
 new interfaces use deterministic direction-aware automatic layout.
 

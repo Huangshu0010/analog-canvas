@@ -2392,6 +2392,50 @@ body {
   box-shadow: none;
 }
 
+.placement-tray {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.placement-tray h2,
+.placement-tray p {
+  margin: 0;
+}
+
+.placement-tray p {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-sm);
+  line-height: 1.35;
+}
+
+.placement-tray-list {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.placement-tray-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.placement-tray-entry button {
+  margin-top: 0;
+}
+
+.placement-tray-entry button:first-child {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.placement-tray-entry button:last-child {
+  width: auto;
+  white-space: nowrap;
+}
+
 .context-actions label,
 .property-section label {
   display: grid;

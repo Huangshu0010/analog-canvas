@@ -100,6 +100,52 @@ test("writes a manual netlist reference into the placed Instance", async ({
     .toContain('"reference": "R7"');
 });
 
+test("returns a component to the Placement Tray and places the retained Instance again", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await chooseComponent(page, "resistor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 320, y: 220 } });
+  await page.keyboard.press("Escape");
+  await page.getByTestId("hit-R1").click();
+  await page.getByTestId("selection-shelf").click();
+
+  await page
+    .getByRole("button", { name: "Return component to Placement Tray" })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Placement Tray" }),
+  ).toContainText("1 retained");
+  await expect(page.getByTestId("unplaced-R1")).toContainText("R1 · resistor");
+  await expect(page.getByTestId("hit-R1")).toHaveCount(0);
+
+  await page
+    .getByRole("button", { name: "Place R1 · resistor from tray" })
+    .click();
+  await canvas.hover({ position: { x: 480, y: 260 } });
+  await expect(page.getByTestId("component-placement-preview")).toBeVisible();
+  await canvas.click({ position: { x: 480, y: 260 } });
+
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Placement Tray" }),
+  ).toContainText("0 retained");
+  await expect(page.getByTestId("revision")).toHaveText("3");
+
+  await page.getByTestId("hit-R1").click();
+  await page
+    .getByRole("button", { name: "Return component to Placement Tray" })
+    .click();
+  await page
+    .getByRole("region", { name: "Placement Tray" })
+    .getByRole("button", { name: "Place all" })
+    .click();
+
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("5");
+});
+
 test("refreshes explicitly only after flushing and automatically restoring recovery", async ({
   page,
 }) => {

@@ -237,6 +237,32 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     );
   };
 
+  const placeRetainedInstance = (instanceId: string, position: Point): void => {
+    const instance = options.document.instances.find(
+      (candidate) => candidate.id === instanceId,
+    );
+    if (!instance || instance.placement !== null) {
+      options.setStatus("This Placement Tray entry is no longer available");
+      options.cancelAllTransientInteraction();
+      return;
+    }
+    const result = options.transact([
+      {
+        kind: "place_instance",
+        instanceId,
+        placement: {
+          position,
+          rotation: options.componentPlacementRotation,
+          mirror: options.componentPlacementMirror,
+        },
+      },
+    ]);
+    if (!result.ok) return;
+    options.selectOnly("instance", [instanceId]);
+    options.cancelAllTransientInteraction();
+    options.setStatus(`Placed ${instanceId} from the Placement Tray`);
+  };
+
   const placeNewCell = (
     symbolId: string,
     position: Point,
@@ -617,7 +643,10 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return;
     }
     if (!options.pendingSymbolId || !options.pendingComponentPlacement) return;
-    if (options.pendingComponentPlacement.kind === "cell-port") {
+    if (options.pendingComponentPlacement.kind === "retained-instance") {
+      const instanceId = options.pendingComponentPlacement.instanceId;
+      if (instanceId) placeRetainedInstance(instanceId, point);
+    } else if (options.pendingComponentPlacement.kind === "cell-port") {
       placeNewCellPort(
         options.pendingSymbolId as "port" | "port-filled",
         point,
@@ -646,7 +675,32 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     }
   };
 
+  const beginRetainedInstancePlacement = (instanceId: string): void => {
+    const instance = options.document.instances.find(
+      (candidate) => candidate.id === instanceId,
+    );
+    if (!instance || instance.placement !== null) {
+      options.setStatus("This Placement Tray entry is no longer available");
+      return;
+    }
+    options.cancelAllTransientInteraction();
+    options.beginComponentPlacement({
+      kind: "retained-instance",
+      instanceId,
+      symbolId: instance.symbolId,
+      parameters: {},
+      initialRotation: 0,
+      showReference: false,
+      referenceText: null,
+      showValue: false,
+    });
+    options.setStatus(
+      `Place ${instanceId} from the Placement Tray · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
+    );
+  };
+
   return {
+    beginRetainedInstancePlacement,
     beginInsertedComponentPlacement,
     cancelComponentInsert,
     cellInsertOnly,

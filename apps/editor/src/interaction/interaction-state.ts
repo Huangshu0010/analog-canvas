@@ -28,7 +28,12 @@ export type DrawingTool = Extract<
 export type InteractionMode = InteractionState<unknown>["kind"];
 
 export interface PendingComponentPlacement {
-  kind: "symbol" | "cell" | "external-subcircuit" | "cell-port";
+  kind:
+    | "symbol"
+    | "cell"
+    | "external-subcircuit"
+    | "cell-port"
+    | "retained-instance";
   symbolId: string;
   parameters: Record<string, string>;
   initialRotation: 0 | 90 | 180 | 270;
@@ -41,6 +46,8 @@ export interface PendingComponentPlacement {
   masterName?: string;
   formalName?: string;
   direction?: "input" | "output" | "inout" | "passive";
+  /** Existing unplaced Instance being returned from the Placement Tray. */
+  instanceId?: string;
 }
 
 export interface CopyPlacement<TClipboard> {
@@ -180,7 +187,8 @@ function sameComponentPlacement(
     left.definitionId !== right.definitionId ||
     left.masterName !== right.masterName ||
     left.formalName !== right.formalName ||
-    left.direction !== right.direction
+    left.direction !== right.direction ||
+    left.instanceId !== right.instanceId
   ) {
     return false;
   }

@@ -3760,4 +3760,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: focused lifecycle/transaction/protocol/selection/Agent contracts
   (5 files / 56 tests), typecheck, format, docs, MCP-resource freshness,
   test-impact, and diff checks passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  `c2295d6e`.
+
+## 2026-08-21 - Placement Tray controls
+
+- Changed areas: replaced the bare unplaced list with a semantic Placement
+  Tray; added single cursor placement, deterministic Place all, Return to tray,
+  Return all, and a clear permanent-delete distinction.
+- Validation: focused tray/interaction/connectivity/lifecycle contracts (4
+  files / 24 tests), focused browser tray flow, typecheck, format, docs,
+  test-impact, and diff checks passed.
 - Commit status: pending commit on `codex/schematic-instance-lifecycle-ux`.

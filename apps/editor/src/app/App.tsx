@@ -34,6 +34,7 @@ import {
   planSetCellSymbolPresentation,
   planSetCellTerminalPlacement,
   planUpdateCellTerminalDirection,
+  planInstanceUnplacement,
   proposeSetCellFormalParameters,
   proposeUpsertExternalSubcircuitDefinition,
   findCellTerminalCaller,
@@ -156,6 +157,7 @@ import {
 } from "../features/component-insert/insert-component-dialog";
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
+import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
 import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
 import { vddPowerLabelAnnotation } from "../features/component-insert/vdd-power-label";
@@ -786,6 +788,15 @@ export function App({
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
+  const formalPortInstanceIds = new Set(
+    (document.netlist?.terminals ?? []).map(
+      (terminal) => terminal.interfaceInstanceId,
+    ),
+  );
+  const returnablePlacedInstances = document.instances.filter(
+    (instance) =>
+      instance.placement !== null && !formalPortInstanceIds.has(instance.id),
+  );
   const selectedIds = visualSelection.instanceIds;
   const projectConnectivityIndex = useMemo(
     () => buildProjectConnectivityIndex(project, resolver),
@@ -1378,6 +1389,7 @@ export function App({
     ? resolver.resolve(pendingSymbolId)?.definition
     : undefined;
   const {
+    beginRetainedInstancePlacement: beginRetainedInstancePlacementFromHook,
     beginInsertedComponentPlacement: beginInsertedComponentPlacementFromHook,
     cancelComponentInsert: cancelComponentInsertFromHook,
     commitPendingPlacementAt: commitPendingPlacementAtFromHook,
@@ -3681,6 +3693,65 @@ export function App({
       },
     ]);
     selectOnly("instance", [instanceId]);
+  }
+
+  function placeAllFromTray(): void {
+    const edits = planPlaceAllUnplacedInstances(document, viewBox);
+    if (edits.length === 0) {
+      setStatus("The Placement Tray is empty");
+      return;
+    }
+    if (transact(edits).ok) {
+      resetSelection();
+      setStatus(
+        `Placed ${edits.length} retained ${edits.length === 1 ? "Instance" : "Instances"} in a deterministic canvas grid`,
+      );
+    }
+  }
+
+  function returnInstancesToTray(instanceIds: readonly string[]): void {
+    if (instanceIds.length === 0) {
+      setStatus("There are no returnable placed Instances");
+      return;
+    }
+    try {
+      const edits = planInstanceUnplacement(
+        document,
+        resolver,
+        instanceIds,
+        ++uniqueSuffixCounter.current,
+      );
+      if (edits.length === 0) {
+        setStatus("Those Instances are already retained in the Placement Tray");
+        return;
+      }
+      if (transact(edits).ok) {
+        resetSelection();
+        setStatus(
+          `Returned ${instanceIds.length} ${instanceIds.length === 1 ? "Instance" : "Instances"} to the Placement Tray; electrical facts were retained`,
+        );
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not return to tray",
+      );
+    }
+  }
+
+  function placementTrayIdentity(
+    instance: SchematicDocument["instances"][number],
+  ): string {
+    const formalName = document.netlist?.terminals.find(
+      (terminal) => terminal.interfaceInstanceId === instance.id,
+    )?.name;
+    const schematicName = flattenRichText(
+      instance.schematicName ?? { runs: [] },
+    );
+    const primary =
+      instance.netlist?.reference ??
+      formalName ??
+      (schematicName || "Unreferenced");
+    return `${primary} · ${instance.symbolId}`;
   }
 
   function selectionVisualMoveEdits(
@@ -7859,6 +7930,17 @@ export function App({
                         >
                           Mirror top/bottom
                         </button>
+                        {!selectedFormalTerminal ? (
+                          <button
+                            type="button"
+                            aria-label="Return component to Placement Tray"
+                            onClick={() =>
+                              returnInstancesToTray([selectedInstance.id])
+                            }
+                          >
+                            Return to tray
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   ) : null}
@@ -8157,28 +8239,80 @@ export function App({
                     );
                   })()
                 : null}
-              {unplaced.length > 0 ? <h3>Unplaced Instances</h3> : null}
-              {unplaced.map((instance) => (
-                <button
-                  type="button"
-                  draggable
-                  data-testid={`unplaced-${instance.id}`}
-                  key={instance.id}
-                  onClick={() => {
-                    selectOnly("instance", [instance.id]);
-                    setStatus(`Selected ${instance.id}`);
-                  }}
-                  onDragStart={(event) => {
-                    event.dataTransfer.setData(
-                      "application/x-icm-instance",
-                      instance.id,
-                    );
-                    event.dataTransfer.effectAllowed = "move";
-                  }}
-                >
-                  {instance.id} · {instance.symbolId}
-                </button>
-              ))}
+              <section
+                className="context-actions placement-tray"
+                aria-label="Placement Tray"
+              >
+                <h2>Placement Tray</h2>
+                <p>
+                  {unplaced.length} retained · drag to the canvas, choose Place,
+                  or arrange every retained Instance in a starter grid.
+                </p>
+                <div className="component-mirror-row">
+                  <button
+                    type="button"
+                    onClick={placeAllFromTray}
+                    disabled={unplaced.length === 0}
+                  >
+                    Place all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      returnInstancesToTray(
+                        returnablePlacedInstances.map(
+                          (instance) => instance.id,
+                        ),
+                      )
+                    }
+                    disabled={returnablePlacedInstances.length === 0}
+                  >
+                    Return all
+                  </button>
+                </div>
+                {unplaced.length === 0 ? (
+                  <small>No retained Instances.</small>
+                ) : (
+                  <div className="placement-tray-list">
+                    {unplaced.map((instance) => (
+                      <div
+                        className="placement-tray-entry"
+                        draggable
+                        data-testid={`unplaced-${instance.id}`}
+                        key={instance.id}
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData(
+                            "application/x-icm-instance",
+                            instance.id,
+                          );
+                          event.dataTransfer.effectAllowed = "move";
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            selectOnly("instance", [instance.id]);
+                            setStatus(
+                              `Selected ${placementTrayIdentity(instance)}`,
+                            );
+                          }}
+                        >
+                          {placementTrayIdentity(instance)}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Place ${placementTrayIdentity(instance)} from tray`}
+                          onClick={() =>
+                            beginRetainedInstancePlacementFromHook(instance.id)
+                          }
+                        >
+                          Place…
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
               {selectedInstance && selectedBulkResolution ? (
                 <section
                   className="context-actions"
