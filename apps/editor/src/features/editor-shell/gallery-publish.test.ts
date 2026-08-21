@@ -52,7 +52,7 @@ describe("publishProjectToGallery", () => {
       fetchReturning(201, { id: "entry-1" }, seen),
     );
     expect(outcome).toEqual({ status: "published", id: "entry-1" });
-    expect(seen.url).toBe("/api/gallery");
+    expect(seen.url).toBe("/api/gallery/submissions");
     expect((seen.init?.headers as Record<string, string>).authorization).toBe(
       "Bearer secret-token",
     );
