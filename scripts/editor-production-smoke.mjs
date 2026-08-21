@@ -48,7 +48,15 @@ async function main() {
       if (message.type() === "error") consoleErrors.push(message.text());
     });
     page.on("pageerror", (error) => consoleErrors.push(error.message));
+    // The production build serves two surfaces: the gallery feed at the
+    // root and the full editor at /editor. Both must mount.
     await page.goto(url, { waitUntil: "networkidle" });
+    await page.waitForSelector('[data-testid="gallery-feed"]', {
+      timeout: 10_000,
+    });
+    await page.goto(new URL("editor", url).href, {
+      waitUntil: "networkidle",
+    });
     await page.waitForSelector('[data-testid="schematic-canvas"]', {
       timeout: 10_000,
     });
