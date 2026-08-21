@@ -417,3 +417,39 @@ describe("CircuitProject schema", () => {
     expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
   });
 });
+
+describe("presentation style overrides", () => {
+  function projectWithOverrides(styleOverrides: unknown) {
+    const project = JSON.parse(
+      JSON.stringify(createEmptyProject("style", "Style")),
+    );
+    project.documents[0].presentation.styleOverrides = styleOverrides;
+    return project;
+  }
+
+  it("accepts bounded scale factors and preserves them", () => {
+    const parsed = CircuitProjectSchema.parse(
+      projectWithOverrides({ fontScale: 1.5, junctionRadiusScale: 0.5 }),
+    );
+    expect(parsed.documents[0]!.presentation.styleOverrides).toEqual({
+      fontScale: 1.5,
+      junctionRadiusScale: 0.5,
+    });
+  });
+
+  it("rejects out-of-range factors and unknown knobs", () => {
+    expect(
+      CircuitProjectSchema.safeParse(projectWithOverrides({ fontScale: 0.4 }))
+        .success,
+    ).toBe(false);
+    expect(
+      CircuitProjectSchema.safeParse(
+        projectWithOverrides({ wireStrokeScale: 2.5 }),
+      ).success,
+    ).toBe(false);
+    expect(
+      CircuitProjectSchema.safeParse(projectWithOverrides({ glowIntensity: 1 }))
+        .success,
+    ).toBe(false);
+  });
+});

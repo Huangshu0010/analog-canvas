@@ -68,11 +68,11 @@ describe("Project persistence", () => {
     }
   });
 
-  it("upgrades schema-19 Projects to repeated formal marker arrays", () => {
+  it("upgrades schema-20 Projects by stamping the current version", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     );
-    source.schemaVersion = 19;
+    source.schemaVersion = 20;
     source.documents[0].instances.push({
       id: "P-object",
       symbolId: "port",
@@ -129,16 +129,11 @@ describe("Project persistence", () => {
         locked: false,
       },
     );
-    const previousTerminal = source.documents[0].netlist.terminals[0];
-    previousTerminal.interfaceInstanceId =
-      previousTerminal.interfaceInstanceIds[0];
-    delete previousTerminal.interfaceInstanceIds;
-
     const migrated = parseProjectWithMetadata(JSON.stringify(source));
     expect(migrated).toMatchObject({
-      sourceSchemaVersion: 19,
+      sourceSchemaVersion: 20,
       migrated: true,
-      project: { schemaVersion: 20 },
+      project: { schemaVersion: 21 },
     });
     expect(
       migrated.project.documents[0]!.annotations.map(
@@ -161,7 +156,7 @@ describe("Project persistence", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     );
-    source.schemaVersion = 19;
+    source.schemaVersion = 20;
     const project = parseProject(JSON.stringify(source));
     project.documents[0]!.annotations.push({
       id: "value-fraction",
@@ -182,7 +177,7 @@ describe("Project persistence", () => {
     });
 
     const reopened = parseProject(serializeProject(project));
-    expect(reopened.schemaVersion).toBe(20);
+    expect(reopened.schemaVersion).toBe(21);
     expect(
       reopened.documents[0]!.annotations[0]?.content!.runs[0],
     ).toMatchObject({ kind: "fraction" });
@@ -192,9 +187,9 @@ describe("Project persistence", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/must be 19 or 20/);
+    ).toThrow(/must be 20 or 21/);
     expect(() =>
-      parseProject(JSON.stringify({ ...project, schemaVersion: 18 })),
-    ).toThrow(/must be 19 or 20/);
+      parseProject(JSON.stringify({ ...project, schemaVersion: 19 })),
+    ).toThrow(/must be 20 or 21/);
   });
 });

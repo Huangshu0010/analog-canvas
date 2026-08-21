@@ -1,6 +1,6 @@
 # Project File Compatibility
 
-The released Project schema version is `20`. It retains schematic-only
+The released Project schema version is `21`. It retains schematic-only
 hierarchy integrity, a Project structural revision, stable formal Cell ports,
 and definition-level Cell symbol presentation. It also has one typed Instance
 netlist authority, formal Cell parameters, and Project-local external
@@ -10,14 +10,14 @@ from its internal schematic or netlist reference until the user edits it. A
 free Port is identified by its Net name; a formal Cell Pin is identified by its
 terminal name, such as `Vout`. Their bound annotations may persist same-text
 RichText formatting but cannot store a divergent alias. A
-canonical v20 file can be opened, saved, reopened, and saved again without
+canonical v21 file can be opened, saved, reopened, and saved again without
 byte drift.
 
-Schema v19 is accepted through one direct upgrade to v20. The upgrade lifts
-each formal Cell terminal's singular marker ID into a one-element marker-ID
-array without changing connectivity. The next save writes v20. The original
-file is never overwritten silently. Schema v18 and older, and versions newer
-than v20, are rejected; there is no accumulating
+Schema v20 is accepted through one direct upgrade to v21. The upgrade stamps
+the current version; the optional bounded document style overrides introduced
+by v21 stay absent, so nothing changes visually. The next save writes v21. The
+original file is never overwritten silently. Schema v19 and older, and
+versions newer than v21, are rejected; there is no accumulating
 migration registry.
 
 The canonical-current corpus at

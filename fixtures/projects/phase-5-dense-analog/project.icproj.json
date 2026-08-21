@@ -354,7 +354,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-phase-5-dense-analog",
   "name": "Current Differential Stage",
-  "schemaVersion": 20,
+  "schemaVersion": 21,
   "source": {
     "dialect": "none",
     "entry": null,

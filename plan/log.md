@@ -4080,4 +4080,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   and diff checks passed. pnpm is unavailable on this machine, so the
   canonical mainline gate is delegated to the remote required checks.
 - Commit status: completed on `claude/peaceful-poitras-f8ccde`; mainline
+
+## 2026-08-21 - Document style overrides (schema 21)
+
+- Changed areas: schema-21 `presentation.styleOverrides` (five bounded scale
+  factors) with ADR 0038 and the rolling 20->21 upgrade; single
+  overrides-aware profile resolution in @icm/derived consumed by derived
+  geometry, render-svg, and the editor; `set_presentation_style` extended
+  (set/keep/clear, undoable); Draw-menu Document style dialog; fixtures,
+  bundled examples, agent-api/MCP artifacts, and version documentation
+  updated.
+- Validation: full unit suite (172 files / 1057 tests), new Playwright
+  document-style scenario, typecheck, prettier, markdown links,
+  export-golden, agent-api/MCP generator checks, test-impact, diff checks.
+- Commit status: completed on `claude/document-style-overrides`; mainline
   merge gated on the remote required checks.

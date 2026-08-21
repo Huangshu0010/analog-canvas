@@ -17,7 +17,7 @@ import {
   measureRichTextDocument,
   richTextMetrics,
 } from "./rich-text-layout.js";
-import { resolveSchematicStyleProfile } from "./style-profile.js";
+import { resolveDocumentStyleProfile } from "./style-profile.js";
 
 // ADR 0010 / WP-R1: the single derived-geometry entry for DraftingObjects.
 // Renderer, Editor overlay, and Agent Snapshot consume ONLY this result; no
@@ -227,7 +227,7 @@ function resolveText(
     rotation,
     object.content,
     richTextMetrics(
-      resolveSchematicStyleProfile(document.presentation.styleProfileId),
+      resolveDocumentStyleProfile(document.presentation),
       object.typographyToken,
       object.styleOverride?.sizeScale,
     ),
@@ -361,7 +361,7 @@ function resolveCallout(
     rotation,
     object.content,
     richTextMetrics(
-      resolveSchematicStyleProfile(document.presentation.styleProfileId),
+      resolveDocumentStyleProfile(document.presentation),
       object.typographyToken,
       object.styleOverride?.sizeScale,
     ),

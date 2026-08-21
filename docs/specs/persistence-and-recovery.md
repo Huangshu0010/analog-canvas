@@ -4,7 +4,7 @@ Status: `accepted`
 
 Primary owner: `packages/project-protocol` and the editor document lifecycle
 
-Portable Projects use canonical schema-20 `.icproj.json`. The current-only
+Portable Projects use canonical schema-21 `.icproj.json`. The current-only
 model in `packages/model` validates the normalized shape;
 `packages/project-protocol` owns parsing, rolling compatibility diagnostics,
 and canonical serialization. Persistence validates
@@ -14,7 +14,7 @@ older and future versions are rejected. Migration runs only at ingestion, and
 serialization remains schema 20.
 
 Recovery state is a non-authoritative browser safety copy. It may restore a
-complete schema-20 Project or a schema-19 record that validates after the direct
+complete schema-21 Project or a schema-20 record that validates after the direct
 upgrade, associated with a recorded working-copy session.
 Corrupt, incompatible, or partial recovery data is discarded or retained as raw
 data without changing the live Project. Credentials, Agent bearer tokens,

@@ -11,7 +11,7 @@ import {
   resolveDocumentRoutingGeometry,
   type ResolvedDocumentRoutingGeometry,
 } from "./resolved-route-geometry.js";
-import { resolveSchematicStyleProfile } from "./style-profile.js";
+import { resolveDocumentStyleProfile } from "./style-profile.js";
 import { deriveDocumentContactEvidence } from "./contact.js";
 import { resolveAnnotationPresentation } from "./annotation-presentation.js";
 import { resolveAnnotationText } from "./annotation-text.js";
@@ -627,9 +627,7 @@ export function diagnoseVisualQuality(
     });
   }
 
-  const styleProfile = resolveSchematicStyleProfile(
-    document.presentation.styleProfileId,
-  );
+  const styleProfile = resolveDocumentStyleProfile(document.presentation);
   const annotationBounds = document.annotations
     .filter(
       (annotation) =>

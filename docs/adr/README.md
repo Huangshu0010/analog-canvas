@@ -77,6 +77,8 @@ The named-power, Power Rail, and MOS bulk-default decision is
 [`0036-named-power-and-mos-bulk-semantics.md`](0036-named-power-and-mos-bulk-semantics.md).
 The repeated formal-Port marker and schema-20 decision is
 [`0037-repeated-formal-port-markers.md`](0037-repeated-formal-port-markers.md).
+The document style-overrides and schema-21 decision is
+[`0038-document-style-overrides.md`](0038-document-style-overrides.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

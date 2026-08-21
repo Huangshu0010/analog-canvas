@@ -151,6 +151,78 @@ export function resolveSchematicStyleProfile(
   return profile;
 }
 
+/**
+ * Presentation intent slice the document-level resolver consumes. Matches
+ * `PresentationIntent` structurally so callers pass `document.presentation`.
+ */
+export interface StyleOverridablePresentation {
+  readonly styleProfileId: string;
+  readonly styleOverrides?:
+    | {
+        readonly fontScale?: number | undefined;
+        readonly wireStrokeScale?: number | undefined;
+        readonly symbolStrokeScale?: number | undefined;
+        readonly annotationStrokeScale?: number | undefined;
+        readonly junctionRadiusScale?: number | undefined;
+      }
+    | undefined;
+}
+
+const overriddenProfiles = new WeakMap<object, SchematicStyleProfile>();
+
+/**
+ * The document-facing profile resolution: the approved base profile with the
+ * persisted `styleOverrides` scales composed on top. Absent overrides return
+ * the base profile object itself, so untouched documents render
+ * byte-identically. Font scale applies to the whole typography system; wire,
+ * symbol-artwork, and drafting/annotation strokes and the junction-dot
+ * radius scale independently. Results are cached per persisted overrides
+ * object so repeated resolutions stay referentially stable.
+ */
+export function resolveDocumentStyleProfile(
+  presentation: StyleOverridablePresentation,
+): SchematicStyleProfile {
+  const base = resolveSchematicStyleProfile(presentation.styleProfileId);
+  const overrides = presentation.styleOverrides;
+  if (!overrides) return base;
+  const cached = overriddenProfiles.get(overrides);
+  if (cached && cached.id === base.id) return cached;
+  const font = overrides.fontScale ?? 1;
+  const wire = overrides.wireStrokeScale ?? 1;
+  const symbol = overrides.symbolStrokeScale ?? 1;
+  const annotation = overrides.annotationStrokeScale ?? 1;
+  const junction = overrides.junctionRadiusScale ?? 1;
+  const profile: SchematicStyleProfile = {
+    ...base,
+    strokes: {
+      ...base.strokes,
+      wire: base.strokes.wire * wire,
+      symbol: base.strokes.symbol * symbol,
+      normal: base.strokes.normal * symbol,
+      emphasis: base.strokes.emphasis * symbol,
+      ground: base.strokes.ground * symbol,
+      supply: base.strokes.supply * symbol,
+      powerRail: base.strokes.powerRail * symbol,
+      annotation: base.strokes.annotation * annotation,
+    },
+    nodes: {
+      ...base.nodes,
+      junctionRadius: base.nodes.junctionRadius * junction,
+    },
+    typography: {
+      ...base.typography,
+      instanceFontSize: base.typography.instanceFontSize * font,
+      netFontSize: base.typography.netFontSize * font,
+      powerFontSize: base.typography.powerFontSize * font,
+      annotationFontSize: base.typography.annotationFontSize * font,
+      polarityFontSize: base.typography.polarityFontSize * font,
+      captionFontSize: base.typography.captionFontSize * font,
+    },
+  };
+  overriddenProfiles.set(overrides, profile);
+  return profile;
+}
+
 export function strokeWidthForRole(
   profile: SchematicStyleProfile,
   role: SymbolStrokeRole,
