@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -89,4 +89,16 @@ feat(editor): unify instance display authoring
 
 ## Outcome
 
-To be completed with actual changed areas, validation, and commit evidence.
+The editor now uses one category-aware display factory: ordinary devices show a
+designator/value on request, internal Cells and external calls show their
+designator plus Cell/master presentation, and formal Ports show their formal
+terminal name only. Component insertion now persists a user-entered reference,
+Properties separates Netlist Reference from optional Schematic Alias, and the
+Instance Table exposes internal ID, reference, alias and resolved master in
+separate columns.
+
+Validation passed: focused unit contracts (7 files / 25 tests), focused browser
+flows (4 tests), `pnpm typecheck`, `pnpm format:check`, `pnpm docs:check`,
+`pnpm test:impact -- --base origin/main`, and `git diff --check`.
+Implementation committed as `0da8da3c` (`feat(editor): unify instance display
+authoring`).

@@ -3739,3 +3739,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   / 102 tests), typecheck, format, docs, test-impact, and diff checks passed.
 - Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
   `d70c84bc`.
+
+## 2026-08-21 - Unified instance display authoring
+
+- Changed areas: introduced a shared editor display factory; made manual
+  device, Cell, external-call and formal-Port labels category-correct; persisted
+  insertion references; separated Reference and Alias in Properties; and added
+  explicit ID/Reference/Alias/Master columns to Instance Table.
+- Validation: focused unit contracts (7 files / 25 tests), focused Playwright
+  flows (4 tests), typecheck, format, docs, test-impact, and diff checks passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  `0da8da3c`.
