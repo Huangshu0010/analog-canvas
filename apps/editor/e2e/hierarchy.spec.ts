@@ -329,6 +329,66 @@ test("declares a top Formal Cell Pin and exports the top interface", async ({
   await expect(preflight).not.toContainText("MISSING_DEVICE_DEFINITION");
 });
 
+test("copies and independently deletes repeated Formal Cell Pin markers", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+  await page.goto("/");
+  const canvas = page.getByTestId("schematic-canvas");
+  await beginPortPlacement(page, {
+    role: "cell-terminal",
+    name: "VIN",
+    direction: "input",
+  });
+  await canvas.click({ position: { x: 280, y: 180 } });
+  await expect(page.getByTestId("status")).toContainText("Added Cell port VIN");
+  await page.keyboard.press("Escape");
+
+  await page.getByTestId("hit-P1").click();
+  const shelf = page.getByTestId("selection-shelf");
+  if ((await shelf.getAttribute("aria-expanded")) === "false") {
+    await shelf.click();
+  }
+  await expect(page.getByLabel("Cell Port properties")).toBeVisible();
+  const canvasBox = await canvas.boundingBox();
+  expect(canvasBox).not.toBeNull();
+  await page.keyboard.press("c");
+  await page.mouse.move(canvasBox!.x + 440, canvasBox!.y + 180);
+  await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+  await canvas.click({ position: { x: 440, y: 180 } });
+  await expect(page.getByTestId("status")).toContainText("Copied 1 components");
+  if ((await shelf.getAttribute("aria-expanded")) === "false") {
+    await shelf.click();
+  }
+  await expect(page.getByLabel("Cell Port properties")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByTestId("hit-P1-copy-1")).toBeVisible();
+  await page.getByTestId("hit-P1").click();
+  await page.keyboard.press("Delete");
+  await expect(page.getByTestId("hit-P1")).toHaveCount(0);
+  await expect(page.getByTestId("hit-P1-copy-1")).toBeVisible();
+
+  await page.getByTestId("hit-P1-copy-1").click();
+  if ((await shelf.getAttribute("aria-expanded")) === "false") {
+    await shelf.click();
+  }
+  await expect(
+    page
+      .getByLabel("Cell Port properties")
+      .getByLabel("Cell Port terminal name"),
+  ).toHaveValue("VIN");
+  await clickCommand(page, "Netlist", "Run Preflight…");
+  await expect(
+    page
+      .getByRole("dialog", { name: "Netlist Preflight" })
+      .getByTestId("netlist-preview"),
+  ).toContainText(".subckt Main VIN");
+});
+
 test("places a free Net Port whose rich label edits the Net name", async ({
   page,
 }) => {

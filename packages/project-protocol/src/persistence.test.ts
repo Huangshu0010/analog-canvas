@@ -68,15 +68,14 @@ describe("Project persistence", () => {
     }
   });
 
-  it("upgrades schema-18 Projects with explicit Net routing origins", () => {
+  it("upgrades schema-19 Projects to repeated formal marker arrays", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     );
-    source.schemaVersion = 18;
+    source.schemaVersion = 19;
     source.documents[0].instances.push({
       id: "P-object",
       symbolId: "port",
-      schematicReference: "P1",
       placement: null,
     });
     source.documents[0].instances.push({
@@ -94,7 +93,7 @@ describe("Project persistence", () => {
           name: "Vout",
           netId: "net-vout",
           direction: "output",
-          interfaceInstanceId: "P-object",
+          interfaceInstanceIds: ["P-object"],
         },
       ],
       formalParameters: [],
@@ -105,15 +104,6 @@ describe("Project persistence", () => {
       terminals: [{ instanceId: "P-object", pinName: "P" }],
     });
     source.documents[0].annotations.push(
-      {
-        id: "reference-P",
-        kind: "instance-label",
-        binding: { kind: "instance-designator", instanceId: "P-object" },
-        anchor: { kind: "free", position: { x: 0, y: 0 } },
-        alignment: "start",
-        rotation: 0,
-        locked: false,
-      },
       {
         id: "reference-R7",
         kind: "instance-label",
@@ -139,39 +129,39 @@ describe("Project persistence", () => {
         locked: false,
       },
     );
+    const previousTerminal = source.documents[0].netlist.terminals[0];
+    previousTerminal.interfaceInstanceId =
+      previousTerminal.interfaceInstanceIds[0];
+    delete previousTerminal.interfaceInstanceIds;
 
     const migrated = parseProjectWithMetadata(JSON.stringify(source));
     expect(migrated).toMatchObject({
-      sourceSchemaVersion: 18,
+      sourceSchemaVersion: 19,
       migrated: true,
-      project: { schemaVersion: 19 },
+      project: { schemaVersion: 20 },
     });
-    expect(migrated.project.documents[0]!.nets).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ origin: { kind: "authored" } }),
-      ]),
-    );
     expect(
       migrated.project.documents[0]!.annotations.map(
         (annotation) => annotation.binding,
       ),
     ).toEqual([
+      { kind: "instance-designator", instanceId: "opaque-resistor-id" },
       { kind: "cell-terminal-name", terminalId: "terminal-vout" },
-      { kind: "instance-schematic-name", instanceId: "opaque-resistor-id" },
     ]);
     expect(migrated.project.documents[0]!.instances[0]).toMatchObject({
       id: "P-object",
     });
-    expect(migrated.project.documents[0]!.instances[0]).not.toHaveProperty(
-      "schematicReference",
-    );
+    expect(
+      migrated.project.documents[0]!.netlist?.terminals[0]
+        ?.interfaceInstanceIds,
+    ).toEqual(["P-object"]);
   });
 
   it("lets an upgraded previous Project author and persist current content", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     );
-    source.schemaVersion = 18;
+    source.schemaVersion = 19;
     const project = parseProject(JSON.stringify(source));
     project.documents[0]!.annotations.push({
       id: "value-fraction",
@@ -192,7 +182,7 @@ describe("Project persistence", () => {
     });
 
     const reopened = parseProject(serializeProject(project));
-    expect(reopened.schemaVersion).toBe(19);
+    expect(reopened.schemaVersion).toBe(20);
     expect(
       reopened.documents[0]!.annotations[0]?.content!.runs[0],
     ).toMatchObject({ kind: "fraction" });
@@ -202,9 +192,9 @@ describe("Project persistence", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/must be 18 or 19/);
+    ).toThrow(/must be 19 or 20/);
     expect(() =>
-      parseProject(JSON.stringify({ ...project, schemaVersion: 17 })),
-    ).toThrow(/must be 18 or 19/);
+      parseProject(JSON.stringify({ ...project, schemaVersion: 18 })),
+    ).toThrow(/must be 19 or 20/);
   });
 });
