@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -114,4 +114,45 @@ above, delivered as a single PR.
 
 ## Outcome
 
-Pending.
+Delivered as four commits on `claude/editor-ui-declutter`:
+
+1. **Palette, dialog, and drawing tools** — Recent fold removed; the virtual
+   VDD Rail entry renamed Power Rail; the Insert dialog no longer echoes the
+   selected name as its search placeholder; the floating startup recovery
+   notice removed (recovery stays on File ▸ Recover recent work…); the Draw
+   dropdown replaced by an always-visible horizontal toolbar and the drawing
+   tools taken off the left rail, which is now only panel toggles.
+2. **Negation-bubble geometry** — a mitered corner overshoots its vertex by
+   `(strokeWidth/2)/sin(halfAngle)`, which is why the Inverter apex and NOR
+   nose spiked into their bubbles despite sitting exactly on the tangent
+   point. Each vertex moved back by that overshoot (16 → 13.65, 20 → 18.52)
+   so the stroked tip lands on the bubble outline; the drawn outline is
+   unchanged.
+3. **Adjustable passives** — the reported "cannot place a Variable Resistor"
+   traced to `targetPolicy: "child-cell"` with an `X` prefix: every placement
+   generated a project-local Cell Document, took an X reference, and was
+   refused outright inside that generated Cell. Modelled as an ordinary
+   resistor-class primitive with the `R` prefix instead, the generated-cell
+   machinery removed, and variable-capacitor (`C`) and variable-inductor
+   (`L`) added on the same reviewed-base-plus-arrow pattern. This
+   deliberately reverses the subcircuit decision recorded in
+   `plan/2026-08-21-variable-resistor`.
+4. **Immediate Port placement** — no setup modal. ADR 0034 requires an
+   explicit role, so the Library entry carries it (Port / Filled Port place a
+   Free Net Port; a new Cell Pin entry places a Formal Cell Pin) and
+   `docs/specs/editor-interaction.md` was updated to describe that surface.
+   Neither role blocks on naming (`NET<n>` / `P<n>`, renamed on the canvas).
+   Renaming a Free Net Port from Properties now runs `planEnsureNamedNet`
+   like the placement path — without it, renaming two Ports to one name left
+   two same-name Nets instead of joining them.
+
+Validation: repository typecheck, full Vitest suite (172 files / 1063 tests),
+the complete Playwright suite (175 passed), prettier, markdown links,
+references, agent-kit catalog, MCP distribution and resources, and
+visual-golden drift checks. Generated catalogs were regenerated in the
+documented order after the symbol changes. The canonical
+`pnpm install --frozen-lockfile && pnpm ci:check` cannot run locally (pnpm is
+absent on this machine), so the mainline gate is the remote required checks.
+
+Note for the reviewer: the local Playwright run used a worktree-local dev
+server on port 4174 because port 4173 was already serving another checkout.
