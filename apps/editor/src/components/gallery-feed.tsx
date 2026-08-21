@@ -4,6 +4,7 @@ import { renderDocumentSvg } from "@icm/render-svg";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 
 import { libraryProjectExamples } from "../examples/library-examples";
+import { AccountMenu } from "./account";
 
 export interface GalleryFeedEntry {
   id: string;
@@ -96,6 +97,7 @@ export function GalleryFeed() {
           </div>
         </div>
         <nav className="gallery-actions">
+          <AccountMenu />
           <a
             className="gallery-open-editor"
             href="/editor"

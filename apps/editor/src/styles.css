@@ -5114,6 +5114,144 @@ html.light .analytics-map-land path {
   color: var(--icm-text-muted);
 }
 
+.gallery-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-name,
+.account-signout {
+  padding: 6px 10px;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  color: var(--icm-text);
+  background: var(--icm-surface);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.account-name:hover,
+.account-signout:hover {
+  background: var(--icm-surface-hover);
+}
+
+.account-name {
+  font-weight: 600;
+}
+
+.account-rename-input {
+  width: 12rem;
+  padding: 6px 10px;
+  border: 1px solid var(--icm-accent);
+  border-radius: var(--icm-radius-sm);
+  font-size: 13px;
+}
+
+.account-owner-badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--icm-accent-soft);
+  color: var(--icm-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.account-signin summary {
+  padding: 8px 14px;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  color: var(--icm-text);
+  background: var(--icm-surface);
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.account-signin summary::-webkit-details-marker {
+  display: none;
+}
+
+.account-signin summary:hover {
+  background: var(--icm-surface-hover);
+}
+
+.account-signin-panel {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 17rem;
+  padding: 14px;
+  border: 1px solid var(--icm-border);
+  border-radius: 12px;
+  background: var(--icm-surface);
+  box-shadow: 0 16px 36px rgb(15 15 15 / 16%);
+}
+
+.account-signin-panel a {
+  display: block;
+  padding: 8px 12px;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  color: var(--icm-text);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+}
+
+.account-signin-panel a:hover {
+  background: var(--icm-surface-hover);
+}
+
+.account-signin-email {
+  display: flex;
+  gap: 6px;
+}
+
+.account-signin-email input {
+  box-sizing: border-box;
+  min-width: 0;
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  font: inherit;
+  font-size: 13px;
+}
+
+.account-signin-email button {
+  padding: 7px 10px;
+  border: 1px solid var(--icm-accent);
+  border-radius: var(--icm-radius-sm);
+  color: #fff;
+  background: var(--icm-accent);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.account-notice {
+  margin: 0;
+  color: var(--icm-text-muted);
+  font-size: 12px;
+}
+
 .gallery-open-editor {
   display: inline-block;
   padding: 8px 16px;
