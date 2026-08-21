@@ -4109,6 +4109,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Commit status: completed on `claude/user-examples`; mainline merge gated
   on the remote required checks.
 
+## 2026-08-21 - Always-open insert picker list
+
+- Changed areas: removed the Insert dialog's collapse toggle and picker
+  open/close state so the catalog list is permanently visible and survives
+  selection; taller list cap; double-clicking an option applies it
+  immediately; layout-stability e2e rewritten for the always-open contract
+  plus a new double-click scenario.
+- Validation: component-insert unit suite (10 files / 40 tests), full
+  component-insert Playwright suite (22 passed), typecheck, prettier,
+  test-impact, diff checks; verified live.
+- Commit status: completed on `claude/insert-picker-always-open`; mainline
+  merge gated on the remote required checks.
+
 ## 2026-08-21 - Bundled-example promotion path
 
 - Changed areas: new `scripts/promote-example.mjs` plus testable

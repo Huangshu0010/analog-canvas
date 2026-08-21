@@ -3631,7 +3631,9 @@ body {
 }
 
 .insert-component-options {
-  max-height: 15rem;
+  /* The catalog stays permanently open; give it real height so most
+     categories are visible without scrolling. */
+  max-height: min(26rem, 48vh);
   margin-top: 0.55rem;
   overflow-y: auto;
   border: 1px solid var(--icm-border);
