@@ -30,7 +30,7 @@ export async function publishProjectToGallery(
 ): Promise<GalleryPublishOutcome> {
   let response: Response;
   try {
-    response = await fetchLike("/api/gallery", {
+    response = await fetchLike("/api/gallery/submissions", {
       method: "POST",
       headers: {
         authorization: `Bearer ${fields.token}`,
