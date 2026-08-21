@@ -45,6 +45,11 @@ formal-pin facts (name and direction) required before the interface transaction
 can commit. This separation is presentation-only and retains the same typed
 Port planners.
 
+The default RichText projection of every Free Port Net name and Formal Cell Pin
+name uses the Razavi mathematical base (bold italic), including identifiers
+such as `CLK` and generated `NET1`; conventional `Vout`/`Iref` and explicit
+underscore subscripts retain their existing semantic decomposition.
+
 Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.

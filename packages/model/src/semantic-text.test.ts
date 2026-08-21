@@ -34,4 +34,29 @@ describe("semantic formal-Port text", () => {
       children: [{ children: [{ value: "in,cm" }] }],
     });
   });
+
+  it("uses a Razavi mathematical base for non-voltage Port and Net names", () => {
+    const port = semanticTextDocument("CLK", "formal-port");
+    const net = semanticTextDocument("NET1", "net-label");
+
+    expect(port).toEqual({
+      runs: [
+        {
+          kind: "span",
+          style: "italic",
+          children: [
+            {
+              kind: "span",
+              style: "bold",
+              children: [{ kind: "text", value: "CLK" }],
+            },
+          ],
+        },
+      ],
+    });
+    expect(net).toMatchObject({
+      runs: [{ kind: "span", style: "italic", children: [{ kind: "span" }] }],
+    });
+    expect(flattenRichText(net)).toBe("NET1");
+  });
 });

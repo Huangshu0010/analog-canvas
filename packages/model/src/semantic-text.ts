@@ -75,7 +75,14 @@ export function semanticTextDocument(
   }
 
   const conventional = /^([VI])(.+?)([+-])?$/u.exec(value);
-  if (!conventional) return { runs: [{ kind: "text", value }] };
+  if (!conventional) {
+    // Net and Cell-Port names are the principal signal identifiers in a
+    // Razavi schematic. They remain mathematical labels even when their
+    // electrical spelling is not V*/I* (for example CLK or generated NET1).
+    return kind === "net-label" || kind === "formal-port"
+      ? { runs: [mathBase(value)] }
+      : { runs: [{ kind: "text", value }] };
+  }
   return {
     runs: [
       mathBase(conventional[1]!),

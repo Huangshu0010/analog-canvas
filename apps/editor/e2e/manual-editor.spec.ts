@@ -475,6 +475,11 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
     "Added Free Net Port NET1",
   );
   await expect(page.getByTestId("hit-P1")).toBeVisible();
+  await expect(
+    page.locator(
+      '[data-object-id="instance-label-P1"] [style*="font-style:italic;font-weight:700"]',
+    ),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
 });
 

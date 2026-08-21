@@ -1,5 +1,15 @@
 # Maintenance Log
 
+## 2026-08-21 - Razavi default Port label text
+
+- Changed areas: made non-voltage/current semantic Net and Formal Port names
+  use the default Razavi bold-italic RichText base; added model and rendered
+  `NET1` Port regression coverage.
+- Validation: focused model unit contract, focused Port browser workflow,
+  typecheck, format, test-impact, and diff checks passed.
+- Commit status: committed on `codex/insert-unification` at the current branch
+  HEAD; push pending after one transient GitHub TLS handshake failure.
+
 ## 2026-08-21 - Separate compact Port Setup from generic Insert
 
 - Changed areas: moved Port role/name/direction out of the generic Insert
