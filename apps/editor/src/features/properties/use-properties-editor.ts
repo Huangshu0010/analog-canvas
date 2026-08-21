@@ -588,7 +588,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
         },
       };
       const instanceReferenceBinding =
-        boundAnnotation.binding.kind === "instance-reference"
+        boundAnnotation.binding.kind === "instance-schematic-name"
           ? boundAnnotation.binding
           : undefined;
       const schematicNameInstance = instanceReferenceBinding
@@ -656,7 +656,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
             setTextEditing(null);
           }
           return;
-        case "instance-reference":
+        case "instance-schematic-name":
           if (!schematicNameSourceChanged && !presentationChanged) {
             setTextEditing(null);
             return;
@@ -680,6 +680,12 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
           return;
         case "instance-value":
           options.setStatus("Edit component values in Properties");
+          return;
+        case "instance-designator":
+          options.setStatus("Edit the netlist reference in Properties");
+          return;
+        case "instance-master-name":
+          options.setStatus("Master names are defined by the instance binding");
           return;
       }
     }

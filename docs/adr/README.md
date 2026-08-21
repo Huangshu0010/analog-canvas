@@ -58,6 +58,9 @@ The single Route geometry and octilinear authoring decision is
 [`0028-octilinear-route-geometry-protocol.md`](0028-octilinear-route-geometry-protocol.md).
 The project-local external interface and `X`-call preservation decision is
 [`0029-external-subcircuit-definition-protocol.md`](0029-external-subcircuit-definition-protocol.md).
+The instance identity, Placement Tray lifecycle, and presentation-only
+netlist-invariance decision is
+[`0030-instance-identity-and-placement-lifecycle.md`](0030-instance-identity-and-placement-lifecycle.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

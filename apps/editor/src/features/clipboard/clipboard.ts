@@ -216,11 +216,10 @@ function uniqueCopyId(
 }
 
 /**
- * A pasted instance whose source id equals its source reference keeps the
- * designator convention: it adopts the freshly allocated reference (copy R1
- * becomes R2) so the visible label, the id, and the netlist reference stay a
- * single fact. Anything else (custom ids, reference-less instances) falls
- * back to the opaque `-copy-N` id.
+ * A pasted instance receives a fresh electrical designator while its internal
+ * object ID remains independently stable. Legacy projects often used the same
+ * string for both, so preserve that convenient convention only when it does
+ * not collide; presentation bindings are rewritten separately below.
  */
 function pastedInstanceId(
   source: Instance,
@@ -259,8 +258,8 @@ function rewriteInstanceLabelText(
   ) {
     return;
   }
-  if (annotation.binding?.kind === "instance-reference") {
-    annotation.binding = { kind: "instance-reference", instanceId: nextId };
+  if (annotation.binding?.kind === "instance-designator") {
+    annotation.binding = { kind: "instance-designator", instanceId: nextId };
     return;
   }
   if (!annotation.content) return;
@@ -550,10 +549,13 @@ export function proposePaste(
                   netId: netIds.get(clone.binding.netId) ?? clone.binding.netId,
                 },
               }
-            : clone.binding?.kind === "instance-value"
+            : clone.binding?.kind === "instance-value" ||
+                clone.binding?.kind === "instance-designator" ||
+                clone.binding?.kind === "instance-schematic-name" ||
+                clone.binding?.kind === "instance-master-name"
               ? {
                   binding: {
-                    kind: "instance-value" as const,
+                    kind: clone.binding.kind,
                     instanceId:
                       objectIds.get(clone.binding.instanceId) ??
                       clone.binding.instanceId,

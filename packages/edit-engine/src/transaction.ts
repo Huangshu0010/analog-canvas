@@ -876,7 +876,7 @@ export function executeTransaction(
         changedObjectIds.add(edit.instanceId);
         for (const annotation of draft.annotations) {
           if (
-            annotation.binding?.kind === "instance-reference" &&
+            annotation.binding?.kind === "instance-schematic-name" &&
             annotation.binding.instanceId === instance.id
           ) {
             changedObjectIds.add(annotation.id);

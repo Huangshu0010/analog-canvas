@@ -1,18 +1,18 @@
 # Project File Compatibility
 
-The released Project schema version is `15`. It retains schematic-only
+The released Project schema version is `16`. It retains schematic-only
 hierarchy integrity, a Project structural revision, stable formal Cell ports,
 and definition-level Cell symbol presentation. It also has one typed Instance
 netlist authority, formal Cell parameters, and Project-local external
 subcircuit definitions with stable ordered terminal identities and directions.
-A canonical v15 file can be opened, saved, reopened, and saved again without
+A canonical v16 file can be opened, saved, reopened, and saved again without
 byte drift.
 
-Schema v14 is accepted through one direct upgrade to v15. It does not remain a
-v14 Project in the editor: external-subcircuit terminal IDs, passive
-directions, and declared interface status are added deterministically, and the
-next save writes v15. The original file is never overwritten silently. Schema
-v13 and older, and versions newer than v15, are rejected; there is no
+Schema v15 is accepted through one direct upgrade to v16. It does not remain a
+v15 Project in the editor: legacy `instance-reference` labels become either an
+electrical designator or a schematic alias according to their prior visible
+projection, and the next save writes v16. The original file is never overwritten
+silently. Schema v14 and older, and versions newer than v16, are rejected; there is no
 accumulating migration registry.
 
 The canonical-current corpus at
@@ -25,7 +25,7 @@ Retired fields such as first-class
 
 An incompatible Project is rejected before it can replace the current browser
 Project. Conversion, when needed, is an explicit external operation that must
-produce and validate a complete v15 candidate before a human chooses to load it.
+produce and validate a complete v16 candidate before a human chooses to load it.
 
 The editor never silently merges duplicate canonical Ground (`0`) or VDD Nets.
 Duplicate folded Net names are invalid and remain diagnostics until the author

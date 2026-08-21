@@ -562,7 +562,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "capacitor"
         },
         {
@@ -583,7 +582,6 @@
             },
             "rotation": 90
           },
-          "properties": {},
           "symbolId": "capacitor"
         },
         {
@@ -604,7 +602,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "nmos",
           "symbolVariantId": "textbook-3terminal"
         },
@@ -626,7 +623,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "resistor"
         },
         {
@@ -640,7 +636,6 @@
             "reference": "PWR1"
           },
           "placement": null,
-          "properties": {},
           "symbolId": "vdd-port"
         },
         {
@@ -661,7 +656,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "ground"
         },
         {
@@ -682,7 +676,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "ground"
         },
         {
@@ -703,7 +696,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "ground"
         },
         {
@@ -724,7 +716,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "ground"
         },
         {
@@ -745,7 +736,6 @@
             },
             "rotation": 90
           },
-          "properties": {},
           "symbolId": "resistor"
         },
         {
@@ -762,7 +752,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "voltage-source"
         },
         {
@@ -776,7 +765,6 @@
             "reference": "PWR6"
           },
           "placement": null,
-          "properties": {},
           "symbolId": "vdd-port"
         }
       ],
@@ -1270,7 +1258,7 @@
   ],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 14,
+  "schemaVersion": 16,
   "source": {
     "dialect": "none",
     "entry": null,

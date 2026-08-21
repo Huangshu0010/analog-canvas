@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 15 and has
+geometric, and presentation facts. The current model is strict schema 16 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -89,7 +89,9 @@ route-relative and include a deterministic fallback position for dangling
 visual references. While an anchor resolves, its resolved position is the one
 text baseline used by rendering, editor hit/marquee geometry, export bounds,
 and visual diagnostics; `fallbackPosition` is used only for a dangling target.
-Renderers never derive visible instance text from IDs or properties. Drafting
+`instance-designator`, `instance-schematic-name`, `instance-master-name`,
+`instance-value`, and `cell-terminal-name` bindings resolve their own source;
+renderers never derive visible instance text from IDs or properties. Drafting
 objects are visual-only and cannot create connectivity.
 
 A Cell definition may additionally persist optional `presentation.cellSymbol`
@@ -131,6 +133,6 @@ ordinary Schematic edits inside one Project structural transaction. The
 Project's `structureRevision` protects this cross-Document boundary and the
 editor records it as one undoable structural commit.
 
-Persistence writes only schema 15. `packages/project-protocol` accepts schema
-14 through the bounded direct upgrade defined by ADR 0029, then supplies the
+Persistence writes only schema 16. `packages/project-protocol` accepts schema
+15 through the bounded direct upgrade defined by ADR 0030, then supplies the
 current model only; no compatibility shape enters `packages/model`.

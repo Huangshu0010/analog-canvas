@@ -12,10 +12,11 @@ repository search, completed roadmaps, target plans, or `docs/archive/`.
    [`../adr/0024-device-protocol-and-compatibility-boundaries.md`](../adr/0024-device-protocol-and-compatibility-boundaries.md),
    [`../adr/0026-definition-level-cell-symbol-presentation.md`](../adr/0026-definition-level-cell-symbol-presentation.md),
    [`../adr/0027-stage-1-netlist-authoring-protocol.md`](../adr/0027-stage-1-netlist-authoring-protocol.md),
-   and [`../adr/0029-external-subcircuit-definition-protocol.md`](../adr/0029-external-subcircuit-definition-protocol.md)
+   [`../adr/0029-external-subcircuit-definition-protocol.md`](../adr/0029-external-subcircuit-definition-protocol.md),
+   and [`../adr/0030-instance-identity-and-placement-lifecycle.md`](../adr/0030-instance-identity-and-placement-lifecycle.md)
    — current Project shape, rolling previous-version read policy, independent
-   device and compatibility boundaries, Port-symbol, edit-union, schema-15
-   implementation target, and Agent credential contract; identify superseded
+   device and compatibility boundaries, Port-symbol, edit-union, schema-16
+   identity and placement lifecycle, and Agent credential contract; identify superseded
    clauses in older ADRs.
 3. [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)
    and [`../specs/razavi-visual-contract.md`](../specs/razavi-visual-contract.md)

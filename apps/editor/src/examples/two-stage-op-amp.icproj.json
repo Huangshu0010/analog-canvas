@@ -277,7 +277,6 @@
             },
             "rotation": 180
           },
-          "properties": {},
           "symbolId": "opamp"
         },
         {
@@ -294,7 +293,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "voltage-amplifier"
         },
         {
@@ -315,7 +313,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "capacitor"
         },
         {
@@ -336,7 +333,6 @@
             },
             "rotation": 270
           },
-          "properties": {},
           "symbolId": "capacitor"
         },
         {
@@ -357,7 +353,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "ground"
         },
         {
@@ -374,7 +369,6 @@
             },
             "rotation": 180
           },
-          "properties": {},
           "symbolId": "port"
         },
         {
@@ -391,7 +385,6 @@
             },
             "rotation": 0
           },
-          "properties": {},
           "symbolId": "port"
         }
       ],
@@ -683,7 +676,7 @@
   ],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 14,
+  "schemaVersion": 16,
   "source": {
     "dialect": "none",
     "entry": null,

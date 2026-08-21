@@ -1,10 +1,14 @@
-import { createEmptyDocument, flattenRichText } from "@icm/model";
+import {
+  createEmptyDocument,
+  flattenRichText,
+  semanticTextDocument,
+} from "@icm/model";
 import { describe, expect, it } from "vitest";
 
 import { resolveAnnotationText } from "./annotation-text.js";
 
 describe("bound annotation text", () => {
-  it("uses the user-owned RichText schematic name before the SPICE reference", () => {
+  it("separates the electrical designator from the user-owned schematic name", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "M1",
@@ -29,7 +33,7 @@ describe("bound annotation text", () => {
     const annotation = {
       id: "instance-label-M1",
       kind: "instance-label" as const,
-      binding: { kind: "instance-reference" as const, instanceId: "M1" },
+      binding: { kind: "instance-designator" as const, instanceId: "M1" },
       anchor: { kind: "free" as const, position: { x: 0, y: 0 } },
       alignment: "start" as const,
       rotation: 0 as const,
@@ -37,8 +41,14 @@ describe("bound annotation text", () => {
     };
 
     expect(resolveAnnotationText(document, annotation)).toEqual(
-      document.instances[0]!.schematicName,
+      semanticTextDocument("M_INTERNAL", "instance-label"),
     );
+    expect(
+      resolveAnnotationText(document, {
+        ...annotation,
+        binding: { kind: "instance-schematic-name", instanceId: "M1" },
+      }),
+    ).toEqual(document.instances[0]!.schematicName);
     expect(document.instances[0]!.netlist!.reference).toBe("M_INTERNAL");
   });
 
@@ -79,5 +89,35 @@ describe("bound annotation text", () => {
       "Vrefp",
     );
     expect(annotation.anchor).toEqual(before);
+  });
+
+  it("projects a master name without falling back to the internal object ID", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "opaque-object-id",
+      symbolId: "nmos",
+      placement: null,
+      netlist: {
+        reference: "M1",
+        binding: { kind: "model", deviceClass: "mos", name: "sky130_nfet" },
+        parameters: {},
+      },
+    });
+    const annotation = {
+      id: "master-M1",
+      kind: "instance-label" as const,
+      binding: {
+        kind: "instance-master-name" as const,
+        instanceId: "opaque-object-id",
+      },
+      anchor: { kind: "free" as const, position: { x: 0, y: 0 } },
+      alignment: "start" as const,
+      rotation: 0 as const,
+      locked: false,
+    };
+
+    expect(flattenRichText(resolveAnnotationText(document, annotation))).toBe(
+      "sky130nfet",
+    );
   });
 });

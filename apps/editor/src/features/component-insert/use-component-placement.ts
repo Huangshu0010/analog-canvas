@@ -152,7 +152,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         ? {
             ...defaultLabel,
             binding: {
-              kind: "instance-reference" as const,
+              kind: "instance-designator" as const,
               instanceId: instance.id,
             },
           }

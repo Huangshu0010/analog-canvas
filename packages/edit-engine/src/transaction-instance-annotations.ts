@@ -129,7 +129,7 @@ export function refreshInstanceReferenceAnnotation(
     ) {
       continue;
     }
-    if (annotation.binding?.kind === "instance-reference") {
+    if (annotation.binding?.kind === "instance-designator") {
       changedObjectIds.add(annotation.id);
       continue;
     }
