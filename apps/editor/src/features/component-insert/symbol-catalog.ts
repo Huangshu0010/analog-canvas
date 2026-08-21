@@ -27,7 +27,9 @@ export function symbolCategory(symbolId: string): string {
       "resistor",
       "variable-resistor",
       "capacitor",
+      "variable-capacitor",
       "inductor",
+      "variable-inductor",
       "diode",
     ].includes(symbolId)
   ) {

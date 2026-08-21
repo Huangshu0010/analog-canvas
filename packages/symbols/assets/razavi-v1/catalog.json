@@ -484,6 +484,46 @@
       }
     },
     {
+      "symbolId": "variable-capacitor",
+      "name": "Variable Capacitor",
+      "category": "passive",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["P1", "P2"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Manually selected adjustable presentation; structural SPICE C does not preserve a distinct variable-capacitor symbol.",
+      "assetPath": "variable-capacitor.symbol.json",
+      "assetHash": "feffb09d98cfeb5c5e6a29502112bb7bcfc3796f6654b7dcbb920036295f5a28",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json"
+      }
+    },
+    {
+      "symbolId": "variable-inductor",
+      "name": "Variable Inductor",
+      "category": "passive",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["P1", "P2"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Manually selected adjustable presentation; structural SPICE L does not preserve a distinct variable-inductor symbol.",
+      "assetPath": "variable-inductor.symbol.json",
+      "assetHash": "019535aa483deb0c3f33e635c8b926f45d17d90533acafb27135c831e251dddb",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json"
+      }
+    },
+    {
       "symbolId": "variable-resistor",
       "name": "Variable Resistor",
       "category": "passive",
