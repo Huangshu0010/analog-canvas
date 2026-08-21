@@ -41,11 +41,12 @@ test("the site lands on the full-screen gallery feed", async ({ page }) => {
   const feed = page.getByTestId("gallery-feed");
   await expect(feed).toBeVisible();
 
-  // Published tile plus the bundled starter tiles keep the wall non-empty.
+  // With community entries present the wall shows them alone: the bundled
+  // starter tiles exist only while the gallery is empty.
   await expect(page.getByTestId(`gallery-tile-${ENTRY.id}`)).toBeVisible();
   await expect(
     page.getByTestId("gallery-bundled-common-source-amplifier"),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(page.getByTestId("gallery-new-circuit")).toHaveAttribute(
     "href",
     "/editor",
