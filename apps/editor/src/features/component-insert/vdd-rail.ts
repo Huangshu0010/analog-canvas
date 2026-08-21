@@ -1,11 +1,13 @@
-import { planEnsurePowerNet, type SchematicEdit } from "@icm/edit-engine";
-import type { Point, SchematicDocument } from "@icm/model";
+import type { SchematicEdit } from "@icm/edit-engine";
+import { foldNetName, type Point, type SchematicDocument } from "@icm/model";
 
 export interface VddRailConstruction {
   instanceId: string;
   start: Point;
   end: Point;
   netId?: string;
+  netName?: string;
+  scope?: "local" | "global";
 }
 
 export type VddRailPlan =
@@ -22,6 +24,8 @@ export function constructVddRailEdits({
   start,
   end,
   netId,
+  netName = "VDD",
+  scope = "local",
 }: VddRailConstruction): SchematicEdit[] {
   const key = instanceId.toLowerCase();
   const targetNetId = netId ?? `net-power-${key}`;
@@ -35,34 +39,80 @@ export function constructVddRailEdits({
       startJunctionId,
       endJunctionId,
       labelId: `label-${instanceId}`,
-      domain: "vdd",
+      netName,
+      scope,
+      powerDomain: "vdd",
       start,
       end,
     },
   ];
 }
 
-/** Resolve VDD by canonical name before constructing its visual rail. */
+/** Resolve a named supply before constructing its visual rail. */
 export function planVddRailEdits(
   document: SchematicDocument,
   construction: VddRailConstruction,
 ): VddRailPlan {
-  const candidateNetId =
-    construction.netId ?? `net-power-${construction.instanceId.toLowerCase()}`;
-  const plan = planEnsurePowerNet(document, {
-    candidateNetId,
-    candidateState: document.nets.some((net) => net.id === candidateNetId)
-      ? "existing"
-      : "created-power",
-    domain: "vdd",
-  });
-  if (!plan.ok) return { ok: false, message: plan.message };
+  const netName = construction.netName?.trim() || "VDD";
+  const requested = construction.netId
+    ? document.nets.find((net) => net.id === construction.netId)
+    : undefined;
+  if (requested?.name && foldNetName(requested.name) !== foldNetName(netName)) {
+    return {
+      ok: false,
+      message: `Power rail target ${requested.name} does not match ${netName}`,
+    };
+  }
+  const named = document.nets.find(
+    (net) => net.name && foldNetName(net.name) === foldNetName(netName),
+  );
+  if (requested && named && requested.id !== named.id) {
+    return {
+      ok: false,
+      message: `Power rail target ${requested.id} conflicts with existing named Net ${named.id}`,
+    };
+  }
+  const target = requested ?? named;
+  if (
+    target &&
+    (target.powerDomain ?? "none") !== "none" &&
+    (target.powerDomain ?? "none") !== "vdd"
+  ) {
+    return {
+      ok: false,
+      message: `Power rail target ${netName} has incompatible role ${target.powerDomain}`,
+    };
+  }
+  const netId =
+    target?.id ?? `net-power-${construction.instanceId.toLowerCase()}`;
   return {
     ok: true,
-    netId: plan.netId,
+    netId,
     edits: [
-      ...plan.edits,
-      ...constructVddRailEdits({ ...construction, netId: plan.netId }),
+      ...(target && !target.name
+        ? [
+            {
+              kind: "set_net_name" as const,
+              netId: target.id,
+              name: netName,
+            },
+          ]
+        : []),
+      ...(target && (target.powerDomain ?? "none") === "none"
+        ? [
+            {
+              kind: "set_net_power_domain" as const,
+              netId: target.id,
+              powerDomain: "vdd" as const,
+            },
+          ]
+        : []),
+      ...constructVddRailEdits({
+        ...construction,
+        netId,
+        netName: target?.name ?? netName,
+        scope: target?.scope ?? construction.scope ?? "local",
+      }),
     ],
   };
 }

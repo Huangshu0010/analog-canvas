@@ -2778,6 +2778,106 @@ body {
   backdrop-filter: blur(4px);
 }
 
+.port-setup-backdrop {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgb(55 53 47 / 28%);
+  backdrop-filter: blur(4px);
+}
+
+.port-setup-dialog {
+  display: grid;
+  gap: 1rem;
+  width: min(23rem, calc(100vw - 2.5rem));
+  max-height: calc(100dvh - 2.5rem);
+  padding: 1rem;
+  overflow: auto;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: var(--icm-radius-lg);
+  color: var(--icm-text);
+  background: var(--icm-surface);
+  box-shadow: var(--icm-shadow-lg);
+}
+
+.port-setup-dialog header p,
+.port-setup-dialog header h2,
+.port-setup-error {
+  margin: 0;
+}
+
+.port-setup-dialog header p {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.port-setup-dialog header h2 {
+  margin-top: 0.15rem;
+  font-size: 16px;
+}
+
+.port-setup-fields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.port-setup-fields fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.9rem;
+  margin: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-md);
+}
+
+.port-setup-fields legend,
+.port-setup-fields label > span {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-sm);
+}
+
+.port-setup-fields fieldset label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--icm-font-sm);
+}
+
+.port-setup-fields > label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.port-setup-fields input:not([type="radio"]),
+.port-setup-fields select {
+  min-width: 0;
+  min-height: var(--icm-control-h-lg);
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  color: var(--icm-text);
+  background: var(--icm-surface);
+  font: inherit;
+}
+
+.port-setup-error {
+  color: var(--icm-danger);
+  font-size: var(--icm-font-sm);
+}
+
+.port-setup-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 .insert-component-dialog {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;

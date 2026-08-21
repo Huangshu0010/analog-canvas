@@ -1,6 +1,11 @@
 import { useState } from "react";
 
 import type { ComponentInsertRequest } from "../component-insert/component-insert-request";
+import {
+  fullInsertLaunch,
+  portSetupLaunch,
+  type InsertLaunch,
+} from "../component-insert/insert-launch";
 import { SymbolArtwork } from "../component-insert/symbol-artwork";
 import { initialComponentParameterValues } from "../component-insert/component-parameters";
 import {
@@ -44,6 +49,7 @@ export function quickPlaceRequest(
       kind: "vdd-rail",
       symbolId: "vdd",
       symbolName: "VDD Rail",
+      netName: "VDD",
     };
   }
   return {
@@ -65,16 +71,14 @@ export interface ShapesPanelProps {
   styleProfileId: string;
   recentSymbolIds: readonly string[];
   open: boolean;
-  onOpenInsert(): void;
-  onQuickPlace(request: ComponentInsertRequest): void;
+  onStartInsert(launch: InsertLaunch): void;
 }
 
 export function ShapesPanel({
   styleProfileId,
   recentSymbolIds,
   open,
-  onOpenInsert,
-  onQuickPlace,
+  onStartInsert,
 }: ShapesPanelProps) {
   const libraryGroups = componentCatalog(styleProfileId, "");
   const librarySymbolCount = libraryGroups.reduce(
@@ -91,8 +95,12 @@ export function ShapesPanel({
     .slice(0, 6);
 
   function placeSymbol(symbolId: string): void {
+    if (symbolId === "port" || symbolId === "port-filled") {
+      onStartInsert(portSetupLaunch(symbolId));
+      return;
+    }
     const request = quickPlaceRequest(styleProfileId, symbolId);
-    if (request) onQuickPlace(request);
+    if (request) onStartInsert({ kind: "quick", request });
   }
 
   function setCategoryOpen(category: string, open: boolean): void {
@@ -119,7 +127,7 @@ export function ShapesPanel({
         <button
           type="button"
           className="shapes-panel-title"
-          onClick={onOpenInsert}
+          onClick={() => onStartInsert(fullInsertLaunch())}
           title="Open insert dialog (I)"
         >
           <span className="shapes-kicker">Quick place</span>
@@ -229,7 +237,7 @@ export function ShapesPanel({
           type="button"
           className="shapes-insert"
           data-testid="shapes-insert"
-          onClick={onOpenInsert}
+          onClick={() => onStartInsert(fullInsertLaunch())}
           title="Insert component with parameters (I)"
         >
           Insert

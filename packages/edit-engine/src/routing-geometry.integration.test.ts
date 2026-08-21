@@ -114,8 +114,10 @@ describe("derived connectivity and route geometry", () => {
     expect(
       flightlines.map((line) => [
         line.netId,
-        line.from.kind === "terminal" ? line.from.instanceId : "other",
-        line.to.kind === "terminal" ? line.to.instanceId : "other",
+        ...[
+          line.from.kind === "terminal" ? line.from.instanceId : "other",
+          line.to.kind === "terminal" ? line.to.instanceId : "other",
+        ].sort((left, right) => left.localeCompare(right, "en")),
       ]),
     ).toEqual([
       ["net-h", "B", "E"],
@@ -168,9 +170,15 @@ describe("derived connectivity and route geometry", () => {
     const remaining = deriveFlightlines(document, resolver);
     expect(remaining).toHaveLength(1);
     expect(remaining[0]).toMatchObject({
-      from: { kind: "terminal", instanceId: "B" },
-      to: { kind: "terminal", instanceId: "E" },
+      netId: "net-h",
     });
+    expect(
+      [remaining[0]!.from, remaining[0]!.to]
+        .map((endpoint) =>
+          endpoint.kind === "terminal" ? endpoint.instanceId : "other",
+        )
+        .sort((left, right) => left.localeCompare(right, "en")),
+    ).toEqual(["B", "E"]);
   });
 
   it("normalizes duplicate/collinear points and proposes local endpoint stretch", () => {

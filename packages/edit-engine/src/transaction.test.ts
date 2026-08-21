@@ -60,6 +60,37 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
+  it("marks a Net created by manual connection as authored", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push(
+      { id: "A", symbolId: "port", placement: null },
+      { id: "B", symbolId: "port", placement: null },
+    );
+
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "connect_endpoints",
+            from: { kind: "terminal", instanceId: "A", pinName: "P" },
+            to: { kind: "terminal", instanceId: "B", pinName: "P" },
+            newNetId: "net-authored",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        nets: [expect.objectContaining({ origin: { kind: "authored" } })],
+      },
+    });
+  });
+
   it("updates a Port schematic reference without creating a netlist record", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
@@ -376,7 +407,9 @@ describe("Edit Transaction envelope", () => {
             startJunctionId: "junction-start",
             endJunctionId: "junction-end",
             labelId: "label-vdd",
-            domain: "vdd",
+            netName: "VDD",
+            scope: "local",
+            powerDomain: "vdd",
             start: { x: 10, y: 10 },
             end: { x: 10, y: 40 },
           },
@@ -409,7 +442,9 @@ describe("Edit Transaction envelope", () => {
             startJunctionId: "junction-start",
             endJunctionId: "junction-end",
             labelId: "label-vdd",
-            domain: "vdd",
+            netName: "VDD",
+            scope: "local",
+            powerDomain: "vdd",
             start: { x: 10, y: 10 },
             end: { x: 80, y: 10 },
           },
@@ -488,7 +523,7 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
-  it("creates a canonical supply default and permits an explicit bulk override", () => {
+  it("leaves unconfigured bulk unresolved and permits an explicit connection", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "M1",
@@ -506,24 +541,14 @@ describe("Edit Transaction envelope", () => {
     );
     expect(reconciled.ok).toBe(true);
     if (!reconciled.ok) return;
-    expect(reconciled.document.instances[0]?.mosBulkBinding).toEqual({
-      origin: "supply-default",
-      netId: "net-global-0",
-    });
-    expect(reconciled.document.nets).toContainEqual({
-      id: "net-global-0",
-      name: "0",
-      scope: "global",
-      powerDomain: "ground",
-      terminals: [{ instanceId: "M1", pinName: "B" }],
-    });
+    expect(reconciled.document.instances[0]?.mosBulkBinding).toBeUndefined();
+    expect(reconciled.document.nets).toEqual([]);
 
     const overridden = executeTransaction(
       reconciled.document,
       {
         ...transaction(reconciled.document.revision),
         edits: [
-          { kind: "clear_mos_bulk_default", instanceId: "M1" },
           {
             kind: "connect_endpoints",
             from: { kind: "terminal", instanceId: "M1", pinName: "B" },
@@ -537,10 +562,6 @@ describe("Edit Transaction envelope", () => {
     expect(overridden.ok).toBe(true);
     if (!overridden.ok) return;
     expect(overridden.document.instances[0]?.mosBulkBinding).toBeUndefined();
-    expect(
-      overridden.document.nets.find((net) => net.id === "net-global-0")
-        ?.terminals,
-    ).not.toContainEqual({ instanceId: "M1", pinName: "B" });
     expect(
       overridden.document.nets.find((net) => net.id === "net-explicit-body")
         ?.terminals,
@@ -585,7 +606,7 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
-  it("keeps imported flightline guidance through placement and Wire, then dismisses it for a Net Label", () => {
+  it("keeps imported Net routing intent through placement, Wire, and Net Labels", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.sourceBinding = {
       cellName: "main",
@@ -595,7 +616,15 @@ describe("Edit Transaction envelope", () => {
         end: { offset: 1, line: 1, column: 2 },
       },
     };
-    document.flightlineGuidance = "active";
+    document.nets.push({
+      id: "net-ab",
+      scope: "local",
+      terminals: [
+        { instanceId: "A", pinName: "P" },
+        { instanceId: "B", pinName: "P" },
+      ],
+      origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+    });
     document.instances.push(
       {
         id: "A",
@@ -633,7 +662,13 @@ describe("Edit Transaction envelope", () => {
     );
     expect(placed).toMatchObject({
       ok: true,
-      document: { flightlineGuidance: "active" },
+      document: {
+        nets: [
+          expect.objectContaining({
+            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+          }),
+        ],
+      },
     });
     if (!placed.ok) return;
 
@@ -650,7 +685,13 @@ describe("Edit Transaction envelope", () => {
     });
     expect(moved).toMatchObject({
       ok: true,
-      document: { flightlineGuidance: "dismissed" },
+      document: {
+        nets: [
+          expect.objectContaining({
+            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+          }),
+        ],
+      },
     });
 
     const wired = executeTransaction(
@@ -659,12 +700,6 @@ describe("Edit Transaction envelope", () => {
         ...transaction(placed.document.revision),
         transactionId: "transaction-wire",
         edits: [
-          {
-            kind: "connect_endpoints",
-            from: { kind: "terminal", instanceId: "A", pinName: "P" },
-            to: { kind: "terminal", instanceId: "B", pinName: "P" },
-            newNetId: "net-ab",
-          },
           {
             kind: "set_route_points",
             routeId: "route-ab",
@@ -680,7 +715,13 @@ describe("Edit Transaction envelope", () => {
     );
     expect(wired).toMatchObject({
       ok: true,
-      document: { flightlineGuidance: "active" },
+      document: {
+        nets: [
+          expect.objectContaining({
+            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+          }),
+        ],
+      },
     });
     if (!wired.ok) return;
 
@@ -705,7 +746,64 @@ describe("Edit Transaction envelope", () => {
     });
     expect(labelled).toMatchObject({
       ok: true,
-      document: { flightlineGuidance: "dismissed" },
+      document: {
+        nets: [
+          expect.objectContaining({
+            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+          }),
+        ],
+      },
+    });
+  });
+
+  it("retains imported provenance when an authored Port Net merges into it", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push(
+      { id: "P1", symbolId: "port", placement: null },
+      { id: "P2", symbolId: "port", placement: null },
+    );
+    document.nets.push(
+      {
+        id: "net-imported-bus",
+        name: "BUS",
+        scope: "local",
+        terminals: [{ instanceId: "P1", pinName: "P" }],
+        origin: { kind: "spice-import", sourceNetIds: ["source-bus"] },
+      },
+      {
+        id: "net-authored-port",
+        scope: "local",
+        terminals: [{ instanceId: "P2", pinName: "P" }],
+        origin: { kind: "authored" },
+      },
+    );
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "merge_nets",
+          targetNetId: "net-imported-bus",
+          sourceNetId: "net-authored-port",
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        nets: [
+          {
+            id: "net-imported-bus",
+            name: "BUS",
+            terminals: [
+              { instanceId: "P1", pinName: "P" },
+              { instanceId: "P2", pinName: "P" },
+            ],
+            origin: { kind: "spice-import", sourceNetIds: ["source-bus"] },
+          },
+        ],
+      },
     });
   });
 

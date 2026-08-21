@@ -91,7 +91,7 @@ export function createConnectivityProposal(
         break;
       case "set_route_points":
       case "cut_connection":
-      case "make_flightline":
+      case "remove_route_geometry":
         routeIds.push(edit.routeId);
         if (edit.kind === "set_route_points") netIds.push(edit.netId);
         break;

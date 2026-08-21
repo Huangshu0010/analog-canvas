@@ -158,7 +158,12 @@ import {
   ComponentPlacementPreview,
   InsertComponentDialog,
 } from "../features/component-insert/insert-component-dialog";
-import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
+import {
+  cellInsertLaunch,
+  fullInsertLaunch,
+  portSetupLaunch,
+} from "../features/component-insert/insert-launch";
+import { PortSetupDialog } from "../features/component-insert/port-setup-dialog";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
 import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
@@ -626,6 +631,9 @@ export function App({
   } | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [wireOptionsOpen, setWireOptionsOpen] = useState(false);
+  const [routingGuidanceView, setRoutingGuidanceView] = useState<
+    "focused" | "all" | "hidden"
+  >("focused");
   const [routeStretchPreview, setRouteStretchPreview] =
     useState<RouteStretchPreview | null>(null);
   const [draftingHandlePreview, setDraftingHandlePreview] =
@@ -651,6 +659,7 @@ export function App({
     componentPlacementMirror,
     componentPreviewPoint,
     vddRailMode,
+    vddRailNetName,
     vddRailStart,
     copyPlacement,
     setTool,
@@ -1166,25 +1175,38 @@ export function App({
       document.nets.flatMap(
         (net) =>
           projectConnectivityIndex.documents.get(document.id)?.nets.get(net.id)
-            ?.flightlines ?? [],
+            ?.routingGuidance ?? [],
       ),
     [document.id, document.nets, projectConnectivityIndex],
   );
   const displayedFlightlines = useMemo(() => {
-    // Flightlines guide placement and partial routing of imported topology.
-    // They are intentionally independent from sourceStatus: placement changes
-    // geometry without changing the imported electrical intent. A deliberate
-    // geometry/Net-label edit dismisses guidance through the persisted state.
-    // Net highlighting already provides a stronger complete-conductor overlay.
-    if (
-      !document.sourceBinding ||
-      document.flightlineGuidance === "dismissed" ||
-      highlightedNetId
-    ) {
-      return [];
-    }
-    return flightlines;
-  }, [document, flightlines, highlightedNetId]);
+    // Routing guidance is derived exclusively from imported Net intent. It is
+    // not Document UI state: labelling, moving, or deleting a Route must never
+    // dismiss another imported Net's unresolved topology. A highlighted Net
+    // already has the stronger conductor overlay, so omit only that Net's
+    // guides rather than suppressing the complete imported document.
+    if (routingGuidanceView === "hidden") return [];
+    const focusedNetIds = new Set(
+      [wireSource?.netId, selectedHighlightNetId, highlightedNetId].filter(
+        (netId): netId is string => netId !== null && netId !== undefined,
+      ),
+    );
+    const scoped =
+      routingGuidanceView === "focused" && focusedNetIds.size > 0
+        ? flightlines.filter((flightline) =>
+            focusedNetIds.has(flightline.netId),
+          )
+        : flightlines;
+    return highlightedNetId
+      ? scoped.filter((flightline) => flightline.netId !== highlightedNetId)
+      : scoped;
+  }, [
+    flightlines,
+    highlightedNetId,
+    routingGuidanceView,
+    selectedHighlightNetId,
+    wireSource?.netId,
+  ]);
   const crossings = useMemo(
     () =>
       deriveCrossings(
@@ -1409,17 +1431,19 @@ export function App({
     : undefined;
   const {
     beginRetainedInstancePlacement: beginRetainedInstancePlacementFromHook,
-    beginInsertedComponentPlacement: beginInsertedComponentPlacementFromHook,
     cancelComponentInsert: cancelComponentInsertFromHook,
+    cancelPortSetup: cancelPortSetupFromHook,
     commitPendingPlacementAt: commitPendingPlacementAtFromHook,
     closeInsertDialog: closeInsertDialogFromHook,
-    cellInsertOnly,
     insertDialogOpen,
     insertInitialSelectionId,
-    openInsertComponentDialog: openInsertComponentDialogFromHook,
+    insertScope,
     recentSymbolIds,
     rotatePendingComponent: rotatePendingComponentFromHook,
     mirrorPendingComponent: mirrorPendingComponentFromHook,
+    portSetupOpen,
+    portSetupSymbolId,
+    startInsert: startInsertFromHook,
   } = useComponentPlacement({
     recentStorageKey: RECENT_COMPONENTS_STORAGE_KEY,
     document,
@@ -1446,6 +1470,7 @@ export function App({
     setComponentPreviewPoint,
     setStatus,
     vddRailMode,
+    vddRailNetName,
     vddRailStart,
     pendingSymbolId,
     pendingComponentPlacement,
@@ -1832,7 +1857,7 @@ export function App({
       setStatus("Create another Cell before placing a hierarchical Instance");
       return;
     }
-    openInsertComponentDialogFromHook(true);
+    startInsertFromHook(cellInsertLaunch());
     setStatus("Choose a Cell, then place it on the canvas");
   }
 
@@ -6230,7 +6255,7 @@ export function App({
               endpointKey(route.to) === endpointKey(selectedEndpoint.endpoint),
           )
           .map((route): SchematicEdit => ({
-            kind: "make_flightline",
+            kind: "remove_route_geometry",
             routeId: route.id,
           }))
       : [];
@@ -6444,10 +6469,10 @@ export function App({
           reverseSelectedCurrentArrow();
           return;
         case "open-component-insert":
-          openInsertComponentDialogFromHook();
+          startInsertFromHook(fullInsertLaunch());
           return;
         case "place-port": {
-          openInsertComponentDialogFromHook(false, "port");
+          startInsertFromHook(portSetupLaunch());
           return;
         }
         case "rotate-placement":
@@ -6863,7 +6888,7 @@ export function App({
                 <div className="command-popover">
                   <button
                     type="button"
-                    onClick={() => openInsertComponentDialogFromHook()}
+                    onClick={() => startInsertFromHook(fullInsertLaunch())}
                   >
                     <ToolIcon name="insert" />
                     Insert component (I)
@@ -7050,6 +7075,9 @@ export function App({
           <output data-testid="net-count">{document.nets.length}</output>
           <output data-testid="active-tool">{tool}</output>
           <output data-testid="flightline-count">{flightlines.length}</output>
+          <output data-testid="displayed-flightline-count">
+            {displayedFlightlines.length}
+          </output>
           <output data-testid="crossing-count">{crossings.length}</output>
           <output data-testid="annotation-count">
             {document.annotations.length}
@@ -7148,11 +7176,23 @@ export function App({
         recentSymbolIds={recentSymbolIds}
         cells={cellInsertCandidates}
         externalDefinitions={externalSubcircuitInsertCandidates}
-        cellOnly={cellInsertOnly}
-        allowFormalPort={document.id !== project.topDocumentId}
+        scope={insertScope}
         initialSelectionId={insertInitialSelectionId}
-        onApply={beginInsertedComponentPlacementFromHook}
+        onApply={(request) => startInsertFromHook({ kind: "quick", request })}
+        onConfigurePort={(symbolId) =>
+          startInsertFromHook(portSetupLaunch(symbolId))
+        }
         onCancel={cancelComponentInsertFromHook}
+      />
+      <PortSetupDialog
+        open={portSetupOpen}
+        symbolId={portSetupSymbolId}
+        allowFormalPort
+        defaultRole={
+          document.id === project.topDocumentId ? "net-port" : "cell-terminal"
+        }
+        onApply={(request) => startInsertFromHook({ kind: "quick", request })}
+        onCancel={cancelPortSetupFromHook}
       />
       <CellManagerDialog
         open={cellManagerOpen}
@@ -7385,18 +7425,7 @@ export function App({
             styleProfileId={document.presentation.styleProfileId}
             recentSymbolIds={recentSymbolIds}
             open={visibleLibraryPanelOpen}
-            onOpenInsert={openInsertComponentDialogFromHook}
-            onQuickPlace={(request) => {
-              if (
-                request.kind === "symbol" &&
-                (request.symbolId === "port" ||
-                  request.symbolId === "port-filled")
-              ) {
-                openInsertComponentDialogFromHook(false, request.symbolId);
-                return;
-              }
-              beginInsertedComponentPlacementFromHook(request);
-            }}
+            onStartInsert={startInsertFromHook}
           />
         ) : (
           <ExamplesPanel
@@ -7451,6 +7480,36 @@ export function App({
               </span>
             </button>
             <div className="selection-panel" hidden={!selectionOpen}>
+              {flightlines.length > 0 ? (
+                <section
+                  className="context-actions"
+                  aria-label="Routing guidance"
+                >
+                  <h2>Imported routing guidance</h2>
+                  <div className="component-mirror-row">
+                    {(
+                      [
+                        ["focused", "Focused"],
+                        ["all", "All"],
+                        ["hidden", "Hide"],
+                      ] as const
+                    ).map(([view, label]) => (
+                      <button
+                        type="button"
+                        aria-pressed={routingGuidanceView === view}
+                        key={view}
+                        onClick={() => setRoutingGuidanceView(view)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <small>
+                    {displayedFlightlines.length} shown / {flightlines.length}{" "}
+                    derived. Guidance exists only for imported Nets.
+                  </small>
+                </section>
+              ) : null}
               {!hasInspectableSelection ? (
                 <p className="inspect-empty">Select an object to inspect.</p>
               ) : null}

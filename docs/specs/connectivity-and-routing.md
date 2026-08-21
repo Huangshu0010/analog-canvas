@@ -36,23 +36,45 @@ must use the same segment-geometry kernel and Route transaction.
 Routes may present as `wire`, `bulk-dashed`, or `power-rail`; presentation does
 not alter Net identity. `bulk-dashed` is used for explicit MOS B routing.
 Manual MOS instances without explicit B membership first use a configured
-cell-default Net, otherwise a `supply-default` creates or reuses canonical
-global ground/VDD. Starting a `bulk-dashed` route from B treats the implicit
-membership as unowned; committing clears the binding before connecting the
-explicit Net. Deleting the explicit route may reconcile the configured or
-canonical supply default. Source-bound/imported MOS instances remain governed
-by their fourth-node evidence and are never guessed.
+cell-default Net; without one, bulk remains unresolved. Starting a
+`bulk-dashed` route from B treats a configured default membership as unowned;
+committing clears the binding before connecting the explicit Net. Deleting the
+explicit route may reconcile only an explicitly configured cell default.
+Source-bound/imported MOS instances remain governed by their fourth-node
+evidence and are never guessed. Legacy persisted `supply-default` bindings are
+readable compatibility data, not a current authoring policy.
 
-A `power-rail` Route is valid only on an explicit Net whose persisted
-`powerDomain` is `vdd`. VDD rail authoring creates the global Net when needed,
-two route-anchor Junctions, the rail Route, and one attached RichText power
-label. It creates no VDD Instance. Branch wires on the same Net use ordinary
-wire presentation and explicit contact evidence.
+A `power-rail` Route is valid only on an explicit named Net whose persisted
+`powerDomain` is `vdd`. Rail authoring creates or reuses that name in the
+current Document, preserves an existing explicit scope, and otherwise creates
+a local Net. It adds two route-anchor Junctions, the rail Route, and one
+net-name-bound RichText power label. It creates no VDD Instance. Branch wires
+on the same Net use ordinary wire presentation and explicit contact evidence.
 
 A named global Net is itself an explicit semantic bridge. Separate Ground or
 VDD markers on that Net do not require a drawn trunk or matching label and do
 not produce a flightline. Named local Nets still require route, contact, or
 label evidence for their visible connectivity.
+
+## Imported routing guidance
+
+SPICE import creates electrical membership before drawing. Only a Net whose
+persisted `origin.kind` is `spice-import` is eligible for derived routing
+guidance. `deriveRoutingGuidance` is a pure, device-neutral minimum-spanning
+tree over current visible components supplied by the connectivity adapter: it
+does not read symbols, MOS/Bulk semantics, SPICE records, labels, or editor
+state. Symbol pin visibility, implicit terminals, and named-global-Net
+exemptions are adapter policy before this calculation.
+
+A guide is transient presentation, never a Route, Junction, or electrical
+contact. A guide click starts the ordinary Wire interaction. Label, geometry,
+or transform edits cannot dismiss guidance; the current graph simply yields a
+new result. `remove_route_geometry` retains Net membership and therefore
+re-exposes unresolved imported components. A normal connection cut may split
+an authored local Net but must retain imported membership. The editor may show
+focused, all, or hidden imported guides; Net highlight suppresses only the
+highlighted Net's guides. Unplaced endpoints remain in the Placement Tray and
+do not receive invented page coordinates.
 
 ## Derived read models
 

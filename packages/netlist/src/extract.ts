@@ -235,6 +235,11 @@ function buildNetContext(
   for (const net of [...document.nets].sort((a, b) =>
     a.id.localeCompare(b.id),
   )) {
+    const formalTerminalName = formalTerminalByNetId.get(net.id);
+    if (formalTerminalName) {
+      nameByNetId.set(net.id, formalTerminalName);
+      continue;
+    }
     if (net.name) {
       nameByNetId.set(net.id, net.name);
       continue;
@@ -256,10 +261,6 @@ function buildNetContext(
       "warning",
     );
   }
-  for (const [netId, terminalName] of formalTerminalByNetId) {
-    nameByNetId.set(netId, terminalName);
-  }
-
   const netByTerminal = new Map<string, Net>();
   const instanceById = new Map(
     document.instances.map((instance) => [instance.id, instance]),
@@ -877,6 +878,12 @@ function extractCell(
     return compareText(left, right) || a.id.localeCompare(b.id);
   })) {
     if (interfaceInstanceIds.has(instance.id)) continue;
+    if (instance.symbolId === "port" || instance.symbolId === "port-filled") {
+      // A Free Net Port is the schematic marker for its bound Net name. It is
+      // electrically significant but never emits a device or subcircuit line.
+      terminalNetName(document, instance, "P", context, diagnostics);
+      continue;
+    }
     const binding = instance.netlist?.binding;
     const extracted =
       binding?.kind === "subcircuit"

@@ -216,8 +216,12 @@ export const MoveJunctionEditSchema = z.strictObject({
   junctionId: StableIdSchema,
   position: PointSchema,
 });
-export const MakeFlightlineEditSchema = z.strictObject({
-  kind: z.literal("make_flightline"),
+/**
+ * Removes only the rendered Route geometry.  The Net's electrical membership
+ * is retained, so imported routing guidance can be derived again if needed.
+ */
+export const RemoveRouteGeometryEditSchema = z.strictObject({
+  kind: z.literal("remove_route_geometry"),
   routeId: StableIdSchema,
 });
 export const CutConnectionEditSchema = z.strictObject({
@@ -233,7 +237,7 @@ export const ConnectEndpointsEditSchema = z.strictObject({
   newNetScope: z.enum(["local", "global"]).optional(),
 });
 
-/** A VDD rail edit creates/reuses one explicit supply Net and its geometry. */
+/** A power rail edit creates/reuses one explicit named Net and its geometry. */
 export const AddPowerRailEditSchema = z.strictObject({
   kind: z.literal("add_power_rail"),
   netId: StableIdSchema,
@@ -241,7 +245,9 @@ export const AddPowerRailEditSchema = z.strictObject({
   startJunctionId: StableIdSchema,
   endJunctionId: StableIdSchema,
   labelId: StableIdSchema,
-  domain: z.literal("vdd"),
+  netName: z.string().trim().min(1).max(128),
+  scope: z.enum(["local", "global"]),
+  powerDomain: z.literal("vdd"),
   start: PointSchema,
   end: PointSchema,
 });
@@ -368,7 +374,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   AttachEndpointToRouteEditSchema,
   RemoveJunctionEditSchema,
   MoveJunctionEditSchema,
-  MakeFlightlineEditSchema,
+  RemoveRouteGeometryEditSchema,
   CutConnectionEditSchema,
   ConnectEndpointsEditSchema,
   AddPowerRailEditSchema,

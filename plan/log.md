@@ -1,5 +1,49 @@
 # Maintenance Log
 
+## 2026-08-21 - Razavi default Port label text
+
+- Changed areas: made non-voltage/current semantic Net and Formal Port names
+  use the default Razavi bold-italic RichText base; added model and rendered
+  `NET1` Port regression coverage.
+- Validation: focused model unit contract, focused Port browser workflow,
+  typecheck, format, test-impact, and diff checks passed.
+- Commit status: committed on `codex/insert-unification` at the current branch
+  HEAD; push pending after one transient GitHub TLS handshake failure.
+
+## 2026-08-21 - Separate compact Port Setup from generic Insert
+
+- Changed areas: moved Port role/name/direction out of the generic Insert
+  control grid into a dedicated compact dialog; routed P, Library, and full
+  Insert Port choices through one editor-local setup intent while retaining the
+  existing placement planners.
+- Validation: focused dialog/launch/Library unit contracts (4 files / 12
+  tests), focused Port shortcut browser workflow, typecheck, format,
+  test-impact, and diff checks passed.
+- Commit status: committed on `codex/insert-unification` at the current branch
+  HEAD; push pending after one transient GitHub TLS handshake failure.
+
+## 2026-08-21 - Complete unnamed Free Net Port placement
+
+- Changed areas: made isolated Free Net Port placement allocate the first
+  unused `NET<n>` name instead of rejecting the click; preserved explicit and
+  named-contact precedence; added a `P` shortcut browser regression.
+- Validation: focused Port browser regression, typecheck, format,
+  test-impact, and diff checks passed.
+- Commit status: committed on `codex/insert-unification` at the current branch
+  HEAD.
+
+## 2026-08-21 - Unified Insert and Library orchestration
+
+- Changed areas: introduced an editor-local `InsertLaunch` contract with
+  explicit all-candidate and Cell-only scopes; unified Library, Insert,
+  keyboard, Port, Cell, and dialog-confirmation entry points; and made the
+  Cell picker visibly scoped without changing persisted or Engine protocols.
+- Validation: focused unit contracts (3 files / 9 tests), focused Library
+  browser flows (3 tests), Cell scope-reset browser regression, typecheck,
+  format, test-impact, and diff checks passed.
+- Commit status: committed on `codex/insert-unification` at the current branch
+  HEAD.
+
 ## 2026-08-20 - External subcircuit definition authoring
 
 - Changed areas: schema-15 project external interfaces and migration; stable
@@ -3839,3 +3883,79 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `pnpm ci:check` passed with 162 unit files / 975 tests, all workspace builds,
   release/MCP smoke checks, and 167 browser tests.
 - Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.
+## 2026-08-21 - Free Net Port lifecycle
+
+- Changed areas: reused the deterministic named-Net planner for Free Port
+  insertion; pruned an unreachable local Net only after its final endpoint,
+  display label, and all durable references have gone; and repaired the
+  browser insertion helper for the separate Port setup dialog.
+- Validation: focused lifecycle/named-Net tests (9 tests), three targeted
+  browser Port flows, workspace typecheck, Prettier, test-impact, and diff
+  checks passed.
+- Commit status: committed and pushed on `codex/insert-unification` as
+  `65580820`.
+
+## 2026-08-21 - Top-Cell Port and Net semantics
+
+- Changed areas: enabled Formal Cell Pin authoring in the top Document; made
+  Free Net Ports validated, non-emitting Net markers; assigned formal terminal
+  names before anonymous Net generation; and accepted ADR 0034 with current
+  interaction, export, and hierarchy guidance.
+- Validation: netlist package (3 files / 19 tests), complete hierarchy browser
+  spec (10 tests), focused manual Port browser flows (2 tests), typecheck,
+  format/docs/test-impact, workspace build, and `pnpm verify:branch` (162 test
+  files / 977 tests plus production preview smoke) passed.
+- Commit status: committed on `codex/top-cell-port-net-semantics` as
+  `60d52ebb`; stacked integration is tracked separately.
+
+## 2026-08-21 - Unified Port semantics stack
+
+- Changed areas: stacked top-Cell formal-interface and Free Port export
+  semantics onto the unified Insert/Port Setup and Free Port Net lifecycle;
+  retained the top-level Free Port default while exposing both explicit roles
+  in every Document.
+- Validation: focused unit tests (5 files / 29 tests), combined Port browser
+  flows (5 tests), typecheck, format/docs/test-impact/diff checks, and complete
+  `pnpm verify:branch` (164 files / 986 tests, workspace builds, production
+  preview smoke) passed.
+- Commit status: integrated as `dff2568c` and closed by `b891998e` on
+  `codex/insert-unification`.
+
+## 2026-08-21 - Imported Net routing guidance
+
+- Changed areas: advanced Project persistence to schema 19; replaced
+  document-wide flightline dismissal with per-Net `authored`/`spice-import`
+  provenance; extracted a pure routing-guidance MST; renamed the geometry-only
+  route mutation to `remove_route_geometry`; and added focused/all/hidden
+  imported-guidance display with per-Net highlight suppression.
+- Validation: focused schema/protocol/SPICE/derived/edit-engine tests,
+  imported guidance browser tests (5), complete workspace unit-test execution
+  after schema-baseline updates, typecheck, static/doc/reference checks,
+  generated Agent/MCP artifact checks, workspace build, production preview
+  smoke, test-impact, and diff checks passed.
+- Commit status: committed on `codex/spice-import-routing-guidance` as
+  `60ff3692`; stacked coordination is tracked separately.
+
+## 2026-08-21 - Port and imported-routing-guidance stack
+
+- Changed areas: stacked schema-19 imported-only routing guidance above the
+  unified Port/export lifecycle; resolved the ADR 0034 collision as ADR 0035;
+  preserved imported provenance through Port Net merge/delete; and hid
+  guidance controls when an authored canvas has no derived guides.
+- Validation: focused cross-layer unit tests, 8 combined Port/guidance browser
+  flows, typecheck, format/docs/test-impact, Agent API and MCP generated checks,
+  and complete `pnpm verify:branch` (165 files / 991 tests, workspace builds,
+  production preview smoke) passed.
+- Commit status: routing source stacked as `85cf56ec`; coordinated repair is
+  committed as the current `codex/insert-unification` branch HEAD.
+
+## 2026-08-21 - Named power and MOS bulk hotfix
+
+- Changed areas: made VDD/AVDD/DVDD Rails ordinary named Net projections;
+  unified VDD Port/Rail reuse and Razavi net-name text; and removed MOS-polarity
+  fallback creation of global VDD/0 while retaining explicit and configured
+  cell-default bulk connections.
+- Validation: focused unit/browser tests, generated Agent/MCP artifact checks,
+  test-impact and diff checks, plus canonical `pnpm ci:check` passed with
+  165 unit files / 990 tests, all builds/release checks, and 169 browser tests.
+- Commit status: ready to commit on `codex/vdd-named-power-hotfix`.

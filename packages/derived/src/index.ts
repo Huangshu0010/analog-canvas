@@ -22,6 +22,7 @@ export * from "./project-instance-index.js";
 export * from "./resolved-route-geometry.js";
 export * from "./route-query.js";
 export * from "./routing-components.js";
+export * from "./routing-guidance.js";
 export * from "./route-attachment.js";
 export * from "./rich-text-layout.js";
 export * from "./style-profile.js";

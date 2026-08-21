@@ -265,11 +265,11 @@ describe("current Agent Circuit API service", () => {
       }
     }
 
-    // RichText recursively unfolds into both part documents. Schema 18 adds a
-    // bounded same-text Port-format override; this tight ceiling still guards
+    // RichText recursively unfolds into both part documents. Schema 19 adds
+    // bounded Net provenance; this ceiling still guards
     // accidental projection bloat.
     expect(JSON.stringify(AgentCircuitRequestJsonSchema).length).toBeLessThan(
-      121_250,
+      122_000,
     );
     expect(JSON.stringify(AgentCircuitResponseJsonSchema).length).toBeLessThan(
       180_000,

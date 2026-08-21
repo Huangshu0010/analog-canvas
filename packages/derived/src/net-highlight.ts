@@ -3,7 +3,7 @@ import type {
   EndpointRef,
   VirtualConnectivityEdge,
 } from "./connectivity-index.js";
-import type { Flightline } from "./connectivity.js";
+import type { RoutingGuide } from "./routing-guidance.js";
 import { endpointKey } from "./endpoint.js";
 
 /**
@@ -19,7 +19,7 @@ export interface NetHighlight {
   routes: readonly string[];
   junctions: readonly string[];
   virtualEdges: readonly VirtualConnectivityEdge[];
-  flightlines: readonly Flightline[];
+  routingGuidance: readonly RoutingGuide[];
 }
 
 export interface CrossCellTraceFrame {
@@ -98,7 +98,7 @@ export function computeNetHighlight(
             visibleEndpointKeys.has(endpointKey(edge.to)),
         )
       : record.virtualEdges,
-    flightlines: record.flightlines,
+    routingGuidance: record.routingGuidance,
   };
 }
 

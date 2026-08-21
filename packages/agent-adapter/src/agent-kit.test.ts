@@ -194,7 +194,9 @@ describe("Agent operating Kit", () => {
         startJunctionId: "junction-vdd-left",
         endJunctionId: "junction-vdd-right",
         labelId: "label-vdd",
-        domain: vddRail!.powerDomain as "vdd",
+        netName: "VDD",
+        scope: "local",
+        powerDomain: vddRail!.powerDomain as "vdd",
         start: { x: 260, y: 100 },
         end: { x: 360, y: 100 },
       },
@@ -335,7 +337,11 @@ describe("Agent operating Kit", () => {
             netId: groundNetId!,
             powerDomain: "ground",
           },
-          { kind: "set_mos_bulk_defaults", nmosNetId: groundNetId! },
+          {
+            kind: "set_mos_bulk_defaults",
+            nmosNetId: groundNetId!,
+            pmosNetId: "net-vdd",
+          },
           { kind: "reconcile_mos_bulk", instanceIds: ["MP1", "MN1"] },
         ],
       }),
@@ -353,7 +359,7 @@ describe("Agent operating Kit", () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: "MP1",
-          mosBulk: { status: "supply-default", netId: "net-vdd" },
+          mosBulk: { status: "cell-default", netId: "net-vdd" },
         }),
         expect.objectContaining({
           id: "MN1",

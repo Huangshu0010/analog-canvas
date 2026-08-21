@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { emulateDownloadOnlyBrowser } from "./editor-fixtures.js";
+import { clickCommand, emulateDownloadOnlyBrowser } from "./editor-fixtures.js";
 
 test.beforeEach(async ({ page }) => {
   await emulateDownloadOnlyBrowser(page);
@@ -37,25 +37,21 @@ async function beginPortPlacement(
   },
 ): Promise<void> {
   await page.getByTestId("shapes-chip-port").click();
-  const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  await dialog
-    .getByLabel("Port role")
-    .selectOption(
-      options.role === "cell-terminal" ? "cell-terminal" : "net-port",
-    );
+  const dialog = page.locator(".port-setup-dialog");
   await dialog
     .getByLabel(
-      options.role === "cell-terminal"
-        ? "New Cell terminal name"
-        : "New Net Port name",
+      options.role === "cell-terminal" ? "Formal Cell Pin" : "Free Net Port",
     )
+    .check();
+  await dialog
+    .getByLabel(options.role === "cell-terminal" ? "Terminal name" : "Net name")
     .fill(options.name);
   if (options.role === "cell-terminal") {
     await dialog
-      .getByLabel("New Cell terminal direction")
+      .getByLabel("Cell Pin direction")
       .selectOption(options.direction ?? "passive");
   }
-  await dialog.getByRole("button", { name: "Apply" }).click();
+  await dialog.getByRole("button", { name: "Place" }).click();
 }
 
 test("keeps direct Cell commands in one hierarchy row", async ({ page }) => {
@@ -114,7 +110,7 @@ test("manages Cell rename and lists callers", async ({ page }) => {
     .getByRole("button", { name: "Top", exact: true })
     .click();
   await runCellCommand(page, "Place Cell");
-  const insert = page.getByRole("dialog", { name: "Insert Component" });
+  const insert = page.getByRole("dialog", { name: "Place Hierarchical Cell" });
   await insert.getByRole("option", { name: /ReusableStage/u }).click();
   await insert.getByRole("button", { name: "Apply" }).click();
   await page
@@ -199,7 +195,9 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
     .getByTestId("cell-command-menu")
     .getByRole("button", { name: "Place Cell" })
     .click();
-  const insertDialog = page.getByRole("dialog", { name: "Insert Component" });
+  const insertDialog = page.getByRole("dialog", {
+    name: "Place Hierarchical Cell",
+  });
   await insertDialog.getByRole("option", { name: /ReusableStage/u }).click();
   await insertDialog.getByRole("button", { name: "Apply" }).click();
   await canvas.click({ position: { x: 420, y: 180 } });
@@ -301,6 +299,36 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   }
 });
 
+test("declares a top Formal Cell Pin and exports the top interface", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await beginPortPlacement(page, {
+    role: "cell-terminal",
+    name: "VIN",
+    direction: "input",
+  });
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 300, y: 180 } });
+  await expect(page.getByTestId("status")).toContainText("Added Cell port VIN");
+  await page.keyboard.press("Escape");
+  await page.getByTestId("hit-P1").click();
+  const shelf = page.getByTestId("selection-shelf");
+  if ((await shelf.getAttribute("aria-expanded")) === "false") {
+    await shelf.click();
+  }
+  await expect(page.getByLabel("Cell Port properties")).toBeVisible();
+
+  await clickCommand(page, "Netlist", "Run Preflight…");
+  const preflight = page.getByRole("dialog", { name: "Netlist Preflight" });
+  await expect(preflight.getByTestId("netlist-preview")).toContainText(
+    ".subckt Main VIN",
+  );
+  await expect(preflight).not.toContainText("GENERATED_NET_NAME");
+  await expect(preflight).not.toContainText("MISSING_DEVICE_DEFINITION");
+});
+
 test("places a free Net Port whose rich label edits the Net name", async ({
   page,
 }) => {
@@ -336,6 +364,13 @@ test("places a free Net Port whose rich label edits the Net name", async ({
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await page.getByTestId("hit-P1").click();
   await expect(netName).toHaveValue("VINP");
+
+  await clickCommand(page, "Netlist", "Run Preflight…");
+  const preflight = page.getByRole("dialog", { name: "Netlist Preflight" });
+  await expect(preflight).not.toContainText("MISSING_DEVICE_DEFINITION");
+  await expect(preflight.getByTestId("netlist-preview")).toContainText(
+    ".subckt Main",
+  );
 });
 
 test("returns a formal Cell Port to the Tray without deleting its interface", async ({
@@ -444,11 +479,21 @@ test("places an existing Cell and blocks deleting its shared definition", async 
     .click();
 
   await runCellCommand(page, "Place Cell");
-  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  const dialog = page.getByRole("dialog", { name: "Place Hierarchical Cell" });
   await expect(dialog.getByText("Cells", { exact: true })).toBeVisible();
   await expect(dialog.getByTestId("insert-component-nmos")).toHaveCount(0);
-  await dialog.getByRole("option", { name: /ReusableStage/u }).click();
-  await dialog.getByRole("button", { name: "Apply" }).click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("i");
+  const fullInsert = page.getByRole("dialog", { name: "Insert Component" });
+  await expect(fullInsert.getByTestId("insert-component-nmos")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await runCellCommand(page, "Place Cell");
+  const cellDialog = page.getByRole("dialog", {
+    name: "Place Hierarchical Cell",
+  });
+  await cellDialog.getByRole("option", { name: /ReusableStage/u }).click();
+  await cellDialog.getByRole("button", { name: "Apply" }).click();
 
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.hover({ position: { x: 360, y: 230 } });

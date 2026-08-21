@@ -21,14 +21,7 @@ describe("Project protocol documentation", () => {
       ["docs/specs/persistence-and-recovery.md", `schema-${version}`],
       ["docs/specs/project-file-format.md", `Project schema: \`${version}\``],
       ["docs/specs/editor-interaction.md", `schema-${version}`],
-      [
-        "docs/adr/0032-formal-port-display-and-retained-annotations.md",
-        `Project schema ${version} makes`,
-      ],
-      [
-        "docs/adr/0033-port-semantic-name-and-richtext-presentation.md",
-        `Project schema ${version} keeps`,
-      ],
+      ["docs/adr/0035-imported-net-routing-guidance.md", `Schema ${version}`],
       [
         "docs/user/project-compatibility.md",
         `schema version is \`${version}\``,

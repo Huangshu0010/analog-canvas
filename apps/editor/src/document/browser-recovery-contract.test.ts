@@ -185,20 +185,20 @@ describe("reviewBrowserRecoveryProject", () => {
     }
   });
 
-  it("accepts a schema-17 recovery envelope after upgrading its Project", () => {
+  it("accepts a schema-18 recovery envelope after upgrading its Project", () => {
     const previousText = JSON.stringify({
       ...JSON.parse(projectText),
-      schemaVersion: 17,
+      schemaVersion: 18,
     });
     const review = reviewBrowserRecoveryProject(
       finalizeBrowserRecoveryRecord(
-        draft({ projectText: previousText, projectSchemaVersion: 17 }),
+        draft({ projectText: previousText, projectSchemaVersion: 18 }),
       ),
     );
 
     expect(review.status).toBe("valid");
     if (review.status === "valid") {
-      expect(review.project.schemaVersion).toBe(18);
+      expect(review.project.schemaVersion).toBe(19);
     }
   });
 

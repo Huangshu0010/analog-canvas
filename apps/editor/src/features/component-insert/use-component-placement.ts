@@ -7,6 +7,7 @@ import type {
   WireSource,
 } from "@icm/edit-engine";
 import {
+  planEnsureNamedNet,
   createHierarchyInstance,
   createExternalSubcircuitInstance,
   planCreateCellPort,
@@ -27,7 +28,12 @@ import type {
 } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import type { ComponentInsertRequest } from "./insert-component-dialog";
+import type { ComponentInsertRequest } from "./component-insert-request";
+import type {
+  InsertLaunch,
+  InsertPickerLaunch,
+  InsertScope,
+} from "./insert-launch";
 import {
   powerConnectionForSymbol,
   proposePlacementContact,
@@ -52,6 +58,17 @@ import type { ScreenFlip } from "../../interaction/shortcut-orientation";
 import type { PendingComponentPlacement } from "../../interaction/interaction-state";
 
 type TransactionResult = { ok: boolean; revision: number };
+
+function nextFreePortNetName(document: SchematicDocument): string {
+  const occupiedNames = new Set(
+    document.nets.flatMap((net) =>
+      net.name?.trim() ? [net.name.trim().toLowerCase()] : [],
+    ),
+  );
+  let ordinal = 1;
+  while (occupiedNames.has(`net${ordinal}`)) ordinal += 1;
+  return `NET${ordinal}`;
+}
 
 export interface UseComponentPlacementOptions {
   recentStorageKey: string;
@@ -79,7 +96,7 @@ export interface UseComponentPlacementOptions {
   cancelCanvasDrag: () => void;
   clearTransientCanvasState: () => void;
   paintSnapGuides: (guides: []) => void;
-  beginVddRailInteraction: () => void;
+  beginVddRailInteraction: (netName: string) => void;
   beginComponentPlacement: (request: PendingComponentPlacement) => void;
   rotateComponentPlacement: (delta: 90 | -90) => void;
   mirrorComponentPlacement: (direction: ScreenFlip) => void;
@@ -91,6 +108,7 @@ export interface UseComponentPlacementOptions {
   setComponentPreviewPoint: (point: Point) => void;
   setStatus: (status: string) => void;
   vddRailMode: boolean;
+  vddRailNetName: string | null;
   vddRailStart: Point | null;
   pendingSymbolId: string | null;
   pendingComponentPlacement: PendingComponentPlacement | null;
@@ -101,7 +119,11 @@ export interface UseComponentPlacementOptions {
 /** Flat owner of component/VDD placement, dialog recents, and its transactions. */
 export function useComponentPlacement(options: UseComponentPlacementOptions) {
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
-  const [cellInsertOnly, setCellInsertOnly] = useState(false);
+  const [insertScope, setInsertScope] = useState<InsertScope>("all");
+  const [portSetupSymbolId, setPortSetupSymbolId] = useState<
+    "port" | "port-filled"
+  >("port");
+  const [portSetupOpen, setPortSetupOpen] = useState(false);
   const [insertInitialSelectionId, setInsertInitialSelectionId] = useState<
     string | null
   >(null);
@@ -568,23 +590,42 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       ? options.document.nets.find((net) => net.id === contact.netId)
       : undefined;
     const name =
-      placementRequest.portName?.trim() || connectedNet?.name?.trim();
-    if (!name) {
-      options.setStatus(
-        "A Free Net Port needs a Net name or a named Net contact",
-      );
-      return;
-    }
+      placementRequest.portName?.trim() ||
+      connectedNet?.name?.trim() ||
+      nextFreePortNetName(options.document);
     const baseNetId = `net-port-${id.toLowerCase()}`;
-    let netId = contact.netId ?? baseNetId;
+    let candidateNetId = contact.netId ?? baseNetId;
     let netSuffix = 2;
     while (
       !contact.netId &&
-      options.document.nets.some((net) => net.id.toLowerCase() === netId)
+      options.document.nets.some(
+        (net) => net.id.toLowerCase() === candidateNetId,
+      )
     ) {
-      netId = `${baseNetId}-${netSuffix}`;
+      candidateNetId = `${baseNetId}-${netSuffix}`;
       netSuffix += 1;
     }
+    // The contact planner can reserve a Net that does not exist yet. Model
+    // that pending candidate before asking the name-first planner whether an
+    // existing same-name Net should absorb it.
+    const namedNetDocument = structuredClone(options.document);
+    if (!namedNetDocument.nets.some((net) => net.id === candidateNetId)) {
+      namedNetDocument.nets.push({
+        id: candidateNetId,
+        scope: "local",
+        powerDomain: "none",
+        terminals: [],
+      });
+    }
+    const namedNetPlan = planEnsureNamedNet(namedNetDocument, {
+      candidateNetId,
+      name,
+    });
+    if (!namedNetPlan.ok) {
+      options.setStatus(namedNetPlan.message);
+      return;
+    }
+    const netId = namedNetPlan.netId;
     const label = defaultInstanceDisplayAnnotations(
       options.document,
       instance,
@@ -613,19 +654,11 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
                 instanceId: id,
                 pinName: "P",
               },
-              newNetId: netId,
+              newNetId: candidateNetId,
               newNetName: name,
             },
           ]),
-      ...(contact.netId && connectedNet?.name !== name
-        ? [
-            {
-              kind: "set_net_name" as const,
-              netId: contact.netId,
-              name,
-            },
-          ]
-        : []),
+      ...namedNetPlan.edits,
       {
         kind: "upsert_schematic_annotation",
         annotation: {
@@ -673,9 +706,12 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       instanceId,
       start,
       end,
+      netName: options.vddRailNetName ?? "VDD",
     });
     if (!railPlan.ok) {
-      options.setStatus(`Cannot add VDD rail: ${railPlan.message}`);
+      options.setStatus(
+        `Cannot add ${options.vddRailNetName ?? "VDD"} rail: ${railPlan.message}`,
+      );
       return;
     }
     const result = options.transactConnectivity(
@@ -686,15 +722,18 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     if (!result?.ok) return;
     options.selectOnly("route", [routeId]);
     options.completeVddRailPlacement();
-    options.setStatus(`Added VDD rail ${instanceId}`);
+    options.setStatus(
+      `Added ${options.vddRailNetName ?? "VDD"} rail ${instanceId}`,
+    );
   };
 
-  const openInsertComponentDialog = (
-    cellOnly = false,
-    initialSelectionId: string | null = null,
-  ): void => {
+  const openInsertPicker = ({
+    scope = "all",
+    initialSelectionId = null,
+  }: InsertPickerLaunch): void => {
+    const cellOnly = scope === "cells";
     options.cancelAllTransientInteraction();
-    setCellInsertOnly(cellOnly);
+    setInsertScope(scope);
     setInsertInitialSelectionId(initialSelectionId);
     setInsertDialogOpen(true);
     options.setStatus(
@@ -722,10 +761,14 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     options.clearTransientCanvasState();
     options.paintSnapGuides([]);
     setInsertDialogOpen(false);
-    setCellInsertOnly(false);
+    setInsertScope("all");
+    setInsertInitialSelectionId(null);
+    setPortSetupOpen(false);
     if (request.kind === "vdd-rail") {
-      options.beginVddRailInteraction();
-      options.setStatus("Place VDD Rail: click the first end · Esc cancels");
+      options.beginVddRailInteraction(request.netName);
+      options.setStatus(
+        `Place ${request.netName} Rail: click the first end · Esc cancels`,
+      );
       return;
     }
     const pendingRequest: PendingComponentPlacement =
@@ -760,16 +803,42 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     );
   };
 
+  const startInsert = (launch: InsertLaunch): void => {
+    if (launch.kind === "quick") {
+      beginInsertedComponentPlacement(launch.request);
+      return;
+    }
+    if (launch.kind === "port-setup") {
+      options.cancelAllTransientInteraction();
+      setInsertDialogOpen(false);
+      setInsertScope("all");
+      setInsertInitialSelectionId(null);
+      setPortSetupSymbolId(launch.symbolId);
+      setPortSetupOpen(true);
+      options.setStatus("Set up Port before placing it on the canvas");
+      return;
+    }
+    openInsertPicker(launch);
+  };
+
   const cancelComponentInsert = (): void => {
     setInsertDialogOpen(false);
-    setCellInsertOnly(false);
+    setInsertScope("all");
+    setInsertInitialSelectionId(null);
     options.cancelAllTransientInteraction();
     options.setStatus("Component insertion cancelled");
   };
 
   const closeInsertDialog = (): void => {
     setInsertDialogOpen(false);
-    setCellInsertOnly(false);
+    setInsertScope("all");
+    setInsertInitialSelectionId(null);
+  };
+
+  const cancelPortSetup = (): void => {
+    setPortSetupOpen(false);
+    options.cancelAllTransientInteraction();
+    options.setStatus("Port setup cancelled");
   };
 
   const rotatePendingComponent = (delta: 90 | -90): void => {
@@ -789,9 +858,13 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       if (!options.vddRailStart) {
         options.setVddRailStart(point);
         options.setVddRailPreviewPoint(point);
-        options.setStatus("VDD rail: click the right end (Esc cancels)");
+        options.setStatus(
+          `${options.vddRailNetName ?? "VDD"} rail: click the right end (Esc cancels)`,
+        );
       } else if (point.x === options.vddRailStart.x) {
-        options.setStatus("VDD rail needs a non-zero horizontal length");
+        options.setStatus(
+          `${options.vddRailNetName ?? "VDD"} rail needs a non-zero horizontal length`,
+        );
       } else {
         placeVddRail(options.vddRailStart, {
           x: point.x,
@@ -865,16 +938,18 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
 
   return {
     beginRetainedInstancePlacement,
-    beginInsertedComponentPlacement,
     cancelComponentInsert,
-    cellInsertOnly,
+    cancelPortSetup,
     closeInsertDialog,
     commitPendingPlacementAt,
     insertDialogOpen,
     insertInitialSelectionId,
+    insertScope,
     mirrorPendingComponent,
-    openInsertComponentDialog,
+    portSetupOpen,
+    portSetupSymbolId,
     recentSymbolIds,
     rotatePendingComponent,
+    startInsert,
   };
 }

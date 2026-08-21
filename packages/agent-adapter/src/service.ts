@@ -172,7 +172,7 @@ export function agentEditCategory(
     case "add_junction":
     case "attach_endpoint_to_route":
     case "remove_junction":
-    case "make_flightline":
+    case "remove_route_geometry":
     case "cut_connection":
     case "connect_endpoints":
     case "add_power_rail":

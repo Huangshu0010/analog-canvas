@@ -17,14 +17,42 @@ state as a Symbol; its commit factory alone differs, creating one typed
 subcircuit Instance through a Project structural transaction. `Xn` remains the
 internal netlist reference; the canvas has one object-anchored Cell-name
 annotation in the ordinary reference-label position. Both `port` and `port-filled`
-remain ordinary manually reachable components. Choosing either starts the same
-placement state as any component; terminal `P` participates in ordinary snap,
-wire, move/stretch, and selection behavior. In a reusable child Cell, its
-commit factory atomically adds the ordinary Instance, contacted or new local
-Net membership, and one stable formal terminal through the Project structural
-transaction. A top-level Port remains an ordinary electrical component. Every
-parent block therefore observes a child Cell interface revision without a later
-expose step.
+remain ordinary manually reachable components. Choosing either requires an
+explicit **Free Net Port** or **Formal Cell Pin** role in every Document,
+including the top Document. Terminal `P` participates in ordinary snap, wire,
+move/stretch, and selection behavior. A Free Net Port atomically creates or
+joins one named Net and is a non-emitting electrical marker. A Formal Cell Pin
+also creates one stable ordered Cell terminal through the Project structural
+transaction and contributes the `.subckt` interface without emitting an
+instance line. Every parent block therefore observes a child Cell interface
+revision without a later expose step.
+
+Library, the `I` shortcut, and **Place Cell** are entry views over one
+editor-local insert controller. Their request is either an `all` picker (the
+full component catalog, Cells, and supported external masters), a `cells`
+picker, or a quick request for an already chosen Symbol. The controller clears
+the previous picker scope before it starts placement, then delegates to the
+existing component, Cell, Port, external-master, or VDD-rail planner. This is
+an editor interaction boundary only: it does not add a persisted project type,
+an Edit Engine operation, or an Agent API endpoint.
+
+Port entry is intentionally a separate compact setup surface, not a mode of
+the generic Insert dialog. `P`, Library Port choices, and selecting either Port
+symbol from full Insert enter the same editor-local Port Setup intent before
+the ordinary placement cursor starts. The top Document defaults this setup to
+Free Net Port so the direct `P` workflow remains fast; child Documents default
+to Formal Cell Pin. Both roles remain explicitly selectable in every Document.
+For a Free Port, a Net name is optional: an isolated Port receives the first
+unused `NET<n>` name, while a named contact or explicit text takes precedence.
+Formal Pin setup requires the terminal name and direction before its interface
+transaction can commit. This separation is presentation-only and retains the
+same typed Port planners.
+
+The default RichText projection of every Free Port Net name and Formal Cell Pin
+name uses the Razavi mathematical base (bold italic), including identifiers
+such as `CLK` and generated `NET1`; conventional `Vout`/`Iref` and explicit
+underscore subscripts retain their existing semantic decomposition.
+
 Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.
@@ -53,25 +81,25 @@ new interfaces use deterministic direction-aware automatic layout.
 
 Canonical `nmos`/`pmos` use the asset's `textbook-3terminal` visual variant by
 default while retaining D/G/S/B electrically. A manual MOS uses explicit B
-membership first, then a configured cell default, then the canonical supply
-default: NMOS bulk uses/creates global ground and PMOS bulk uses/creates global
-VDD. Drawing the visible `bulk-dashed` connection clears that implicit binding
-and connects B to the selected Net in the same transaction. Imported MOS
-instances do not receive a guessed fourth node.
+membership first, then an explicitly configured cell default; otherwise bulk
+remains unresolved. Drawing the visible `bulk-dashed` connection clears that
+default binding and connects B to the selected Net in the same transaction.
+Imported MOS instances do not receive a guessed fourth node.
 
 Ground is the `ground` component connected through pin `0`; placement reuses an
-existing global ground supply Net. VDD Rail is a virtual Library item presented
+existing global ground supply Net. Power Rail is a virtual Library item presented
 through the same I-dialog, Library, and placement input plane as components.
 Its editor-local VDD artwork is preview-only and is not registered with the
 product Symbol Resolver. Before the first click the artwork follows the
 pointer; after the first click the preview becomes the horizontal rail. The
-second click creates/reuses an explicit global VDD Net, creates two route-anchor
-Junctions and one `power-rail` Route, and persists one RichText power-label
-annotation. The Route is the only rail geometry: the annotation adds no supply
-bar or terminal stub, and its complete `V_DD` text is bold italic with `DD` as
-a subscript. It creates no VDD Instance and exits placement after the commit.
-Deleting the rail also deletes its power label and rail-only Junctions while
-preserving a VDD Net still used elsewhere.
+second click creates/reuses the selected named Net in this Document, creates two
+route-anchor Junctions and one `power-rail` Route, and persists one net-name-bound
+RichText power-label annotation. A new Net is local; a matching explicitly
+global Net keeps its scope. The Route is the only rail geometry: the annotation
+adds no supply bar or terminal stub, and the semantic name uses the shared
+Razavi schematic-math style. It creates no VDD Instance and exits placement
+after the commit. Deleting the rail also deletes its power label and rail-only
+Junctions; an otherwise-unused local Net follows the ordinary orphan lifecycle.
 
 ## Interaction states
 
@@ -251,8 +279,8 @@ no electrical meaning.
 Open, demo load, restore, and human-approved staged import replace the entire
 Project through one replacement boundary; they are not Edit Engine
 transactions. Replacement cancels pending recovery for the outgoing Project
-and terminates its Agent session. A complete schema-17 Project may be upgraded
-at the read boundary and then enters the editor only as schema-18; migrated
+and terminates its Agent session. A complete schema-18 Project may be upgraded
+at the read boundary and then enters the editor only as schema-19; migrated
 files are marked as needing save.
 
 Selection, viewport, active tool, previews, Agent tokens, and approval UI are

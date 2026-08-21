@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.12`
+Version: `1.13`
 
 Owning phase: `Phase 0/1/8`
 
@@ -66,7 +66,7 @@ for readability; these groups do not create separate mutation endpoints:
   `set_cell_formal_parameters`;
 - Route/Junction/connectivity: `set_route_points`, `route_orthogonal`,
   `add_junction`, `attach_endpoint_to_route`, `remove_junction`,
-  `move_junction`, `make_flightline`, `cut_connection`, `connect_endpoints`,
+  `move_junction`, `remove_route_geometry`, `cut_connection`, `connect_endpoints`,
   `disconnect_endpoint`;
 - Net/power/MOS: `add_power_rail`, `merge_nets`, `set_net_name`,
   `set_net_power_domain`, `set_mos_bulk_defaults`,
@@ -201,8 +201,11 @@ Phase 8 topology operations have these preconditions:
   weaken the raw edit's rejection rule or create another mutation endpoint.
 - `set_net_power_domain` may classify an unclassified Net or clear a role, but
   cannot change directly between non-`none` roles. Canonical power authoring
-  selects by global Net name (`0` or `VDD`) before applying this edit; a power
-  role alone never selects a Net.
+  selects by Net name before applying this edit; a power role alone never
+  selects a Net.
+- `add_power_rail` requires an explicit trimmed `netName` and scope, creates or
+  reuses exactly that named compatible Net, and binds its RichText annotation
+  to the Net name. It does not infer identity from `powerDomain`.
 - Power-Net normalization is not an edit operation. Normal production
   authoring uses the name-first power and named-Net planners; a transaction
   cannot silently add a canonical name, change scope, or repair a duplicate
@@ -240,9 +243,9 @@ Phase 8 topology operations have these preconditions:
   electrical split. Newly orphaned Junction endpoints of the deleted branch
   are removed, an empty local Net is removed, and attached annotations follow
   the normal unresolved-anchor fallback rule.
-- `make_flightline` remains the explicit geometry-only operation: it removes a
-  Route while preserving its logical Net membership. It is intended for
-  advanced rerouting clients, not ordinary Delete.
+- `remove_route_geometry` is the explicit geometry-only operation: it removes
+  a Route while preserving logical Net membership. It supports advanced
+  rerouting without conflating a persisted mutation with derived guidance.
 - symbol and Instance edits honor the same locked layout groups/constraints as
   instance transforms and reject the complete transaction on conflict.
 

@@ -86,6 +86,9 @@
         {
           "id": "net-h",
           "name": "HORIZONTAL",
+          "origin": {
+            "kind": "authored"
+          },
           "scope": "local",
           "terminals": [
             {
@@ -105,6 +108,9 @@
         {
           "id": "net-v",
           "name": "VERTICAL",
+          "origin": {
+            "kind": "authored"
+          },
           "scope": "local",
           "terminals": [
             {
@@ -132,7 +138,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-routing",
   "name": "Phase 3 Routing Demo",
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "source": {
     "dialect": "none",
     "entry": null,

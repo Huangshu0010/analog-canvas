@@ -69,6 +69,10 @@ decision is
 The unified free/formal Port semantic-name and same-text RichText presentation
 decision is
 [`0033-port-semantic-name-and-richtext-presentation.md`](0033-port-semantic-name-and-richtext-presentation.md).
+The top-Cell formal interface and non-emitting Free Net Port decision is
+[`0034-top-cell-formal-port-and-free-port-export.md`](0034-top-cell-formal-port-and-free-port-export.md).
+The imported-Net provenance and derived routing-guidance decision is
+[`0035-imported-net-routing-guidance.md`](0035-imported-net-routing-guidance.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

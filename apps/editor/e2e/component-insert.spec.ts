@@ -244,9 +244,8 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
   );
 });
 
-test("offers VDD rail in I with preview-only symbol artwork", async ({
-  page,
-}) => {
+test("places a named power rail from I", async ({ page }) => {
+  await emulateDownloadOnlyBrowser(page);
   await page.goto("/");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
@@ -254,14 +253,44 @@ test("offers VDD rail in I with preview-only symbol artwork", async ({
   await dialog.getByTestId("insert-component-vdd").click();
   await expect(dialog.locator("svg.insert-symbol-artwork")).toBeVisible();
   await expect(dialog.getByLabel("Placement options")).toHaveCount(0);
+  await dialog.getByLabel("Power rail Net name").fill("AVDD");
   await dialog.getByRole("button", { name: "Apply" }).click();
 
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.hover({ position: { x: 260, y: 140 } });
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
+  await canvas.click({ position: { x: 260, y: 140 } });
+  await canvas.click({ position: { x: 500, y: 140 } });
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("component-input-plane")).toHaveCount(0);
   await expect(page.getByTestId("instance-count")).toHaveText("0");
+
+  const saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as {
+    documents: Array<{
+      nets: Array<{ id: string; name?: string; scope: string }>;
+      routes: Array<{ netId: string; presentation?: string }>;
+      annotations: Array<{
+        kind: string;
+        netId: string;
+        binding?: { kind: string; netId?: string };
+      }>;
+    }>;
+  };
+  const document = saved.documents[0]!;
+  const avdd = document.nets.find((net) => net.name === "AVDD");
+  expect(avdd).toMatchObject({ scope: "local" });
+  expect(document.routes).toContainEqual(
+    expect.objectContaining({ netId: avdd!.id, presentation: "power-rail" }),
+  );
+  expect(document.annotations).toContainEqual(
+    expect.objectContaining({
+      kind: "power-label",
+      netId: avdd!.id,
+      binding: { kind: "net-name", netId: avdd!.id },
+    }),
+  );
 });
 
 test("places the VDD power-port device as the default VDD entry", async ({
@@ -320,7 +349,7 @@ test("places the VDD power-port device as the default VDD entry", async ({
   ]);
   const vddNets = document.nets.filter((net) => net.powerDomain === "vdd");
   expect(vddNets).toHaveLength(1);
-  expect(vddNets[0]).toMatchObject({ name: "VDD", scope: "global" });
+  expect(vddNets[0]).toMatchObject({ name: "VDD", scope: "local" });
   expect(vddNets[0]!.terminals).toEqual([
     { instanceId: "VDD1", pinName: "P" },
     { instanceId: "VDD2", pinName: "P" },

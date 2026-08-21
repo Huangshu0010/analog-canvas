@@ -11,6 +11,7 @@ import {
 } from "./component-parameters";
 import { componentCatalog, findPaletteSymbol } from "./symbol-catalog";
 import type { ComponentInsertRequest } from "./component-insert-request";
+import type { InsertScope } from "./insert-launch";
 import { DisplayToggle } from "./display-toggle";
 import { SymbolArtwork } from "./symbol-artwork";
 
@@ -22,10 +23,10 @@ export interface InsertComponentDialogProps {
   recentSymbolIds: readonly string[];
   cells: readonly CellInsertCandidate[];
   externalDefinitions?: readonly ExternalSubcircuitInsertCandidate[];
-  cellOnly?: boolean;
-  allowFormalPort?: boolean;
+  scope?: InsertScope;
   initialSelectionId?: string | null;
   onApply(request: ComponentInsertRequest): void;
+  onConfigurePort(symbolId: "port" | "port-filled"): void;
   onCancel(): void;
 }
 
@@ -101,15 +102,20 @@ export function InsertComponentDialog({
   recentSymbolIds,
   cells,
   externalDefinitions = [],
-  cellOnly = false,
-  allowFormalPort = false,
+  scope = "all",
   initialSelectionId = null,
   onApply,
+  onConfigurePort,
   onCancel,
 }: InsertComponentDialogProps) {
+  const cellsOnly = scope === "cells";
+  const pickerNoun = cellsOnly ? "Cell" : "Component";
+  const dialogTitle = cellsOnly
+    ? "Place Hierarchical Cell"
+    : "Insert Component";
   const initialChoices = useMemo<InsertChoice[]>(
     () => [
-      ...(cellOnly
+      ...(cellsOnly
         ? []
         : componentCatalog(styleProfileId, "", recentSymbolIds).flatMap(
             (group) =>
@@ -126,7 +132,7 @@ export function InsertComponentDialog({
         childDocumentId: cell.childDocumentId,
         cellName: cell.cellName,
       })),
-      ...(cellOnly
+      ...(cellsOnly
         ? []
         : externalDefinitions.map((definition) => ({
             key: `external:${definition.definitionId}`,
@@ -136,7 +142,7 @@ export function InsertComponentDialog({
             masterName: definition.masterName,
           }))),
     ],
-    [cellOnly, cells, externalDefinitions, recentSymbolIds, styleProfileId],
+    [cellsOnly, cells, externalDefinitions, recentSymbolIds, styleProfileId],
   );
   const [query, setQuery] = useState("");
   const [pickerOpen, setPickerOpen] = useState(true);
@@ -150,12 +156,7 @@ export function InsertComponentDialog({
   const [showReference, setShowReference] = useState(true);
   const [referenceText, setReferenceText] = useState("");
   const [showValue, setShowValue] = useState(false);
-  const [portRole, setPortRole] = useState<"net-port" | "cell-terminal">(
-    "net-port",
-  );
-  const [portDirection, setPortDirection] = useState<
-    "input" | "output" | "inout" | "passive"
-  >("passive");
+  const [railNetName, setRailNetName] = useState("VDD");
   const inputRef = useRef<HTMLInputElement>(null);
   const groups = useMemo<
     { category: string; choices: InsertChoice[] }[]
@@ -177,7 +178,7 @@ export function InsertComponentDialog({
         childDocumentId: cell.childDocumentId,
         cellName: cell.cellName,
       }));
-    const externalChoices = (cellOnly ? [] : externalDefinitions)
+    const externalChoices = (cellsOnly ? [] : externalDefinitions)
       .filter((definition) => {
         const normalized = query.trim().toLowerCase();
         return (
@@ -195,7 +196,7 @@ export function InsertComponentDialog({
         masterName: definition.masterName,
       }));
     return [
-      ...(cellOnly
+      ...(cellsOnly
         ? []
         : componentCatalog(styleProfileId, query, recentSymbolIds).map(
             (group) => ({
@@ -215,7 +216,7 @@ export function InsertComponentDialog({
         : []),
     ];
   }, [
-    cellOnly,
+    cellsOnly,
     cells,
     externalDefinitions,
     query,
@@ -263,11 +264,10 @@ export function InsertComponentDialog({
     setShowReference(true);
     setReferenceText("");
     setShowValue(false);
-    setPortRole(allowFormalPort ? "cell-terminal" : "net-port");
-    setPortDirection("passive");
+    setRailNetName("VDD");
     const frame = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(frame);
-  }, [allowFormalPort, initialChoices, initialSelectionId, open]);
+  }, [initialChoices, initialSelectionId, open]);
 
   useEffect(() => {
     setParameterValues(
@@ -319,10 +319,13 @@ export function InsertComponentDialog({
   const apply = (): void => {
     if (!selected) return;
     if (selectedIsVddRail) {
+      const netName = railNetName.trim();
+      if (!netName) return;
       onApply({
         kind: "vdd-rail",
         symbolId: "vdd",
         symbolName: "VDD Rail",
+        netName,
       });
       return;
     }
@@ -358,28 +361,16 @@ export function InsertComponentDialog({
       });
       return;
     }
+    if (selectedIsPort) {
+      onConfigurePort(selected.symbol.id as "port" | "port-filled");
+      return;
+    }
     const parameters = Object.fromEntries(
       Object.entries(parameterValues)
         .map(([key, value]) => [key, value.trim()] as const)
         .filter(([, value]) => value !== ""),
     );
     const trimmedReference = referenceText.trim();
-    if (selectedIsPort) {
-      onApply({
-        kind: "symbol",
-        symbolId: selected.symbol.id,
-        symbolName: selected.symbol.name,
-        parameters: {},
-        initialRotation,
-        showReference: false,
-        referenceText: null,
-        showValue: false,
-        portRole,
-        ...(trimmedReference === "" ? {} : { portName: trimmedReference }),
-        portDirection,
-      });
-      return;
-    }
     onApply({
       kind: "symbol",
       symbolId: selected.symbol.id,
@@ -445,22 +436,25 @@ export function InsertComponentDialog({
       >
         <header className="insert-dialog-header">
           <div>
-            <p>Place device</p>
-            <h2 id="insert-component-title">Insert Component</h2>
+            <p>{cellsOnly ? "Place reusable design" : "Place device"}</p>
+            <h2 id="insert-component-title">{dialogTitle}</h2>
           </div>
-          <kbd>I</kbd>
+          {cellsOnly ? null : <kbd>I</kbd>}
         </header>
 
         <div className="insert-dialog-body">
-          <aside className="insert-control-column" aria-label="Device setup">
+          <aside
+            className="insert-control-column"
+            aria-label={`${pickerNoun} setup`}
+          >
             <section className="insert-component-picker">
               <label className="insert-search-field">
-                <span>Component</span>
+                <span>{pickerNoun}</span>
                 <div className="insert-picker-input-row">
                   <input
                     ref={inputRef}
                     role="combobox"
-                    aria-label="Component search"
+                    aria-label={`${pickerNoun} search`}
                     aria-autocomplete="list"
                     aria-expanded={pickerOpen}
                     aria-controls="insert-component-options"
@@ -473,7 +467,7 @@ export function InsertComponentDialog({
                     placeholder={
                       selected
                         ? `${selected.cellName ?? selected.symbol.name} · ${selected.symbol.id}`
-                        : "Search component"
+                        : `Search ${pickerNoun.toLowerCase()}`
                     }
                     onChange={(event) => {
                       setQuery(event.currentTarget.value);
@@ -485,8 +479,8 @@ export function InsertComponentDialog({
                     className="insert-picker-toggle"
                     aria-label={
                       pickerOpen
-                        ? "Collapse component list"
-                        : "Expand component list"
+                        ? `Collapse ${pickerNoun.toLowerCase()} list`
+                        : `Expand ${pickerNoun.toLowerCase()} list`
                     }
                     aria-expanded={pickerOpen}
                     onClick={() => setPickerOpen((current) => !current)}
@@ -500,7 +494,7 @@ export function InsertComponentDialog({
                   id="insert-component-options"
                   className="insert-component-options"
                   role="listbox"
-                  aria-label="Component choices"
+                  aria-label={`${pickerNoun} choices`}
                 >
                   {groups.map((group) => (
                     <section
@@ -531,13 +525,31 @@ export function InsertComponentDialog({
                     </section>
                   ))}
                   {choices.length === 0 ? (
-                    <p className="insert-no-results">No matching components</p>
+                    <p className="insert-no-results">
+                      No matching {pickerNoun.toLowerCase()}s
+                    </p>
                   ) : null}
                 </div>
               ) : null}
             </section>
 
-            {!selectedIsVddRail ? (
+            {selectedIsVddRail ? (
+              <section
+                className="insert-placement-options"
+                aria-label="Power rail options"
+              >
+                <label>
+                  <span>Net name</span>
+                  <input
+                    aria-label="Power rail Net name"
+                    value={railNetName}
+                    onChange={(event) =>
+                      setRailNetName(event.currentTarget.value)
+                    }
+                  />
+                </label>
+              </section>
+            ) : (
               <section
                 className="insert-placement-options"
                 aria-label="Placement options"
@@ -560,64 +572,9 @@ export function InsertComponentDialog({
                   </select>
                 </label>
                 {selectedIsPort ? (
-                  <div className="insert-label-control">
-                    <label>
-                      <span>Port role</span>
-                      <select
-                        aria-label="Port role"
-                        value={portRole}
-                        onChange={(event) =>
-                          setPortRole(
-                            event.currentTarget.value as
-                              "net-port" | "cell-terminal",
-                          )
-                        }
-                      >
-                        <option value="net-port">Free Net Port</option>
-                        {allowFormalPort ? (
-                          <option value="cell-terminal">Formal Cell Pin</option>
-                        ) : null}
-                      </select>
-                    </label>
-                    <label>
-                      <span>
-                        {portRole === "cell-terminal"
-                          ? "Terminal name"
-                          : "Net name"}
-                      </span>
-                      <input
-                        aria-label={
-                          portRole === "cell-terminal"
-                            ? "New Cell terminal name"
-                            : "New Net Port name"
-                        }
-                        value={referenceText}
-                        placeholder="Use connected Net name"
-                        onChange={(event) =>
-                          setReferenceText(event.currentTarget.value)
-                        }
-                      />
-                    </label>
-                    {portRole === "cell-terminal" ? (
-                      <label>
-                        <span>Direction</span>
-                        <select
-                          aria-label="New Cell terminal direction"
-                          value={portDirection}
-                          onChange={(event) =>
-                            setPortDirection(
-                              event.currentTarget.value as typeof portDirection,
-                            )
-                          }
-                        >
-                          <option value="input">Input</option>
-                          <option value="output">Output</option>
-                          <option value="inout">Inout</option>
-                          <option value="passive">Passive</option>
-                        </select>
-                      </label>
-                    ) : null}
-                  </div>
+                  <p className="insert-cell-label-note">
+                    Apply opens compact Port setup.
+                  </p>
                 ) : (
                   <div className="insert-label-control">
                     <DisplayToggle
@@ -648,7 +605,7 @@ export function InsertComponentDialog({
                   </div>
                 )}
               </section>
-            ) : null}
+            )}
 
             {parameters.length > 0 ? (
               <section

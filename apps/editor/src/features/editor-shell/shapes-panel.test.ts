@@ -17,8 +17,7 @@ describe("shapes quick-place", () => {
         styleProfileId: "razavi",
         recentSymbolIds: [],
         open: true,
-        onOpenInsert: () => undefined,
-        onQuickPlace: () => undefined,
+        onStartInsert: () => undefined,
       }),
     );
 
@@ -89,6 +88,7 @@ describe("shapes quick-place", () => {
       kind: "vdd-rail",
       symbolId: "vdd",
       symbolName: "VDD Rail",
+      netName: "VDD",
     });
   });
 

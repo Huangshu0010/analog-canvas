@@ -87,6 +87,7 @@ describe("component placement electrical contacts", () => {
       scope: "global",
       powerDomain: "ground",
       terminals: [{ instanceId: "GND1", pinName: "0" }],
+      origin: { kind: "authored" },
     });
   });
 
@@ -145,7 +146,7 @@ describe("component placement electrical contacts", () => {
     });
   });
 
-  it("creates a standalone global VDD Net from a placed power port", () => {
+  it("creates a standalone local VDD Net from a placed power port", () => {
     const vddPort = {
       id: "VDD1",
       symbolId: "vdd-port",
@@ -168,7 +169,7 @@ describe("component placement electrical contacts", () => {
         {
           kind: "connect_endpoints",
           newNetName: "VDD",
-          newNetScope: "global",
+          newNetScope: "local",
           from: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
         },
         {
@@ -191,13 +192,14 @@ describe("component placement electrical contacts", () => {
     expect(connected.document.nets).toContainEqual({
       id: "net-power-vdd1",
       name: "VDD",
-      scope: "global",
+      scope: "local",
       powerDomain: "vdd",
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
+      origin: { kind: "authored" },
     });
   });
 
-  it("merges a later VDD power port into the rail's global supply Net", () => {
+  it("merges a later VDD power port into an explicitly global VDD Net", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-power-vdd1",
@@ -268,7 +270,7 @@ describe("component placement electrical contacts", () => {
         {
           kind: "connect_endpoints",
           newNetName: "VDD",
-          newNetScope: "global",
+          newNetScope: "local",
         },
         {
           kind: "set_net_power_domain",
@@ -367,7 +369,7 @@ describe("component placement electrical contacts", () => {
       expect.arrayContaining([
         expect.objectContaining({
           name: "VDD",
-          scope: "global",
+          scope: "local",
           powerDomain: "vdd",
           terminals: [
             { instanceId: "VDD1", pinName: "P" },

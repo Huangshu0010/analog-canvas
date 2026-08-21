@@ -108,7 +108,11 @@ describe("authoring helper compilation", () => {
     expect(edit?.kind).toBe("add_power_rail");
     if (edit?.kind === "add_power_rail") {
       expect(edit.netId).toBe("net-vdd");
-      expect(edit.domain).toBe("vdd");
+      expect(edit).toMatchObject({
+        netName: "VDD",
+        scope: "global",
+        powerDomain: "vdd",
+      });
       expect(edit.routeId).not.toBe(edit.netId);
       expect(edit.startJunctionId).not.toBe(edit.endJunctionId);
     }

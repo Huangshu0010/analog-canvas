@@ -248,7 +248,7 @@ describe("editor interaction state", () => {
   it("owns the complete VDD rail gesture and exits after commit", () => {
     let state = interactionReducer(
       { kind: "idle" },
-      { type: "begin-vdd-rail" },
+      { type: "begin-vdd-rail", netName: "VDD" },
     );
     state = interactionReducer(state, {
       type: "set-vdd-rail-preview",
@@ -265,6 +265,7 @@ describe("editor interaction state", () => {
 
     expect(state).toEqual({
       kind: "placing-vdd-rail",
+      netName: "VDD",
       start: { x: 20, y: 30 },
       previewPoint: { x: 120, y: 30 },
     });

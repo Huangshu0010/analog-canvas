@@ -15,6 +15,14 @@ import {
   recoveryProjectTexts,
 } from "./editor-fixtures.js";
 
+function markRoutingDemoNetsImported(
+  project: ReturnType<typeof createRoutingDemoProject>,
+): void {
+  for (const net of project.documents[0]!.nets) {
+    net.origin = { kind: "spice-import", sourceNetIds: [net.id] };
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await emulateDownloadOnlyBrowser(page);
 });
@@ -58,10 +66,12 @@ async function placeComponent(
     const dialog = page.getByRole("dialog", { name: "Insert Component" });
     await dialog.getByLabel("Component search").fill(symbolId);
     await dialog.getByTestId(`insert-component-${symbolId}`).click();
-    await dialog
-      .getByLabel("New Net Port name")
-      .fill(symbolId === "port" ? "NET_HOLLOW" : "NET_FILLED");
     await dialog.getByRole("button", { name: "Apply" }).click();
+    const portDialog = page.getByRole("dialog", { name: "Place Net Port" });
+    await portDialog
+      .getByLabel("Net name")
+      .fill(symbolId === "port" ? "NET_HOLLOW" : "NET_FILLED");
+    await portDialog.getByRole("button", { name: "Place" }).click();
   } else {
     await chooseComponent(page, symbolId);
   }
@@ -375,7 +385,7 @@ test("keeps a tapped VDD rail movable and stretchable as one supply bar", async 
   ).toBeGreaterThan(beforeResizeRight);
 });
 
-test("reuses the PMOS bulk supply Net when drawing a VDD rail", async ({
+test("keeps unresolved PMOS bulk separate from a named VDD rail", async ({
   page,
 }) => {
   await page.goto("/");
@@ -402,13 +412,13 @@ test("reuses the PMOS bulk supply Net when drawing a VDD rail", async ({
   const vddNets = document.nets.filter((net) => net.powerDomain === "vdd");
   expect(vddNets).toEqual([
     expect.objectContaining({
-      id: "net-global-vdd",
-      terminals: [{ instanceId: "M1", pinName: "B" }],
+      id: "net-power-vdd1",
+      terminals: [],
     }),
   ]);
   expect(document.routes).toContainEqual(
     expect.objectContaining({
-      netId: "net-global-vdd",
+      netId: "net-power-vdd1",
       presentation: "power-rail",
     }),
   );
@@ -464,14 +474,81 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
   await page.goto("/");
   const canvas = page.getByTestId("schematic-canvas");
   await page.keyboard.press("p");
-  const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  await expect(dialog.getByLabel("Port role")).toHaveValue("net-port");
-  await dialog.getByLabel("New Net Port name").fill("PORT_IN");
-  await dialog.getByRole("button", { name: "Apply" }).click();
+  const dialog = page.getByRole("dialog", { name: "Place Net Port" });
+  await expect(dialog).toHaveClass(/port-setup-dialog/u);
+  await expect(dialog.getByLabel("Net name")).toHaveValue("");
+  await dialog.getByRole("button", { name: "Place" }).click();
   await canvas.hover({ position: { x: 320, y: 180 } });
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 320, y: 180 } });
+  await expect(page.getByTestId("status")).toContainText(
+    "Added Free Net Port NET1",
+  );
+  await expect(page.getByTestId("hit-P1")).toBeVisible();
+  await expect(
+    page.locator(
+      '[data-object-id="instance-label-P1"] [style*="font-style:italic;font-weight:700"]',
+    ),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
+  await openSelectionShelf(page);
+  await expect(
+    page.getByRole("region", { name: "Routing guidance" }),
+  ).toHaveCount(0);
+});
+
+test("Free Net Ports merge by name and release their final Net lifecycle", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const canvas = page.getByTestId("schematic-canvas");
+
+  const placeNamedPort = async (
+    name: string,
+    position: { x: number; y: number },
+  ) => {
+    await page.keyboard.press("p");
+    const dialog = page.getByRole("dialog", { name: "Place Net Port" });
+    await dialog.getByLabel("Net name").fill(name);
+    await dialog.getByRole("button", { name: "Place" }).click();
+    await canvas.click({ position });
+    await page.keyboard.press("Escape");
+  };
+
+  await placeNamedPort("BUS", { x: 260, y: 180 });
+  await placeNamedPort("bus", { x: 460, y: 180 });
+
+  let saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as {
+    documents: Array<{
+      nets: Array<{
+        name?: string;
+        terminals: Array<{ instanceId: string; pinName: string }>;
+      }>;
+    }>;
+  };
+  expect(saved.documents[0]!.nets).toEqual([
+    expect.objectContaining({
+      name: "BUS",
+      terminals: expect.arrayContaining([
+        { instanceId: "P1", pinName: "P" },
+        { instanceId: "P2", pinName: "P" },
+      ]),
+    }),
+  ]);
+
+  await page.getByTestId("hit-P1").click();
+  await page.keyboard.press("Delete");
+  await page.getByTestId("hit-P2").click();
+  await page.keyboard.press("Delete");
+
+  saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as typeof saved;
+  expect(saved.documents[0]!.nets).toEqual([]);
+
+  await placeNamedPort("BUS", { x: 360, y: 260 });
   await expect(page.getByTestId("hit-P1")).toBeVisible();
 });
 
@@ -751,11 +828,12 @@ test("keeps Wire active for consecutive independent routes until Escape", async 
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
-test("hides flightlines after manually deleting an imported Route", async ({
+test("re-derives guidance after manually deleting an imported Route", async ({
   page,
 }) => {
   const project = createRoutingDemoProject();
   const document = project.documents[0]!;
+  markRoutingDemoNetsImported(project);
   document.sourceBinding = {
     cellName: "routing_demo",
     sourceRef: {
@@ -782,7 +860,7 @@ test("hides flightlines after manually deleting an imported Route", async ({
   });
 
   await clickRoute(page, "route-imported-partial");
-  await expect(page.getByTestId("flightline")).toHaveCount(2);
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
   await page.keyboard.press("Delete");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
   await expect(page.getByTestId("status")).toContainText(
@@ -792,13 +870,14 @@ test("hides flightlines after manually deleting an imported Route", async ({
   await expect(page.getByTestId("source-status")).toHaveText(
     "geometry-only-changed",
   );
-  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(3);
 });
 
 test("keeps remaining imported flightlines after routing one guided connection", async ({
   page,
 }) => {
   const project = createRoutingDemoProject();
+  markRoutingDemoNetsImported(project);
   project.documents[0]!.sourceBinding = {
     cellName: "routing_demo",
     sourceRef: {
@@ -828,10 +907,11 @@ test("keeps remaining imported flightlines after routing one guided connection",
   await expect(page.getByTestId("flightline")).toHaveCount(2);
 });
 
-test("hides imported flightlines while a Net is highlighted", async ({
+test("suppresses only the highlighted imported Net guidance", async ({
   page,
 }) => {
   const project = createRoutingDemoProject();
+  markRoutingDemoNetsImported(project);
   project.documents[0]!.routes.push({
     id: "route-imported-h",
     netId: "net-h",
@@ -857,13 +937,16 @@ test("hides imported flightlines while a Net is highlighted", async ({
 
   await expect(page.getByTestId("flightline")).toHaveCount(2);
   await clickRoute(page, "route-imported-h");
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "All", exact: true }).click();
   await expect(page.getByTestId("flightline")).toHaveCount(2);
   await page.keyboard.press("h");
   await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
     "data-net-id",
     "net-h",
   );
-  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
   await page.keyboard.press("h");
   await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
   await expect(page.getByTestId("flightline")).toHaveCount(2);
@@ -904,7 +987,7 @@ test("keeps a selected MOS in its fixed Razavi three-terminal view", async ({
   ).toHaveCount(0);
 });
 
-test("materializes a MOS supply default and lets a dashed bulk route override it", async ({
+test("leaves unconfigured MOS bulk unresolved until an explicit dashed route connects it", async ({
   page,
 }) => {
   await page.goto("/");
@@ -914,7 +997,7 @@ test("materializes a MOS supply default and lets a dashed bulk route override it
   await page.getByTestId("hit-M1").click();
   await openSelectionShelf(page);
   await expect(page.getByLabel("MOS bulk connection")).toContainText(
-    "supply-default",
+    "unresolved",
   );
   await page.getByRole("button", { name: "Draw bulk connection" }).click();
   await page.getByTestId("terminal-GND1-0").click();
@@ -931,6 +1014,7 @@ test("materializes a MOS supply default and lets a dashed bulk route override it
       routes: Array<{ presentation?: string }>;
       nets: Array<{
         id: string;
+        name?: string;
         terminals: Array<{ instanceId: string; pinName: string }>;
       }>;
     }>;
@@ -942,9 +1026,7 @@ test("materializes a MOS supply default and lets a dashed bulk route override it
   expect(document.routes).toContainEqual(
     expect.objectContaining({ presentation: "bulk-dashed" }),
   );
-  expect(
-    document.nets.find((net) => net.id === "net-global-0")?.terminals,
-  ).toEqual(
+  expect(document.nets.find((net) => net.name === "0")?.terminals).toEqual(
     expect.arrayContaining([
       { instanceId: "M1", pinName: "B" },
       { instanceId: "GND1", pinName: "0" },
