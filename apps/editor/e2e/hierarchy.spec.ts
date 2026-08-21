@@ -28,6 +28,36 @@ async function createCell(
   await editor.getByRole("button", { name: "Create" }).click();
 }
 
+async function beginPortPlacement(
+  page: import("@playwright/test").Page,
+  options: {
+    role: "net-port" | "cell-terminal";
+    name: string;
+    direction?: "input" | "output" | "inout" | "passive";
+  },
+): Promise<void> {
+  await page.getByTestId("shapes-chip-port").click();
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog
+    .getByLabel("Port role")
+    .selectOption(
+      options.role === "cell-terminal" ? "cell-terminal" : "net-port",
+    );
+  await dialog
+    .getByLabel(
+      options.role === "cell-terminal"
+        ? "New Cell terminal name"
+        : "New Net Port name",
+    )
+    .fill(options.name);
+  if (options.role === "cell-terminal") {
+    await dialog
+      .getByLabel("New Cell terminal direction")
+      .selectOption(options.direction ?? "passive");
+  }
+  await dialog.getByRole("button", { name: "Apply" }).click();
+}
+
 test("keeps direct Cell commands in one hierarchy row", async ({ page }) => {
   await page.setViewportSize({ width: 420, height: 700 });
   await page.goto("/");
@@ -115,30 +145,40 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await createCell(page, "ReusableStage");
 
   const canvas = page.getByTestId("schematic-canvas");
-  await page.getByTestId("shapes-chip-port").click();
+  await beginPortPlacement(page, {
+    role: "cell-terminal",
+    name: "Vout",
+    direction: "output",
+  });
   await canvas.click({ position: { x: 300, y: 180 } });
-  await expect(page.getByTestId("status")).toContainText("Added Cell port P1");
+  await expect(page.getByTestId("status")).toContainText(
+    "Added Cell port Vout",
+  );
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("active-instance-count")).toHaveText("1");
 
   await page.getByTestId("selection-shelf").click();
   const portProperties = page.getByLabel("Cell Port properties");
   await expect(portProperties).toBeVisible();
-  await expect(portProperties.getByLabel("Port name")).toHaveCount(0);
+  const terminalName = portProperties.getByLabel("Cell Port terminal name");
+  await expect(terminalName).toHaveValue("Vout");
   await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
   const nameEditor = page.getByRole("textbox", { name: "Canvas text editor" });
-  await nameEditor.fill("Vout");
+  await expect(
+    page.getByRole("toolbar", { name: "Text formatting" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Bold" }).click();
   await page.getByRole("button", { name: "Apply text changes" }).click();
-  await expect(page.getByTestId("status")).toContainText(
-    "Renamed formal port to Vout",
-  );
+  await page.getByTestId("hit-P1").click();
+  await expect(terminalName).toHaveValue("Vout");
   await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
-  await page.getByRole("textbox", { name: "Canvas text editor" }).fill("Vout");
+  await nameEditor.fill("OUT");
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.getByTestId("status")).toContainText(
-    "Cell Port Vout is already current",
+    "Renamed formal port to OUT",
   );
   await page.getByTestId("hit-P1").click();
+  await expect(terminalName).toHaveValue("OUT");
   const shelf = page.getByTestId("selection-shelf");
   if ((await shelf.getAttribute("aria-expanded")) === "false") {
     await shelf.click();
@@ -165,7 +205,7 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await canvas.click({ position: { x: 420, y: 180 } });
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("active-instance-count")).toHaveText("1");
-  await expect(canvas.locator('[data-pin-name="Vout"]')).toHaveCount(1);
+  await expect(canvas.locator('[data-pin-name="OUT"]')).toHaveCount(1);
 
   await page.getByTestId("hit-X1").click();
   const layoutShelf = page.getByTestId("selection-shelf");
@@ -179,7 +219,7 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await expect(page.getByTestId("status")).toContainText(
     "Resized ReusableStage",
   );
-  await layout.getByLabel("Cell symbol Vout pin side").selectOption("north");
+  await layout.getByLabel("Cell symbol OUT pin side").selectOption("north");
   await expect(page.getByTestId("status")).toContainText(
     "Moved Cell symbol pin",
   );
@@ -261,12 +301,93 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   }
 });
 
+test("places a free Net Port whose rich label edits the Net name", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await beginPortPlacement(page, { role: "net-port", name: "VIN" });
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 300, y: 180 } });
+  await expect(page.getByTestId("status")).toContainText(
+    "Added Free Net Port VIN",
+  );
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByTestId("annotation-hit-instance-reference-P1"),
+  ).toHaveCount(0);
+  await page.getByTestId("hit-P1").click();
+  const shelf = page.getByTestId("selection-shelf");
+  if ((await shelf.getAttribute("aria-expanded")) === "false") {
+    await shelf.click();
+  }
+  const netName = page.getByLabel("Net Port name");
+  await expect(netName).toHaveValue("VIN");
+  await expect(page.getByLabel("Cell Port properties")).toHaveCount(0);
+
+  await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
+  await page.getByRole("button", { name: "Bold" }).click();
+  await page.getByRole("button", { name: "Apply text changes" }).click();
+  await page.getByTestId("hit-P1").click();
+  await expect(netName).toHaveValue("VIN");
+
+  await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
+  await page.getByRole("textbox", { name: "Canvas text editor" }).fill("VINP");
+  await page.getByRole("button", { name: "Apply text changes" }).click();
+  await page.getByTestId("hit-P1").click();
+  await expect(netName).toHaveValue("VINP");
+});
+
+test("returns a formal Cell Port to the Tray without deleting its interface", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await createCell(page, "ReusableStage");
+  const canvas = page.getByTestId("schematic-canvas");
+  await beginPortPlacement(page, {
+    role: "cell-terminal",
+    name: "Vout",
+  });
+  await canvas.click({ position: { x: 300, y: 180 } });
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-P1"),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("annotation-hit-instance-reference-P1"),
+  ).toHaveCount(0);
+  await page.getByTestId("hit-P1").click();
+  const shelf = page.getByTestId("selection-shelf");
+  if ((await shelf.getAttribute("aria-expanded")) === "false") {
+    await shelf.click();
+  }
+  await page
+    .getByRole("button", { name: "Return component to Placement Tray" })
+    .click();
+
+  await expect(page.getByTestId("status")).toContainText(
+    "Cell interfaces and electrical facts were retained",
+  );
+  await expect(page.getByTestId("unplaced-P1")).toContainText("Vout · port");
+  await expect(page.getByTestId("hit-P1")).toHaveCount(0);
+  await page
+    .getByRole("region", { name: "Placement Tray" })
+    .getByRole("button", { name: "Place all" })
+    .click();
+  await expect(page.getByTestId("hit-P1")).toBeVisible();
+  await page.getByTestId("hit-P1").click();
+  await expect(page.getByLabel("Cell Port properties")).toBeVisible();
+});
+
 test("authors formal Cell parameters without entering Cell Symbol Layout", async ({
   page,
 }) => {
   await page.goto("/");
   await createCell(page, "ReusableStage");
-  await page.getByTestId("shapes-chip-port").click();
+  await beginPortPlacement(page, {
+    role: "cell-terminal",
+    name: "Vout",
+  });
   await page
     .getByTestId("schematic-canvas")
     .click({ position: { x: 300, y: 180 } });
@@ -274,7 +395,7 @@ test("authors formal Cell parameters without entering Cell Symbol Layout", async
 
   await runCellCommand(page, "Manage Cells…");
   const dialog = page.getByRole("dialog", { name: "Cell Manager" });
-  await expect(dialog.getByLabel("Formal terminal 1 name")).toHaveValue("P1");
+  await expect(dialog.getByLabel("Formal terminal 1 name")).toHaveValue("Vout");
   await expect(
     dialog.getByText("Cell symbol layout", { exact: false }),
   ).toHaveCount(0);
@@ -299,7 +420,10 @@ test("deletes a wired child Cell Port through the ordinary instance path", async
   await page.goto("/");
   await createCell(page, "ReusableStage");
   const canvas = page.getByTestId("schematic-canvas");
-  await page.getByTestId("shapes-chip-port").click();
+  await beginPortPlacement(page, {
+    role: "cell-terminal",
+    name: "Vout",
+  });
   await canvas.click({ position: { x: 300, y: 180 } });
   await page.keyboard.press("Escape");
   await page.getByTestId("hit-P1").click();
@@ -342,7 +466,9 @@ test("places an existing Cell and blocks deleting its shared definition", async 
   await expect(canvas.locator('[data-kind="instance-value"]')).toContainText(
     "ReusableStage",
   );
-  await expect(canvas.locator('[data-kind="instance-label"]')).toHaveCount(0);
+  await expect(canvas.locator('[data-kind="instance-label"]')).toContainText(
+    "X1",
+  );
   await page.keyboard.press("Escape");
 
   await runCellCommand(page, "Manage Cells…");

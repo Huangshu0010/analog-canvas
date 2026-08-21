@@ -37,6 +37,7 @@ function documentWithInstance() {
   document.instances.push({
     id: "M1",
     symbolId: "nmos",
+    schematicReference: "M1",
     placement: null,
     netlist: {
       reference: "M1",
@@ -59,6 +60,232 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
+  it("updates a Port schematic reference without creating a netlist record", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "port-object",
+      symbolId: "port",
+      schematicReference: "P1",
+      placement: null,
+    });
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "set_instance_schematic_reference",
+          instanceId: "port-object",
+          reference: "P_IN",
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.document.instances[0]?.schematicReference).toBe("P_IN");
+    expect(result.document.instances[0]).not.toHaveProperty("netlist");
+  });
+
+  it("rejects a schematic reference on a formal Cell Port", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "port-object",
+      symbolId: "port",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-vout",
+      scope: "local",
+      terminals: [{ instanceId: "port-object", pinName: "P" }],
+    });
+    document.netlist = {
+      name: "Child",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-vout",
+          name: "Vout",
+          netId: "net-vout",
+          direction: "output",
+          interfaceInstanceId: "port-object",
+        },
+      ],
+    };
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "set_instance_schematic_reference",
+          instanceId: "port-object",
+          reference: "P1",
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+  });
+
+  it("updates a formal Port same-text format override without changing its interface name", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "port-object",
+      symbolId: "port",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-vout",
+      scope: "local",
+      terminals: [{ instanceId: "port-object", pinName: "P" }],
+    });
+    document.netlist = {
+      name: "Child",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-vout",
+          name: "Vout",
+          netId: "net-vout",
+          direction: "output",
+          interfaceInstanceId: "port-object",
+        },
+      ],
+    };
+    const formatOverride = {
+      runs: [
+        {
+          kind: "span" as const,
+          style: "overbar" as const,
+          children: [{ kind: "text" as const, value: "Vout" }],
+        },
+      ],
+    };
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "upsert_schematic_annotation",
+          annotation: {
+            id: "instance-label-port-object",
+            kind: "instance-label",
+            binding: {
+              kind: "cell-terminal-name",
+              terminalId: "terminal-vout",
+            },
+            formatOverride,
+            anchor: {
+              kind: "object",
+              objectId: "port-object",
+              localOffset: { x: 0, y: 0 },
+              fallbackPosition: { x: 0, y: 0 },
+            },
+            alignment: "middle",
+            rotation: 0,
+            locked: false,
+          },
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.document.netlist!.terminals[0]!.name).toBe("Vout");
+    expect(result.document.annotations[0]!.formatOverride).toEqual(
+      formatOverride,
+    );
+
+    const renamed = executeTransaction(result.document, {
+      ...transaction(),
+      expectedRevision: result.document.revision,
+      edits: [
+        {
+          kind: "update_cell_terminal",
+          terminalId: "terminal-vout",
+          name: "OUT",
+        },
+      ],
+    });
+    expect(renamed).toMatchObject({ ok: true });
+    if (!renamed.ok) return;
+    expect(renamed.document.annotations[0]!.formatOverride).toBeUndefined();
+  });
+
+  it("clears a stale Net-label format override when the Net is renamed", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({
+      id: "net-vin",
+      name: "VIN",
+      scope: "local",
+      terminals: [],
+    });
+    document.annotations.push({
+      id: "label-vin",
+      kind: "net-label",
+      binding: { kind: "net-name", netId: "net-vin" },
+      formatOverride: {
+        runs: [
+          {
+            kind: "span",
+            style: "italic",
+            children: [{ kind: "text", value: "VIN" }],
+          },
+        ],
+      },
+      netId: "net-vin",
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [{ kind: "set_net_name", netId: "net-vin", name: "VINP" }],
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.document.annotations[0]!.formatOverride).toBeUndefined();
+  });
+
+  it("enforces the same layout lock before placing a retained Instance", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      schematicReference: "P1",
+      placement: null,
+    });
+    document.layoutGroups.push({
+      id: "locked-port",
+      kind: "custom",
+      objectIds: ["P1"],
+      locked: true,
+    });
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "place_instance",
+          instanceId: "P1",
+          placement: {
+            position: { x: 100, y: 100 },
+            rotation: 0,
+            mirror: "none",
+          },
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+  });
+
   it("updates a RichText schematic name without changing the SPICE reference", () => {
     const document = documentWithInstance();
     const result = executeTransaction(document, {
@@ -780,7 +1007,7 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
-  it("enforces Cell reference policy and refreshes only a canonical label", () => {
+  it("keeps the schematic reference independent from the netlist reference", () => {
     const document = documentWithInstance();
     document.instances.push({
       id: "M2",
@@ -834,7 +1061,7 @@ describe("Edit Transaction envelope", () => {
     if (!renamed.ok) return;
     expect(renamed.document.instances[0]?.netlist?.reference).toBe("M3");
     expect(flattenRichText(renamed.document.annotations[0]!.content!)).toBe(
-      "M3",
+      "M1",
     );
   });
 

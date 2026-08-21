@@ -98,6 +98,11 @@ rename them.
 Canvas `port` and `port-filled` symbols are ordinary single-pin Instances; they
 do not define or reorder the formal cell interface. A hierarchy instance uses
 its bound child Document and that child's explicit private interface.
+Ports do not emit instance lines and receive no visible schematic Reference or
+`Instance.netlist.reference`. A free Net Port displays and edits its bound
+`Net.name`. A formal Cell Pin uses its ordered `CellTerminal.name`, such as
+`Vout`, for interface and export identity. Either bound Annotation may retain
+same-text RichText formatting, which never changes emitted names.
 
 Every manually inserted device receives an explicit reference. References are
 unique per cell and have the prefix required by their device definition. Model-

@@ -53,7 +53,18 @@ async function placeComponent(
   symbolId: string,
   position: { x: number; y: number },
 ): Promise<void> {
-  await chooseComponent(page, symbolId);
+  if (symbolId === "port" || symbolId === "port-filled") {
+    await page.keyboard.press("i");
+    const dialog = page.getByRole("dialog", { name: "Insert Component" });
+    await dialog.getByLabel("Component search").fill(symbolId);
+    await dialog.getByTestId(`insert-component-${symbolId}`).click();
+    await dialog
+      .getByLabel("New Net Port name")
+      .fill(symbolId === "port" ? "NET_HOLLOW" : "NET_FILLED");
+    await dialog.getByRole("button", { name: "Apply" }).click();
+  } else {
+    await chooseComponent(page, symbolId);
+  }
   await page.getByTestId("schematic-canvas").click({ position });
   await page.keyboard.press("Escape");
 }
@@ -453,6 +464,10 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
   await page.goto("/");
   const canvas = page.getByTestId("schematic-canvas");
   await page.keyboard.press("p");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await expect(dialog.getByLabel("Port role")).toHaveValue("net-port");
+  await dialog.getByLabel("New Net Port name").fill("PORT_IN");
+  await dialog.getByRole("button", { name: "Apply" }).click();
   await canvas.hover({ position: { x: 320, y: 180 } });
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 320, y: 180 } });
@@ -1174,7 +1189,7 @@ test("moves a selected wire segment and deletes a connected component safely", a
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
   await expect(
     page.locator('[data-testid^="junction-junction-delete-"]'),
-  ).toHaveCount(1);
+  ).toHaveCount(0);
   await expect(page.getByTestId("status")).toContainText(
     "connected wires remain dangling",
   );
@@ -1552,10 +1567,11 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   const annotationEditor = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
-  await expect(annotationEditor).toHaveAttribute("type", "text");
+  await expect(annotationEditor).toHaveAttribute("contenteditable", "true");
   await annotationEditor.fill("Vref");
   await annotationEditor.press("Control+a");
-  await expect(page.getByRole("button", { name: "Italic" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Italic" })).toBeVisible();
+  await page.getByRole("button", { name: "Italic" }).click();
   await page.getByRole("button", { name: "Increase text size" }).click();
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
@@ -2649,6 +2665,48 @@ X2 OUT IN EXT_MASTER l=1u nf=4
   expect(spice).toContain("X2 OUT IN EXT_MASTER l=1u nf=4");
 });
 
+test("shows imported instance references after Place all", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("spice-files").setInputFiles({
+    name: "circuit.spi",
+    mimeType: "application/x-spice",
+    buffer: Buffer.from(`
+.subckt top IN OUT
+R7 IN OUT 10k
+.ends top
+`),
+  });
+
+  await expect(page.getByTestId("status")).toContainText(
+    "Imported 1 Documents",
+  );
+  await page
+    .getByRole("region", { name: "Placement Tray" })
+    .getByRole("button", { name: "Place all" })
+    .click();
+  await expect(
+    page
+      .getByTestId("schematic-canvas")
+      .locator("text")
+      .filter({ hasText: "R7" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByTestId("schematic-canvas")
+      .locator("text")
+      .filter({ hasText: "OUT" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByTestId("schematic-canvas")
+      .locator("text")
+      .filter({ hasText: "P1" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R7"),
+  ).toBeVisible();
+});
+
 test("requires warning review before exporting generated NoConnect nodes", async ({
   page,
 }) => {
@@ -2733,7 +2791,12 @@ test("exports structural SPICE and Spectre netlists while exposing instance auth
   const properties = page.getByRole("complementary", { name: "Properties" });
   await expect(properties.getByLabel("Cell netlist name")).toHaveCount(0);
   await expect(properties.getByLabel("Cell netlist port order")).toHaveCount(0);
-  await expect(properties.getByLabel("Component schematic name")).toBeVisible();
+  await expect(
+    properties.getByLabel("Component netlist reference"),
+  ).toBeVisible();
+  await expect(
+    properties.getByLabel("Component schematic label"),
+  ).toBeVisible();
   await expect(properties.getByLabel("Component model target")).toBeVisible();
   await expect(properties.getByText(/^Model:/u)).toHaveCount(0);
 });

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { CURRENT_PROJECT_SCHEMA_VERSION } from "@icm/model";
 
 import {
   chooseComponent,
@@ -29,7 +30,7 @@ test("downloads the canonical Project when File System Access is unavailable", a
   const parsed = JSON.parse(bytes.toString("utf8")) as {
     schemaVersion: number;
   };
-  expect(parsed.schemaVersion).toBe(15);
+  expect(parsed.schemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
   await expect(page.getByTestId("status")).toContainText("Download requested");
   // A download never clears the browser recovery copies.
   await expect
@@ -37,7 +38,7 @@ test("downloads the canonical Project when File System Access is unavailable", a
     .toContain('"revision": 1');
 });
 
-test("upgrades a schema-14 Project and saves it as schema 15", async ({
+test("upgrades the previous Project schema and saves it as current", async ({
   page,
 }) => {
   const source = JSON.parse(
@@ -46,25 +47,26 @@ test("upgrades a schema-14 Project and saves it as schema 15", async ({
       "utf8",
     ),
   ) as Record<string, unknown>;
-  source.schemaVersion = 14;
+  const previousVersion = CURRENT_PROJECT_SCHEMA_VERSION - 1;
+  source.schemaVersion = previousVersion;
 
   await page.goto("/");
   await page.getByTestId("project-file").setInputFiles({
-    name: "minimal-v14.icproj.json",
+    name: `minimal-v${previousVersion}.icproj.json`,
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(source)),
   });
   await expect(page.getByTestId("status")).toContainText(
-    "upgraded minimal-v14.icproj.json from schema 14 to schema 15",
+    `upgraded minimal-v${previousVersion}.icproj.json from schema ${previousVersion} to schema ${CURRENT_PROJECT_SCHEMA_VERSION}`,
   );
   await expect
     .poll(() => recoveryProjectTexts(page))
-    .toContain('"schemaVersion": 15');
+    .toContain(`"schemaVersion": ${CURRENT_PROJECT_SCHEMA_VERSION}`);
 
   const saved = JSON.parse(
     (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
   ) as { schemaVersion: number };
-  expect(saved.schemaVersion).toBe(15);
+  expect(saved.schemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
 });
 
 test("reports a confirmed File System Access save", async ({ page }) => {
@@ -95,7 +97,9 @@ test("reports a confirmed File System Access save", async ({ page }) => {
         .__fsaWrites[0] ?? null,
   );
   expect(write).not.toBeNull();
-  expect(JSON.parse(write!.text).schemaVersion).toBe(15);
+  expect(JSON.parse(write!.text).schemaVersion).toBe(
+    CURRENT_PROJECT_SCHEMA_VERSION,
+  );
 });
 
 test("falls back to download when the save location is denied", async ({
@@ -109,7 +113,9 @@ test("falls back to download when the save location is denied", async ({
   });
   await page.goto("/");
   const bytes = await downloadBytes(page, "File", "Save Project");
-  expect(JSON.parse(bytes.toString("utf8")).schemaVersion).toBe(15);
+  expect(JSON.parse(bytes.toString("utf8")).schemaVersion).toBe(
+    CURRENT_PROJECT_SCHEMA_VERSION,
+  );
   await expect(page.getByTestId("status")).toContainText("Download requested");
 });
 

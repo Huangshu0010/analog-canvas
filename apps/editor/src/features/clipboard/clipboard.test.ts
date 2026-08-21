@@ -164,7 +164,12 @@ describe("schematic clipboard", () => {
         rotation: 0,
         mirror: "none",
       },
-      ...(reference ? { netlist: { reference, parameters: {} } } : {}),
+      ...(reference
+        ? {
+            schematicReference: reference,
+            netlist: { reference, parameters: {} },
+          }
+        : {}),
     };
   }
 
@@ -212,6 +217,7 @@ describe("schematic clipboard", () => {
     expect(result.document.instances).toHaveLength(2);
     expect(result.document.instances[1]).toMatchObject({
       id: "R2",
+      schematicReference: "R2",
       netlist: { reference: "R2" },
     });
     expect(

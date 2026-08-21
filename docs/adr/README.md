@@ -58,6 +58,17 @@ The single Route geometry and octilinear authoring decision is
 [`0028-octilinear-route-geometry-protocol.md`](0028-octilinear-route-geometry-protocol.md).
 The project-local external interface and `X`-call preservation decision is
 [`0029-external-subcircuit-definition-protocol.md`](0029-external-subcircuit-definition-protocol.md).
+The instance identity, Placement Tray lifecycle, and presentation-only
+netlist-invariance decision is
+[`0030-instance-identity-and-placement-lifecycle.md`](0030-instance-identity-and-placement-lifecycle.md).
+The schematic-reference and unified Port lifecycle decision is
+[`0031-schematic-reference-and-port-lifecycle.md`](0031-schematic-reference-and-port-lifecycle.md).
+The formal-Port terminal-name display and retained-annotation visibility
+decision is
+[`0032-formal-port-display-and-retained-annotations.md`](0032-formal-port-display-and-retained-annotations.md).
+The unified free/formal Port semantic-name and same-text RichText presentation
+decision is
+[`0033-port-semantic-name-and-richtext-presentation.md`](0033-port-semantic-name-and-richtext-presentation.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

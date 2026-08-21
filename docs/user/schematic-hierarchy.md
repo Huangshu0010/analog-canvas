@@ -64,8 +64,8 @@ the Properties values remain the precise fallback. These are definition operatio
 not top-level drawing tools.
 
 Hierarchy presentation is saved as definition-level size and pin-placement
-intent in Project schema 15. Older schema-14 projects open with deterministic
-automatic pin layout; schema-11 files are outside the supported rolling
+intent in Project schema 18. Older schema-17 projects open with deterministic
+automatic pin layout; schema-15 files are outside the supported rolling
 compatibility window. The block uses a closed polygon body and the shared
 Razavi rich-text renderer for pin and Cell names; it is compatible with that
 visual grammar rather than a pixel-for-pixel textbook symbol asset.

@@ -216,11 +216,10 @@ function uniqueCopyId(
 }
 
 /**
- * A pasted instance whose source id equals its source reference keeps the
- * designator convention: it adopts the freshly allocated reference (copy R1
- * becomes R2) so the visible label, the id, and the netlist reference stay a
- * single fact. Anything else (custom ids, reference-less instances) falls
- * back to the opaque `-copy-N` id.
+ * A pasted instance receives a fresh electrical designator while its internal
+ * object ID remains independently stable. Legacy projects often used the same
+ * string for both, so preserve that convenient convention only when it does
+ * not collide; presentation bindings are rewritten separately below.
  */
 function pastedInstanceId(
   source: Instance,
@@ -237,6 +236,47 @@ function pastedInstanceId(
     return nextReference;
   }
   return uniqueCopyId(source.id, sequence, occupied);
+}
+
+/**
+ * Allocate the copied schematic reference independently while preserving the
+ * common case where schematic and emitted references intentionally agree.
+ */
+function pastedSchematicReference(
+  source: Instance,
+  nextNetlistReference: string | undefined,
+  nextId: string,
+  sequence: number,
+  reserved: Set<string>,
+): string | undefined {
+  const current = source.schematicReference;
+  if (!current) return undefined;
+  const synchronized =
+    nextNetlistReference &&
+    (current === source.netlist?.reference || current === source.id)
+      ? nextNetlistReference
+      : current === source.id
+        ? nextId
+        : undefined;
+  if (synchronized) {
+    reserved.add(synchronized.toLowerCase());
+    return synchronized;
+  }
+
+  const suffix = /^(.*?)(\d+)$/u.exec(current);
+  const prefix = suffix?.[1] || `${current}-copy-`;
+  let index = suffix ? Number(suffix[2]) + 1 : sequence;
+  const candidateFor = (value: number): string => {
+    const digits = String(value);
+    return `${prefix.slice(0, Math.max(1, 128 - digits.length))}${digits}`;
+  };
+  let candidate = candidateFor(index);
+  while (reserved.has(candidate.toLowerCase())) {
+    index += 1;
+    candidate = candidateFor(index);
+  }
+  reserved.add(candidate.toLowerCase());
+  return candidate;
 }
 
 /**
@@ -259,8 +299,8 @@ function rewriteInstanceLabelText(
   ) {
     return;
   }
-  if (annotation.binding?.kind === "instance-reference") {
-    annotation.binding = { kind: "instance-reference", instanceId: nextId };
+  if (annotation.binding?.kind === "instance-designator") {
+    annotation.binding = { kind: "instance-designator", instanceId: nextId };
     return;
   }
   if (!annotation.content) return;
@@ -359,6 +399,28 @@ export function proposePaste(
       ),
     ]),
   );
+  const reservedSchematicReferences = new Set([
+    ...document.instances.flatMap((instance) =>
+      [instance.schematicReference, instance.netlist?.reference]
+        .filter((reference): reference is string => reference !== undefined)
+        .map((reference) => reference.toLowerCase()),
+    ),
+    ...[...instanceReferences.values()].map((reference) =>
+      reference.toLowerCase(),
+    ),
+  ]);
+  const instanceSchematicReferences = new Map(
+    clipboard.instances.flatMap((instance) => {
+      const reference = pastedSchematicReference(
+        instance,
+        instanceReferences.get(instance.id),
+        instanceIds.get(instance.id)!,
+        sequence,
+        reservedSchematicReferences,
+      );
+      return reference ? [[instance.id, reference] as const] : [];
+    }),
+  );
   const routeIds = new Map(
     clipboard.routes.map((route) => [
       route.id,
@@ -404,6 +466,11 @@ export function proposePaste(
       instance: {
         ...structuredClone(instance),
         id: instanceIds.get(instance.id)!,
+        ...(instanceSchematicReferences.has(instance.id)
+          ? {
+              schematicReference: instanceSchematicReferences.get(instance.id)!,
+            }
+          : {}),
         ...(instance.netlist && instanceReferences.has(instance.id)
           ? {
               netlist: {
@@ -550,10 +617,13 @@ export function proposePaste(
                   netId: netIds.get(clone.binding.netId) ?? clone.binding.netId,
                 },
               }
-            : clone.binding?.kind === "instance-value"
+            : clone.binding?.kind === "instance-value" ||
+                clone.binding?.kind === "instance-designator" ||
+                clone.binding?.kind === "instance-schematic-name" ||
+                clone.binding?.kind === "instance-master-name"
               ? {
                   binding: {
-                    kind: "instance-value" as const,
+                    kind: clone.binding.kind,
                     instanceId:
                       objectIds.get(clone.binding.instanceId) ??
                       clone.binding.instanceId,

@@ -58,6 +58,11 @@ export const PlaceInstanceEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   placement: PlacementSchema,
 });
+/** Return a placed Instance to the retained Placement Tray. */
+export const UnplaceInstanceEditSchema = z.strictObject({
+  kind: z.literal("unplace_instance"),
+  instanceId: StableIdSchema,
+});
 export const MoveInstanceEditSchema = z.strictObject({
   kind: z.literal("move_instance"),
   instanceId: StableIdSchema,
@@ -84,7 +89,13 @@ export const SetInstanceReferenceEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   reference: z.string().min(1).max(128),
 });
-/** Update only the user-visible, RichText schematic alias. */
+/** Update the visible schematic reference without changing netlist identity. */
+export const SetInstanceSchematicReferenceEditSchema = z.strictObject({
+  kind: z.literal("set_instance_schematic_reference"),
+  instanceId: StableIdSchema,
+  reference: z.string().min(1).max(128),
+});
+/** Update the default user-visible, RichText schematic label. */
 export const SetInstanceSchematicNameEditSchema = z.strictObject({
   kind: z.literal("set_instance_schematic_name"),
   instanceId: StableIdSchema,
@@ -335,11 +346,13 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   RemoveInstanceEditSchema,
   SetInstanceSymbolEditSchema,
   PlaceInstanceEditSchema,
+  UnplaceInstanceEditSchema,
   MoveInstanceEditSchema,
   RotateInstanceEditSchema,
   MirrorInstanceEditSchema,
   PatchInstanceNetlistParametersEditSchema,
   SetInstanceReferenceEditSchema,
+  SetInstanceSchematicReferenceEditSchema,
   SetInstanceSchematicNameEditSchema,
   SetInstanceBindingEditSchema,
   SetInstanceNetlistEditSchema,

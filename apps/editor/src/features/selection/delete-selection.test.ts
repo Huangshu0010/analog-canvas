@@ -118,13 +118,13 @@ describe("connected instance deletion", () => {
         nets: [{ terminals: [{ instanceId: "R2", pinName: "1" }] }],
         junctions: [
           {
-            id: "junction-delete-1-1",
+            id: "junction-lifecycle-1-1",
             position: { x: 100, y: 120 },
           },
         ],
         routes: [
           {
-            from: { kind: "junction", junctionId: "junction-delete-1-1" },
+            from: { kind: "junction", junctionId: "junction-lifecycle-1-1" },
             to: { kind: "terminal", instanceId: "R2", pinName: "1" },
           },
         ],

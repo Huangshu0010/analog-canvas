@@ -11,6 +11,7 @@ import {
   planRenameCell,
   planRemoveCellTerminal,
   planRemoveCellTerminals,
+  planEditCellTerminalAnnotation,
   planRenameCellTerminal,
   planSetCellSymbolPresentation,
 } from "./hierarchy-planner.js";
@@ -306,7 +307,7 @@ describe("Project structural transaction", () => {
     });
   });
 
-  it("normalizes a formatting-only formal Port edit without renaming its terminal", () => {
+  it("sets a formatting-only formal Port label without renaming its terminal", () => {
     const project = createEmptyProject("project", "Project");
     const child = createEmptyDocument("document-child", "Child");
     child.instances.push({
@@ -329,7 +330,7 @@ describe("Project structural transaction", () => {
     child.annotations.push({
       id: "instance-label-port-vout",
       kind: "instance-label",
-      content: { runs: [{ kind: "text", value: "Vout" }] },
+      binding: { kind: "cell-terminal-name", terminalId: "terminal-vout" },
       anchor: {
         kind: "object",
         objectId: "port-vout",
@@ -347,17 +348,43 @@ describe("Project structural transaction", () => {
       projectId: project.id,
       expectedStructureRevision: 0,
       actor: { kind: "human", id: "human-local" },
-      edits: planRenameCellTerminal(project, child.id, "terminal-vout", "Vout"),
+      edits: planEditCellTerminalAnnotation(
+        project,
+        child.id,
+        "terminal-vout",
+        {
+          ...child.annotations[0]!,
+          formatOverride: {
+            runs: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "Vout" }],
+              },
+            ],
+          },
+        },
+        "Vout",
+      ),
     });
 
     expect(result).toMatchObject({
       ok: true,
       applied: true,
       project: {
-        documents: [{}, { netlist: { terminals: [{ name: "Vout" }] } }],
+        documents: [
+          {},
+          {
+            netlist: { terminals: [{ name: "Vout" }] },
+            annotations: [
+              { formatOverride: { runs: [{ kind: "span", style: "bold" }] } },
+            ],
+          },
+        ],
       },
     });
-    if (!result.ok) throw new Error("Expected formatting-only Port update");
+    if (!result.ok)
+      throw new Error("Expected formatting-only Port label update");
     expect(result.project.documents[1]!.annotations[0]!.binding).toEqual({
       kind: "cell-terminal-name",
       terminalId: "terminal-vout",

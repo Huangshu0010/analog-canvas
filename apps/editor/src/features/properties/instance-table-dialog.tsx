@@ -196,7 +196,10 @@ export function InstanceTableDialog({
             <thead>
               <tr>
                 <th aria-label="Selection" />
+                <th>ID</th>
                 <th>Reference</th>
+                <th>Alias</th>
+                <th>Master</th>
                 <th>Symbol</th>
                 <th>Cell</th>
                 <th>Callers</th>
@@ -224,9 +227,12 @@ export function InstanceTableDialog({
                         onOpenInstance(row.documentId, row.instanceId)
                       }
                     >
-                      {row.reference ?? row.instanceId}
+                      {row.instanceId}
                     </button>
                   </td>
+                  <td>{row.reference ?? "—"}</td>
+                  <td>{row.schematicName ?? "—"}</td>
+                  <td>{row.masterName ?? "—"}</td>
                   <td>{row.symbolId}</td>
                   <td>{row.documentName}</td>
                   <td>
@@ -234,11 +240,7 @@ export function InstanceTableDialog({
                       ? "Top"
                       : `${row.callerPaths.length} definition use${row.callerPaths.length === 1 ? "" : "s"}`}
                   </td>
-                  <td>
-                    {row.binding?.kind === "model"
-                      ? row.binding.name
-                      : (row.binding?.kind ?? "—")}
-                  </td>
+                  <td>{row.binding?.kind ?? "—"}</td>
                   <td>
                     {Object.entries(row.parameters)
                       .map(([name, parameter]) => `${name}=${parameter}`)

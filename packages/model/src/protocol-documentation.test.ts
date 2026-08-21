@@ -22,8 +22,12 @@ describe("Project protocol documentation", () => {
       ["docs/specs/project-file-format.md", `Project schema: \`${version}\``],
       ["docs/specs/editor-interaction.md", `schema-${version}`],
       [
-        "docs/adr/0026-definition-level-cell-symbol-presentation.md",
-        `schema-${version} in-memory Project shape`,
+        "docs/adr/0032-formal-port-display-and-retained-annotations.md",
+        `Project schema ${version} makes`,
+      ],
+      [
+        "docs/adr/0033-port-semantic-name-and-richtext-presentation.md",
+        `Project schema ${version} keeps`,
       ],
       [
         "docs/user/project-compatibility.md",

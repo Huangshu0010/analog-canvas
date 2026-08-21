@@ -32,8 +32,10 @@ import {
   planRenameCellTerminal,
   planReorderCellTerminal,
   planSetCellSymbolPresentation,
+  planEditCellTerminalAnnotation,
   planSetCellTerminalPlacement,
   planUpdateCellTerminalDirection,
+  planInstanceUnplacement,
   proposeSetCellFormalParameters,
   proposeUpsertExternalSubcircuitDefinition,
   findCellTerminalCaller,
@@ -62,6 +64,7 @@ import {
   findHierarchyPath,
   findHierarchyPaths,
   isMosBulkTerminal,
+  isSchematicAnnotationVisible,
   isVisibleEndpoint,
   resolveEndpointPoint,
   resolveDraftingObjectGeometry,
@@ -104,6 +107,7 @@ import type {
   GridRect,
   Point,
   Rect,
+  RichTextDocument,
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
@@ -156,6 +160,8 @@ import {
 } from "../features/component-insert/insert-component-dialog";
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
+import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
+import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
 import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
 import { vddPowerLabelAnnotation } from "../features/component-insert/vdd-power-label";
@@ -184,10 +190,7 @@ import {
   nextInstanceDesignator,
 } from "../features/netlist-export/netlist-authoring";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
-import {
-  quickPlaceRequest,
-  ShapesPanel,
-} from "../features/editor-shell/shapes-panel";
+import { ShapesPanel } from "../features/editor-shell/shapes-panel";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
@@ -786,6 +789,9 @@ export function App({
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
+  const returnablePlacedInstances = document.instances.filter(
+    (instance) => instance.placement !== null,
+  );
   const selectedIds = visualSelection.instanceIds;
   const projectConnectivityIndex = useMemo(
     () => buildProjectConnectivityIndex(project, resolver),
@@ -1002,21 +1008,45 @@ export function App({
       );
       if (!terminal) return false;
       try {
-        const edits = planRenameCellTerminal(
+        const {
+          content,
+          formatOverride,
+          binding: _binding,
+          ...annotationPresentation
+        } = annotation;
+        const editedContent = formatOverride ?? content;
+        const semanticContent = semanticTextDocument(name, "formal-port");
+        const normalizedAnnotation: Annotation = {
+          ...annotationPresentation,
+          binding: {
+            kind: "cell-terminal-name",
+            terminalId: terminal.id,
+          },
+          ...(editedContent &&
+          JSON.stringify(editedContent) !== JSON.stringify(semanticContent)
+            ? { formatOverride: editedContent }
+            : {}),
+        };
+        const renamed = terminal.name !== name;
+        const edits = planEditCellTerminalAnnotation(
           project,
           document.id,
           terminal.id,
+          normalizedAnnotation,
           name,
         );
         if (edits.length === 0) {
-          setStatus(`Cell Port ${name} is already current`);
+          setStatus(`Cell Port ${terminal.name} is already current`);
           return true;
         }
-        const committed = commitStructure(
-          "rename-cell-port-from-annotation",
-          edits,
-        );
-        if (committed) setStatus(`Renamed formal port to ${name}`);
+        const committed = commitStructure("edit-cell-port-label", edits);
+        if (committed) {
+          setStatus(
+            renamed
+              ? `Renamed formal port to ${name}`
+              : `Formatted Cell Port ${name}`,
+          );
+        }
         return committed;
       } catch (error) {
         setStatus(
@@ -1378,12 +1408,14 @@ export function App({
     ? resolver.resolve(pendingSymbolId)?.definition
     : undefined;
   const {
+    beginRetainedInstancePlacement: beginRetainedInstancePlacementFromHook,
     beginInsertedComponentPlacement: beginInsertedComponentPlacementFromHook,
     cancelComponentInsert: cancelComponentInsertFromHook,
     commitPendingPlacementAt: commitPendingPlacementAtFromHook,
     closeInsertDialog: closeInsertDialogFromHook,
     cellInsertOnly,
     insertDialogOpen,
+    insertInitialSelectionId,
     openInsertComponentDialog: openInsertComponentDialogFromHook,
     recentSymbolIds,
     rotatePendingComponent: rotatePendingComponentFromHook,
@@ -2083,6 +2115,26 @@ export function App({
         (terminal) => terminal.interfaceInstanceId === selectedInstance.id,
       )
     : undefined;
+  const selectedPortNet =
+    selectedInstance &&
+    (selectedInstance.symbolId === "port" ||
+      selectedInstance.symbolId === "port-filled")
+      ? document.nets.find((net) =>
+          net.terminals.some(
+            (terminal) => terminal.instanceId === selectedInstance.id,
+          ),
+        )
+      : undefined;
+  function renameSelectedNetPort(name: string): void {
+    if (!selectedPortNet || selectedFormalTerminal) return;
+    name = name.trim();
+    if (!name || name === selectedPortNet.name) return;
+    if (
+      transact([{ kind: "set_net_name", netId: selectedPortNet.id, name }]).ok
+    ) {
+      setStatus(`Renamed Net Port to ${name}`);
+    }
+  }
   function renameSelectedFormalPort(name: string): void {
     if (!selectedFormalTerminal) return;
     name = name.trim();
@@ -3665,22 +3717,129 @@ export function App({
     if (!instanceId) {
       return;
     }
+    const placement = {
+      position: pointFromClient(
+        event.clientX,
+        event.clientY,
+        event.currentTarget,
+      ),
+      rotation: 0 as const,
+      mirror: "none" as const,
+    };
+    const instance = document.instances.find(
+      (candidate) => candidate.id === instanceId,
+    );
+    const displayAnnotations = instance
+      ? missingDefaultInstanceDisplayAnnotations(
+          document,
+          { ...instance, placement },
+          resolver,
+          styleProfile,
+        )
+      : [];
     transact([
       {
         kind: "place_instance",
         instanceId,
-        placement: {
-          position: pointFromClient(
-            event.clientX,
-            event.clientY,
-            event.currentTarget,
-          ),
-          rotation: 0,
-          mirror: "none",
-        },
+        placement,
       },
+      ...displayAnnotations.map((annotation) => ({
+        kind: "upsert_schematic_annotation" as const,
+        annotation,
+      })),
     ]);
     selectOnly("instance", [instanceId]);
+  }
+
+  function placeAllFromTray(): void {
+    const edits = planPlaceAllUnplacedInstances(document, viewBox);
+    if (edits.length === 0) {
+      setStatus("The Placement Tray is empty");
+      return;
+    }
+    const displayEdits = edits.flatMap((edit) => {
+      if (edit.kind !== "place_instance") return [];
+      const instance = document.instances.find(
+        (candidate) => candidate.id === edit.instanceId,
+      );
+      if (!instance) return [];
+      return missingDefaultInstanceDisplayAnnotations(
+        document,
+        { ...instance, placement: edit.placement },
+        resolver,
+        styleProfile,
+      ).map((annotation) => ({
+        kind: "upsert_schematic_annotation" as const,
+        annotation,
+      }));
+    });
+    if (transact([...edits, ...displayEdits]).ok) {
+      resetSelection();
+      setStatus(
+        `Placed ${edits.length} retained ${edits.length === 1 ? "Instance" : "Instances"} in a deterministic canvas grid`,
+      );
+    }
+  }
+
+  function returnInstancesToTray(instanceIds: readonly string[]): void {
+    if (instanceIds.length === 0) {
+      setStatus("There are no returnable placed Instances");
+      return;
+    }
+    try {
+      const edits = planInstanceUnplacement(
+        document,
+        resolver,
+        instanceIds,
+        ++uniqueSuffixCounter.current,
+      );
+      if (edits.length === 0) {
+        setStatus("Those Instances are already retained in the Placement Tray");
+        return;
+      }
+      if (transact(edits).ok) {
+        resetSelection();
+        const returnedFormalPort = instanceIds.some((instanceId) =>
+          document.netlist?.terminals.some(
+            (terminal) => terminal.interfaceInstanceId === instanceId,
+          ),
+        );
+        setStatus(
+          `Returned ${instanceIds.length} ${instanceIds.length === 1 ? "Instance" : "Instances"} to the Placement Tray; ${returnedFormalPort ? "Cell interfaces and " : ""}electrical facts were retained`,
+        );
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not return to tray",
+      );
+    }
+  }
+
+  function placementTrayIdentity(
+    instance: SchematicDocument["instances"][number],
+  ): string {
+    const formalName = document.netlist?.terminals.find(
+      (terminal) => terminal.interfaceInstanceId === instance.id,
+    )?.name;
+    const netPortName =
+      instance.symbolId === "port" || instance.symbolId === "port-filled"
+        ? document.nets.find((net) =>
+            net.terminals.some(
+              (terminal) => terminal.instanceId === instance.id,
+            ),
+          )?.name
+        : undefined;
+    const schematicName = flattenRichText(
+      instance.schematicName ?? { runs: [] },
+    );
+    const reference =
+      instance.schematicReference ?? instance.netlist?.reference ?? null;
+    const secondary = formalName ?? netPortName ?? schematicName;
+    const identity =
+      reference && secondary && reference !== secondary
+        ? `${reference} · ${secondary}`
+        : (reference ?? secondary ?? "Unreferenced");
+    return `${identity} · ${instance.symbolId}`;
   }
 
   function selectionVisualMoveEdits(
@@ -4957,6 +5116,7 @@ export function App({
     presentation?: {
       alignment: "start" | "middle" | "end";
       sizeScale: number;
+      formatOverride?: RichTextDocument;
     },
   ): SchematicEdit[] | null {
     const net = document.nets.find((candidate) => candidate.id === route.netId);
@@ -5036,6 +5196,9 @@ export function App({
           : existingLabel?.sizeScale !== undefined
             ? { sizeScale: existingLabel.sizeScale }
             : {}),
+        ...(presentation?.formatOverride
+          ? { formatOverride: presentation.formatOverride }
+          : {}),
       },
     });
     return edits;
@@ -5245,6 +5408,27 @@ export function App({
       ]).ok
     ) {
       setStatus(`Renamed schematic label to ${value.trim()}`);
+    }
+  }
+
+  function updateSelectedReference(value: string): void {
+    if (!selectedInstance?.netlist) return;
+    const reference = value.trim();
+    if (!reference) {
+      setStatus("Netlist reference cannot be empty");
+      return;
+    }
+    if (reference === selectedInstance.netlist.reference) return;
+    if (
+      transact([
+        {
+          kind: "set_instance_reference",
+          instanceId: selectedInstance.id,
+          reference,
+        },
+      ]).ok
+    ) {
+      setStatus(`Set netlist reference to ${reference}`);
     }
   }
 
@@ -5713,7 +5897,7 @@ export function App({
           annotationIds: document.annotations
             .filter(
               (annotation) =>
-                annotation.visible !== false &&
+                isSchematicAnnotationVisible(document, annotation) &&
                 rectsIntersect(
                   annotationHitBox(
                     document,
@@ -6263,12 +6447,7 @@ export function App({
           openInsertComponentDialogFromHook();
           return;
         case "place-port": {
-          const request = quickPlaceRequest(
-            document.presentation.styleProfileId,
-            "port",
-          );
-          if (request) beginInsertedComponentPlacementFromHook(request);
-          else setStatus("Port is unavailable in this style profile");
+          openInsertComponentDialogFromHook(false, "port");
           return;
         }
         case "rotate-placement":
@@ -6970,6 +7149,8 @@ export function App({
         cells={cellInsertCandidates}
         externalDefinitions={externalSubcircuitInsertCandidates}
         cellOnly={cellInsertOnly}
+        allowFormalPort={document.id !== project.topDocumentId}
+        initialSelectionId={insertInitialSelectionId}
         onApply={beginInsertedComponentPlacementFromHook}
         onCancel={cancelComponentInsertFromHook}
       />
@@ -7205,7 +7386,17 @@ export function App({
             recentSymbolIds={recentSymbolIds}
             open={visibleLibraryPanelOpen}
             onOpenInsert={openInsertComponentDialogFromHook}
-            onQuickPlace={beginInsertedComponentPlacementFromHook}
+            onQuickPlace={(request) => {
+              if (
+                request.kind === "symbol" &&
+                (request.symbolId === "port" ||
+                  request.symbolId === "port-filled")
+              ) {
+                openInsertComponentDialogFromHook(false, request.symbolId);
+                return;
+              }
+              beginInsertedComponentPlacementFromHook(request);
+            }}
           />
         ) : (
           <ExamplesPanel
@@ -7303,6 +7494,17 @@ export function App({
                       className="formal-port-properties"
                       aria-label="Cell Port properties"
                     >
+                      <label>
+                        <span>Terminal name</span>
+                        <input
+                          key={`${selectedFormalTerminal.id}-${document.revision}-terminal-name`}
+                          aria-label="Cell Port terminal name"
+                          defaultValue={selectedFormalTerminal.name}
+                          onBlur={(event) =>
+                            renameSelectedFormalPort(event.currentTarget.value)
+                          }
+                        />
+                      </label>
                       <label>
                         <span>Direction</span>
                         <select
@@ -7470,28 +7672,62 @@ export function App({
                   >
                     <div className="property-section-heading">Identity</div>
                     <dl className="component-readonly-fields">
-                      <div>
-                        <dt>Schematic name</dt>
-                        <dd>
-                          <input
-                            key={`${selectedInstance.id}-${document.revision}-schematic-name`}
-                            aria-label="Component schematic name"
-                            defaultValue={flattenRichText(
-                              selectedInstance.schematicName ??
-                                semanticTextDocument(
-                                  selectedInstance.netlist?.reference ??
-                                    selectedInstance.id,
-                                  "instance-label",
-                                ),
-                            )}
-                            onBlur={(event) =>
-                              updateSelectedSchematicName(
-                                event.currentTarget.value,
-                              )
-                            }
-                          />
-                        </dd>
-                      </div>
+                      {selectedPortNet && !selectedFormalTerminal ? (
+                        <div>
+                          <dt>Net name</dt>
+                          <dd>
+                            <input
+                              key={`${selectedPortNet.id}-${document.revision}-net-port-name`}
+                              aria-label="Net Port name"
+                              defaultValue={selectedPortNet.name ?? ""}
+                              onBlur={(event) =>
+                                renameSelectedNetPort(event.currentTarget.value)
+                              }
+                            />
+                          </dd>
+                        </div>
+                      ) : !selectedFormalTerminal ? (
+                        <div>
+                          <dt>Schematic label</dt>
+                          <dd>
+                            <input
+                              key={`${selectedInstance.id}-${document.revision}-schematic-label`}
+                              aria-label="Component schematic label"
+                              defaultValue={flattenRichText(
+                                selectedInstance.schematicName ??
+                                  defaultDraftTextDocument(
+                                    selectedInstance.schematicReference ??
+                                      selectedInstance.netlist?.reference ??
+                                      "",
+                                  ),
+                              )}
+                              placeholder="Schematic label"
+                              onBlur={(event) =>
+                                updateSelectedSchematicName(
+                                  event.currentTarget.value,
+                                )
+                              }
+                            />
+                          </dd>
+                        </div>
+                      ) : null}
+                      {selectedInstance.netlist ? (
+                        <div>
+                          <dt>Netlist reference</dt>
+                          <dd>
+                            <input
+                              key={`${selectedInstance.id}-${document.revision}-netlist-reference`}
+                              aria-label="Component netlist reference"
+                              defaultValue={selectedInstance.netlist.reference}
+                              onBlur={(event) =>
+                                updateSelectedReference(
+                                  event.currentTarget.value,
+                                )
+                              }
+                            />
+                          </dd>
+                        </div>
+                      ) : null}
                       <div>
                         <dt>Symbol</dt>
                         <dd>{selectedInstance.symbolId}</dd>
@@ -7617,7 +7853,12 @@ export function App({
                       aria-label="Component display toggles"
                     >
                       <DisplayToggle
-                        label="Reference"
+                        label={
+                          selectedInstance.symbolId === "port" ||
+                          selectedInstance.symbolId === "port-filled"
+                            ? "Port label"
+                            : "Reference"
+                        }
                         checked={
                           selectedInstanceLabel !== undefined &&
                           selectedInstanceLabel.visible !== false
@@ -7823,6 +8064,15 @@ export function App({
                           onClick={() => mirrorSelected("top-bottom")}
                         >
                           Mirror top/bottom
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Return component to Placement Tray"
+                          onClick={() =>
+                            returnInstancesToTray([selectedInstance.id])
+                          }
+                        >
+                          Return to tray
                         </button>
                       </div>
                     </div>
@@ -8122,28 +8372,80 @@ export function App({
                     );
                   })()
                 : null}
-              {unplaced.length > 0 ? <h3>Unplaced Instances</h3> : null}
-              {unplaced.map((instance) => (
-                <button
-                  type="button"
-                  draggable
-                  data-testid={`unplaced-${instance.id}`}
-                  key={instance.id}
-                  onClick={() => {
-                    selectOnly("instance", [instance.id]);
-                    setStatus(`Selected ${instance.id}`);
-                  }}
-                  onDragStart={(event) => {
-                    event.dataTransfer.setData(
-                      "application/x-icm-instance",
-                      instance.id,
-                    );
-                    event.dataTransfer.effectAllowed = "move";
-                  }}
-                >
-                  {instance.id} · {instance.symbolId}
-                </button>
-              ))}
+              <section
+                className="context-actions placement-tray"
+                aria-label="Placement Tray"
+              >
+                <h2>Placement Tray</h2>
+                <p>
+                  {unplaced.length} retained · drag to the canvas, choose Place,
+                  or arrange every retained Instance in a starter grid.
+                </p>
+                <div className="component-mirror-row">
+                  <button
+                    type="button"
+                    onClick={placeAllFromTray}
+                    disabled={unplaced.length === 0}
+                  >
+                    Place all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      returnInstancesToTray(
+                        returnablePlacedInstances.map(
+                          (instance) => instance.id,
+                        ),
+                      )
+                    }
+                    disabled={returnablePlacedInstances.length === 0}
+                  >
+                    Return all
+                  </button>
+                </div>
+                {unplaced.length === 0 ? (
+                  <small>No retained Instances.</small>
+                ) : (
+                  <div className="placement-tray-list">
+                    {unplaced.map((instance) => (
+                      <div
+                        className="placement-tray-entry"
+                        draggable
+                        data-testid={`unplaced-${instance.id}`}
+                        key={instance.id}
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData(
+                            "application/x-icm-instance",
+                            instance.id,
+                          );
+                          event.dataTransfer.effectAllowed = "move";
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            selectOnly("instance", [instance.id]);
+                            setStatus(
+                              `Selected ${placementTrayIdentity(instance)}`,
+                            );
+                          }}
+                        >
+                          {placementTrayIdentity(instance)}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Place ${placementTrayIdentity(instance)} from tray`}
+                          onClick={() =>
+                            beginRetainedInstancePlacementFromHook(instance.id)
+                          }
+                        >
+                          Place…
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
               {selectedInstance && selectedBulkResolution ? (
                 <section
                   className="context-actions"
@@ -9220,7 +9522,9 @@ export function App({
                 );
               })}
               {document.annotations
-                .filter((annotation) => annotation.visible !== false)
+                .filter((annotation) =>
+                  isSchematicAnnotationVisible(document, annotation),
+                )
                 .map((annotation) => {
                   const anchor = annotationAnchor(
                     document,

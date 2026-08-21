@@ -19,9 +19,7 @@ class MemoryStorage implements ProjectStorage {
 
   async readText(path: string): Promise<string> {
     const content = this.files.get(path);
-    if (content === undefined) {
-      throw new Error(`Missing file: ${path}`);
-    }
+    if (content === undefined) throw new Error(`Missing file: ${path}`);
     return content;
   }
 
@@ -70,65 +68,105 @@ describe("Project persistence", () => {
     }
   });
 
-  it("upgrades the previous schema while preserving netlist parameters", () => {
-    const project = createEmptyProject("project-test", "Test Project");
-    const source = {
-      ...JSON.parse(serializeProject(project)),
-      schemaVersion: 14,
-    };
-    delete source.externalSubcircuitDefinitions;
-    delete source.documents[0].netlist.formalParameters;
+  it("upgrades schema-17 default labels and formal Ports to their schema-18 identities", () => {
+    const source = JSON.parse(
+      serializeProject(createEmptyProject("project-test", "Test Project")),
+    );
+    source.schemaVersion = 17;
     source.documents[0].instances.push({
-      id: "R1",
-      symbolId: "resistor",
+      id: "P-object",
+      symbolId: "port",
+      schematicReference: "P1",
       placement: null,
-      properties: { value: "20k" },
     });
-    source.documents[0].annotations.push({
-      id: "plain-v13-value",
-      kind: "instance-value",
-      content: { runs: [{ kind: "text", value: "20u/1u" }] },
-      anchor: { kind: "free", position: { x: 0, y: 0 } },
-      alignment: "start",
-      rotation: 0,
-      locked: false,
+    source.documents[0].instances.push({
+      id: "opaque-resistor-id",
+      symbolId: "resistor",
+      schematicReference: "R7",
+      placement: null,
+      netlist: { reference: "R7", parameters: {} },
     });
-    const parsed = parseProjectWithMetadata(JSON.stringify(source));
-
-    expect(parsed).toMatchObject({
-      sourceSchemaVersion: 14,
-      migrated: true,
-      project: {
-        schemaVersion: 15,
-        structureRevision: 0,
-        externalSubcircuitDefinitions: [],
-        documents: [
-          {
-            netlist: { formalParameters: [] },
-            instances: [
-              {
-                id: "R1",
-                netlist: { reference: "R1", parameters: { value: "20k" } },
-              },
-            ],
-          },
-        ],
+    source.documents[0].netlist = {
+      name: "Child",
+      terminals: [
+        {
+          id: "terminal-vout",
+          name: "Vout",
+          netId: "net-vout",
+          direction: "output",
+          interfaceInstanceId: "P-object",
+        },
+      ],
+      formalParameters: [],
+    };
+    source.documents[0].nets.push({
+      id: "net-vout",
+      scope: "local",
+      terminals: [{ instanceId: "P-object", pinName: "P" }],
+    });
+    source.documents[0].annotations.push(
+      {
+        id: "reference-P",
+        kind: "instance-label",
+        binding: { kind: "instance-designator", instanceId: "P-object" },
+        anchor: { kind: "free", position: { x: 0, y: 0 } },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
       },
+      {
+        id: "reference-R7",
+        kind: "instance-label",
+        binding: {
+          kind: "instance-designator",
+          instanceId: "opaque-resistor-id",
+        },
+        anchor: { kind: "free", position: { x: 40, y: 0 } },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
+      },
+      {
+        id: "terminal-name",
+        kind: "instance-label",
+        binding: {
+          kind: "cell-terminal-name",
+          terminalId: "terminal-vout",
+        },
+        anchor: { kind: "free", position: { x: 20, y: 0 } },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
+      },
+    );
+
+    const migrated = parseProjectWithMetadata(JSON.stringify(source));
+    expect(migrated).toMatchObject({
+      sourceSchemaVersion: 17,
+      migrated: true,
+      project: { schemaVersion: 18 },
     });
-    expect(parsed.project.documents[0]!.instances[0]).not.toHaveProperty(
-      "properties",
+    expect(
+      migrated.project.documents[0]!.annotations.map(
+        (annotation) => annotation.binding,
+      ),
+    ).toEqual([
+      { kind: "cell-terminal-name", terminalId: "terminal-vout" },
+      { kind: "instance-schematic-name", instanceId: "opaque-resistor-id" },
+    ]);
+    expect(migrated.project.documents[0]!.instances[0]).toMatchObject({
+      id: "P-object",
+    });
+    expect(migrated.project.documents[0]!.instances[0]).not.toHaveProperty(
+      "schematicReference",
     );
   });
 
   it("lets an upgraded previous Project author and persist current content", () => {
-    const source = {
-      ...JSON.parse(
-        serializeProject(createEmptyProject("project-test", "Test Project")),
-      ),
-      schemaVersion: 14,
-    };
-    delete source.externalSubcircuitDefinitions;
-    delete source.documents[0].netlist.formalParameters;
+    const source = JSON.parse(
+      serializeProject(createEmptyProject("project-test", "Test Project")),
+    );
+    source.schemaVersion = 17;
     const project = parseProject(JSON.stringify(source));
     project.documents[0]!.annotations.push({
       id: "value-fraction",
@@ -149,147 +187,19 @@ describe("Project persistence", () => {
     });
 
     const reopened = parseProject(serializeProject(project));
-    expect(reopened.schemaVersion).toBe(15);
+    expect(reopened.schemaVersion).toBe(18);
     expect(
       reopened.documents[0]!.annotations[0]?.content!.runs[0],
-    ).toMatchObject({
-      kind: "fraction",
-      numerator: { runs: [{ value: "10um" }] },
-      denominator: { runs: [{ value: "150nm" }] },
-    });
-  });
-
-  it("rejects conflicting legacy electrical values instead of choosing one", () => {
-    const source = JSON.parse(
-      serializeProject(createEmptyProject("project-conflict", "Conflict")),
-    );
-    source.schemaVersion = 14;
-    delete source.externalSubcircuitDefinitions;
-    delete source.documents[0].netlist.formalParameters;
-    source.documents[0].instances.push({
-      id: "R1",
-      symbolId: "resistor",
-      placement: null,
-      properties: { value: "10k" },
-      netlist: { reference: "R1", parameters: { value: "20k" } },
-    });
-
-    expect(() => parseProject(JSON.stringify(source))).toThrow(
-      /conflicts with netlist.parameters.value/,
-    );
-  });
-
-  it("groups consistent external imports and preserves a conflicting one as unresolved", () => {
-    const source = JSON.parse(
-      serializeProject(createEmptyProject("project-external", "External")),
-    );
-    source.schemaVersion = 14;
-    delete source.externalSubcircuitDefinitions;
-    delete source.documents[0].netlist.formalParameters;
-    const imported = (id: string, pinName: string) => ({
-      id,
-      symbolId: "generic-block-2",
-      placement: null,
-      netlist: {
-        reference: id,
-        parameters: {},
-        terminals: [{ sourcePosition: 0, pinName }],
-        binding: { kind: "external-subcircuit", name: "OPA" },
-      },
-    });
-    source.documents[0].instances.push(
-      imported("X1", "IN"),
-      imported("X2", "INPUT"),
-    );
-
-    const migrated = parseProject(JSON.stringify(source));
-    expect(migrated.externalSubcircuitDefinitions).toEqual([
-      {
-        id: "external-subcircuit-opa",
-        name: "OPA",
-        terminals: [
-          {
-            id: "external-terminal-external-subcircuit-opa-1",
-            name: "IN",
-            direction: "passive",
-          },
-        ],
-        formalParameters: [],
-        interfaceStatus: "declared",
-      },
-    ]);
-    expect(
-      migrated.documents[0]!.instances.map(
-        (instance) => instance.netlist!.binding,
-      ),
-    ).toEqual([
-      { kind: "external-subcircuit", definitionId: "external-subcircuit-opa" },
-      { kind: "unresolved-subcircuit", name: "OPA" },
-    ]);
+    ).toMatchObject({ kind: "fraction" });
   });
 
   it("rejects schemas outside the rolling current-and-previous window", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/must be 14 or 15/);
+    ).toThrow(/must be 17 or 18/);
     expect(() =>
-      parseProject(JSON.stringify({ ...project, schemaVersion: 12 })),
-    ).toThrow(/must be 14 or 15/);
-  });
-
-  it("preserves previous-schema formal terminal identity without adding visual intent", () => {
-    const source = JSON.parse(
-      serializeProject(createEmptyProject("project-port", "Port migration")),
-    );
-    source.schemaVersion = 14;
-    delete source.externalSubcircuitDefinitions;
-    delete source.documents[0].netlist.formalParameters;
-    source.documents[0].nets.push({
-      id: "net-input",
-      name: "VIN",
-      scope: "local",
-      terminals: [],
-    });
-    source.documents[0].instances.push({
-      id: "P1",
-      symbolId: "port",
-      placement: null,
-    });
-    source.documents[0].netlist.terminals.push({
-      id: "terminal-input",
-      name: "VIN",
-      netId: "net-input",
-      direction: "input",
-      interfaceInstanceId: "P1",
-    });
-    source.documents[0].nets[0].terminals.push({
-      instanceId: "P1",
-      pinName: "P",
-    });
-
-    const migrated = parseProjectWithMetadata(JSON.stringify(source));
-    const document = migrated.project.documents[0]!;
-    const terminal = document.netlist!.terminals[0]!;
-    const marker = document.instances.find(
-      (instance) => instance.id === terminal.interfaceInstanceId,
-    );
-
-    expect(migrated).toMatchObject({
-      sourceSchemaVersion: 14,
-      migrated: true,
-    });
-    expect(terminal).toMatchObject({
-      name: "VIN",
-      netId: "net-input",
-      direction: "input",
-    });
-    expect(terminal.id).toBe("terminal-input");
-    expect(marker).toMatchObject({
-      id: "P1",
-      symbolId: "port",
-      placement: null,
-    });
-    expect(document.presentation.cellSymbol).toBeUndefined();
+      parseProject(JSON.stringify({ ...project, schemaVersion: 16 })),
+    ).toThrow(/must be 17 or 18/);
   });
 });

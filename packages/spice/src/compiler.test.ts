@@ -213,6 +213,11 @@ Q2 collector base emitter QPREF
     );
     expect(
       document.instances
+        .filter((instance) => interfaceInstanceIds.has(instance.id))
+        .every((instance) => instance.schematicReference === undefined),
+    ).toBe(true);
+    expect(
+      document.instances
         .filter((instance) => !interfaceInstanceIds.has(instance.id))
         .every(
           (instance) =>

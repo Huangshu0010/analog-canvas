@@ -468,6 +468,7 @@ export function defaultInstanceLabel(
   instance: SchematicDocument["instances"][number],
   resolver: SymbolResolver,
   styleProfile: SchematicStyleProfile,
+  slot: "reference" | "value" = "reference",
 ): Annotation | null {
   if (!instance.placement) return null;
   if (
@@ -492,13 +493,14 @@ export function defaultInstanceLabel(
     resolved,
     styleProfile,
     document.presentation.grid,
+    slot,
   );
   if (!placement) return null;
   const position = placement.position;
   return {
     id: `instance-label-${instance.id}`,
     kind: "instance-label",
-    binding: { kind: "instance-reference", instanceId: instance.id },
+    binding: { kind: "instance-schematic-name", instanceId: instance.id },
     anchor: {
       kind: "object",
       objectId: instance.id,

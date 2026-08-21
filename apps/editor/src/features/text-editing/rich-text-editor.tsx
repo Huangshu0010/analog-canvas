@@ -452,7 +452,7 @@ export function RichTextEditor({
           value={flattenRichText(content)}
           disabled={disabled}
           aria-label="Canvas text editor"
-          aria-description="Rename the bound schematic label"
+          aria-description="Edit the bound schematic label"
           style={{ fontSize: `${15.116 * sizeScale}px` }}
           onChange={(event) =>
             onChange({ runs: [{ kind: "text", value: event.target.value }] })

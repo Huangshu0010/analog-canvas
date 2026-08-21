@@ -32,4 +32,43 @@ describe("ProjectInstanceIndex", () => {
       "document-main\u0000R1",
     ]);
   });
+
+  it("keeps internal ID, electrical reference, alias and master distinct", () => {
+    const project = createEmptyProject("project", "Project");
+    project.externalSubcircuitDefinitions.push({
+      id: "master-sky130-nfet",
+      name: "sky130_fd_pr__nfet_01v8",
+      terminals: [],
+      formalParameters: [],
+      interfaceStatus: "declared",
+    });
+    project.documents[0]!.instances.push({
+      id: "imported-instance-4c3b",
+      symbolId: "generic-block-2",
+      placement: null,
+      netlist: {
+        reference: "XBIAS",
+        binding: {
+          kind: "external-subcircuit",
+          definitionId: "master-sky130-nfet",
+        },
+        parameters: {},
+      },
+      schematicName: { runs: [{ kind: "text", value: "Bias transistor" }] },
+    });
+
+    const row = buildProjectInstanceIndex(project).row(
+      "document-main",
+      "imported-instance-4c3b",
+    );
+    expect(row).toMatchObject({
+      instanceId: "imported-instance-4c3b",
+      reference: "XBIAS",
+      schematicName: "Bias transistor",
+      masterName: "sky130_fd_pr__nfet_01v8",
+    });
+    expect(
+      buildProjectInstanceIndex(project).search("bias transistor"),
+    ).toHaveLength(1);
+  });
 });

@@ -93,6 +93,7 @@
             },
             "rotation": 0
           },
+          "schematicReference": "P1",
           "symbolId": "port"
         },
         {
@@ -105,6 +106,7 @@
             },
             "rotation": 0
           },
+          "schematicReference": "M1",
           "symbolId": "nmos"
         },
         {
@@ -117,6 +119,7 @@
             },
             "rotation": 0
           },
+          "schematicReference": "M2",
           "symbolId": "nmos"
         },
         {
@@ -129,6 +132,7 @@
             },
             "rotation": 180
           },
+          "schematicReference": "P2",
           "symbolId": "port-filled"
         },
         {
@@ -141,6 +145,7 @@
             },
             "rotation": 0
           },
+          "schematicReference": "GND1",
           "symbolId": "ground"
         }
       ],
@@ -340,7 +345,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-phase-5-dense-analog",
   "name": "Current Differential Stage",
-  "schemaVersion": 15,
+  "schemaVersion": 18,
   "source": {
     "dialect": "none",
     "entry": null,

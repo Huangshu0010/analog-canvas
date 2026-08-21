@@ -55,8 +55,10 @@ for readability; these groups do not create separate mutation endpoints:
 
 - control/history: `noop`, `clear_document`, `undo`, `redo`;
 - Instance: `add_instance`, `remove_instance`, `set_instance_symbol`,
-  `place_instance`, `move_instance`, `rotate_instance`, `mirror_instance`,
-  `set_instance_reference`, `set_instance_schematic_name`, `set_instance_binding`,
+  `place_instance`, `unplace_instance`, `move_instance`, `rotate_instance`,
+  `mirror_instance`,
+  `set_instance_reference`, `set_instance_schematic_reference`,
+  `set_instance_schematic_name`, `set_instance_binding`,
   `patch_instance_netlist_parameters`, `bulk_patch_instance_netlist`,
   `set_instance_netlist`;
 - Cell interface: `add_cell_terminal`, `update_cell_terminal`,
@@ -88,10 +90,16 @@ is not another `SchematicEdit` member.
 
 `set_instance_reference`, `set_instance_binding`, and
 `patch_instance_netlist_parameters` are the ordinary field writers for an
-existing netlist record. `set_instance_schematic_name` instead changes the
-user-owned RichText alias shown on a schematic and never changes the instance's
-SPICE reference or stable identity. `bulk_patch_instance_netlist` is the
-bounded, atomic multi-instance netlist form. `set_instance_netlist` remains
+existing netlist record. `set_instance_schematic_reference` changes the visible
+Reference for any non-formal Instance, including a non-emitting Port, without
+changing netlist output; formal Cell Ports use their terminal name and reject
+this edit. `set_instance_schematic_name` instead changes the user-owned
+RichText label shown on an ordinary schematic instance. Port character edits
+rename their bound `Net.name` or `CellTerminal.name`; a formatting-only edit
+upserts the same-text `Annotation.formatOverride`. A Cell-terminal character
+edit uses the structural hierarchy planner so caller pins and the netlist
+interface reconcile atomically. `bulk_patch_instance_netlist` is the bounded,
+atomic multi-instance netlist form. `set_instance_netlist` remains
 the whole-record operation for object initialization, import, and bounded
 migrations; product editing must not rebuild unrelated netlist facts through
 it.
@@ -169,7 +177,7 @@ Phase 8 topology operations have these preconditions:
   covered by an explicit one-to-one `pinMap`; the edit atomically updates Net,
   Route, and preserved `spice.pin.*` references without changing Net ownership.
 - `port` and `port-filled` use the ordinary `add_instance`, `place_instance`,
-  `move_instance`, and terminal-connectivity edit paths; there is no
+  `unplace_instance`, `move_instance`, and terminal-connectivity edit paths; there is no
   Port-specific edit kind.
 - `set_cell_symbol_presentation` changes only a Cell definition's optional
   stable-terminal visual intent. It is wrapped in a Project structural
@@ -177,6 +185,10 @@ Phase 8 topology operations have these preconditions:
   it creates no endpoint or drawing-object kind.
 - `remove_instance` requires no Net, annotation, group, or constraint
   reference.
+- `place_instance` and `unplace_instance` require an unlocked Instance.
+  `unplace_instance` returns a placed Instance to the Placement
+  Tray. It preserves Net membership, NoConnects, bindings, parameters, and
+  annotations, but rejects while a Route still terminates at the Instance.
 - `connect_endpoints` creates a caller-named local Net when both endpoints are
   unowned, or attaches an unowned endpoint to the other endpoint's Net.
 - `set_net_name` requires a non-empty trimmed name. A name already owned by a
@@ -210,8 +222,9 @@ Phase 8 topology operations have these preconditions:
   endpoint without a second mutation path.
 - Connected-instance deletion remains a composed transaction rather than a
   destructive `remove_instance` flag: Routes are first repointed to replacement
-  Junctions, terminals and annotations are removed explicitly, and only then is
-  the unreferenced instance removed.
+  Junctions, terminals, NoConnects, instance-owned annotations, and unlocked
+  layout references are removed explicitly, and only then is the unreferenced
+  instance removed.
 - Endpoints on different Nets require an explicit preceding `merge_nets` edit
   in the same transaction.
 - `merge_nets` retargets routes, junctions, annotations, and layout references

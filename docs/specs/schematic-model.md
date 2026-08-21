@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 15 and has
+geometric, and presentation facts. The current model is strict schema 18 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -29,6 +29,11 @@ migration. Invalid coordinates are rejected with their data path.
 ## Electrical authority
 
 - `Instance` selects one exact canonical symbol and optional visual variant.
+  `Instance.schematicReference` is its canvas-facing Reference when the
+  Instance has one, independent of the optional emitted
+  `Instance.netlist.reference`. A free Net Port instead projects `Net.name`; a
+  formal Cell Pin projects `CellTerminal.name`. Neither Port role has a visible
+  schematic reference.
 - `Net.terminals` is complete logical membership. A terminal is
   `{instanceId, pinName}` and belongs to at most one Net.
 - `Route` owns editable geometry for one Net and connects terminal or Junction
@@ -89,8 +94,14 @@ route-relative and include a deterministic fallback position for dangling
 visual references. While an anchor resolves, its resolved position is the one
 text baseline used by rendering, editor hit/marquee geometry, export bounds,
 and visual diagnostics; `fallbackPosition` is used only for a dangling target.
-Renderers never derive visible instance text from IDs or properties. Drafting
-objects are visual-only and cannot create connectivity.
+`instance-schematic-name` resolves RichText `schematicName` and only then the
+internal schematic/netlist reference; `instance-designator` resolves an
+optional, read-only network ID. `net-name` and `cell-terminal-name` resolve
+their semantic source and may use a same-text Annotation RichText
+`formatOverride`; `instance-master-name` and `instance-value` resolve their own
+source. Renderers never derive visible
+instance text from IDs or copied properties. Drafting objects are visual-only
+and cannot create connectivity.
 
 A Cell definition may additionally persist optional `presentation.cellSymbol`
 intent: a symbol-local minimum body size and unique `terminalId`-keyed visual
@@ -124,6 +135,15 @@ two explicit placements may occupy the same side/offset slot.
   Routes, Junctions, NoConnects, and formal cell terminals, but excludes
   placement, annotation, and drafting presentation.
 
+An Instance has three lifecycle states: retained in the Placement Tray
+(`placement: null`), placed (`placement` present), or deleted (absent). Returning
+to the Tray retains every electrical, netlist, and object-anchored annotation
+fact, but retained-instance annotations are not rendered or hit-testable until
+the Instance is re-placed. Any visible Route endpoint is first detached to a
+Junction at the resolved pin position. Deletion is a separate atomic composition
+that clears membership, NoConnect, owned annotation, and unlocked layout
+references before removing the Instance.
+
 Mutation occurs only through atomic Edit Engine transactions against an exact
 Document revision. GUI and Agent writes use the same schema and invariants.
 Formal-interface edits and add/remove Document operations are composed with
@@ -131,6 +151,6 @@ ordinary Schematic edits inside one Project structural transaction. The
 Project's `structureRevision` protects this cross-Document boundary and the
 editor records it as one undoable structural commit.
 
-Persistence writes only schema 15. `packages/project-protocol` accepts schema
-14 through the bounded direct upgrade defined by ADR 0029, then supplies the
+Persistence writes only schema 18. `packages/project-protocol` accepts schema
+17 through the bounded direct upgrade defined by ADR 0032, then supplies the
 current model only; no compatibility shape enters `packages/model`.

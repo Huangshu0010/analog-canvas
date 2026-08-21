@@ -104,11 +104,17 @@ export const InstanceSchema = z
     // Explicit SPICE/user B connections need no parallel metadata.
     mosBulkBinding: MosBulkBindingSchema.optional(),
     placement: PlacementSchema.nullable(),
+    /**
+     * Internal, stable schematic reference used for lifecycle and as an
+     * initial label fallback. It is intentionally separate from the optional
+     * emitted SPICE/Spectre designator and is never an object identity.
+     */
+    schematicReference: NetlistIdentifierSchema.optional(),
     netlist: InstanceNetlistDataSchema.optional(),
     /**
-     * User-owned schematic alias. Unlike `netlist.reference`, this RichText
-     * source is presentation-only: it may be repeated, formatted, and changed
-     * without modifying the electrical/export identity.
+     * User-owned RichText schematic label. This is the default visible label;
+     * it may be repeated, formatted, and changed without modifying the
+     * electrical/export identity.
      */
     schematicName: RichTextDocumentSchema.optional(),
   })

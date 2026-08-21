@@ -37,7 +37,18 @@ export const AnnotationKindSchema = z.enum([
  */
 export const AnnotationTextBindingSchema = z.discriminatedUnion("kind", [
   z.strictObject({
-    kind: z.literal("instance-reference"),
+    /** Optional, read-only emitted network designator; never an object ID. */
+    kind: z.literal("instance-designator"),
+    instanceId: StableIdSchema,
+  }),
+  z.strictObject({
+    /** The default user-owned RichText schematic label. */
+    kind: z.literal("instance-schematic-name"),
+    instanceId: StableIdSchema,
+  }),
+  z.strictObject({
+    /** The binding target's human-readable master/Cell/model name. */
+    kind: z.literal("instance-master-name"),
     instanceId: StableIdSchema,
   }),
   z.strictObject({
@@ -67,6 +78,8 @@ export const AnnotationSchema = z
     // marker authoring; all semantic annotation producers write `binding`.
     content: RichTextDocumentSchema.optional(),
     binding: AnnotationTextBindingSchema.optional(),
+    /** Same-text RichText formatting for an editable semantic name binding. */
+    formatOverride: RichTextDocumentSchema.optional(),
     anchor: VisualAnchorSchema,
     netId: StableIdSchema.optional(),
     alignment: z.enum(["start", "middle", "end"]),
@@ -83,6 +96,18 @@ export const AnnotationSchema = z
         path: ["binding"],
         message:
           "Annotations require exactly one literal content or text binding",
+      });
+    }
+    if (
+      annotation.formatOverride &&
+      annotation.binding?.kind !== "net-name" &&
+      annotation.binding?.kind !== "cell-terminal-name"
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["formatOverride"],
+        message:
+          "RichText format overrides require an editable Net or Cell-terminal name binding",
       });
     }
     if (annotation.markerKind && annotation.kind !== "route-marker") {

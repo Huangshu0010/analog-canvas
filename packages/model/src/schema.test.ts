@@ -80,6 +80,71 @@ describe("CircuitProject schema", () => {
     );
   });
 
+  it("rejects a schematic Reference on a formal Cell Port", () => {
+    const document = createEmptyProject("formal-port", "Formal Port")
+      .documents[0]!;
+    document.instances.push({
+      id: "port-object",
+      symbolId: "port",
+      schematicReference: "P1",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-vout",
+      scope: "local",
+      terminals: [{ instanceId: "port-object", pinName: "P" }],
+    });
+    document.netlist = {
+      name: "Child",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-vout",
+          name: "Vout",
+          netId: "net-vout",
+          direction: "output",
+          interfaceInstanceId: "port-object",
+        },
+      ],
+    };
+
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(false);
+    delete document.instances[0]!.schematicReference;
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
+    document.annotations.push({
+      id: "label-port",
+      kind: "instance-label",
+      binding: {
+        kind: "instance-schematic-name",
+        instanceId: "port-object",
+      },
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(false);
+    document.annotations[0]!.binding = {
+      kind: "cell-terminal-name",
+      terminalId: "terminal-vout",
+    };
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
+    document.annotations[0]!.formatOverride = {
+      runs: [
+        {
+          kind: "span",
+          style: "bold",
+          children: [{ kind: "text", value: "Vout" }],
+        },
+      ],
+    };
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
+    document.annotations[0]!.formatOverride = {
+      runs: [{ kind: "text", value: "Different alias" }],
+    };
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(false);
+  });
+
   it("rejects a persisted page point that is not aligned to its Document grid", () => {
     const document = createEmptyProject("project-grid", "Grid").documents[0]!;
     document.drafting!.objects.push({

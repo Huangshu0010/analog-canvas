@@ -562,7 +562,7 @@
             },
             "rotation": 0
           },
-          "properties": {},
+          "schematicReference": "C1",
           "symbolId": "capacitor"
         },
         {
@@ -583,7 +583,7 @@
             },
             "rotation": 90
           },
-          "properties": {},
+          "schematicReference": "C2",
           "symbolId": "capacitor"
         },
         {
@@ -604,7 +604,7 @@
             },
             "rotation": 0
           },
-          "properties": {},
+          "schematicReference": "M1",
           "symbolId": "nmos",
           "symbolVariantId": "textbook-3terminal"
         },
@@ -626,7 +626,7 @@
             },
             "rotation": 0
           },
-          "properties": {},
+          "schematicReference": "R1",
           "symbolId": "resistor"
         },
         {
@@ -640,7 +640,7 @@
             "reference": "PWR1"
           },
           "placement": null,
-          "properties": {},
+          "schematicReference": "PWR1",
           "symbolId": "vdd-port"
         },
         {
@@ -661,7 +661,7 @@
             },
             "rotation": 0
           },
-          "properties": {},
+          "schematicReference": "PWR2",
           "symbolId": "ground"
         },
         {
@@ -682,7 +682,7 @@
             },
             "rotation": 0
           },
-          "properties": {},
+          "schematicReference": "PWR3",
           "symbolId": "ground"
         },
         {
@@ -703,7 +703,7 @@
             },
             "rotation": 0
           },
-          "properties": {},
+          "schematicReference": "PWR4",
           "symbolId": "ground"
         },
         {
@@ -724,7 +724,7 @@
             },
             "rotation": 0
           },
-          "properties": {},
+          "schematicReference": "PWR5",
           "symbolId": "ground"
         },
         {
@@ -745,7 +745,7 @@
             },
             "rotation": 90
           },
-          "properties": {},
+          "schematicReference": "R2",
           "symbolId": "resistor"
         },
         {
@@ -762,7 +762,7 @@
             },
             "rotation": 0
           },
-          "properties": {},
+          "schematicReference": "V1",
           "symbolId": "voltage-source"
         },
         {
@@ -776,7 +776,7 @@
             "reference": "PWR6"
           },
           "placement": null,
-          "properties": {},
+          "schematicReference": "PWR6",
           "symbolId": "vdd-port"
         }
       ],
@@ -866,6 +866,7 @@
       "layoutGroups": [],
       "name": "Main",
       "netlist": {
+        "formalParameters": [],
         "name": "Main",
         "terminals": []
       },
@@ -1268,9 +1269,10 @@
       "sourceStatus": "connectivity-modified"
     }
   ],
+  "externalSubcircuitDefinitions": [],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 14,
+  "schemaVersion": 18,
   "source": {
     "dialect": "none",
     "entry": null,

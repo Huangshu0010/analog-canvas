@@ -2,8 +2,8 @@
 
 Status: `accepted`
 
-Current-version note: ADR 0029 supersedes this ADR's schema-version and active
-migration statements. Readers now operate on the sole **schema-15 in-memory Project shape**.
+Current-version note: ADR 0030 supersedes this ADR's schema-version and active
+migration statements. Readers now operate on the sole **schema-16 in-memory Project shape**.
 
 Date: `2026-08-18`
 

@@ -29,11 +29,25 @@ Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.
 
-There is no separate Cell Interface authoring surface. A child Cell Port's
-single object-anchored annotation owns its terminal name; normal Properties own
-direction. Annotation rename reconciles callers by stable terminal identity.
-Ordinary Delete reuses the normal instance/route deletion proposal, with the
-formal-terminal and caller projection appended only by the Project transaction.
+There is no separate Cell Interface authoring surface. A child Cell Port shows
+only its object-anchored terminal-name annotation in the normal Reference slot;
+its stable Instance ID is not drawn and it has no schematic Reference. Normal
+Properties own direction. Annotation rename reconciles callers by stable
+terminal identity.
+Ordinary Delete reuses the normal instance/route deletion proposal: it retains
+wire geometry by replacing affected terminal endpoints with Junctions, then
+removes electrical memberships, NoConnects, owned labels, layout references,
+and the Instance in one transaction. The formal-terminal and caller projection
+is appended only by the Project transaction.
+
+The **Placement Tray** is the only retained-unplaced presentation surface. A
+tray item may be dragged, entered into the ordinary placement cursor, or placed
+with **Place all** into a deterministic starter grid in the current view.
+**Return to tray** and **Return all** use the same lifecycle planner and retain
+electrical facts; permanent Delete remains a separate action. Object-anchored
+labels are retained with an unplaced Instance but are neither rendered nor
+hit-testable until re-placement. Formal Cell Ports use the same return path:
+the Cell interface remains present while the Port is retained in the Tray.
 Definition-level pin placement data remains compatible, while
 new interfaces use deterministic direction-aware automatic layout.
 
@@ -193,9 +207,20 @@ without requiring an Alt cycle.
 ## Text and presentation
 
 Every visible editable label is one persisted RichText annotation. Component
-insertion creates an `instance-label` only when reference display is requested,
-and an `instance-value` only when value display is requested and the device
-parameters have a display projection.
+insertion uses one default-display policy: ordinary instances receive an
+`instance-schematic-name` label, which uses RichText `schematicName` and
+otherwise falls back only to `schematicReference` or `netlist.reference`.
+Internal Cells and external subcircuits additionally receive their
+Cell/master presentation; a free Net Port receives an object-anchored
+`net-name` label and a formal Cell Pin receives only `cell-terminal-name`; and
+parameter values use `instance-value` when requested and displayable.
+`instance-designator` is an explicitly requested, read-only network-ID
+projection, never the default editable label. Properties exposes one
+Schematic label field; RichText canvas editing materializes `schematicName`.
+For either Port role, a character edit renames the bound Net or terminal while
+a formatting-only edit persists a same-text annotation `formatOverride`.
+Properties exposes `Net name` for a free Port and `Terminal name` plus
+direction for a formal Pin.
 The renderer never synthesizes text from Instance IDs and no empty suppressor
 label exists. Reference label display is a Properties toggle for one or many
 selected components: hiding sets the annotation's optional `visible: false`
@@ -226,8 +251,8 @@ no electrical meaning.
 Open, demo load, restore, and human-approved staged import replace the entire
 Project through one replacement boundary; they are not Edit Engine
 transactions. Replacement cancels pending recovery for the outgoing Project
-and terminates its Agent session. A complete schema-14 Project may be upgraded
-at the read boundary and then enters the editor only as schema-15; migrated
+and terminates its Agent session. A complete schema-17 Project may be upgraded
+at the read boundary and then enters the editor only as schema-18; migrated
 files are marked as needing save.
 
 Selection, viewport, active tool, previews, Agent tokens, and approval UI are

@@ -5,6 +5,7 @@ import {
   clickCommand,
   downloadBytes,
   emulateDownloadOnlyBrowser,
+  recoveryProjectTexts,
 } from "./editor-fixtures.js";
 
 test("blocks destructive browser refresh shortcuts and uses the stronger grid", async ({
@@ -77,6 +78,78 @@ test("mirrors component and copy placement previews before their commits", async
     canvas.locator('[data-object-id="R2"] > g').first(),
   ).toHaveAttribute("transform", /rotate\(180\)/u);
   await page.keyboard.press("Escape");
+});
+
+test("writes a manual netlist reference into the placed Instance", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByLabel("Component search").fill("resistor");
+  await dialog.getByTestId("insert-component-resistor").click();
+  await dialog.getByLabel("Reference name").fill("R7");
+  await dialog.getByRole("button", { name: "Apply" }).click();
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 360, y: 220 } });
+  await page.keyboard.press("Escape");
+
+  await expect
+    .poll(() => recoveryProjectTexts(page))
+    .toContain('"reference": "R7"');
+});
+
+test("returns a component to the Placement Tray and places the retained Instance again", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await chooseComponent(page, "resistor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 320, y: 220 } });
+  await page.keyboard.press("Escape");
+  await page.getByTestId("hit-R1").click();
+  await page.getByTestId("selection-shelf").click();
+
+  await page
+    .getByRole("button", { name: "Return component to Placement Tray" })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Placement Tray" }),
+  ).toContainText("1 retained");
+  await expect(page.getByTestId("unplaced-R1")).toContainText("R1 · resistor");
+  await expect(page.getByTestId("hit-R1")).toHaveCount(0);
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R1"),
+  ).toHaveCount(0);
+
+  await page
+    .getByRole("button", { name: "Place R1 · resistor from tray" })
+    .click();
+  await canvas.hover({ position: { x: 480, y: 260 } });
+  await expect(page.getByTestId("component-placement-preview")).toBeVisible();
+  await canvas.click({ position: { x: 480, y: 260 } });
+
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R1"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Placement Tray" }),
+  ).toContainText("0 retained");
+  await expect(page.getByTestId("revision")).toHaveText("3");
+
+  await page.getByTestId("hit-R1").click();
+  await page
+    .getByRole("button", { name: "Return component to Placement Tray" })
+    .click();
+  await page
+    .getByRole("region", { name: "Placement Tray" })
+    .getByRole("button", { name: "Place all" })
+    .click();
+
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("5");
 });
 
 test("refreshes explicitly only after flushing and automatically restoring recovery", async ({
@@ -415,14 +488,19 @@ test("carries a manual Value through placement and Q property editing", async ({
     page.getByRole("button", { name: "Discard changes" }),
   ).toHaveCount(0);
   await expect(page.getByLabel("Component identity")).toContainText(
-    "Schematic nameSymbolresistorDevice classresistor",
+    "Schematic labelNetlist referenceSymbolresistorDevice classresistor",
   );
-  const schematicName = page.getByLabel("Component schematic name");
-  await expect(schematicName).toHaveValue("R1");
-  await schematicName.fill("R7");
-  await schematicName.press("Tab");
+  const netlistReference = page.getByLabel("Component netlist reference");
+  await expect(netlistReference).toHaveValue("R1");
+  await netlistReference.fill("R7");
+  await netlistReference.press("Tab");
   await expect(page.getByTestId("revision")).toHaveText("4");
-  await expect(schematicName).toHaveValue("R7");
+  await expect(netlistReference).toHaveValue("R7");
+  const schematicLabel = page.getByLabel("Component schematic label");
+  await expect(schematicLabel).toHaveValue("R1");
+  await schematicLabel.fill("Input resistor");
+  await schematicLabel.press("Tab");
+  await expect(page.getByTestId("revision")).toHaveText("5");
   await page
     .locator("summary")
     .filter({ hasText: "Advanced parameters" })
@@ -431,7 +509,7 @@ test("carries a manual Value through placement and Q property editing", async ({
   await page.getByLabel("Additional parameter name 1").fill("tc");
   await page.getByLabel("Additional parameter value 1").fill("0.1");
   await page.getByRole("button", { name: "Apply parameters" }).click();
-  await expect(page.getByTestId("revision")).toHaveText("5");
+  await expect(page.getByTestId("revision")).toHaveText("6");
   await expect(page.getByLabel("Additional parameter name 1")).toHaveValue(
     "tc",
   );

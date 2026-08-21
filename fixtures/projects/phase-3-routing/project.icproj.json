@@ -18,6 +18,7 @@
             },
             "rotation": 0
           },
+          "schematicReference": "P1",
           "symbolId": "port"
         },
         {
@@ -30,6 +31,7 @@
             },
             "rotation": 0
           },
+          "schematicReference": "P2",
           "symbolId": "port"
         },
         {
@@ -42,6 +44,7 @@
             },
             "rotation": 90
           },
+          "schematicReference": "P3",
           "symbolId": "port"
         },
         {
@@ -54,6 +57,7 @@
             },
             "rotation": 270
           },
+          "schematicReference": "P4",
           "symbolId": "port"
         },
         {
@@ -66,6 +70,7 @@
             },
             "rotation": 90
           },
+          "schematicReference": "P5",
           "symbolId": "port"
         }
       ],
@@ -127,7 +132,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-routing",
   "name": "Phase 3 Routing Demo",
-  "schemaVersion": 15,
+  "schemaVersion": 18,
   "source": {
     "dialect": "none",
     "entry": null,

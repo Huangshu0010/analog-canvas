@@ -155,6 +155,7 @@ export function agentEditCategory(
       return "geometry";
     case "patch_instance_netlist_parameters":
     case "set_instance_reference":
+    case "set_instance_schematic_reference":
     case "set_instance_schematic_name":
       return "presentation";
     case "set_instance_netlist":
@@ -199,6 +200,10 @@ export function agentEditCategory(
       return "presentation";
     case "undo":
     case "redo":
+    // The Placement Tray is a browser-editor lifecycle surface. Its edit is
+    // kept out of the retired Agent product even though the shared typed edit
+    // union must parse it for Project protocol completeness.
+    case "unplace_instance":
       return "unsupported";
   }
 }

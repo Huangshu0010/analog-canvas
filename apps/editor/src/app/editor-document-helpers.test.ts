@@ -1,4 +1,4 @@
-import { createEmptyDocument, semanticTextDocument } from "@icm/model";
+import { createEmptyDocument } from "@icm/model";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -25,7 +25,7 @@ describe("editor document helpers", () => {
     document.annotations.push({
       id: "label-R1",
       kind: "instance-label",
-      content: semanticTextDocument("R1", "instance-label"),
+      binding: { kind: "instance-schematic-name", instanceId: "R1" },
       anchor: {
         kind: "object",
         objectId: "R1",
@@ -40,6 +40,25 @@ describe("editor document helpers", () => {
     });
     expect(instanceLabelAnnotationFor(document, "R1")?.id).toBe("label-R1");
     expect(instanceLabelAnnotationFor(document, "R2")).toBeUndefined();
+  });
+
+  it("does not confuse a master label with a schematic label", () => {
+    const document = createEmptyDocument("doc", "Doc");
+    document.annotations.push({
+      id: "master-R1",
+      kind: "instance-label",
+      binding: { kind: "instance-master-name", instanceId: "R1" },
+      anchor: {
+        kind: "object",
+        objectId: "R1",
+        localOffset: { x: 0, y: 0 },
+        fallbackPosition: { x: 0, y: 0 },
+      },
+      rotation: 0,
+      alignment: "start",
+      locked: false,
+    });
+    expect(instanceLabelAnnotationFor(document, "R1")).toBeUndefined();
   });
 
   it("finds the highest generated routing counter across document objects", () => {

@@ -20,16 +20,45 @@ export function resolveAnnotationText(
 ): RichTextDocument {
   const binding = annotation.binding;
   if (!binding) return annotation.content ?? EMPTY_TEXT;
+  if (
+    annotation.formatOverride &&
+    (binding.kind === "net-name" || binding.kind === "cell-terminal-name")
+  ) {
+    return annotation.formatOverride;
+  }
   switch (binding.kind) {
-    case "instance-reference": {
+    case "instance-designator": {
       const instance = document.instances.find(
         (candidate) => candidate.id === binding.instanceId,
       );
-      if (instance?.schematicName) return instance.schematicName;
       return semanticTextDocument(
-        instance?.netlist?.reference ?? instance?.id ?? "",
+        instance?.netlist?.reference ?? "",
         "instance-label",
       );
+    }
+    case "instance-schematic-name": {
+      const instance = document.instances.find(
+        (candidate) => candidate.id === binding.instanceId,
+      );
+      return (
+        instance?.schematicName ??
+        semanticTextDocument(
+          instance?.schematicReference ?? instance?.netlist?.reference ?? "",
+          "instance-label",
+        )
+      );
+    }
+    case "instance-master-name": {
+      const instance = document.instances.find(
+        (candidate) => candidate.id === binding.instanceId,
+      );
+      const bindingTarget = instance?.netlist?.binding;
+      const name =
+        bindingTarget?.kind === "model" ||
+        bindingTarget?.kind === "unresolved-subcircuit"
+          ? bindingTarget.name
+          : (instance?.importProvenance?.name ?? "");
+      return semanticTextDocument(name, "instance-label");
     }
     case "instance-value": {
       const instance = document.instances.find(

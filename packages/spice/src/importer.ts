@@ -422,11 +422,25 @@ function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
   const boundDocuments: SchematicDocument[] = documents.map((document) => ({
     ...document,
     instances: document.instances.map((instance) => {
+      const isFormalPort = document.netlist?.terminals.some(
+        (terminal) => terminal.interfaceInstanceId === instance.id,
+      );
+      const referencedInstance = {
+        ...instance,
+        ...(isFormalPort
+          ? {}
+          : {
+              schematicReference:
+                instance.schematicReference ??
+                instance.netlist?.reference ??
+                instance.id,
+            }),
+      };
       const isImportedChild = instance.importProvenance?.kind === "subcircuit";
       const isImportedExternal =
         instance.netlist?.binding?.kind === "external-subcircuit";
       if (!isImportedChild && !isImportedExternal) {
-        return instance;
+        return referencedInstance;
       }
       const childDocumentId = isImportedChild
         ? documentIdByCellName.get(
@@ -462,7 +476,7 @@ function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
           })()
         : undefined;
       return {
-        ...instance,
+        ...referencedInstance,
         ...(externalDefinition
           ? { symbolId: externalSubcircuitSymbolId(externalDefinition.id) }
           : {}),

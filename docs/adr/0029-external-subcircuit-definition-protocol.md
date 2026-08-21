@@ -2,6 +2,9 @@
 
 Status: `accepted`
 
+Current-version note: ADR 0030 supersedes this ADR's rolling schema-version
+statement. Its external-definition and `X`-call decisions remain accepted.
+
 Date: `2026-08-20`
 
 Owners: `packages/model`, `packages/edit-engine`, `packages/spice`,
@@ -40,10 +43,10 @@ external `.subckt` body generation.
 
 ## Compatibility and migration
 
-Schema 15 accepts schema 14 as its sole rolling predecessor. The migration
-adds deterministic terminal IDs, passive directions and a `declared` status to
-existing external definitions. Schema 13 is outside the active compatibility
-window.
+Schema 15 accepted schema 14 as its sole rolling predecessor when this decision
+landed. Schema 16 instead accepts schema 15 through ADR 0030; schema 14 is now
+outside the active compatibility window. The external-definition migration
+evidence remains historical validation for this decision.
 
 ## Validation
 

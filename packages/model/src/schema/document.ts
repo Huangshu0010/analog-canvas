@@ -11,6 +11,8 @@ import { NetSchema, NoConnectSchema } from "./connectivity.js";
 import { JunctionSchema, RouteBranchSchema } from "./routing.js";
 import { AnnotationSchema, VisualAnchorSchema } from "./annotations.js";
 import { DraftingLayerSchema } from "./drafting.js";
+import { flattenRichText } from "../rich-text.js";
+import { semanticTextDocument } from "../semantic-text.js";
 import {
   LayoutConstraintSchema,
   LayoutGroupSchema,
@@ -393,6 +395,81 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
         });
       }
       netlistReferences.add(reference);
+    }
+    const schematicReferences = new Set<string>();
+    const formalPortInstanceIds = new Set(
+      (document.netlist?.terminals ?? []).map(
+        (terminal) => terminal.interfaceInstanceId,
+      ),
+    );
+    for (const [instanceIndex, instance] of document.instances.entries()) {
+      if (
+        formalPortInstanceIds.has(instance.id) &&
+        instance.schematicReference !== undefined
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "A formal Cell Port is identified by its Cell terminal name, not a schematic reference",
+          path: ["instances", instanceIndex, "schematicReference"],
+        });
+      }
+      const reference = instance.schematicReference?.toLowerCase();
+      if (!reference) continue;
+      if (schematicReferences.has(reference)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate schematic instance reference: ${instance.schematicReference}`,
+          path: ["instances", instanceIndex, "schematicReference"],
+        });
+      }
+      schematicReferences.add(reference);
+    }
+    for (const [
+      annotationIndex,
+      annotation,
+    ] of document.annotations.entries()) {
+      const binding = annotation.binding;
+      if (
+        (binding?.kind === "instance-designator" ||
+          binding?.kind === "instance-schematic-name") &&
+        formalPortInstanceIds.has(binding.instanceId)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "A formal Cell Port projects only its Cell terminal name annotation",
+          path: ["annotations", annotationIndex, "binding"],
+        });
+      }
+      if (!annotation.formatOverride || !binding) continue;
+      const semanticContent =
+        binding.kind === "cell-terminal-name"
+          ? semanticTextDocument(
+              document.netlist?.terminals.find(
+                (terminal) => terminal.id === binding.terminalId,
+              )?.name ?? "",
+              "formal-port",
+            )
+          : binding.kind === "net-name"
+            ? semanticTextDocument(
+                document.nets.find((net) => net.id === binding.netId)?.name ??
+                  "",
+                annotation.kind === "power-label" ? "power-label" : "net-label",
+              )
+            : null;
+      if (
+        semanticContent &&
+        flattenRichText(annotation.formatOverride) !==
+          flattenRichText(semanticContent)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "A bound RichText format override must preserve the semantic name text",
+          path: ["annotations", annotationIndex, "formatOverride"],
+        });
+      }
     }
     for (const [instanceIndex, instance] of document.instances.entries()) {
       const binding = instance.mosBulkBinding;

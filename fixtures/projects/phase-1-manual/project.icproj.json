@@ -11,12 +11,14 @@
         {
           "id": "M1",
           "placement": null,
+          "schematicReference": "M1",
           "symbolId": "nmos",
           "symbolVariantId": "textbook-3terminal"
         },
         {
           "id": "M2",
           "placement": null,
+          "schematicReference": "M2",
           "symbolId": "pmos",
           "symbolVariantId": "textbook-3terminal"
         },
@@ -29,6 +31,7 @@
             "reference": "R1"
           },
           "placement": null,
+          "schematicReference": "R1",
           "symbolId": "resistor"
         }
       ],
@@ -55,7 +58,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-phase-1-manual",
   "name": "Phase 1 Manual Editor",
-  "schemaVersion": 15,
+  "schemaVersion": 18,
   "source": {
     "dialect": "none",
     "entry": null,

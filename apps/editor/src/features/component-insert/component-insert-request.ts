@@ -7,6 +7,9 @@ export interface SymbolInsertRequest {
   showReference: boolean;
   referenceText: string | null;
   showValue: boolean;
+  portRole?: "net-port" | "cell-terminal";
+  portName?: string;
+  portDirection?: "input" | "output" | "inout" | "passive";
 }
 
 export interface VddRailInsertRequest {
@@ -36,8 +39,8 @@ export interface ExternalSubcircuitInsertRequest {
   masterName: string;
   parameters: Record<string, string>;
   initialRotation: 0 | 90 | 180 | 270;
-  showReference: false;
-  referenceText: null;
+  showReference: boolean;
+  referenceText: string | null;
   showValue: true;
 }
 

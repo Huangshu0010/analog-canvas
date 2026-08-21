@@ -3728,3 +3728,114 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   release and production smoke checks, and 162 browser E2E tests.
 - Commit status: merged to `origin/main` through PR #134 as `51075420` after
   all GitHub Actions checks passed; local `main` is synchronized.
+
+## 2026-08-21 - Schema 16 instance identity protocol
+
+- Changed areas: advanced canonical Projects to schema 16; split ambiguous
+  instance labels into designator, schematic-name and master-name bindings;
+  replaced the rolling reader with a direct schema-15 migration; synchronized
+  recovery, fixtures, bundled examples, documentation, and ADR 0030.
+- Validation: focused model/project-protocol/derived/editor contracts (12 files
+  / 102 tests), typecheck, format, docs, test-impact, and diff checks passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  `d70c84bc`.
+
+## 2026-08-21 - Unified instance display authoring
+
+- Changed areas: introduced a shared editor display factory; made manual
+  device, Cell, external-call and formal-Port labels category-correct; persisted
+  insertion references; separated Reference and Alias in Properties; and added
+  explicit ID/Reference/Alias/Master columns to Instance Table.
+- Validation: focused unit contracts (7 files / 25 tests), focused Playwright
+  flows (4 tests), typecheck, format, docs, test-impact, and diff checks passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  `0da8da3c`.
+
+## 2026-08-21 - Instance placement lifecycle engine
+
+- Changed areas: added explicit retained-unplaced transaction semantics and a
+  shared lifecycle planner; selection deletion now clears route endpoints,
+  memberships, NoConnects, labels, and unlocked layout references safely
+  before strict instance removal.
+- Validation: focused lifecycle/transaction/protocol/selection/Agent contracts
+  (5 files / 56 tests), typecheck, format, docs, MCP-resource freshness,
+  test-impact, and diff checks passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  `c2295d6e`.
+
+## 2026-08-21 - Placement Tray controls
+
+- Changed areas: replaced the bare unplaced list with a semantic Placement
+  Tray; added single cursor placement, deterministic Place all, Return to tray,
+  Return all, and a clear permanent-delete distinction.
+- Validation: focused tray/interaction/connectivity/lifecycle contracts (4
+  files / 24 tests), focused browser tray flow, typecheck, format, docs,
+  test-impact, diff checks, and complete `pnpm verify:branch` passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  `13ba3a26`.
+
+## 2026-08-21 - Schematic reference and unified Port lifecycle
+
+- Changed areas: advanced canonical Projects to schema 17; separated the
+  visible `Instance.schematicReference` from emitted netlist references;
+  migrated schema 16 deterministically; made References visible by default;
+  and made formal Cell Ports returnable and re-placeable without changing
+  their interface semantics.
+- Validation: focused unit contracts (17 files / 172 tests), targeted
+  regression tests (2 files / 14 tests), formal-Port browser lifecycle (1
+  test), format, docs, test-impact, diff checks, complete workspace unit-test
+  execution, workspace build, and production preview smoke passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  the current branch HEAD.
+
+## 2026-08-21 - Imported Reference default display
+
+- Changed areas: made Tray placement, canvas drag/drop, and Place all
+  materialize only missing default Reference projections; retained imported
+  netlist references are now visibly rendered when first placed.
+- Validation: focused editor contracts (3 files / 18 tests), SPICE
+  import-and-place browser regression (1 test), typecheck, format,
+  test-impact, and diff checks passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  the current branch HEAD.
+
+## 2026-08-21 - Rich schematic label authority and formal Port presentation
+
+- Changed areas: corrected schema-18 default instance labels to bind RichText
+  `schematicName` rather than the emitted designator; retained a
+  schematic/netlist-only fallback with no internal-ID display; made the
+  designator optional/read-only; reduced Properties to one Schematic label
+  entry; and tightened formal Cell Ports to their terminal-name-only
+  projection. The v17 reader migration preserves ordinary label placement while
+  rebinding it and removes redundant formal-Port projections.
+- Validation: focused unit contracts (9 files / 78 tests), focused Playwright
+  lifecycle/import/property flows (5 tests), workspace typecheck, Prettier,
+  Markdown-link validation, test-impact, and diff checks passed.
+- Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.
+
+## 2026-08-21 - Unified Port naming and RichText presentation
+
+- Changed areas: added explicit Free Net Port versus Formal Cell Pin insertion;
+  bound their visible text to `Net.name` or `CellTerminal.name`; introduced a
+  same-text-only RichText annotation override; routed character edits through
+  Net/hierarchy rename transactions; exposed role-correct Properties; and
+  documented the protocol in ADR 0033. Also restored canonical formatting of
+  one fixture exposed by branch verification.
+- Validation: focused unit contracts (6 files / 72 tests), complete hierarchy
+  browser specification (9 tests), repaired gate regressions (2 files / 18
+  tests), typecheck, docs, test-impact and diff checks, plus complete
+  `pnpm verify:branch` (162 unit files / 975 tests, workspace build, production
+  preview smoke) passed.
+- Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.
+
+## 2026-08-21 - Schematic lifecycle mainline gate closure
+
+- Changed areas: fixed Clipboard paste to allocate a unique
+  `schematicReference` alongside each fresh netlist designator; aligned Port,
+  Net RichText, connected-deletion, and Project persistence browser contracts
+  with the accepted schema-18 behavior.
+- Validation: Clipboard unit tests (1 file / 8 tests), all 14 originally
+  failing browser cases, typecheck, test-impact and diff checks, and canonical
+  `pnpm ci:check` passed with 162 unit files / 975 tests, all workspace builds,
+  release/MCP smoke checks, and 167 browser tests.
+- Commit status: ready to commit on `codex/schematic-instance-lifecycle-ux`.

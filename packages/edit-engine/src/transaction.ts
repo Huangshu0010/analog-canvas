@@ -55,7 +55,6 @@ import {
 } from "./transaction-route-follow.js";
 import {
   followAttachedAnnotations,
-  refreshInstanceReferenceAnnotation,
   refreshInstanceValueAnnotation,
   translateObjectAnchoredAnnotation,
 } from "./transaction-instance-annotations.js";
@@ -542,6 +541,13 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
+        const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
+        if (lockOwner) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
+          );
+        }
         if (instance.placement !== null) {
           return rejectAt(
             "EDIT_PRECONDITION",
@@ -549,6 +555,49 @@ export function executeTransaction(
           );
         }
         instance.placement = structuredClone(edit.placement);
+        changedObjectIds.add(edit.instanceId);
+        break;
+      }
+      case "unplace_instance": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
+          );
+        }
+        const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
+        if (lockOwner) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
+          );
+        }
+        if (instance.placement === null) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Instance is already unplaced: ${edit.instanceId}`,
+          );
+        }
+        if (
+          draft.routes.some((route) =>
+            [route.from, route.to].some(
+              (endpoint) =>
+                endpoint.kind === "terminal" &&
+                endpoint.instanceId === edit.instanceId,
+            ),
+          )
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Instance has routed terminals; detach routes before unplacing: ${edit.instanceId}`,
+          );
+        }
+        instance.placement = null;
         changedObjectIds.add(edit.instanceId);
         break;
       }
@@ -833,20 +882,71 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
-        const before: SchematicDocument["instances"][number] =
-          structuredClone(instance);
         instance.netlist.reference = edit.reference;
         const failure = referencePolicyFailure(draft, instance.id);
         if (failure) {
           return rejectAt("EDIT_PRECONDITION", failure, [], [instance.id]);
         }
-        refreshInstanceReferenceAnnotation(
-          draft,
-          before,
-          edit.instanceId,
-          changedObjectIds,
-        );
         changedObjectIds.add(edit.instanceId);
+        break;
+      }
+      case "set_instance_schematic_reference": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
+          );
+        }
+        if (
+          draft.netlist?.terminals.some(
+            (terminal) => terminal.interfaceInstanceId === instance.id,
+          )
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "A formal Cell Port is identified by its Cell terminal name, not a schematic reference",
+            [],
+            [instance.id],
+          );
+        }
+        if (instance.schematicReference === edit.reference) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Schematic reference edit does not change the instance",
+            [],
+            [edit.instanceId],
+          );
+        }
+        const duplicate = draft.instances.find(
+          (candidate) =>
+            candidate.id !== instance.id &&
+            (
+              candidate.schematicReference ?? candidate.netlist?.reference
+            )?.toLowerCase() === edit.reference.toLowerCase(),
+        );
+        if (duplicate) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Schematic reference is already in use: ${edit.reference}`,
+            [],
+            [duplicate.id],
+          );
+        }
+        instance.schematicReference = edit.reference;
+        changedObjectIds.add(instance.id);
+        for (const annotation of draft.annotations) {
+          if (
+            annotation.binding?.kind === "instance-schematic-name" &&
+            annotation.binding.instanceId === instance.id
+          ) {
+            changedObjectIds.add(annotation.id);
+          }
+        }
         break;
       }
       case "set_instance_schematic_name": {
@@ -876,7 +976,7 @@ export function executeTransaction(
         changedObjectIds.add(edit.instanceId);
         for (const annotation of draft.annotations) {
           if (
-            annotation.binding?.kind === "instance-reference" &&
+            annotation.binding?.kind === "instance-schematic-name" &&
             annotation.binding.instanceId === instance.id
           ) {
             changedObjectIds.add(annotation.id);
@@ -1065,14 +1165,6 @@ export function executeTransaction(
               [instance.id],
             );
           }
-          if (assignment.reference !== undefined) {
-            refreshInstanceReferenceAnnotation(
-              draft,
-              before,
-              instance.id,
-              changedObjectIds,
-            );
-          }
           if (parametersChanged) {
             refreshInstanceValueAnnotation(
               draft,
@@ -1131,7 +1223,19 @@ export function executeTransaction(
             `Cell terminal does not exist: ${edit.terminalId}`,
           );
         }
-        if (edit.name !== undefined) terminal.name = edit.name;
+        if (edit.name !== undefined) {
+          terminal.name = edit.name;
+          for (const annotation of draft.annotations) {
+            if (
+              annotation.binding?.kind === "cell-terminal-name" &&
+              annotation.binding.terminalId === terminal.id &&
+              annotation.formatOverride
+            ) {
+              delete annotation.formatOverride;
+              changedObjectIds.add(annotation.id);
+            }
+          }
+        }
         if (edit.direction !== undefined) terminal.direction = edit.direction;
         changedObjectIds.add(terminal.id);
         connectivityChanged = true;
@@ -2119,6 +2223,16 @@ export function executeTransaction(
         }
         net.name = edit.name;
         changedObjectIds.add(net.id);
+        for (const annotation of draft.annotations) {
+          if (
+            annotation.binding?.kind === "net-name" &&
+            annotation.binding.netId === net.id &&
+            annotation.formatOverride
+          ) {
+            delete annotation.formatOverride;
+            changedObjectIds.add(annotation.id);
+          }
+        }
         connectivityChanged = true;
         break;
       }
