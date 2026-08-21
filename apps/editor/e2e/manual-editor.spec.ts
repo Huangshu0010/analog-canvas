@@ -30,7 +30,7 @@ test.beforeEach(async ({ page }) => {
 test("opens netlist preflight and navigates its canonical finding", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 360, y: 240 });
   await clickCommand(page, "Netlist", "Run Preflight…");
   const dialog = page.getByRole("dialog", { name: "Netlist Preflight" });
@@ -47,7 +47,7 @@ test("opens netlist preflight and navigates its canonical finding", async ({
 test("previews a validated structural netlist in both export dialects", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await clickCommand(page, "Netlist", "Run Preflight…");
   const dialog = page.getByRole("dialog", { name: "Netlist Preflight" });
   const preview = dialog.getByTestId("netlist-preview");
@@ -271,7 +271,7 @@ async function dragBy(
 test("shows faithful symbol previews for the reviewed Razavi palette", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   const search = dialog.getByLabel("Component search");
@@ -293,7 +293,7 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
 });
 
 test("constructs VDD as a drawn dotless power rail", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("shapes-chip-vdd").click();
   const canvas = page.getByTestId("schematic-canvas");
 
@@ -330,7 +330,7 @@ test("constructs VDD as a drawn dotless power rail", async ({ page }) => {
 test("keeps a tapped VDD rail movable and stretchable as one supply bar", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
   await page.getByTestId("shapes-chip-vdd").click();
   await canvas.click({ position: { x: 180, y: 120 } });
@@ -388,7 +388,7 @@ test("keeps a tapped VDD rail movable and stretchable as one supply bar", async 
 test("keeps unresolved PMOS bulk separate from a named VDD rail", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "pmos", { x: 360, y: 260 });
   await page.getByTestId("shapes-chip-vdd").click();
   const canvas = page.getByTestId("schematic-canvas");
@@ -427,7 +427,7 @@ test("keeps unresolved PMOS bulk separate from a named VDD rail", async ({
 test("cancels VDD rail placement before or after its first endpoint", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
 
   await page.getByTestId("shapes-chip-vdd").click();
@@ -453,7 +453,7 @@ test("cancels VDD rail placement before or after its first endpoint", async ({
 test("command move follows the pointer and commits on one click", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 340, y: 220 });
   const resistor = page.getByTestId("hit-R1");
   await resistor.click();
@@ -471,7 +471,7 @@ test("command move follows the pointer and commits on one click", async ({
 });
 
 test("Port shortcut starts ordinary component placement", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
   await page.keyboard.press("p");
   const dialog = page.getByRole("dialog", { name: "Place Net Port" });
@@ -500,7 +500,7 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
 test("Free Net Ports merge by name and release their final Net lifecycle", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
 
   const placeNamedPort = async (
@@ -555,7 +555,7 @@ test("Free Net Ports merge by name and release their final Net lifecycle", async
 test("Ctrl+D deselects without allowing browser bookmarking", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 340, y: 220 });
   await page.getByTestId("hit-R1").click();
   await page.keyboard.press("Control+d");
@@ -567,7 +567,7 @@ test("Ctrl+D deselects without allowing browser bookmarking", async ({
 test("Ctrl+R mirrors a selected component instead of refreshing", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 340, y: 220 });
   await page.getByTestId("hit-M1").click();
   await page.keyboard.press("Control+r");
@@ -583,7 +583,7 @@ test("Ctrl+R mirrors a selected component instead of refreshing", async ({
 test("treats hollow and filled Ports as ordinary wired components", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 460, y: 240 });
   await placeComponent(page, "port", { x: 260, y: 220 });
   await placeComponent(page, "port-filled", { x: 260, y: 300 });
@@ -638,7 +638,7 @@ test("treats hollow and filled Ports as ordinary wired components", async ({
 test("authors components and connectivity manually from an empty canvas", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await expect(page.getByTestId("cell-navigation")).toBeVisible();
   await expect(page.getByTestId("revision")).toHaveText("0");
 
@@ -680,7 +680,7 @@ test("authors components and connectivity manually from an empty canvas", async 
 test("connects one MOS Gate to Drain without false contact ambiguity", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 480, y: 260 });
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-M1-G").click();
@@ -695,7 +695,7 @@ test("connects one MOS Gate to Drain without false contact ambiguity", async ({
 test("keeps Wire input above labels and resolves a screen-tolerant route tap", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 340, y: 220 });
   await placeComponent(page, "resistor", { x: 660, y: 220 });
 
@@ -727,7 +727,7 @@ test("keeps Wire input above labels and resolves a screen-tolerant route tap", a
 test("keeps a Wire source across repeated activation and cancels it after undo", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 340, y: 220 });
   await placeComponent(page, "resistor", { x: 660, y: 220 });
 
@@ -747,7 +747,7 @@ test("keeps a Wire source across repeated activation and cancels it after undo",
 });
 
 test("deletes a wire without exposing Unroute", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 340, y: 220 });
   await placeComponent(page, "resistor", { x: 660, y: 220 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -779,7 +779,7 @@ test("deletes a wire without exposing Unroute", async ({ page }) => {
 test("adds and straightens an explicit jog on the selected wire segment", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await clickCommand(page, "Draw", "Wire (W)");
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 300, y: 240 } });
@@ -809,7 +809,7 @@ test("adds and straightens an explicit jog on the selected wire segment", async 
 test("keeps Wire active for consecutive independent routes until Escape", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 280, y: 180 });
   await placeComponent(page, "resistor", { x: 520, y: 180 });
   await placeComponent(page, "resistor", { x: 280, y: 360 });
@@ -852,7 +852,7 @@ test("re-derives guidance after manually deleting an imported Route", async ({
       segmentModes: ["manual"],
     },
   ];
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("project-file").setInputFiles({
     name: "routing-imported-partial.icproj.json",
     mimeType: "application/json",
@@ -886,7 +886,7 @@ test("keeps remaining imported flightlines after routing one guided connection",
       end: { offset: 1, line: 1, column: 2 },
     },
   };
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("project-file").setInputFiles({
     name: "routing-flightlines.icproj.json",
     mimeType: "application/json",
@@ -928,7 +928,7 @@ test("suppresses only the highlighted imported Net guidance", async ({
       end: { offset: 1, line: 1, column: 2 },
     },
   };
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("project-file").setInputFiles({
     name: "routing-imported.icproj.json",
     mimeType: "application/json",
@@ -955,7 +955,7 @@ test("suppresses only the highlighted imported Net guidance", async ({
 test("turns an off-axis tap near a route bend into an exact junction", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 300, y: 260 });
   await placeComponent(page, "resistor", { x: 540, y: 160 });
   await placeComponent(page, "resistor", { x: 680, y: 360 });
@@ -977,7 +977,7 @@ test("turns an off-axis tap near a route bend into an exact junction", async ({
 test("keeps a selected MOS in its fixed Razavi three-terminal view", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "pmos", { x: 420, y: 260 });
   await expect(page.getByTestId("terminal-M1-B")).toHaveCount(0);
 
@@ -990,7 +990,7 @@ test("keeps a selected MOS in its fixed Razavi three-terminal view", async ({
 test("leaves unconfigured MOS bulk unresolved until an explicit dashed route connects it", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 360, y: 220 });
   await placeComponent(page, "ground", { x: 620, y: 280 });
 
@@ -1037,7 +1037,7 @@ test("leaves unconfigured MOS bulk unresolved until an explicit dashed route con
 test("places free wire bends and finishes at an arbitrary grid point", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 300, y: 200 });
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
@@ -1063,7 +1063,7 @@ test("places free wire bends and finishes at an arbitrary grid point", async ({
 });
 
 test("reuses a free wire endpoint as a later wire source", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 300, y: 200 });
   await placeComponent(page, "resistor", { x: 600, y: 300 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1083,7 +1083,7 @@ test("reuses a free wire endpoint as a later wire source", async ({ page }) => {
 });
 
 test("moves an isolated free wire as one route", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
   await clickCommand(page, "Draw", "Wire (W)");
   await canvas.click({ position: { x: 420, y: 220 } });
@@ -1116,7 +1116,7 @@ test("moves an isolated free wire as one route", async ({ page }) => {
 test("stretches the pointed segment of a selected attached wire", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 300, y: 220 });
   await placeComponent(page, "resistor", { x: 540, y: 220 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1137,7 +1137,7 @@ test("stretches the pointed segment of a selected attached wire", async ({
 test("keeps a BJT base connection as an ordinary solid wire", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "npn", { x: 300, y: 220 });
   await placeComponent(page, "resistor", { x: 540, y: 220 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1159,7 +1159,7 @@ test("keeps a BJT base connection as an ordinary solid wire", async ({
 test("keeps direct device pin corners on-grid and deletes a selected junction", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 300, y: 260 });
   await placeComponent(page, "resistor", { x: 540, y: 160 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1204,7 +1204,7 @@ test("keeps direct device pin corners on-grid and deletes a selected junction", 
 test("connects copied multi-pin groups through a manually bent wire", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 320, y: 180 });
   await placeComponent(page, "nmos", { x: 320, y: 360 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1247,7 +1247,7 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
 test("moves a selected wire segment and deletes a connected component safely", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1278,7 +1278,7 @@ test("moves a selected wire segment and deletes a connected component safely", a
 });
 
 test("previews a connected Wire while its Instance moves", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1313,7 +1313,7 @@ test("previews a connected Wire while its Instance moves", async ({ page }) => {
 test("moves internal wiring with a selected group and copies the routed subgraph", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1377,7 +1377,7 @@ test("moves internal wiring with a selected group and copies the routed subgraph
 test("keeps an internal junction with the live group preview", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
   await placeComponent(page, "resistor", { x: 420, y: 420 });
@@ -1413,7 +1413,7 @@ test("keeps an internal junction with the live group preview", async ({
 test("drags a current marker directly along and around its route", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1491,7 +1491,7 @@ test("drags a current marker directly along and around its route", async ({
 test("moves an unselected component in one thresholded drag", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   const canvas = page.getByTestId("schematic-canvas");
   const hit = page.getByTestId("hit-R1");
@@ -1526,7 +1526,7 @@ test("moves an unselected component in one thresholded drag", async ({
 test("keeps a transformed instance label at a constant distance while moving", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await page.keyboard.press("Shift+r");
   await expect(page.getByTestId("revision")).toHaveText("2");
@@ -1548,7 +1548,7 @@ test("keeps a transformed instance label at a constant distance while moving", a
 test("selects an attached label without selecting its host", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
 
   await page
@@ -1566,7 +1566,7 @@ test("selects an attached label without selecting its host", async ({
 });
 
 test("moves an explicitly selected attached label", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
 
   // Text uses the same one-gesture threshold as a component.
@@ -1589,7 +1589,7 @@ test("moves an explicitly selected attached label", async ({ page }) => {
 });
 
 test("moves floating text after it is created", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await clickCommand(page, "Draw", "Text");
   await page
     .getByRole("textbox", { name: "Canvas text editor" })
@@ -1612,7 +1612,7 @@ test("moves floating text after it is created", async ({ page }) => {
 test("edits instance, electrical Net, and free text with bounded label handles", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 280, y: 180 });
   await placeComponent(page, "resistor", { x: 480, y: 180 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1699,7 +1699,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
 test("keeps literal text line breaks and overbars visible while editing", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await clickCommand(page, "Draw", "Text");
   const editor = page.getByRole("textbox", { name: "Canvas text editor" });
   await editor.fill("Vx");
@@ -1728,7 +1728,7 @@ test("keeps literal text line breaks and overbars visible while editing", async 
 test("L edits a selected route Net Label without opening Properties", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 280, y: 180 });
   await placeComponent(page, "resistor", { x: 480, y: 180 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1789,7 +1789,7 @@ test("L edits a selected route Net Label without opening Properties", async ({
 test("Properties toggles reference label visibility for one or many components", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 280, y: 180 });
   await placeComponent(page, "resistor", { x: 480, y: 180 });
 
@@ -1863,7 +1863,7 @@ test("Properties toggles reference label visibility for one or many components",
 test("value display projects MOS W/L and passive values beside the reference", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("nmos");
@@ -1923,7 +1923,7 @@ test("value display projects MOS W/L and passive values beside the reference", a
 test("reference and value toggles refresh content after parameter edits", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 300, y: 200 });
   await placeComponent(page, "resistor", { x: 500, y: 200 });
 
@@ -1998,7 +1998,7 @@ test("reference and value toggles refresh content after parameter edits", async 
 test("drag value annotation keeps the user offset through rotation", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 360, y: 220 });
   await page.getByTestId("hit-R1").click();
   await openSelectionShelf(page);
@@ -2042,7 +2042,7 @@ test("drag value annotation keeps the user offset through rotation", async ({
 test("property edits commit on blank click and Escape instead of vanishing", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 200 });
   const canvas = page.getByTestId("schematic-canvas");
 
@@ -2072,7 +2072,7 @@ test("property edits commit on blank click and Escape instead of vanishing", asy
 test("canvas text editor commits on Escape and on an outside click", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 420, y: 280 });
   const rendered = page.locator('[data-object-id="instance-label-R1"]');
 
@@ -2096,7 +2096,7 @@ test("canvas text editor commits on Escape and on an outside click", async ({
 test("a dragged Net label re-anchors along its route and stays released", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 280, y: 180 });
   await placeComponent(page, "resistor", { x: 520, y: 180 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -2128,7 +2128,7 @@ test("a dragged Net label re-anchors along its route and stays released", async 
 test("selects and moves multiple instances while viewport gestures stay transient", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 330, y: 180 });
   await placeComponent(page, "nmos", { x: 560, y: 180 });
   await expect(page.getByTestId("revision")).toHaveText("2");
@@ -2181,7 +2181,7 @@ test("selects and moves multiple instances while viewport gestures stay transien
 test("R rotates a selected component instead of entering Rectangle", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 420, y: 260 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -2200,7 +2200,7 @@ test("R rotates a selected component instead of entering Rectangle", async ({
 test("C previews one copy and Escape cancels without a revision", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 360, y: 220 });
   await page.getByTestId("hit-R1").click();
 
@@ -2225,7 +2225,7 @@ test("C previews one copy and Escape cancels without a revision", async ({
 test("R rotates a copy preview before committing the copied component", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 360, y: 220 });
   await page.getByTestId("hit-R1").click();
   const canvas = page.getByTestId("schematic-canvas");
@@ -2254,7 +2254,7 @@ test("R rotates a copy preview before committing the copied component", async ({
 test("numbers placed components per device type instead of globally", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 320, y: 200 });
   await placeComponent(page, "nmos", { x: 520, y: 200 });
   await placeComponent(page, "resistor", { x: 720, y: 200 });
@@ -2270,7 +2270,7 @@ test("numbers placed components per device type instead of globally", async ({
 test("right-drag frames a region and fits the camera to it transiently", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 200 });
 
   const canvas = page.getByTestId("schematic-canvas");
@@ -2320,7 +2320,7 @@ test("right-drag frames a region and fits the camera to it transiently", async (
 test("keeps copy placement active for repeated commits until Escape", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await page.getByTestId("hit-R1").click();
   const canvas = page.getByTestId("schematic-canvas");
@@ -2346,7 +2346,7 @@ test("keeps copy placement active for repeated commits until Escape", async ({
 test("keeps the rich-text editor outside its target and shields canvas input", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 420, y: 280 });
   const label = page.getByTestId("annotation-hit-instance-label-R1");
   await label.dblclick();
@@ -2402,7 +2402,7 @@ test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
     rotation: 0,
     locked: false,
   });
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("project-file").setInputFiles({
     name: "legacy-net-label.icproj.json",
     mimeType: "application/json",
@@ -2469,7 +2469,7 @@ test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
 test("derives crossings and creates junctions only when a wire ends on a route", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("project-file").setInputFiles({
     name: "routing-example.icproj.json",
     mimeType: "application/json",
@@ -2524,7 +2524,7 @@ test("derives crossings and creates junctions only when a wire ends on a route",
 test("places a Ground pin onto a canonical Route and keeps real split topology", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const project = createRoutingDemoProject();
   const document = project.documents[0]!;
   const horizontalNet = document.nets.find((net) => net.id === "net-h");
@@ -2641,7 +2641,7 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
     terminals: [{ instanceId: "GND1", pinName: "0" }],
   });
 
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("project-file").setInputFiles({
     name: "wire-through-pins.icproj.json",
     mimeType: "application/json",
@@ -2685,7 +2685,7 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
 test("keeps rejected SPICE import diagnostics in a historical report", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await openMenu(page, "File");
   await page
     .getByTestId("spice-files")
@@ -2722,7 +2722,7 @@ test("keeps rejected SPICE import diagnostics in a historical report", async ({
 test("imports a parameterized hierarchy and re-exports its structural semantics", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("spice-files").setInputFiles({
     name: "circuit.spi",
     mimeType: "application/x-spice",
@@ -2749,7 +2749,7 @@ X2 OUT IN EXT_MASTER l=1u nf=4
 });
 
 test("shows imported instance references after Place all", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("spice-files").setInputFiles({
     name: "circuit.spi",
     mimeType: "application/x-spice",
@@ -2816,7 +2816,7 @@ test("requires warning review before exporting generated NoConnect nodes", async
     endpoint: { kind: "terminal", instanceId: "R1", pinName: "2" },
   });
 
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("project-file").setInputFiles({
     name: "warning.icproj.json",
     mimeType: "application/json",
@@ -2840,7 +2840,7 @@ test("requires warning review before exporting generated NoConnect nodes", async
 test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
 
   const projectBytes = await downloadBytes(page, "File", "Save Project");
   expect(JSON.parse(projectBytes.toString("utf8")).topDocumentId).toBeTruthy();
@@ -2859,7 +2859,7 @@ test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({
 test("exports structural SPICE and Spectre netlists while exposing instance authoring", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const spice = (
     await downloadBytes(page, "File", "Export SPICE netlist")
   ).toString("utf8");
@@ -2887,7 +2887,7 @@ test("exports structural SPICE and Spectre netlists while exposing instance auth
 test("uses automatic recovery and guards shortcuts while typing", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 360, y: 220 });
   await expect(page.getByTestId("revision")).toHaveText("1");
   await expect
@@ -2913,7 +2913,7 @@ test("uses automatic recovery and guards shortcuts while typing", async ({
 test("keeps component insertion and inspection from resizing the canvas", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
   const beforePlaceCanvas = await canvas.boundingBox();
   if (!beforePlaceCanvas) throw new Error("Canvas is not measurable");
@@ -2947,7 +2947,7 @@ test("keeps component insertion and inspection from resizing the canvas", async 
 test("retains recovery across save and project replacement", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 360, y: 220 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -2992,7 +2992,7 @@ test("retains recovery across save and project replacement", async ({
 });
 
 test("discard recovery clears the recovery slot", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 360, y: 220 });
   await expect
     .poll(() => recoveryProjectTexts(page))
@@ -3012,7 +3012,7 @@ test("discard recovery clears the recovery slot", async ({ page }) => {
 test("keeps the production command surface compact and publishes PWA metadata", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const toolbar = page.getByRole("navigation", { name: "Editor commands" });
   for (const label of ["File", "Edit", "Draw"]) {
     await expect(toolbar.locator("summary", { hasText: label })).toBeVisible();
@@ -3053,7 +3053,7 @@ test("keeps the production command surface compact and publishes PWA metadata", 
 test("clears the active canvas atomically after confirmation and restores it with Undo", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 240 });
   await placeComponent(page, "resistor", { x: 560, y: 240 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -3172,7 +3172,7 @@ test("shows first-party visitor analytics without tracking the dashboard itself"
 test("dismisses a command menu on outside click or Escape", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const fileMenu = await openMenu(page, "File");
   await expect(fileMenu).toHaveAttribute("open", "");
 
@@ -3185,7 +3185,7 @@ test("dismisses a command menu on outside click or Escape", async ({
 });
 
 test("selecting an object does not change canvas width", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
   const widthBefore = (await canvas.boundingBox())!.width;
 
@@ -3202,7 +3202,7 @@ test("selecting an object does not change canvas width", async ({ page }) => {
 test("opens project search with Ctrl+F and selects a matching component", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 420, y: 260 });
   await page.keyboard.press("Control+f");
   const input = page.getByTestId("project-search-input");
@@ -3218,7 +3218,7 @@ test("opens project search with Ctrl+F and selects a matching component", async 
 test("highlights the complete current-document Net from a selected route", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 380, y: 260 });
   await placeComponent(page, "resistor", { x: 600, y: 260 });
   await clickCommand(page, "Draw", "Wire (W)");
@@ -3322,7 +3322,7 @@ test("recomputes highlighted routed components after a Net Label is deleted", as
     },
   ];
 
-  await page.goto("/");
+  await page.goto("/editor");
   await page.getByTestId("project-file").setInputFiles({
     name: "label-highlight.icproj.json",
     mimeType: "application/json",
@@ -3352,7 +3352,7 @@ test("recomputes highlighted routed components after a Net Label is deleted", as
 test("marks and clears an unconnected endpoint as No Connect", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 380, y: 260 });
 
   await page.getByTestId("terminal-R1-1").click({ button: "right" });
@@ -3374,7 +3374,7 @@ test("marks and clears an unconnected endpoint as No Connect", async ({
 test("surfaces and locates current-document ERC diagnostics", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 380, y: 260 });
   await openSelectionShelf(page);
   await page
@@ -3404,7 +3404,7 @@ test("surfaces and locates current-document ERC diagnostics", async ({
 test("removes resolved live diagnostics and restores them through undo", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 380, y: 260 });
   await openSelectionShelf(page);
   await page
@@ -3431,7 +3431,7 @@ test("removes resolved live diagnostics and restores them through undo", async (
 test("filters and navigates locator-backed visual diagnostics", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 420, y: 300 });
   await placeComponent(page, "resistor", { x: 420, y: 300 });
   await openSelectionShelf(page);
@@ -3454,7 +3454,7 @@ test("filters and navigates locator-backed visual diagnostics", async ({
 test("directional marquee: window needs full coverage, crossing selects on touch", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await chooseComponent(page, "resistor");
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 420, y: 260 } });
@@ -3510,7 +3510,7 @@ test("directional marquee: window needs full coverage, crossing selects on touch
 test("Document style dialog scales fonts document-wide and resets", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   const label = page.locator('[data-kind="instance-label"]').first();
   await expect(label).toHaveAttribute("font-size", "15.116");
@@ -3539,7 +3539,7 @@ test("Document style dialog scales fonts document-wide and resets", async ({
 });
 
 test("saves, reopens, and deletes a user Library example", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await expect(page.getByTestId("hit-R1")).toHaveCount(1);
 

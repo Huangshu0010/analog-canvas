@@ -1,0 +1,591 @@
+// Community example gallery: publish-first with an admin recycle bin.
+//
+// Trust boundary: the only accepted input is Project JSON that passes the
+// strict protocol boundary (`parseProject`, rolling-window upgrade applied).
+// Everything served back — canonical Project text and the preview SVG — is
+// derived server-side from that validated model; no client-supplied markup
+// is ever stored or echoed. Entries publish immediately; the admin (bearer
+// `GALLERY_ADMIN_TOKEN`, a Cloudflare secret) can recycle (soft, restorable),
+// hard-delete from the bin only, and batch re-serialize every entry to keep
+// long-lived records inside the rolling schema window. Previews are stored
+// independently so browsing survives an entry the current window can no
+// longer open.
+
+import { parseProject, serializeProject } from "@icm/project-protocol";
+import { renderDocumentSvg } from "@icm/render-svg";
+import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
+import type { CircuitProject } from "@icm/model";
+
+export const GALLERY_MAX_PROJECT_BYTES = 2 * 1024 * 1024;
+export const GALLERY_MAX_NAME_LENGTH = 120;
+export const GALLERY_MAX_AUTHOR_LENGTH = 40;
+export const GALLERY_MAX_DESCRIPTION_LENGTH = 300;
+export const GALLERY_DAILY_SUBMISSION_LIMIT = 10;
+export const GALLERY_DEFAULT_LIST_LIMIT = 30;
+export const GALLERY_MAX_LIST_LIMIT = 60;
+
+type SqlResult<T> = {
+  toArray(): T[];
+  one(): T;
+};
+
+type SqlStorage = {
+  exec<T>(query: string, ...bindings: unknown[]): SqlResult<T>;
+};
+
+type DurableObjectStateLike = {
+  storage: {
+    sql: SqlStorage;
+    transactionSync<T>(callback: () => T): T;
+  };
+};
+
+export type GalleryNamespaceLike = {
+  getByName(name: string): {
+    fetch(input: string, init?: RequestInit): Promise<Response>;
+  };
+};
+
+export type GalleryEnv = {
+  GALLERY: GalleryNamespaceLike;
+  GALLERY_ADMIN_TOKEN?: string;
+};
+
+export interface GalleryEntrySummary {
+  id: string;
+  name: string;
+  author: string;
+  description: string;
+  createdAt: string;
+  schemaVersion: number;
+}
+
+interface EntryRow {
+  id: string;
+  name: string;
+  author: string;
+  description: string;
+  created_at: string;
+  schema_version: number;
+  status: string;
+  recycled_at: string | null;
+  owner_user_id: string | null;
+  project_text: string;
+  svg_text: string;
+}
+
+const resolver = new InMemorySymbolResolver(builtInSymbols);
+
+function summaryOf(row: EntryRow): GalleryEntrySummary {
+  return {
+    id: row.id,
+    name: row.name,
+    author: row.author,
+    description: row.description,
+    createdAt: row.created_at,
+    schemaVersion: row.schema_version,
+  };
+}
+
+/** Storage-only Durable Object; policy lives in `routeGalleryRequest`. */
+export class GalleryDO {
+  private readonly sql: SqlStorage;
+
+  constructor(private readonly state: DurableObjectStateLike) {
+    this.sql = state.storage.sql;
+    this.sql.exec(`
+      CREATE TABLE IF NOT EXISTS gallery_entries (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        author TEXT NOT NULL,
+        description TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        schema_version INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        recycled_at TEXT,
+        owner_user_id TEXT,
+        project_text TEXT NOT NULL,
+        svg_text TEXT NOT NULL
+      ) WITHOUT ROWID
+    `);
+    this.sql.exec(`
+      CREATE INDEX IF NOT EXISTS idx_gallery_entries_status_created
+      ON gallery_entries(status, created_at)
+    `);
+    this.sql.exec(`
+      CREATE TABLE IF NOT EXISTS gallery_submissions (
+        day TEXT NOT NULL,
+        submitter_hash TEXT NOT NULL,
+        count INTEGER NOT NULL,
+        PRIMARY KEY (day, submitter_hash)
+      ) WITHOUT ROWID
+    `);
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    const operation = new URL(request.url).pathname.slice(1);
+    const body =
+      request.method === "POST"
+        ? ((await request.json()) as Record<string, unknown>)
+        : {};
+    switch (operation) {
+      case "submit":
+        return this.submit(body);
+      case "list":
+        return this.list(body);
+      case "entry":
+        return this.entry(String(body.id), "public");
+      case "any-entry":
+        return this.entry(String(body.id), null);
+      case "set-status":
+        return this.setStatus(
+          String(body.id),
+          String(body.status),
+          String(body.at),
+        );
+      case "delete":
+        return this.delete(String(body.id));
+      case "recycled":
+        return this.recycled();
+      case "all-ids":
+        return this.allIds();
+      case "update-entry":
+        return this.updateEntry(body);
+      default:
+        return Response.json({ error: "Unknown operation" }, { status: 404 });
+    }
+  }
+
+  private submit(body: Record<string, unknown>): Response {
+    const entry = body.entry as EntryRow;
+    const day = String(body.day);
+    const submitterHash = String(body.submitterHash);
+    const outcome = this.state.storage.transactionSync(() => {
+      const used =
+        this.sql
+          .exec<{
+            count: number;
+          }>(
+            "SELECT count FROM gallery_submissions WHERE day = ? AND submitter_hash = ?",
+            day,
+            submitterHash,
+          )
+          .toArray()[0]?.count ?? 0;
+      if (used >= GALLERY_DAILY_SUBMISSION_LIMIT) {
+        return { status: "rate-limited" as const };
+      }
+      this.sql.exec(
+        `INSERT INTO gallery_submissions(day, submitter_hash, count) VALUES (?, ?, 1)
+         ON CONFLICT(day, submitter_hash) DO UPDATE SET count = count + 1`,
+        day,
+        submitterHash,
+      );
+      this.sql.exec(
+        `INSERT INTO gallery_entries(
+          id, name, author, description, created_at, schema_version,
+          status, recycled_at, owner_user_id, project_text, svg_text
+        ) VALUES (?, ?, ?, ?, ?, ?, 'public', NULL, NULL, ?, ?)`,
+        entry.id,
+        entry.name,
+        entry.author,
+        entry.description,
+        entry.created_at,
+        entry.schema_version,
+        entry.project_text,
+        entry.svg_text,
+      );
+      return { status: "stored" as const };
+    });
+    if (outcome.status === "rate-limited") {
+      return Response.json({ error: "rate-limited" }, { status: 429 });
+    }
+    return Response.json({ id: entry.id });
+  }
+
+  private list(body: Record<string, unknown>): Response {
+    const limit = Math.min(
+      Math.max(Number(body.limit) || GALLERY_DEFAULT_LIST_LIMIT, 1),
+      GALLERY_MAX_LIST_LIMIT,
+    );
+    const cursor = typeof body.cursor === "string" ? body.cursor : null;
+    const rows = cursor
+      ? this.sql
+          .exec<EntryRow>(
+            `SELECT * FROM gallery_entries WHERE status = 'public'
+             AND (created_at || '|' || id) < ?
+             ORDER BY created_at DESC, id DESC LIMIT ?`,
+            cursor,
+            limit + 1,
+          )
+          .toArray()
+      : this.sql
+          .exec<EntryRow>(
+            `SELECT * FROM gallery_entries WHERE status = 'public'
+             ORDER BY created_at DESC, id DESC LIMIT ?`,
+            limit + 1,
+          )
+          .toArray();
+    const page = rows.slice(0, limit);
+    const nextCursor =
+      rows.length > limit && page.length > 0
+        ? `${page.at(-1)!.created_at}|${page.at(-1)!.id}`
+        : null;
+    return Response.json({ entries: page.map(summaryOf), nextCursor });
+  }
+
+  private entry(id: string, requiredStatus: string | null): Response {
+    const row = this.sql
+      .exec<EntryRow>("SELECT * FROM gallery_entries WHERE id = ?", id)
+      .toArray()[0];
+    if (!row || (requiredStatus !== null && row.status !== requiredStatus)) {
+      return Response.json({ error: "not-found" }, { status: 404 });
+    }
+    return Response.json({
+      entry: summaryOf(row),
+      status: row.status,
+      projectText: row.project_text,
+      svgText: row.svg_text,
+    });
+  }
+
+  private setStatus(id: string, status: string, at: string): Response {
+    const row = this.sql
+      .exec<EntryRow>("SELECT * FROM gallery_entries WHERE id = ?", id)
+      .toArray()[0];
+    if (!row) return Response.json({ error: "not-found" }, { status: 404 });
+    this.sql.exec(
+      "UPDATE gallery_entries SET status = ?, recycled_at = ? WHERE id = ?",
+      status,
+      status === "recycled" ? at : null,
+      id,
+    );
+    return Response.json({ id, status });
+  }
+
+  private delete(id: string): Response {
+    const row = this.sql
+      .exec<EntryRow>("SELECT * FROM gallery_entries WHERE id = ?", id)
+      .toArray()[0];
+    if (!row) return Response.json({ error: "not-found" }, { status: 404 });
+    if (row.status !== "recycled") {
+      return Response.json({ error: "not-recycled" }, { status: 409 });
+    }
+    this.sql.exec("DELETE FROM gallery_entries WHERE id = ?", id);
+    return Response.json({ id, deleted: true });
+  }
+
+  private recycled(): Response {
+    const rows = this.sql
+      .exec<EntryRow>(
+        `SELECT * FROM gallery_entries WHERE status = 'recycled'
+         ORDER BY recycled_at DESC, id DESC`,
+      )
+      .toArray();
+    return Response.json({
+      entries: rows.map((row) => ({
+        ...summaryOf(row),
+        recycledAt: row.recycled_at,
+      })),
+    });
+  }
+
+  private allIds(): Response {
+    const rows = this.sql
+      .exec<{ id: string }>("SELECT id FROM gallery_entries ORDER BY id")
+      .toArray();
+    return Response.json({ ids: rows.map((row) => row.id) });
+  }
+
+  private updateEntry(body: Record<string, unknown>): Response {
+    const row = this.sql
+      .exec<EntryRow>(
+        "SELECT * FROM gallery_entries WHERE id = ?",
+        String(body.id),
+      )
+      .toArray()[0];
+    if (!row) return Response.json({ error: "not-found" }, { status: 404 });
+    this.sql.exec(
+      "UPDATE gallery_entries SET project_text = ?, schema_version = ?, svg_text = ? WHERE id = ?",
+      String(body.projectText),
+      Number(body.schemaVersion),
+      String(body.svgText),
+      String(body.id),
+    );
+    return Response.json({ id: row.id });
+  }
+}
+
+function galleryStub(env: GalleryEnv) {
+  return env.GALLERY.getByName("gallery");
+}
+
+async function callGallery<T>(
+  env: GalleryEnv,
+  operation: string,
+  body: Record<string, unknown>,
+): Promise<{ status: number; payload: T }> {
+  const response = await galleryStub(env).fetch(
+    `https://gallery/${operation}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  return { status: response.status, payload: (await response.json()) as T };
+}
+
+function sameOrigin(request: Request): boolean {
+  const expected = new URL(request.url).origin;
+  const origin = request.headers.get("Origin");
+  const fetchSite = request.headers.get("Sec-Fetch-Site");
+  if (origin && origin !== expected) return false;
+  if (fetchSite && !["same-origin", "same-site", "none"].includes(fetchSite)) {
+    return false;
+  }
+  return true;
+}
+
+function isAdmin(request: Request, env: GalleryEnv): boolean {
+  if (!env.GALLERY_ADMIN_TOKEN) return false;
+  return (
+    request.headers.get("Authorization") === `Bearer ${env.GALLERY_ADMIN_TOKEN}`
+  );
+}
+
+async function submitterHash(request: Request): Promise<string> {
+  const ip =
+    request.headers.get("CF-Connecting-IP") ??
+    request.headers.get("X-Forwarded-For") ??
+    "unknown";
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`gallery:${ip}`),
+  );
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function fieldText(value: unknown, maxLength: number): string | null {
+  if (value === undefined || value === null) return "";
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length <= maxLength ? trimmed : null;
+}
+
+function renderPreview(project: CircuitProject): string {
+  const topDocument = project.documents.find(
+    (document) => document.id === project.topDocumentId,
+  )!;
+  return renderDocumentSvg(topDocument, resolver);
+}
+
+async function handleSubmission(
+  request: Request,
+  env: GalleryEnv,
+): Promise<Response> {
+  if (!sameOrigin(request)) {
+    return Response.json({ error: "forbidden" }, { status: 403 });
+  }
+  // Phase G1: publishing requires the admin bearer until Phase G2 sign-in
+  // replaces it with session identity. Anonymous upload therefore stays
+  // impossible from day one — which is also the end-state rule.
+  if (!isAdmin(request, env)) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const body = (await request.json().catch(() => null)) as {
+    name?: unknown;
+    author?: unknown;
+    description?: unknown;
+    projectText?: unknown;
+  } | null;
+  const name = fieldText(body?.name, GALLERY_MAX_NAME_LENGTH);
+  const author = fieldText(body?.author, GALLERY_MAX_AUTHOR_LENGTH);
+  const description = fieldText(
+    body?.description,
+    GALLERY_MAX_DESCRIPTION_LENGTH,
+  );
+  if (!body || !name || author === null || description === null) {
+    return Response.json({ error: "invalid-fields" }, { status: 400 });
+  }
+  if (typeof body.projectText !== "string") {
+    return Response.json({ error: "invalid-project" }, { status: 400 });
+  }
+  if (
+    new TextEncoder().encode(body.projectText).length >
+    GALLERY_MAX_PROJECT_BYTES
+  ) {
+    return Response.json({ error: "too-large" }, { status: 413 });
+  }
+  let project: CircuitProject;
+  try {
+    project = parseProject(body.projectText);
+  } catch {
+    return Response.json({ error: "invalid-project" }, { status: 400 });
+  }
+  project.name = name;
+  const now = new Date();
+  const { status, payload } = await callGallery<{ id?: string }>(
+    env,
+    "submit",
+    {
+      day: now.toISOString().slice(0, 10),
+      submitterHash: await submitterHash(request),
+      entry: {
+        id: crypto.randomUUID(),
+        name,
+        author,
+        description,
+        created_at: now.toISOString(),
+        schema_version: project.schemaVersion,
+        project_text: serializeProject(project),
+        svg_text: renderPreview(project),
+      },
+    },
+  );
+  if (status === 429) {
+    return Response.json({ error: "rate-limited" }, { status: 429 });
+  }
+  return Response.json({ id: payload.id }, { status: 201 });
+}
+
+async function handleReserialize(env: GalleryEnv): Promise<Response> {
+  const { payload } = await callGallery<{ ids: string[] }>(env, "all-ids", {});
+  let upgraded = 0;
+  const failed: { id: string; message: string }[] = [];
+  for (const id of payload.ids) {
+    const detail = await callGallery<{ projectText?: string }>(
+      env,
+      "any-entry",
+      { id },
+    );
+    if (!detail.payload.projectText) continue;
+    try {
+      const project = parseProject(detail.payload.projectText);
+      await callGallery(env, "update-entry", {
+        id,
+        projectText: serializeProject(project),
+        schemaVersion: project.schemaVersion,
+        svgText: renderPreview(project),
+      });
+      upgraded += 1;
+    } catch (error) {
+      failed.push({
+        id,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return Response.json({ upgraded, failed });
+}
+
+/**
+ * All `/api/gallery*` routing. Returns null for unrelated paths so the
+ * worker entry keeps its ordinary dispatch.
+ */
+export async function routeGalleryRequest(
+  request: Request,
+  env: GalleryEnv,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith("/api/gallery")) return null;
+  const segments = url.pathname.split("/").filter(Boolean).slice(2);
+
+  if (segments.length === 0 && request.method === "GET") {
+    const { payload } = await callGallery(env, "list", {
+      limit: url.searchParams.get("limit"),
+      cursor: url.searchParams.get("cursor"),
+    });
+    return Response.json(payload, {
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  if (
+    segments.length === 1 &&
+    segments[0] === "submissions" &&
+    request.method === "POST"
+  ) {
+    return handleSubmission(request, env);
+  }
+  if (
+    segments.length === 1 &&
+    segments[0] === "recycled" &&
+    request.method === "GET"
+  ) {
+    if (!isAdmin(request, env)) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const { payload } = await callGallery(env, "recycled", {});
+    return Response.json(payload, {
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  if (
+    segments.length === 2 &&
+    segments[0] === "maintenance" &&
+    segments[1] === "reserialize" &&
+    request.method === "POST"
+  ) {
+    if (!isAdmin(request, env)) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    return handleReserialize(env);
+  }
+  if (segments.length === 2 && segments[1] === "preview.svg") {
+    const { status, payload } = await callGallery<{ svgText?: string }>(
+      env,
+      "entry",
+      { id: segments[0] },
+    );
+    if (status !== 200 || !payload.svgText) {
+      return Response.json({ error: "not-found" }, { status: 404 });
+    }
+    return new Response(payload.svgText, {
+      headers: {
+        "content-type": "image/svg+xml",
+        "cache-control": "public, max-age=300",
+        "content-security-policy":
+          "default-src 'none'; style-src 'unsafe-inline'",
+      },
+    });
+  }
+  if (segments.length === 1 && request.method === "GET") {
+    const { status, payload } = await callGallery<{
+      entry?: GalleryEntrySummary;
+      projectText?: string;
+    }>(env, "entry", { id: segments[0] });
+    if (status !== 200) {
+      return Response.json({ error: "not-found" }, { status: 404 });
+    }
+    return Response.json(
+      { entry: payload.entry, projectText: payload.projectText },
+      { headers: { "cache-control": "no-store" } },
+    );
+  }
+  if (segments.length === 2 && request.method === "POST") {
+    const [id, action] = segments;
+    if (action !== "recycle" && action !== "restore") {
+      return Response.json({ error: "not-found" }, { status: 404 });
+    }
+    if (!isAdmin(request, env)) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const { status, payload } = await callGallery(env, "set-status", {
+      id,
+      status: action === "recycle" ? "recycled" : "public",
+      at: new Date().toISOString(),
+    });
+    return Response.json(payload, { status });
+  }
+  if (segments.length === 1 && request.method === "DELETE") {
+    if (!isAdmin(request, env)) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const { status, payload } = await callGallery(env, "delete", {
+      id: segments[0],
+    });
+    return Response.json(payload, { status });
+  }
+  return Response.json({ error: "not-found" }, { status: 404 });
+}

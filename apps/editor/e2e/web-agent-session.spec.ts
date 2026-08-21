@@ -80,7 +80,7 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
     await route.abort();
   });
 
-  await page.goto("/");
+  await page.goto("/editor");
   const agentMenu = await openMenu(page, "Agent");
   await agentMenu.getByRole("button", { name: "Connect Agent" }).click();
   await page.getByTestId("agent-preset-full").click();

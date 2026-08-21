@@ -9,7 +9,11 @@
     "pnpm": ">=11.16.0"
   },
   "dependencies": {
-    "@icm/agent-adapter": "workspace:*"
+    "@icm/agent-adapter": "workspace:*",
+    "@icm/model": "workspace:*",
+    "@icm/project-protocol": "workspace:*",
+    "@icm/render-svg": "workspace:*",
+    "@icm/symbols": "workspace:*"
   },
   "scripts": {
     "build": "pnpm -r --if-present build",

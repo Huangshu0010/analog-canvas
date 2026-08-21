@@ -4996,3 +4996,147 @@ html.light .analytics-map-land path {
   color: #5f6b7a;
   font-size: var(--icm-font-sm);
 }
+
+/* ---------- Community gallery landing feed ---------- */
+
+.gallery-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--icm-chrome-bg);
+  color: var(--icm-text);
+}
+
+.gallery-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--icm-space-3);
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--icm-border);
+  background: var(--icm-surface);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.gallery-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gallery-brand h1 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.gallery-brand p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--icm-text-muted);
+}
+
+.gallery-open-editor {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: var(--icm-radius-sm);
+  background: var(--icm-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.gallery-open-editor:hover {
+  filter: brightness(1.05);
+}
+
+.gallery-status,
+.gallery-footnote {
+  padding: 18px 22px;
+  color: var(--icm-text-muted);
+  font-size: 13px;
+}
+
+.gallery-footnote {
+  margin-top: auto;
+  border-top: 1px solid var(--icm-border);
+  background: var(--icm-surface);
+}
+
+/* Pinterest-style wall: CSS columns give a dependency-free masonry. */
+.gallery-wall {
+  columns: 5 240px;
+  column-gap: 14px;
+  padding: 18px 22px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gallery-tile {
+  display: block;
+  break-inside: avoid;
+  margin: 0 0 14px;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-md, 10px);
+  background: var(--icm-surface);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.gallery-tile:hover {
+  border-color: var(--icm-border-hover);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+}
+
+.gallery-tile-preview {
+  display: block;
+  background: #fff;
+  border-bottom: 1px solid var(--icm-border);
+  padding: 10px;
+}
+
+.gallery-tile-preview img,
+.gallery-tile-preview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+  object-fit: contain;
+}
+
+.gallery-tile-copy {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px 12px;
+}
+
+.gallery-tile-kicker {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--icm-text-muted);
+}
+
+.gallery-tile-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.gallery-tile-meta,
+.gallery-tile-description {
+  font-size: 12px;
+  color: var(--icm-text-muted);
+}
+
+.gallery-home-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
