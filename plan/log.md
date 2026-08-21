@@ -4211,3 +4211,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   prettier, test-impact, diff checks.
 - Commit status: completed on `claude/gallery-publish`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 — Hotfix: publish dialog endpoint path
+
+- Target: `plan/2026-08-22-gallery-submissions-hotfix/plan.md` (completed).
+- Change: the publish client now posts to `/api/gallery/submissions`
+  (was `/api/gallery`, a 404 surfacing as "rejected (not-found)" on a
+  correct form — user-reported in production); the e2e mock is pinned to
+  the real path so drift fails the test.
+- Validation: gallery-publish unit tests, publish e2e scenario, prettier,
+  test-impact, diff checks; production re-publish verified after deploy.
+- Commit status: completed on `claude/gallery-submissions-path`.
