@@ -29,6 +29,7 @@ export function symbolCategory(symbolId: string): string {
       "variable-resistor",
       "capacitor",
       "variable-capacitor",
+      "inductor-compact",
       "inductor",
       "variable-inductor",
       "diode",

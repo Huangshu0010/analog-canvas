@@ -14,9 +14,16 @@ The product set is exactly the reviewed, Reference-calibrated entries:
 
 - `nmos`, `pmos`, and `ground`;
 - `voltage-source`, `current-source`;
-- `resistor`, `capacitor`, `inductor`, their adjustable siblings
+- `resistor`, `capacitor`, `inductor-compact`, their adjustable siblings
   `variable-resistor`, `variable-capacitor`, and `variable-inductor` (the base
   body plus one diagonal adjustment arrow), `port`, and `port-filled`;
+- `inductor`, the evidence-exact Large Inductor. The textbook figure is drawn
+  at its own scale, so the calibrated coil spans 60 logical units against the
+  40 every other reviewed passive uses. Both come from the same pinned PDF
+  vector evidence: `inductor` reproduces it exactly and keeps the fidelity
+  target, while `inductor-compact` applies one uniform `pinSpanScale` (2/3)
+  recorded in its catalog `generation` block so a schematic mixing R, C, and L
+  reads at one scale. Imported SPICE `L` elements take `inductor-compact`;
 - the behavioral block family `inverter`, `and-gate`, `or-gate`, `nand-gate`,
   `nor-gate`, and `comparator` (manual-only netlist mapping, like `opamp`).
 

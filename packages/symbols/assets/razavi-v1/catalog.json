@@ -200,14 +200,14 @@
     },
     {
       "symbolId": "inductor",
-      "name": "Inductor",
+      "name": "Large Inductor",
       "category": "passive",
       "reviewStatus": "reviewed",
       "pinOrder": ["1", "2"],
       "palette": true,
-      "automaticMappings": ["spice:L"],
+      "automaticMappings": [],
       "assetPath": "inductor.symbol.json",
-      "assetHash": "b281e6f3fcca59eb84a5dfc1f9b9fd93a29bef226cc5b7113a3fd91f3c10d55e",
+      "assetHash": "11c01f2890b89fbe505252f2622e62838cd047885ad544fd862c3ae2d5821369",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -222,7 +222,36 @@
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePath": "fixtures/visual-reference/razavi-reference-v1/inductor-vector-source.json",
         "converterPath": "scripts/generate-razavi-inductor-asset.mjs",
-        "converterVersion": 1
+        "converterVersion": 2
+      },
+      "manualOnlyReason": "Evidence-exact textbook proportions; imported L elements take the scale-reconciled inductor-compact symbol."
+    },
+    {
+      "symbolId": "inductor-compact",
+      "name": "Inductor",
+      "category": "passive",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["1", "2"],
+      "palette": true,
+      "automaticMappings": ["spice:L"],
+      "assetPath": "inductor-compact.symbol.json",
+      "assetHash": "ea49a969428ddb0bdce0a567467e11295a1e39f15ba71d0eafd5d316a0cbc6ea",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/inductor-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/inductor-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/inductor-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/inductor-vector-source.json",
+        "converterPath": "scripts/generate-razavi-inductor-asset.mjs",
+        "converterVersion": 2,
+        "pinSpanScale": 0.666667
       }
     },
     {
@@ -513,7 +542,7 @@
       "automaticMappings": [],
       "manualOnlyReason": "Manually selected adjustable presentation; structural SPICE L does not preserve a distinct variable-inductor symbol.",
       "assetPath": "variable-inductor.symbol.json",
-      "assetHash": "019535aa483deb0c3f33e635c8b926f45d17d90533acafb27135c831e251dddb",
+      "assetHash": "ac2a1e9e7c26bb77d9bb6f698d241b751e554583aba4e55478b1b5280fe7a018",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

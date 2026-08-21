@@ -16,6 +16,7 @@ const PRODUCT_IDS = [
   "ground",
   "ideal-switch",
   "inductor",
+  "inductor-compact",
   "inverter",
   "nand-gate",
   "nmos",

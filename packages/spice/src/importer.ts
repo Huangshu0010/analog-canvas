@@ -50,6 +50,7 @@ function netlistDeviceClass(symbolId: string): NetlistDeviceClass | null {
     resistor: "resistor",
     capacitor: "capacitor",
     inductor: "inductor",
+    "inductor-compact": "inductor",
     nmos: "mos",
     pmos: "mos",
     diode: "diode",
@@ -164,7 +165,9 @@ function symbolFor(
   const symbols: Record<string, ImportSymbolMapping> = {
     resistor: { symbolId: "resistor" },
     capacitor: { symbolId: "capacitor" },
-    inductor: { symbolId: "inductor" },
+    // Imported L elements take the scale-reconciled Inductor so an imported
+    // schematic reads at the same scale as its R and C.
+    inductor: { symbolId: "inductor-compact" },
     nmos: { symbolId: "nmos" },
     pmos: { symbolId: "pmos" },
     "voltage-source": { symbolId: "voltage-source" },

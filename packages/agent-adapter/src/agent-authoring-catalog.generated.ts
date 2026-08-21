@@ -191,6 +191,28 @@ export const agentRazaviAuthoringCatalog = {
     },
     {
       symbolId: "inductor",
+      name: "Large Inductor",
+      category: "passive",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "1",
+          role: "passive",
+          direction: "north",
+          visibility: "visible",
+        },
+        {
+          name: "2",
+          role: "passive",
+          direction: "south",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
+    {
+      symbolId: "inductor-compact",
       name: "Inductor",
       category: "passive",
       defaultVariantId: null,
