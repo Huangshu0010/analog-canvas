@@ -45,15 +45,18 @@ are placed on the left of generated parent symbols, outputs on the right, and
 other directions are balanced automatically. The symbol body and pin placement
 adapt without a separate interface editor.
 
-The visible marker remains an ordinary Instance for selection, move, wiring,
-and deletion. Its single annotation is the interface name; the formal terminal
-adds stable identity, ordering, and the Net binding used by parent
-blocks and netlist export.
+Each visible marker remains an ordinary Instance for selection, move, wiring,
+copy, and deletion. Copying a marker creates another view of the same formal
+terminal on the same Net; it does not add a second interface pin. Every marker
+projects the same terminal-name annotation. The formal terminal adds stable
+identity, ordering, and the Net binding used by parent blocks and netlist
+export.
 
 Renaming that annotation updates all connected parent Instances atomically.
-Ordinary Delete uses the same local Port/instance deletion behavior as the top
-Cell and removes the formal terminal together; it is rejected only while a
-parent still electrically references that interface pin. **Delete Cell** removes only a non-top, unreferenced Cell definition and can be undone or redone.
+Ordinary Delete removes only the selected marker while another marker remains.
+Deleting the final marker also removes the formal terminal; that final removal
+is rejected while a parent still electrically references the interface pin.
+**Delete Cell** removes only a non-top, unreferenced Cell definition and can be undone or redone.
 Deleting a hierarchical Instance with the normal Delete command never deletes
 its reusable child Cell.
 
@@ -71,8 +74,8 @@ the Properties values remain the precise fallback. These are definition operatio
 not top-level drawing tools.
 
 Hierarchy presentation is saved as definition-level size and pin-placement
-intent in Project schema 18. Older schema-17 projects open with deterministic
-automatic pin layout; schema-15 files are outside the supported rolling
-compatibility window. The block uses a closed polygon body and the shared
+intent in Project schema 20. Schema-19 projects open through the bounded direct
+upgrade; schema-18 files are outside the supported rolling compatibility
+window. The block uses a closed polygon body and the shared
 Razavi rich-text renderer for pin and Cell names; it is compatible with that
 visual grammar rather than a pixel-for-pixel textbook symbol asset.

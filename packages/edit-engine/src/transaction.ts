@@ -972,8 +972,8 @@ export function executeTransaction(
           );
         }
         if (
-          draft.netlist?.terminals.some(
-            (terminal) => terminal.interfaceInstanceId === instance.id,
+          draft.netlist?.terminals.some((terminal) =>
+            terminal.interfaceInstanceIds.includes(instance.id),
           )
         ) {
           return rejectAt(
@@ -1306,6 +1306,9 @@ export function executeTransaction(
           }
         }
         if (edit.direction !== undefined) terminal.direction = edit.direction;
+        if (edit.interfaceInstanceIds !== undefined) {
+          terminal.interfaceInstanceIds = [...edit.interfaceInstanceIds];
+        }
         changedObjectIds.add(terminal.id);
         connectivityChanged = true;
         break;

@@ -8756,8 +8756,12 @@
             "passive"
           ]
         },
-        "interfaceInstanceId": {
-          "$ref": "#/$defs/__schema1"
+        "interfaceInstanceIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
         }
       },
       "required": [
@@ -8765,7 +8769,7 @@
         "name",
         "netId",
         "direction",
-        "interfaceInstanceId"
+        "interfaceInstanceIds"
       ],
       "additionalProperties": false
     },
@@ -8792,6 +8796,13 @@
             "inout",
             "passive"
           ]
+        },
+        "interfaceInstanceIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
         }
       },
       "required": [

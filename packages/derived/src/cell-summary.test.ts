@@ -14,7 +14,7 @@ describe("Cell summary", () => {
       name: "IN",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceId: "P1",
+      interfaceInstanceIds: ["P1"],
     });
     project.documents.push(child);
     for (const id of ["X1", "X2"]) {

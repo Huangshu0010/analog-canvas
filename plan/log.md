@@ -3959,3 +3959,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   test-impact and diff checks, plus canonical `pnpm ci:check` passed with
   165 unit files / 990 tests, all builds/release checks, and 169 browser tests.
 - Commit status: ready to commit on `codex/vdd-named-power-hotfix`.
+
+## 2026-08-22 - Repeated Formal Port markers
+
+- Changed areas: advanced Project persistence to schema 20; let one formal
+  Cell terminal own multiple ordinary Port markers on one Net; routed Formal
+  marker copy through the existing Project structural transaction; and made
+  subset deletion retain the interface while final deletion keeps caller
+  protection.
+- Validation: 149 focused cross-layer tests, 63 Agent-adapter tests, the full
+  hierarchy browser suite, generated Agent/MCP checks, test-impact,
+  `pnpm verify:branch` (165 files / 992 tests plus builds and production
+  smoke), and canonical `pnpm ci:check` with 170 browser tests passed.
+- Commit status: ready to commit on `codex/named-power-bulk-semantics`.

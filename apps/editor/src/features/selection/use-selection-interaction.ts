@@ -81,6 +81,10 @@ export interface UseSelectionInteractionOptions {
     edits: SchematicEdit[],
     options?: { preserveInteraction?: boolean },
   ) => TransactionResult;
+  transactProjectDocument: (
+    transactionId: string,
+    edits: readonly SchematicEdit[],
+  ) => TransactionResult;
   setStatus: (status: string) => void;
   setSelectedEndpoint: (endpoint: WireSource | null) => void;
   resetSelection: () => void;
@@ -811,12 +815,35 @@ export function useSelectionInteraction(
         ];
       },
     );
-    const result = transactConnectivity(
-      "connect_without_wire",
-      [...proposal.edits, ...orientationEdits],
-      proposal,
-      { preserveInteraction: true },
+    const edits = [...proposal.edits, ...orientationEdits];
+    const editsCellInterface = edits.some(
+      (edit) => edit.kind === "update_cell_terminal",
     );
+    let result: TransactionResult;
+    if (editsCellInterface) {
+      const gate = gateConnectivityProposal(
+        options.document,
+        createConnectivityProposal(options.document, {
+          intent: "connect_without_wire",
+          diagnostics: [],
+          edits,
+          preview: proposal,
+        }),
+      );
+      if (!gate.ok) {
+        options.setStatus(gate.message);
+        result = { ok: false, revision: options.document.revision };
+      } else {
+        result = options.transactProjectDocument(
+          "copy-formal-port-marker",
+          gate.edits,
+        );
+      }
+    } else {
+      result = transactConnectivity("connect_without_wire", edits, proposal, {
+        preserveInteraction: true,
+      });
+    }
     if (result.ok) {
       options.selectOnly("instance", proposal.instanceIds);
       options.setCopyPreviewPoint(point);

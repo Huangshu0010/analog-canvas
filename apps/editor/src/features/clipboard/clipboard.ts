@@ -443,9 +443,18 @@ export function proposePaste(
   const existingAnchors = new Map<string, RouteEndpoint>();
   const errors: string[] = [];
   for (const net of clipboard.nets) {
-    const existing = net.name
-      ? document.nets.find((candidate) => candidate.name === net.name)
-      : undefined;
+    const formalTerminal = document.netlist?.terminals.find(
+      (terminal) =>
+        terminal.netId === net.id &&
+        terminal.interfaceInstanceIds.some((instanceId) =>
+          instanceIds.has(instanceId),
+        ),
+    );
+    const existing = formalTerminal
+      ? document.nets.find((candidate) => candidate.id === formalTerminal.netId)
+      : net.name
+        ? document.nets.find((candidate) => candidate.name === net.name)
+        : undefined;
     if (existing) {
       netIds.set(net.id, existing.id);
       const anchor = firstNetEndpoint(existing);
@@ -498,6 +507,24 @@ export function proposePaste(
       },
     }),
   );
+
+  for (const terminal of document.netlist?.terminals ?? []) {
+    const copiedMarkerIds = terminal.interfaceInstanceIds.flatMap(
+      (instanceId) => {
+        const copiedId = instanceIds.get(instanceId);
+        return copiedId ? [copiedId] : [];
+      },
+    );
+    if (copiedMarkerIds.length === 0) continue;
+    edits.push({
+      kind: "update_cell_terminal",
+      terminalId: terminal.id,
+      interfaceInstanceIds: [
+        ...terminal.interfaceInstanceIds,
+        ...copiedMarkerIds,
+      ],
+    });
+  }
 
   for (const net of clipboard.nets) {
     const mappedTerminals = net.terminals.map((terminal): RouteEndpoint => ({

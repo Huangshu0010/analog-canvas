@@ -137,7 +137,7 @@ describe("Edit Transaction envelope", () => {
           name: "Vout",
           netId: "net-vout",
           direction: "output",
-          interfaceInstanceId: "port-object",
+          interfaceInstanceIds: ["port-object"],
         },
       ],
     };
@@ -180,7 +180,7 @@ describe("Edit Transaction envelope", () => {
           name: "Vout",
           netId: "net-vout",
           direction: "output",
-          interfaceInstanceId: "port-object",
+          interfaceInstanceIds: ["port-object"],
         },
       ],
     };

@@ -1,6 +1,6 @@
 # Project File Compatibility
 
-The released Project schema version is `19`. It retains schematic-only
+The released Project schema version is `20`. It retains schematic-only
 hierarchy integrity, a Project structural revision, stable formal Cell ports,
 and definition-level Cell symbol presentation. It also has one typed Instance
 netlist authority, formal Cell parameters, and Project-local external
@@ -10,14 +10,14 @@ from its internal schematic or netlist reference until the user edits it. A
 free Port is identified by its Net name; a formal Cell Pin is identified by its
 terminal name, such as `Vout`. Their bound annotations may persist same-text
 RichText formatting but cannot store a divergent alias. A
-canonical v19 file can be opened, saved, reopened, and saved again without
+canonical v20 file can be opened, saved, reopened, and saved again without
 byte drift.
 
-Schema v18 is accepted through one direct upgrade to v19. The upgrade records
-whether every Net came from SPICE import or authoring, and removes the retired
-document-wide flightline display state. The next save writes v19. The original
-file is never overwritten silently. Schema v17 and older, and versions newer
-than v19, are rejected; there is no accumulating
+Schema v19 is accepted through one direct upgrade to v20. The upgrade lifts
+each formal Cell terminal's singular marker ID into a one-element marker-ID
+array without changing connectivity. The next save writes v20. The original
+file is never overwritten silently. Schema v18 and older, and versions newer
+than v20, are rejected; there is no accumulating
 migration registry.
 
 The canonical-current corpus at
@@ -30,7 +30,7 @@ Retired fields such as first-class
 
 An incompatible Project is rejected before it can replace the current browser
 Project. Conversion, when needed, is an explicit external operation that must
-produce and validate a complete v19 candidate before a human chooses to load it.
+produce and validate a complete v20 candidate before a human chooses to load it.
 
 The editor never silently merges duplicate canonical Ground (`0`) or VDD Nets.
 Duplicate folded Net names are invalid and remain diagnostics until the author

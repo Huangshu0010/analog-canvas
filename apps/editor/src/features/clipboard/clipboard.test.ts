@@ -19,6 +19,63 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("schematic clipboard", () => {
+  it("copies a formal Port marker onto its existing terminal and Net", () => {
+    const document = createEmptyDocument("document-main", "Clipboard");
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+    });
+    document.nets.push({
+      id: "net-input",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    document.netlist = {
+      name: "cell",
+      terminals: [
+        {
+          id: "terminal-input",
+          name: "VIN",
+          netId: "net-input",
+          direction: "input",
+          interfaceInstanceIds: ["P1"],
+        },
+      ],
+      formalParameters: [],
+    };
+
+    const clipboard = copySelection(document, ["P1"]);
+    expect(clipboard).not.toBeNull();
+    const proposal = proposePaste(document, clipboard!, { x: 80, y: 0 }, 1);
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "paste-formal-marker",
+        documentId: document.id,
+        expectedRevision: document.revision,
+        actor: { kind: "human", id: "test" },
+        edits: proposal.edits,
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.netlist?.terminals[0]?.interfaceInstanceIds).toEqual(
+      ["P1", "P1-copy-1"],
+    );
+    expect(result.document.nets).toHaveLength(1);
+    expect(result.document.nets[0]?.terminals).toEqual([
+      { instanceId: "P1", pinName: "P" },
+      { instanceId: "P1-copy-1", pinName: "P" },
+    ]);
+  });
+
   it("duplicates selected components, their named electrical Net, and route atomically", () => {
     const document = createEmptyDocument("document-main", "Clipboard");
     document.instances.push(

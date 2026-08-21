@@ -135,7 +135,7 @@ describe("Instance lifecycle planning", () => {
           name: "VIN",
           netId: "net-vin",
           direction: "input",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
         },
       ],
     };
@@ -157,7 +157,7 @@ describe("Instance lifecycle planning", () => {
           terminals: [
             {
               name: "VIN",
-              interfaceInstanceId: "P1",
+              interfaceInstanceIds: ["P1"],
               netId: "net-vin",
             },
           ],
@@ -393,7 +393,7 @@ describe("Instance lifecycle planning", () => {
           name: "VIN",
           netId: "net-vin",
           direction: "input",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
         },
       ],
     };

@@ -97,8 +97,9 @@ rename them.
 `terminals` maps each ordered formal cell-terminal name to one existing Net.
 Canvas `port` and `port-filled` symbols are ordinary single-pin Instances. A
 Free Net Port names its bound Net without changing the interface. A Formal
-Cell Pin is identified by `terminals[].interfaceInstanceId` and contributes
-that ordered interface. Both roles are available in top and child Documents,
+Cell Pin owns one or more canvas markers through
+`terminals[].interfaceInstanceIds` and contributes exactly one ordered
+interface terminal regardless of marker count. Both roles are available in top and child Documents,
 and neither emits an instance line. A hierarchy instance uses its bound child
 Document and that child's explicit private interface. Ports receive no visible
 schematic Reference or `Instance.netlist.reference`. A free Net Port displays

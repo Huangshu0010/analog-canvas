@@ -370,7 +370,7 @@ function importDocument(
       name: port.name,
       netId: port.netId,
       direction: "passive" as const,
-      interfaceInstanceId,
+      interfaceInstanceIds: [interfaceInstanceId],
     };
   });
   return {
@@ -422,8 +422,8 @@ function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
   const boundDocuments: SchematicDocument[] = documents.map((document) => ({
     ...document,
     instances: document.instances.map((instance) => {
-      const isFormalPort = document.netlist?.terminals.some(
-        (terminal) => terminal.interfaceInstanceId === instance.id,
+      const isFormalPort = document.netlist?.terminals.some((terminal) =>
+        terminal.interfaceInstanceIds.includes(instance.id),
       );
       const referencedInstance = {
         ...instance,

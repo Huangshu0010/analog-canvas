@@ -568,7 +568,7 @@ internal Cell 继续以 `Document.netlist` 为权威：
 
 - Cell netlist name；
 - ordered formal terminals：stable terminal ID、name、direction、`netId` 与
-  `interfaceInstanceId`；
+  非空 `interfaceInstanceIds[]` marker 集合；多个 marker 仍只代表一个 formal terminal；
 - `formalParameters[]`：ordered name 与 optional raw-string default。
 
 schema-14 adapter 对现有 internal binding 校验 child ID 后删除重复 name；caller 上旧

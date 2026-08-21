@@ -46,14 +46,14 @@ describe("current formal cell interface", () => {
           name: "VIN",
           netId: "net-in",
           direction: "input",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
         },
         {
           id: "cell-terminal-out",
           name: "VOUT",
           netId: "net-out",
           direction: "output",
-          interfaceInstanceId: "P2",
+          interfaceInstanceIds: ["P2"],
         },
       ],
     };

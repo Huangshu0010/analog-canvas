@@ -9533,8 +9533,12 @@
                   "passive"
                 ]
               },
-              "interfaceInstanceId": {
-                "$ref": "#/components/schemas/agentCircuitRequest/$defs/__schema1"
+              "interfaceInstanceIds": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/agentCircuitRequest/$defs/__schema1"
+                }
               }
             },
             "required": [
@@ -9542,7 +9546,7 @@
               "name",
               "netId",
               "direction",
-              "interfaceInstanceId"
+              "interfaceInstanceIds"
             ],
             "additionalProperties": false
           },
@@ -9569,6 +9573,13 @@
                   "inout",
                   "passive"
                 ]
+              },
+              "interfaceInstanceIds": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/agentCircuitRequest/$defs/__schema1"
+                }
               }
             },
             "required": [
@@ -12999,8 +13010,12 @@
                                         "passive"
                                       ]
                                     },
-                                    "interfaceInstanceId": {
-                                      "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema0"
+                                    "interfaceInstanceIds": {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema0"
+                                      }
                                     }
                                   },
                                   "required": [
@@ -13008,7 +13023,7 @@
                                     "name",
                                     "netId",
                                     "direction",
-                                    "interfaceInstanceId"
+                                    "interfaceInstanceIds"
                                   ],
                                   "additionalProperties": false
                                 }
