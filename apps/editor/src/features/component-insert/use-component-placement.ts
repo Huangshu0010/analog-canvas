@@ -131,6 +131,8 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     const instance = {
       id,
       symbolId,
+      schematicReference:
+        placementRequest.referenceText ?? netlist?.reference ?? id,
       ...(symbolVariantId ? { symbolVariantId } : {}),
       placement: {
         position,
@@ -417,6 +419,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     const instance = {
       id,
       symbolId,
+      schematicReference: id,
       placement: {
         position,
         rotation: options.componentPlacementRotation,

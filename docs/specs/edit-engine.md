@@ -57,7 +57,8 @@ for readability; these groups do not create separate mutation endpoints:
 - Instance: `add_instance`, `remove_instance`, `set_instance_symbol`,
   `place_instance`, `unplace_instance`, `move_instance`, `rotate_instance`,
   `mirror_instance`,
-  `set_instance_reference`, `set_instance_schematic_name`, `set_instance_binding`,
+  `set_instance_reference`, `set_instance_schematic_reference`,
+  `set_instance_schematic_name`, `set_instance_binding`,
   `patch_instance_netlist_parameters`, `bulk_patch_instance_netlist`,
   `set_instance_netlist`;
 - Cell interface: `add_cell_terminal`, `update_cell_terminal`,
@@ -89,9 +90,10 @@ is not another `SchematicEdit` member.
 
 `set_instance_reference`, `set_instance_binding`, and
 `patch_instance_netlist_parameters` are the ordinary field writers for an
-existing netlist record. `set_instance_schematic_name` instead changes the
-user-owned RichText alias shown on a schematic and never changes the instance's
-SPICE reference or stable identity. `bulk_patch_instance_netlist` is the
+existing netlist record. `set_instance_schematic_reference` changes the visible
+Reference for any Instance, including a non-emitting Port, without changing
+netlist output. `set_instance_schematic_name` instead changes the user-owned
+RichText alias shown on a schematic. `bulk_patch_instance_netlist` is the
 bounded, atomic multi-instance netlist form. `set_instance_netlist` remains
 the whole-record operation for object initialization, import, and bounded
 migrations; product editing must not rebuild unrelated netlist facts through
@@ -178,7 +180,8 @@ Phase 8 topology operations have these preconditions:
   it creates no endpoint or drawing-object kind.
 - `remove_instance` requires no Net, annotation, group, or constraint
   reference.
-- `unplace_instance` returns only a placed, unlocked Instance to the Placement
+- `place_instance` and `unplace_instance` require an unlocked Instance.
+  `unplace_instance` returns a placed Instance to the Placement
   Tray. It preserves Net membership, NoConnects, bindings, parameters, and
   annotations, but rejects while a Route still terminates at the Instance.
 - `connect_endpoints` creates a caller-named local Net when both endpoints are

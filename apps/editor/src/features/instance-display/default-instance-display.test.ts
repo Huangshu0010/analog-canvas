@@ -50,11 +50,12 @@ describe("default instance display annotations", () => {
     ]);
   });
 
-  it("uses the formal terminal name instead of creating a fake port reference", () => {
+  it("shows the Port reference and formal terminal name separately", () => {
     const document = createEmptyDocument("main", "Main");
     const instance = {
       id: "derived-internal-port-id",
       symbolId: "port",
+      schematicReference: "P1",
       placement: {
         position: { x: 100, y: 100 },
         rotation: 0 as const,
@@ -70,6 +71,12 @@ describe("default instance display annotations", () => {
     );
 
     expect(annotations).toEqual([
+      expect.objectContaining({
+        binding: {
+          kind: "instance-designator",
+          instanceId: "derived-internal-port-id",
+        },
+      }),
       expect.objectContaining({
         binding: { kind: "cell-terminal-name", terminalId: "terminal-input" },
       }),

@@ -55,7 +55,6 @@ import {
 } from "./transaction-route-follow.js";
 import {
   followAttachedAnnotations,
-  refreshInstanceReferenceAnnotation,
   refreshInstanceValueAnnotation,
   translateObjectAnchoredAnnotation,
 } from "./transaction-instance-annotations.js";
@@ -542,6 +541,13 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
+        const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
+        if (lockOwner) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
+          );
+        }
         if (instance.placement !== null) {
           return rejectAt(
             "EDIT_PRECONDITION",
@@ -876,20 +882,59 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
-        const before: SchematicDocument["instances"][number] =
-          structuredClone(instance);
         instance.netlist.reference = edit.reference;
         const failure = referencePolicyFailure(draft, instance.id);
         if (failure) {
           return rejectAt("EDIT_PRECONDITION", failure, [], [instance.id]);
         }
-        refreshInstanceReferenceAnnotation(
-          draft,
-          before,
-          edit.instanceId,
-          changedObjectIds,
-        );
         changedObjectIds.add(edit.instanceId);
+        break;
+      }
+      case "set_instance_schematic_reference": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
+          );
+        }
+        if (instance.schematicReference === edit.reference) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Schematic reference edit does not change the instance",
+            [],
+            [edit.instanceId],
+          );
+        }
+        const duplicate = draft.instances.find(
+          (candidate) =>
+            candidate.id !== instance.id &&
+            (
+              candidate.schematicReference ?? candidate.netlist?.reference
+            )?.toLowerCase() === edit.reference.toLowerCase(),
+        );
+        if (duplicate) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Schematic reference is already in use: ${edit.reference}`,
+            [],
+            [duplicate.id],
+          );
+        }
+        instance.schematicReference = edit.reference;
+        changedObjectIds.add(instance.id);
+        for (const annotation of draft.annotations) {
+          if (
+            annotation.binding?.kind === "instance-designator" &&
+            annotation.binding.instanceId === instance.id
+          ) {
+            changedObjectIds.add(annotation.id);
+          }
+        }
         break;
       }
       case "set_instance_schematic_name": {
@@ -1106,14 +1151,6 @@ export function executeTransaction(
               `Bulk netlist patch does not change ${instance.id}`,
               [],
               [instance.id],
-            );
-          }
-          if (assignment.reference !== undefined) {
-            refreshInstanceReferenceAnnotation(
-              draft,
-              before,
-              instance.id,
-              changedObjectIds,
             );
           }
           if (parametersChanged) {

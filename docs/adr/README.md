@@ -61,6 +61,8 @@ The project-local external interface and `X`-call preservation decision is
 The instance identity, Placement Tray lifecycle, and presentation-only
 netlist-invariance decision is
 [`0030-instance-identity-and-placement-lifecycle.md`](0030-instance-identity-and-placement-lifecycle.md).
+The schematic-reference and unified Port lifecycle decision is
+[`0031-schematic-reference-and-port-lifecycle.md`](0031-schematic-reference-and-port-lifecycle.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

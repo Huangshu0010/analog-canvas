@@ -100,6 +100,7 @@ export function createHierarchyInstance(
   return {
     id,
     symbolId: hierarchicalSymbolId(child.netlist.name),
+    schematicReference: reference,
     placement,
     netlist: {
       reference,
@@ -122,6 +123,7 @@ export function createExternalSubcircuitInstance(
   return {
     id,
     symbolId: externalSubcircuitSymbolId(definition.id),
+    schematicReference: reference,
     placement,
     netlist: {
       reference,

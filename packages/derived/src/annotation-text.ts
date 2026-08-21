@@ -26,7 +26,7 @@ export function resolveAnnotationText(
         (candidate) => candidate.id === binding.instanceId,
       );
       return semanticTextDocument(
-        instance?.netlist?.reference ?? "",
+        instance?.schematicReference ?? instance?.netlist?.reference ?? "",
         "instance-label",
       );
     }

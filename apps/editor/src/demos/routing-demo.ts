@@ -6,6 +6,7 @@ import type { CircuitProject, Instance } from "@icm/model";
 
 function instance(
   id: string,
+  schematicReference: string,
   x: number,
   y: number,
   rotation: 0 | 90 | 180 | 270,
@@ -14,6 +15,7 @@ function instance(
   return {
     id,
     symbolId: "port",
+    schematicReference,
     placement: { position: { x, y }, rotation, mirror },
   };
 }
@@ -39,11 +41,11 @@ export function createRoutingDemoProject(): CircuitProject {
         sourceStatus: "in-sync",
         netlist: { name: "Phase_3_Routing", terminals: [] },
         instances: [
-          instance("A", 140, 300, 0),
-          instance("B", 460, 300, 0, "x"),
-          instance("C", 300, 140, 90),
-          instance("D", 300, 460, 270),
-          instance("E", 340, 440, 90),
+          instance("A", "P1", 140, 300, 0),
+          instance("B", "P2", 460, 300, 0, "x"),
+          instance("C", "P3", 300, 140, 90),
+          instance("D", "P4", 300, 460, 270),
+          instance("E", "P5", 340, 440, 90),
         ],
         nets: [
           {

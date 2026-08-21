@@ -277,6 +277,7 @@
             },
             "rotation": 180
           },
+          "schematicReference": "X1",
           "symbolId": "opamp"
         },
         {
@@ -293,6 +294,7 @@
             },
             "rotation": 0
           },
+          "schematicReference": "X2",
           "symbolId": "voltage-amplifier"
         },
         {
@@ -313,6 +315,7 @@
             },
             "rotation": 0
           },
+          "schematicReference": "C1",
           "symbolId": "capacitor"
         },
         {
@@ -333,6 +336,7 @@
             },
             "rotation": 270
           },
+          "schematicReference": "C2",
           "symbolId": "capacitor"
         },
         {
@@ -353,6 +357,7 @@
             },
             "rotation": 0
           },
+          "schematicReference": "PWR1",
           "symbolId": "ground"
         },
         {
@@ -369,6 +374,7 @@
             },
             "rotation": 180
           },
+          "schematicReference": "P1",
           "symbolId": "port"
         },
         {
@@ -385,6 +391,7 @@
             },
             "rotation": 0
           },
+          "schematicReference": "P2",
           "symbolId": "port"
         }
       ],
@@ -420,6 +427,7 @@
       "layoutGroups": [],
       "name": "Main",
       "netlist": {
+        "formalParameters": [],
         "name": "Main",
         "terminals": []
       },
@@ -674,9 +682,10 @@
       "sourceStatus": "connectivity-modified"
     }
   ],
+  "externalSubcircuitDefinitions": [],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 16,
+  "schemaVersion": 17,
   "source": {
     "dialect": "none",
     "entry": null,

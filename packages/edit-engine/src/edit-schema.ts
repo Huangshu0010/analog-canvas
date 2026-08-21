@@ -89,6 +89,12 @@ export const SetInstanceReferenceEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   reference: z.string().min(1).max(128),
 });
+/** Update the visible schematic reference without changing netlist identity. */
+export const SetInstanceSchematicReferenceEditSchema = z.strictObject({
+  kind: z.literal("set_instance_schematic_reference"),
+  instanceId: StableIdSchema,
+  reference: z.string().min(1).max(128),
+});
 /** Update only the user-visible, RichText schematic alias. */
 export const SetInstanceSchematicNameEditSchema = z.strictObject({
   kind: z.literal("set_instance_schematic_name"),
@@ -346,6 +352,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MirrorInstanceEditSchema,
   PatchInstanceNetlistParametersEditSchema,
   SetInstanceReferenceEditSchema,
+  SetInstanceSchematicReferenceEditSchema,
   SetInstanceSchematicNameEditSchema,
   SetInstanceBindingEditSchema,
   SetInstanceNetlistEditSchema,

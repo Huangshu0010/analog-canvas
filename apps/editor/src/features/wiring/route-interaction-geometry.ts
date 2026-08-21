@@ -468,6 +468,7 @@ export function defaultInstanceLabel(
   instance: SchematicDocument["instances"][number],
   resolver: SymbolResolver,
   styleProfile: SchematicStyleProfile,
+  slot: "reference" | "value" = "reference",
 ): Annotation | null {
   if (!instance.placement) return null;
   if (
@@ -492,6 +493,7 @@ export function defaultInstanceLabel(
     resolved,
     styleProfile,
     document.presentation.grid,
+    slot,
   );
   if (!placement) return null;
   const position = placement.position;

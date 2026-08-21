@@ -37,6 +37,7 @@ function documentWithInstance() {
   document.instances.push({
     id: "M1",
     symbolId: "nmos",
+    schematicReference: "M1",
     placement: null,
     netlist: {
       reference: "M1",
@@ -59,6 +60,66 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
+  it("updates a Port schematic reference without creating a netlist record", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "port-object",
+      symbolId: "port",
+      schematicReference: "P1",
+      placement: null,
+    });
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "set_instance_schematic_reference",
+          instanceId: "port-object",
+          reference: "P_IN",
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.document.instances[0]?.schematicReference).toBe("P_IN");
+    expect(result.document.instances[0]).not.toHaveProperty("netlist");
+  });
+
+  it("enforces the same layout lock before placing a retained Instance", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      schematicReference: "P1",
+      placement: null,
+    });
+    document.layoutGroups.push({
+      id: "locked-port",
+      kind: "custom",
+      objectIds: ["P1"],
+      locked: true,
+    });
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "place_instance",
+          instanceId: "P1",
+          placement: {
+            position: { x: 100, y: 100 },
+            rotation: 0,
+            mirror: "none",
+          },
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+  });
+
   it("updates a RichText schematic name without changing the SPICE reference", () => {
     const document = documentWithInstance();
     const result = executeTransaction(document, {
@@ -780,7 +841,7 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
-  it("enforces Cell reference policy and refreshes only a canonical label", () => {
+  it("keeps the schematic reference independent from the netlist reference", () => {
     const document = documentWithInstance();
     document.instances.push({
       id: "M2",
@@ -834,7 +895,7 @@ describe("Edit Transaction envelope", () => {
     if (!renamed.ok) return;
     expect(renamed.document.instances[0]?.netlist?.reference).toBe("M3");
     expect(flattenRichText(renamed.document.annotations[0]!.content!)).toBe(
-      "M3",
+      "M1",
     );
   });
 

@@ -394,6 +394,19 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       }
       netlistReferences.add(reference);
     }
+    const schematicReferences = new Set<string>();
+    for (const [instanceIndex, instance] of document.instances.entries()) {
+      const reference = instance.schematicReference?.toLowerCase();
+      if (!reference) continue;
+      if (schematicReferences.has(reference)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate schematic instance reference: ${instance.schematicReference}`,
+          path: ["instances", instanceIndex, "schematicReference"],
+        });
+      }
+      schematicReferences.add(reference);
+    }
     for (const [instanceIndex, instance] of document.instances.entries()) {
       const binding = instance.mosBulkBinding;
       if (!binding) continue;

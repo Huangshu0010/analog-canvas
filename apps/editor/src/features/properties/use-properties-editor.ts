@@ -682,7 +682,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
           options.setStatus("Edit component values in Properties");
           return;
         case "instance-designator":
-          options.setStatus("Edit the netlist reference in Properties");
+          options.setStatus("Edit the schematic reference in Properties");
           return;
         case "instance-master-name":
           options.setStatus("Master names are defined by the instance binding");

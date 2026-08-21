@@ -261,6 +261,41 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   }
 });
 
+test("returns a formal Cell Port to the Tray without deleting its interface", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await createCell(page, "ReusableStage");
+  const canvas = page.getByTestId("schematic-canvas");
+  await page.getByTestId("shapes-chip-port").click();
+  await canvas.click({ position: { x: 300, y: 180 } });
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByTestId("annotation-hit-instance-reference-P1"),
+  ).toBeVisible();
+  await page.getByTestId("hit-P1").click();
+  const shelf = page.getByTestId("selection-shelf");
+  if ((await shelf.getAttribute("aria-expanded")) === "false") {
+    await shelf.click();
+  }
+  await page
+    .getByRole("button", { name: "Return component to Placement Tray" })
+    .click();
+
+  await expect(page.getByTestId("status")).toContainText(
+    "Cell interfaces and electrical facts were retained",
+  );
+  await expect(page.getByTestId("unplaced-P1")).toContainText("P1 · port");
+  await expect(page.getByTestId("hit-P1")).toHaveCount(0);
+  await page
+    .getByRole("region", { name: "Placement Tray" })
+    .getByRole("button", { name: "Place all" })
+    .click();
+  await expect(page.getByTestId("hit-P1")).toBeVisible();
+  await page.getByTestId("hit-P1").click();
+  await expect(page.getByLabel("Cell Port properties")).toBeVisible();
+});
+
 test("authors formal Cell parameters without entering Cell Symbol Layout", async ({
   page,
 }) => {

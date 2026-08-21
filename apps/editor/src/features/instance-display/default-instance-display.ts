@@ -39,18 +39,33 @@ export function defaultInstanceDisplayAnnotations(
     resolver,
     styleProfile,
   );
-  if (options.formalTerminalId && designator) {
+  if (options.showDesignator !== false && designator) {
     annotations.push({
       ...designator,
-      binding: {
-        kind: "cell-terminal-name",
-        terminalId: options.formalTerminalId,
-      },
+      ...(options.formalTerminalId
+        ? { id: `instance-reference-${instance.id}` }
+        : {}),
+      binding: { kind: "instance-designator", instanceId: instance.id },
     });
-    return annotations;
   }
-  if (options.showDesignator !== false && instance.netlist && designator) {
-    annotations.push(designator);
+  if (options.formalTerminalId) {
+    const terminalName = defaultInstanceLabel(
+      document,
+      instance,
+      resolver,
+      styleProfile,
+      "value",
+    );
+    if (terminalName) {
+      annotations.push({
+        ...terminalName,
+        id: `instance-label-${instance.id}`,
+        binding: {
+          kind: "cell-terminal-name",
+          terminalId: options.formalTerminalId,
+        },
+      });
+    }
   }
   if (options.masterName) {
     const master = defaultMasterNameAnnotation(

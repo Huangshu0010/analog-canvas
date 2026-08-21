@@ -13,11 +13,58 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function schematicReferencePrefix(instance: Record<string, unknown>): string {
+  switch (instance.symbolId) {
+    case "resistor":
+      return "R";
+    case "capacitor":
+      return "C";
+    case "inductor":
+      return "L";
+    case "diode":
+      return "D";
+    case "nmos":
+    case "pmos":
+      return "M";
+    case "npn":
+    case "pnp":
+      return "Q";
+    case "voltage-source":
+      return "V";
+    case "current-source":
+      return "I";
+    case "port":
+    case "port-filled":
+      return "P";
+    case "ground":
+      return "GND";
+    case "vdd-port":
+      return "VDD";
+    default: {
+      const netlist = isRecord(instance.netlist) ? instance.netlist : null;
+      const binding =
+        netlist && isRecord(netlist.binding) ? netlist.binding : null;
+      return binding?.kind === "subcircuit" ||
+        binding?.kind === "external-subcircuit" ||
+        binding?.kind === "unresolved-subcircuit"
+        ? "X"
+        : "X";
+    }
+  }
+}
+
+function nextSchematicReference(prefix: string, used: Set<string>): string {
+  let suffix = 1;
+  while (used.has(`${prefix}${suffix}`.toLowerCase())) suffix += 1;
+  const reference = `${prefix}${suffix}`;
+  used.add(reference.toLowerCase());
+  return reference;
+}
+
 /**
- * The rolling migration: schema 15 separates the formerly ambiguous
- * `instance-reference` projection into an electrical designator or a
- * presentation-only schematic alias. The selected kind preserves the visible
- * v15 text exactly; no legacy binding reaches the schema-16 runtime model.
+ * The rolling migration adds an explicitly schematic-facing reference to
+ * every Instance. Emitting instances preserve their netlist designator;
+ * non-emitting objects receive a deterministic presentation reference.
  */
 export function upgradePreviousProject(
   raw: Record<string, unknown>,
@@ -29,31 +76,30 @@ export function upgradePreviousProject(
     const instances = Array.isArray(rawDocument.instances)
       ? rawDocument.instances
       : [];
-    const instanceById = new Map<string, Record<string, unknown>>();
+    const usedSchematicReferences = new Set<string>();
     for (const rawInstance of instances) {
       if (!isRecord(rawInstance) || typeof rawInstance.id !== "string")
         continue;
-      instanceById.set(rawInstance.id, rawInstance);
-    }
-    const annotations = Array.isArray(rawDocument.annotations)
-      ? rawDocument.annotations
-      : [];
-    for (const rawAnnotation of annotations) {
-      if (!isRecord(rawAnnotation) || !isRecord(rawAnnotation.binding))
-        continue;
-      const binding = rawAnnotation.binding;
-      if (binding.kind !== "instance-reference") continue;
-      const instance =
-        typeof binding.instanceId === "string"
-          ? instanceById.get(binding.instanceId)
-          : undefined;
-      rawAnnotation.binding = {
-        kind:
-          instance && instance.schematicName !== undefined
-            ? "instance-schematic-name"
-            : "instance-designator",
-        instanceId: binding.instanceId,
-      };
+      const netlist = isRecord(rawInstance.netlist)
+        ? rawInstance.netlist
+        : null;
+      const emittedReference =
+        netlist && typeof netlist.reference === "string"
+          ? netlist.reference.trim()
+          : "";
+      const isPort =
+        rawInstance.symbolId === "port" ||
+        rawInstance.symbolId === "port-filled";
+      rawInstance.schematicReference =
+        emittedReference && !isPort
+          ? emittedReference
+          : nextSchematicReference(
+              schematicReferencePrefix(rawInstance),
+              usedSchematicReferences,
+            );
+      usedSchematicReferences.add(
+        (rawInstance.schematicReference as string).toLowerCase(),
+      );
     }
   }
   project.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;

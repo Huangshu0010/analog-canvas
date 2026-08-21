@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 16 and has
+geometric, and presentation facts. The current model is strict schema 17 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -29,6 +29,8 @@ migration. Invalid coordinates are rejected with their data path.
 ## Electrical authority
 
 - `Instance` selects one exact canonical symbol and optional visual variant.
+  `Instance.schematicReference` is its canvas-facing Reference, independent of
+  the optional emitted `Instance.netlist.reference`.
 - `Net.terminals` is complete logical membership. A terminal is
   `{instanceId, pinName}` and belongs to at most one Net.
 - `Route` owns editable geometry for one Net and connects terminal or Junction
@@ -140,6 +142,6 @@ ordinary Schematic edits inside one Project structural transaction. The
 Project's `structureRevision` protects this cross-Document boundary and the
 editor records it as one undoable structural commit.
 
-Persistence writes only schema 16. `packages/project-protocol` accepts schema
-15 through the bounded direct upgrade defined by ADR 0030, then supplies the
+Persistence writes only schema 17. `packages/project-protocol` accepts schema
+16 through the bounded direct upgrade defined by ADR 0031, then supplies the
 current model only; no compatibility shape enters `packages/model`.

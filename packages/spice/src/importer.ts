@@ -360,6 +360,7 @@ function importDocument(
     instances.push({
       id: interfaceInstanceId,
       symbolId: "port",
+      schematicReference: `P${index + 1}`,
       placement: null,
     });
     const net = nets.find((candidate) => candidate.id === port.netId);
@@ -422,11 +423,18 @@ function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
   const boundDocuments: SchematicDocument[] = documents.map((document) => ({
     ...document,
     instances: document.instances.map((instance) => {
+      const referencedInstance = {
+        ...instance,
+        schematicReference:
+          instance.schematicReference ??
+          instance.netlist?.reference ??
+          instance.id,
+      };
       const isImportedChild = instance.importProvenance?.kind === "subcircuit";
       const isImportedExternal =
         instance.netlist?.binding?.kind === "external-subcircuit";
       if (!isImportedChild && !isImportedExternal) {
-        return instance;
+        return referencedInstance;
       }
       const childDocumentId = isImportedChild
         ? documentIdByCellName.get(
@@ -462,7 +470,7 @@ function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
           })()
         : undefined;
       return {
-        ...instance,
+        ...referencedInstance,
         ...(externalDefinition
           ? { symbolId: externalSubcircuitSymbolId(externalDefinition.id) }
           : {}),

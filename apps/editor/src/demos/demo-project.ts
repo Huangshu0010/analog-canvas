@@ -33,17 +33,20 @@ const demoProject = CircuitProjectSchema.parse({
           id: "M1",
           symbolId: "nmos",
           symbolVariantId: "textbook-3terminal",
+          schematicReference: "M1",
           placement: null,
         },
         {
           id: "M2",
           symbolId: "pmos",
           symbolVariantId: "textbook-3terminal",
+          schematicReference: "M2",
           placement: null,
         },
         {
           id: "R1",
           symbolId: "resistor",
+          schematicReference: "R1",
           placement: null,
           netlist: {
             reference: "R1",

@@ -15,7 +15,7 @@ repository search, completed roadmaps, target plans, or `docs/archive/`.
    [`../adr/0029-external-subcircuit-definition-protocol.md`](../adr/0029-external-subcircuit-definition-protocol.md),
    and [`../adr/0030-instance-identity-and-placement-lifecycle.md`](../adr/0030-instance-identity-and-placement-lifecycle.md)
    — current Project shape, rolling previous-version read policy, independent
-   device and compatibility boundaries, Port-symbol, edit-union, schema-16
+   device and compatibility boundaries, Port-symbol, edit-union, schema-17
    identity and placement lifecycle, and Agent credential contract; identify superseded
    clauses in older ADRs.
 3. [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)

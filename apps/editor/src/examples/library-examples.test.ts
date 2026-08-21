@@ -14,7 +14,7 @@ describe("bundled Library Project examples", () => {
     ]);
     for (const example of libraryProjectExamples) {
       expect(serializeProject(example.project)).toContain(
-        '"schemaVersion": 16',
+        '"schemaVersion": 17',
       );
       expect(example.project.documents).toHaveLength(1);
     }

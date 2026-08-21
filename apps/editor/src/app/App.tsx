@@ -788,14 +788,8 @@ export function App({
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
-  const formalPortInstanceIds = new Set(
-    (document.netlist?.terminals ?? []).map(
-      (terminal) => terminal.interfaceInstanceId,
-    ),
-  );
   const returnablePlacedInstances = document.instances.filter(
-    (instance) =>
-      instance.placement !== null && !formalPortInstanceIds.has(instance.id),
+    (instance) => instance.placement !== null,
   );
   const selectedIds = visualSelection.instanceIds;
   const projectConnectivityIndex = useMemo(
@@ -3727,8 +3721,13 @@ export function App({
       }
       if (transact(edits).ok) {
         resetSelection();
+        const returnedFormalPort = instanceIds.some((instanceId) =>
+          document.netlist?.terminals.some(
+            (terminal) => terminal.interfaceInstanceId === instanceId,
+          ),
+        );
         setStatus(
-          `Returned ${instanceIds.length} ${instanceIds.length === 1 ? "Instance" : "Instances"} to the Placement Tray; electrical facts were retained`,
+          `Returned ${instanceIds.length} ${instanceIds.length === 1 ? "Instance" : "Instances"} to the Placement Tray; ${returnedFormalPort ? "Cell interfaces and " : ""}electrical facts were retained`,
         );
       }
     } catch (error) {
@@ -3747,11 +3746,14 @@ export function App({
     const schematicName = flattenRichText(
       instance.schematicName ?? { runs: [] },
     );
-    const primary =
-      instance.netlist?.reference ??
-      formalName ??
-      (schematicName || "Unreferenced");
-    return `${primary} · ${instance.symbolId}`;
+    const reference =
+      instance.schematicReference ?? instance.netlist?.reference ?? null;
+    const secondary = formalName ?? schematicName;
+    const identity =
+      reference && secondary && reference !== secondary
+        ? `${reference} · ${secondary}`
+        : (reference ?? secondary ?? "Unreferenced");
+    return `${identity} · ${instance.symbolId}`;
   }
 
   function selectionVisualMoveEdits(
@@ -5337,6 +5339,27 @@ export function App({
       ]).ok
     ) {
       setStatus(`Set netlist reference to ${reference}`);
+    }
+  }
+
+  function updateSelectedSchematicReference(value: string): void {
+    if (!selectedInstance) return;
+    const reference = value.trim();
+    if (!reference) {
+      setStatus("Schematic reference cannot be empty");
+      return;
+    }
+    if (reference === selectedInstance.schematicReference) return;
+    if (
+      transact([
+        {
+          kind: "set_instance_schematic_reference",
+          instanceId: selectedInstance.id,
+          reference,
+        },
+      ]).ok
+    ) {
+      setStatus(`Set schematic reference to ${reference}`);
     }
   }
 
@@ -7562,6 +7585,23 @@ export function App({
                   >
                     <div className="property-section-heading">Identity</div>
                     <dl className="component-readonly-fields">
+                      <div>
+                        <dt>Schematic reference</dt>
+                        <dd>
+                          <input
+                            key={`${selectedInstance.id}-${document.revision}-schematic-reference`}
+                            aria-label="Component schematic reference"
+                            defaultValue={
+                              selectedInstance.schematicReference ?? ""
+                            }
+                            onBlur={(event) =>
+                              updateSelectedSchematicReference(
+                                event.currentTarget.value,
+                              )
+                            }
+                          />
+                        </dd>
+                      </div>
                       {selectedInstance.netlist ? (
                         <div>
                           <dt>Netlist reference</dt>
@@ -7930,17 +7970,15 @@ export function App({
                         >
                           Mirror top/bottom
                         </button>
-                        {!selectedFormalTerminal ? (
-                          <button
-                            type="button"
-                            aria-label="Return component to Placement Tray"
-                            onClick={() =>
-                              returnInstancesToTray([selectedInstance.id])
-                            }
-                          >
-                            Return to tray
-                          </button>
-                        ) : null}
+                        <button
+                          type="button"
+                          aria-label="Return component to Placement Tray"
+                          onClick={() =>
+                            returnInstancesToTray([selectedInstance.id])
+                          }
+                        >
+                          Return to tray
+                        </button>
                       </div>
                     </div>
                   ) : null}

@@ -32,10 +32,9 @@ export function placementReferencePrefix(symbolId: string): string {
 }
 
 /**
- * Lowest unused per-prefix designator across the union of instance ids and
- * netlist references, so the visible label, the instance id, and the netlist
- * reference never collide with either domain (undo, reload, and deletion all
- * re-scan the live document, and freed numbers are reused).
+ * Lowest unused per-prefix schematic Reference. Internal IDs and netlist
+ * references are separate authorities, so allocation scans all three domains
+ * without letting one silently overwrite another.
  */
 export function nextInstanceDesignator(
   document: SchematicDocument,
@@ -45,6 +44,9 @@ export function nextInstanceDesignator(
   const used = new Set<string>();
   for (const instance of document.instances) {
     used.add(instance.id.toLowerCase());
+    if (instance.schematicReference) {
+      used.add(instance.schematicReference.toLowerCase());
+    }
     if (instance.netlist?.reference) {
       used.add(instance.netlist.reference.toLowerCase());
     }

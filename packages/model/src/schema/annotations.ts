@@ -37,7 +37,7 @@ export const AnnotationKindSchema = z.enum([
  */
 export const AnnotationTextBindingSchema = z.discriminatedUnion("kind", [
   z.strictObject({
-    /** The emitted SPICE/Spectre designator, never the internal object ID. */
+    /** The schematic-facing instance reference, never the internal object ID. */
     kind: z.literal("instance-designator"),
     instanceId: StableIdSchema,
   }),

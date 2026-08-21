@@ -112,6 +112,64 @@ function transaction(
 }
 
 describe("Instance lifecycle planning", () => {
+  it("returns a formal Cell Port without removing its exported interface", () => {
+    const document = createEmptyDocument("document-child", "Child");
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      schematicReference: "P1",
+      placement: {
+        position: { x: 80, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+    });
+    document.nets.push({
+      id: "net-vin",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    document.netlist = {
+      name: "Child",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-vin",
+          name: "VIN",
+          netId: "net-vin",
+          direction: "input",
+          interfaceInstanceId: "P1",
+        },
+      ],
+    };
+
+    const result = executeTransaction(
+      document,
+      transaction(
+        document.id,
+        planInstanceUnplacement(document, resolver, ["P1"], 1),
+      ),
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        instances: [{ id: "P1", placement: null }],
+        netlist: {
+          terminals: [
+            {
+              name: "VIN",
+              interfaceInstanceId: "P1",
+              netId: "net-vin",
+            },
+          ],
+        },
+        nets: [{ terminals: [{ instanceId: "P1", pinName: "P" }] }],
+      },
+    });
+  });
+
   it("returns an Instance to the tray without changing its electrical facts", () => {
     const document = lifecycleDocument();
     const edits = planInstanceUnplacement(document, resolver, ["R1"], 3);

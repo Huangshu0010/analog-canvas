@@ -3773,3 +3773,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   test-impact, diff checks, and complete `pnpm verify:branch` passed.
 - Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
   `13ba3a26`.
+
+## 2026-08-21 - Schematic reference and unified Port lifecycle
+
+- Changed areas: advanced canonical Projects to schema 17; separated the
+  visible `Instance.schematicReference` from emitted netlist references;
+  migrated schema 16 deterministically; made References visible by default;
+  and made formal Cell Ports returnable and re-placeable without changing
+  their interface semantics.
+- Validation: focused unit contracts (17 files / 172 tests), targeted
+  regression tests (2 files / 14 tests), formal-Port browser lifecycle (1
+  test), format, docs, test-impact, diff checks, complete workspace unit-test
+  execution, workspace build, and production preview smoke passed.
+- Commit status: committed on `codex/schematic-instance-lifecycle-ux` as
+  the current branch HEAD.

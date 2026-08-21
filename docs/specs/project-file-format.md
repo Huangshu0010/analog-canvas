@@ -2,17 +2,16 @@
 
 Status: `accepted`
 
-Current Project schema: `16`
+Current Project schema: `17`
 
 Primary owners: `packages/model` (current shape) and
 `packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`@icm/project-protocol` exposes `parseProject` and accepts Project schema 16
-and schema 15. Schema 15 advances directly to 16 by separating the ambiguous
-legacy reference-label projection into an electrical designator or a
-presentation-only schematic alias. Every reader returns the sole schema-16
-in-memory Project shape; schema 14 and older and all future versions are
+`@icm/project-protocol` exposes `parseProject` and accepts Project schema 17
+and schema 16. Schema 16 advances directly to 17 by adding an independent
+schematic Reference to every Instance. Every reader returns the sole schema-17
+in-memory Project shape; schema 15 and older and all future versions are
 rejected. There is no sequential migration registry or second in-memory Project
 shape.
 
@@ -25,8 +24,10 @@ shape.
   Each external definition has a stable identity, an ordered list of stable
   terminals, raw formal defaults, interface status and optional block
   presentation. It has no internal Document body.
-- `Instance.netlist` contains its reference, binding, and typed parameter
-  values. Import source order and symbol-mapping registry identity live in
+- `Instance.schematicReference` is the canvas-facing Reference for every
+  Instance. `Instance.netlist` contains the separate emitted reference,
+  binding, and typed parameter values for emitting Instances. Import source
+  order and symbol-mapping registry identity live in
   `Instance.importProvenance`; there is no persisted property bag.
 - Hierarchy is an acyclic graph of ordinary Instances whose typed subcircuit
   bindings resolve to child Documents; orphan Cell definitions are allowed.
@@ -53,8 +54,8 @@ shape.
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 15 or 16
--> direct v15-to-v16 upgrade when needed -> strict schema-16 validation -> open
+read text -> parse JSON -> require Project schema 16 or 17
+-> direct v16-to-v17 upgrade when needed -> strict schema-17 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```
 
@@ -64,7 +65,7 @@ after explicit human approval in the editor.
 
 A migrated formal file is marked as needing save. The editor does not silently
 overwrite the source selected through the browser file input. Browser recovery
-records may be canonicalized to v16 only after a successful validated write.
+records may be canonicalized to v17 only after a successful validated write.
 
 Project entry does not repair duplicate canonical supply Nets (`0` or `VDD`).
 Duplicate folded Net names are invalid input and remain a blocking diagnostic
@@ -73,7 +74,7 @@ until the author explicitly renames or merges the Nets.
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in
 `fixtures/projects/compatibility-corpus.json`; its accepted entries must all be
-already canonical Project schema 16. The rejected corpus names expected
+already canonical Project schema 17. The rejected corpus names expected
 validation failures.
 
 Viewport, selection, undo history, canvas overlays, Agent credentials,
