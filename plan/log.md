@@ -4475,6 +4475,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   verified in the running editor.
 - Commit status: completed on `claude/differential-output-opamp`; mainline
   merge gated on the remote required checks.
+
 ## 2026-08-22 - Unified copy placement transforms
 
 - Target: `plan/2026-08-22-unified-copy-transform/plan.md` (completed).
@@ -4535,7 +4536,6 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Commit status: committed locally as `bd5bc67e`; mainline delivery proceeds
   through the canonical local and remote gates.
 
-
 ## 2026-08-22 - Publish button spells out its destination
 
 - Changed areas: the menubar publish control reads "Publish to Gallery"
@@ -4593,3 +4593,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   it, prettier, diff checks; reproduced and re-verified in a running editor.
 - Commit status: completed on `claude/seed-placement-preview`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 — Gallery masonry feed (G4 first slice)
+
+- Target: `plan/2026-08-22-gallery-masonry/plan.md` (completed).
+- Change: replaced the CSS multi-column wall with a true masonry
+  component (equal-width columns, natural tile heights, greedy
+  shortest-column placement with left-to-right reading order, one
+  ResizeObserver relayout on resize/image load); owner picked it from
+  side-by-side renderings of the live entries.
+- Validation: component suite 13, gallery Playwright 11/11 (new
+  placement scenario), typecheck, prettier, test-impact, diff checks.
+- Commit status: completed on `claude/gallery-masonry`.
