@@ -4532,4 +4532,5 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: live editor `Issues (0)` for both fixtures; focused Example and
   bulk tests; focused Example browser workflow; static contracts, preflight,
   test-impact, and affected unit/component/hierarchy/editor gates.
-- Commit status: pending local commit on `codex/unified-transform-power-bulk`.
+- Commit status: committed locally as `cd180595`; mainline delivery proceeds
+  through the canonical local and remote gates.
