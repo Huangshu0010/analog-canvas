@@ -1078,7 +1078,7 @@ test("double-clicking a placed device opens Properties for editing", async ({
   await expect(propertyValue).toBeFocused();
 });
 
-test("Library rail folds the sidebar; Insert and title open the catalog", async ({
+test("Library rail folds the sidebar; Insert opens the catalog", async ({
   page,
 }) => {
   await page.goto("/editor");
@@ -1099,10 +1099,11 @@ test("Library rail folds the sidebar; Insert and title open the catalog", async 
     page.getByRole("dialog", { name: "Insert Component" }),
   ).toHaveCount(0);
 
-  await page
-    .getByRole("button", { name: /Library/ })
-    .filter({ hasText: "Quick place" })
-    .click();
+  // No title banner competes with the footer button or the shortcut.
+  await expect(panel.getByRole("button", { name: /Quick place/ })).toHaveCount(
+    0,
+  );
+  await page.keyboard.press("i");
   await expect(
     page.getByRole("dialog", { name: "Insert Component" }),
   ).toBeVisible();

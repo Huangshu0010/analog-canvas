@@ -87,6 +87,7 @@ export function StyleDialog({ overrides, onApply, onClose }: StyleDialogProps) {
   const changeKnob = (key: keyof StyleOverrides, value: number): void => {
     onApply(normalizedStyleOverrides({ ...draft, [key]: value }));
   };
+  const untouched = normalizedStyleOverrides(draft) === null;
   return (
     <div
       className="insert-dialog-backdrop"
@@ -95,26 +96,30 @@ export function StyleDialog({ overrides, onApply, onClose }: StyleDialogProps) {
       }}
     >
       <section
-        className="insert-component-dialog style-dialog"
+        className="style-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="document-style-title"
         data-testid="document-style-dialog"
       >
-        <header className="insert-dialog-header">
-          <div>
-            <p>Scales over the document&apos;s style profile</p>
-            <h2 id="document-style-title">Document style</h2>
-          </div>
+        <header className="style-dialog-header">
+          <p>Scales over the document&apos;s style profile</p>
+          <h2 id="document-style-title">Document style</h2>
         </header>
-        <div className="insert-dialog-body">
-          <section className="insert-control-column">
-            {STYLE_KNOBS.map((knob) => (
-              <label key={knob.key} title={knob.description}>
-                {knob.label}
+        <div className="style-dialog-knobs">
+          {STYLE_KNOBS.map((knob) => (
+            <label key={knob.key} className="style-dialog-knob">
+              <span className="style-dialog-knob-copy">
+                <span className="style-dialog-knob-label">{knob.label}</span>
+                <span className="style-dialog-knob-description">
+                  {knob.description}
+                </span>
+              </span>
+              <span className="style-dialog-knob-control">
                 <select
                   aria-label={knob.label}
                   value={String(draft[knob.key])}
+                  data-changed={draft[knob.key] === 1 ? undefined : "true"}
                   onChange={(event) =>
                     changeKnob(knob.key, Number(event.currentTarget.value))
                   }
@@ -125,19 +130,26 @@ export function StyleDialog({ overrides, onApply, onClose }: StyleDialogProps) {
                     </option>
                   ))}
                 </select>
-              </label>
-            ))}
-            <button
-              type="button"
-              onClick={() => onApply(null)}
-              disabled={normalizedStyleOverrides(draft) === null}
-            >
-              Reset all to profile defaults
-            </button>
-            <button type="button" onClick={onClose}>
-              Close
-            </button>
-          </section>
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className="style-dialog-actions">
+          <button
+            type="button"
+            className="style-dialog-reset"
+            onClick={() => onApply(null)}
+            disabled={untouched}
+          >
+            Reset all to profile defaults
+          </button>
+          <button
+            type="button"
+            className="style-dialog-primary"
+            onClick={onClose}
+          >
+            Done
+          </button>
         </div>
       </section>
     </div>

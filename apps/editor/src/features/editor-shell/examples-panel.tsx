@@ -46,13 +46,6 @@ export function ExamplesPanel({
       data-testid="examples-panel"
       data-open={open ? "true" : "false"}
     >
-      <header className="shapes-panel-header">
-        <div className="shapes-panel-static-title">
-          <span className="shapes-kicker">Quick place</span>
-          <span className="shapes-panel-heading">Examples</span>
-        </div>
-      </header>
-
       <div className="shapes-panel-body">
         <div className="shapes-example-list">
           {libraryProjectExamples.map((example) => (

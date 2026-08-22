@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
+  CSSProperties,
   DragEvent,
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
@@ -309,7 +310,11 @@ import { useSelectionController } from "../features/selection/selection-controll
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
 import { InstanceTableDialog } from "../features/properties/instance-table-dialog";
 import { capacitorPlatePropertyRows } from "../features/properties/capacitor-plate-properties";
-import { useEditorPanels } from "../features/editor-shell/use-editor-panels";
+import {
+  LIBRARY_WIDTH_MAX,
+  LIBRARY_WIDTH_MIN,
+  useEditorPanels,
+} from "../features/editor-shell/use-editor-panels";
 import {
   type InstanceMovePreview,
   useSelectionInteraction,
@@ -370,6 +375,7 @@ import type { SnapAnchor, SnapGuideLine, SnapResult } from "../snap/engine";
 const DEFAULT_VIEWBOX: GridRect = { x: 0, y: 0, width: 960, height: 640 };
 const RECENT_COMPONENTS_STORAGE_KEY = "icm.recent-components.v1";
 const LIBRARY_PANEL_STORAGE_KEY = "icm.library-panel-open.v1";
+const LIBRARY_WIDTH_STORAGE_KEY = "icm.library-panel-width.v1";
 const REFRESH_RESTORE_STORAGE_KEY = "icm.restore-after-refresh.v1";
 const COMPACT_LAYOUT_MEDIA_QUERY = "(max-width: 860px)";
 const DRAG_START_DISTANCE_PX = 4;
@@ -473,9 +479,15 @@ export function App({
   const helpCloseRef = useRef<HTMLButtonElement>(null);
   const aboutButtonRef = useRef<HTMLButtonElement>(null);
   const aboutCloseRef = useRef<HTMLButtonElement>(null);
+  const libraryResizeOriginRef = useRef<{
+    pointerX: number;
+    width: number;
+  } | null>(null);
   const {
     libraryPanelOpen,
     setLibraryPanelOpen,
+    libraryWidth,
+    setLibraryWidth,
     compactLayout,
     setCompactLayout,
     compactLibraryPanelOpen,
@@ -508,6 +520,7 @@ export function App({
     initialCompact: compactLayoutMatches(COMPACT_LAYOUT_MEDIA_QUERY),
     compactMediaQuery: COMPACT_LAYOUT_MEDIA_QUERY,
     libraryStorageKey: LIBRARY_PANEL_STORAGE_KEY,
+    libraryWidthStorageKey: LIBRARY_WIDTH_STORAGE_KEY,
     helpButtonRef,
     helpCloseRef,
     aboutButtonRef,
@@ -6918,9 +6931,9 @@ export function App({
               title="Back to the gallery"
             >
               <span className="app-brand-mark" aria-hidden="true" />
+              <h1 title="Analog Canvas">Analog Canvas</h1>
             </a>
             <div className="app-brand-copy">
-              <h1 title="Analog Canvas">Analog Canvas</h1>
               <p title={`${project.name} / ${document.name}`}>
                 {project.name} /{" "}
                 <span data-testid="active-document-name">{document.name}</span>
@@ -6981,14 +6994,6 @@ export function App({
                     onClick={() => void saveCurrentProjectAsExample()}
                   >
                     Save as Example
-                  </button>
-                  <button
-                    type="button"
-                    aria-haspopup="dialog"
-                    aria-expanded={publishGalleryOpen}
-                    onClick={() => setPublishGalleryOpen(true)}
-                  >
-                    Publish to Gallery…
                   </button>
                   <span className="command-group-label">Export</span>
                   <button
@@ -7148,6 +7153,15 @@ export function App({
                 onClick={() => setSearchOpen(true)}
               >
                 Search
+              </button>
+              <button
+                type="button"
+                data-testid="publish-gallery-button"
+                aria-haspopup="dialog"
+                aria-expanded={publishGalleryOpen}
+                onClick={() => setPublishGalleryOpen(true)}
+              >
+                Publish…
               </button>
             </div>
           </nav>
@@ -7644,6 +7658,7 @@ export function App({
             ? "app-workspace"
             : "app-workspace library-collapsed"
         }
+        style={{ "--icm-shapes-width": `${libraryWidth}px` } as CSSProperties}
       >
         <aside className="tool-rail" aria-label="Tool rail">
           <button
@@ -7701,6 +7716,46 @@ export function App({
             onDeleteUserExample={(id) => void deleteUserExample(id)}
           />
         )}
+        {visibleLibraryPanelOpen ? (
+          <div
+            className="library-resize-handle"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize the Library panel"
+            aria-valuenow={libraryWidth}
+            aria-valuemin={LIBRARY_WIDTH_MIN}
+            aria-valuemax={LIBRARY_WIDTH_MAX}
+            tabIndex={0}
+            data-testid="library-resize-handle"
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.currentTarget.setPointerCapture(event.pointerId);
+              libraryResizeOriginRef.current = {
+                pointerX: event.clientX,
+                width: libraryWidth,
+              };
+            }}
+            onPointerMove={(event) => {
+              const origin = libraryResizeOriginRef.current;
+              if (!origin) return;
+              setLibraryWidth(origin.width + (event.clientX - origin.pointerX));
+            }}
+            onPointerUp={(event) => {
+              libraryResizeOriginRef.current = null;
+              event.currentTarget.releasePointerCapture(event.pointerId);
+            }}
+            onKeyDown={(event) => {
+              const step = event.shiftKey ? 32 : 8;
+              if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                setLibraryWidth(libraryWidth - step);
+              } else if (event.key === "ArrowRight") {
+                event.preventDefault();
+                setLibraryWidth(libraryWidth + step);
+              }
+            }}
+          />
+        ) : null}
         <aside
           className={selectionOpen ? "selection-dock open" : "selection-dock"}
           aria-label="Properties"
