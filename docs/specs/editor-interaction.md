@@ -104,6 +104,30 @@ schematic-math style. It creates no VDD Instance and exits placement after the
 commit. Deleting the rail also deletes its power label and rail-only Junctions;
 an otherwise-unused local Net follows the ordinary orphan lifecycle.
 
+## Project sessions
+
+New, Open, SPICE import, Gallery/My Example open, and recovery restore are
+Project-session transitions rather than Document edits. A dirty current Project
+always requires an explicit discard or cancel decision before one of these
+transitions commits; a successful browser-recovery write is safety evidence,
+not authorization to replace the foreground Project. Candidate files and
+gallery/recovery payloads are parsed and validated before that decision.
+
+The editor retains one in-memory Previous Project snapshot when a live session
+is replaced. **Previous Project** swaps it with the current session through the
+same dirty-work guard. This bounded session rollback is deliberately separate
+from Document Undo/Redo. Boot-time deep links and an explicit Refresh restore do
+not create a Previous Project entry because no live foreground session is being
+replaced.
+
+Project dirty detection covers `structureRevision` and every Document revision,
+not only the active Cell. **New Project** creates a new canonical Project with
+one empty Main Cell, no SPICE source manifest entries, and no external
+subcircuit definitions; it does not mutate the previous Project into an empty
+shell. After a Project has been opened or explicitly saved/downloaded,
+**Revert to Last Saved** restores that exact formal snapshot through the same
+guard and makes the outgoing working copy the Previous Project.
+
 ## Interaction states
 
 The canonical reducer owns exactly one exclusive canvas interaction:

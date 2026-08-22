@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 
 import { createEmptyProject } from "@icm/model";
 import { serializeProject } from "@icm/project-protocol";
+import { chooseComponent } from "./editor-fixtures.js";
 
 const ENTRY = {
   id: "g-ring",
@@ -763,7 +764,7 @@ test("an opened gallery entry offers updating in place", async ({ page }) => {
   expect(updates[0]!.body.name).toBe(ENTRY.name);
 });
 
-test("the Examples panel lists the gallery and opens an entry", async ({
+test("the Examples panel guards dirty work before opening an entry", async ({
   page,
 }) => {
   await mockGallery(page, [ENTRY]);
@@ -772,6 +773,12 @@ test("the Examples panel lists the gallery and opens an entry", async ({
   );
 
   await page.goto("/editor");
+  await chooseComponent(page, "resistor");
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 360, y: 230 } });
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("hit-R1")).toHaveCount(1);
   await page.getByTestId("examples-toggle").click();
   const panel = page.getByTestId("examples-panel");
   await expect(panel).toHaveAttribute("data-open", "true");
@@ -785,9 +792,19 @@ test("the Examples panel lists the gallery and opens an entry", async ({
   ).toHaveCount(0);
 
   await card.click();
+  const dialog = page.getByRole("dialog", {
+    name: "Protect the current Project",
+  });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel (keep editing)" }).click();
+  await expect(page.getByTestId("hit-R1")).toHaveCount(1);
+
+  await card.click();
+  await dialog.getByRole("button", { name: "Discard and continue" }).click();
   await expect(page.getByTestId("status")).toContainText(
     `Opened gallery circuit: ${ENTRY.name}`,
   );
+  await expect(page.getByTestId("hit-R1")).toHaveCount(0);
 });
 
 test("bundled starter tiles open their example in the editor", async ({

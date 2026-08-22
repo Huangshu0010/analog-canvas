@@ -3100,6 +3100,10 @@ test("retains recovery across save and project replacement", async ({
         "fixtures/projects/phase-1-manual/project.icproj.json",
       ),
     );
+  await page
+    .getByRole("dialog", { name: "Protect the current Project" })
+    .getByRole("button", { name: "Discard and continue" })
+    .click();
   await expect(page.getByTestId("active-document-name")).toHaveText(
     "Manual Editor Demo",
   );
@@ -3683,6 +3687,10 @@ test("saves, reopens, and deletes a user Library example", async ({ page }) => {
 
   // Opening the snapshot replaces the live Project with the saved circuit.
   await card.getByRole("button", { name: /Open my example/ }).click();
+  await page
+    .getByRole("dialog", { name: "Protect the current Project" })
+    .getByRole("button", { name: "Discard and continue" })
+    .click();
   await expect(page.getByTestId("status")).toContainText("Opened my example");
   await expect(page.getByTestId("hit-R1")).toHaveCount(1);
 

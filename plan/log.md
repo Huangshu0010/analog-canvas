@@ -4860,3 +4860,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   smoke, and all 205 browser tests.
 - Commit status: stacked review branch prepared for required remote checks and
   one PR merge to `main`.
+
+## 2026-08-23 - Project replacement lifecycle closure
+
+- Target: `plan/2026-08-23-project-lifecycle-closure/plan.md` (completed).
+- Changed areas: Project-wide dirty detection; explicit guarded New, Open,
+  import, gallery/example, and recovery replacement; one reversible Previous
+  Project; and Revert to the last formal opened/saved snapshot.
+- Validation: focused lifecycle units (3), project-file browser tests (10),
+  gallery/recovery regressions, preflight, affected units (1188), and all 98
+  manual-editor browser scenarios.
+- Commit status: prepared on `codex/project-net-lifecycle`; mainline delivery
+  remains gated on canonical local and remote checks.

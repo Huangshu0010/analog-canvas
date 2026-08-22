@@ -243,6 +243,7 @@ import {
   type LibraryProjectExample,
 } from "../examples/library-examples";
 import { useDocumentController } from "../document/document-controller";
+import { projectChangeToken } from "../document/project-session-lifecycle";
 import {
   applyDraftingHandle,
   applyDraftingStylePatch,
@@ -308,8 +309,6 @@ import {
   razaviManualBulkConnectionEdits,
   razaviMosPresentationEdits,
 } from "../presentation/razavi-presentation";
-import { createRoutingDemoProject } from "../demos/routing-demo";
-import { createVisualDemoProject } from "../demos/visual-demo";
 import { useRecoveryCoordinator } from "../document/recovery-coordinator";
 import type {
   BrowserRecoveryFormalFileHint,
@@ -469,6 +468,16 @@ interface ReplaceGuardState {
   perform: () => void | Promise<void>;
 }
 
+interface FormalProjectBaseline {
+  project: CircuitProject;
+  viewBox: GridRect;
+}
+
+interface PreviousProjectSnapshot extends FormalProjectBaseline {
+  fileState: ProjectFileState;
+  formalBaseline: FormalProjectBaseline | null;
+}
+
 export interface AppProps {
   project?: CircuitProject;
   visitStats?: { pv: number; uv: number } | null;
@@ -589,10 +598,14 @@ export function App({
   // state: a commit makes it dirty again, only a confirmed File System
   // Access close or an explicit download transitions it out of dirty.
   const [fileState, setFileState] = useState<ProjectFileState>("new");
+  const [formalProjectBaseline, setFormalProjectBaseline] =
+    useState<FormalProjectBaseline | null>(null);
   const fileStateBaselineRef = useRef<{
     session: string;
-    revision: number;
+    token: string;
   } | null>(null);
+  const [previousProject, setPreviousProject] =
+    useState<PreviousProjectSnapshot | null>(null);
   const [replaceGuard, setReplaceGuard] = useState<ReplaceGuardState | null>(
     null,
   );
@@ -1921,12 +1934,13 @@ export function App({
     void refreshUserExamples();
   }
 
-  // Landing-page deep links: `/g/<id>` opens a published gallery entry and
-  // `/editor?example=<id>` opens a bundled example. Both replace the fresh
-  // Open one gallery entry into the live editor: the same path serves the
-  // `/g/<id>` boot and the Examples panel, and it remembers the entry so
-  // the publish dialog can offer updating it.
-  async function openGalleryEntryById(entryId: string): Promise<void> {
+  // The same loader serves a fresh `/g/<id>` boot and the live Examples panel.
+  // Only the live path crosses an existing Project session and needs the
+  // replacement guard and Previous Project snapshot.
+  async function openGalleryEntryById(
+    entryId: string,
+    protectCurrentProject = true,
+  ): Promise<void> {
     try {
       const response = await fetch(`/api/gallery/${entryId}`, {
         credentials: "same-origin",
@@ -1950,17 +1964,29 @@ export function App({
         return;
       }
       const galleryProject = parseProject(payload.projectText);
-      replaceActiveProject(galleryProject);
-      setGalleryEntryContext({
-        id: entryId,
-        ownerUserId: payload.ownerUserId ?? null,
-        author: payload.entry?.author ?? "",
-        description: payload.entry?.description ?? "",
-        tags: payload.entry?.tags ?? [],
-      });
-      setStatus(
-        `Opened gallery circuit: ${payload.entry?.name ?? galleryProject.name}`,
-      );
+      const install = () => {
+        replaceActiveProject(galleryProject, DEFAULT_VIEWBOX, {
+          rememberPrevious: protectCurrentProject,
+        });
+        setGalleryEntryContext({
+          id: entryId,
+          ownerUserId: payload.ownerUserId ?? null,
+          author: payload.entry?.author ?? "",
+          description: payload.entry?.description ?? "",
+          tags: payload.entry?.tags ?? [],
+        });
+        setStatus(
+          `Opened gallery circuit: ${payload.entry?.name ?? galleryProject.name}`,
+        );
+      };
+      if (protectCurrentProject) {
+        await guardDirtyReplacement(
+          `Open gallery circuit ${payload.entry?.name ?? galleryProject.name}`,
+          install,
+        );
+      } else {
+        install();
+      }
     } catch {
       setStatus("This gallery entry is unavailable");
     }
@@ -1975,7 +2001,7 @@ export function App({
       "example",
     );
     if (initialGalleryEntryId) {
-      void openGalleryEntryById(initialGalleryEntryId);
+      void openGalleryEntryById(initialGalleryEntryId, false);
       return;
     }
     if (exampleId) {
@@ -1984,7 +2010,9 @@ export function App({
         (candidate) => candidate.id === exampleId,
       );
       if (exampleProject && example) {
-        replaceActiveProject(exampleProject);
+        replaceActiveProject(exampleProject, DEFAULT_VIEWBOX, {
+          rememberPrevious: false,
+        });
         setStatus(`Opened example: ${example.name}`);
       }
     }
@@ -3105,8 +3133,24 @@ export function App({
       source?: BrowserRecoverySource;
       keepWorkingCopy?: boolean;
       formalFileHint?: BrowserRecoveryFormalFileHint;
+      rememberPrevious?: boolean;
+      fileState?: ProjectFileState;
+      formalBaseline?: FormalProjectBaseline | null;
     } = {},
   ): SchematicDocument {
+    if (options.rememberPrevious !== false) {
+      setPreviousProject({
+        project: structuredClone(project),
+        viewBox: { ...viewBox },
+        fileState,
+        formalBaseline: formalProjectBaseline
+          ? {
+              project: structuredClone(formalProjectBaseline.project),
+              viewBox: { ...formalProjectBaseline.viewBox },
+            }
+          : null,
+      });
+    }
     // Drop any pending recovery write for the outgoing project so it cannot
     // revive after Save/Discard/Open/Import/Restore/demo-load swaps the
     // project, then give the incoming project its own working-copy identity
@@ -3122,13 +3166,18 @@ export function App({
     setAgentFileCandidate(null);
     setImportReport(null);
     setImportReviewOpen(false);
+    setGalleryEntryContext(null);
     const prepared = materializeRazaviProjectBulkConnections(nextProject);
     const nextDocument = replaceProject(prepared.project);
     documentViewBoxes.current = new Map();
     setDocumentStack([]);
     setViewBox(nextViewBox, nextDocument.presentation.grid);
     resetInteractionState();
-    setFileState(options.source === "opened-file" ? "opened" : "new");
+    setFileState(
+      options.fileState ??
+        (options.source === "opened-file" ? "opened" : "new"),
+    );
+    setFormalProjectBaseline(options.formalBaseline ?? null);
     // Seed the incoming working copy immediately; the outgoing project's
     // stored records are retained under its own session.
     stageRecovery(prepared.project);
@@ -3400,12 +3449,6 @@ export function App({
     setStatus(
       `Place copy mirrored ${direction === "left-right" ? "left/right" : "top/bottom"} · R rotates · Esc cancels`,
     );
-  }
-
-  function loadRoutingDemo(): void {
-    const demo = createRoutingDemoProject();
-    replaceActiveProject(demo);
-    setStatus("Loaded Phase 3 routing demo");
   }
 
   function routeAnchor(
@@ -4744,6 +4787,10 @@ export function App({
     // fallback download is reported as requested, not saved.
     const outcome = await saveProjectArtifact(project);
     if (outcome.status === "write-confirmed") {
+      setFormalProjectBaseline({
+        project: structuredClone(project),
+        viewBox: { ...viewBox },
+      });
       noteRecoveryFormalFileHint({
         name: outcome.fileName,
         lastConfirmedWriteAt: outcome.at,
@@ -4753,6 +4800,13 @@ export function App({
       return;
     }
     if (outcome.status === "download-requested") {
+      // The browser cannot confirm durable download completion, but this is
+      // still the exact formal snapshot the user requested and may revert to
+      // during the current session.
+      setFormalProjectBaseline({
+        project: structuredClone(project),
+        viewBox: { ...viewBox },
+      });
       noteRecoveryFormalFileHint({
         name: outcome.fileName,
         lastDownloadRequestedAt: new Date().toISOString(),
@@ -4785,11 +4839,7 @@ export function App({
     return fileState === "dirty" || fileState === "write-failed";
   }
 
-  /**
-   * Protect outgoing dirty work before Open/Import/Replace: first confirm the
-   * newest revision is stored in recovery; if recovery cannot confirm, let
-   * the human choose between downloading, replacing anyway, and cancelling.
-   */
+  /** Protect outgoing dirty work before every live Project replacement. */
   async function guardDirtyReplacement(
     intent: string,
     perform: () => void | Promise<void>,
@@ -4799,11 +4849,9 @@ export function App({
       return;
     }
     stageRecovery(project);
-    const recoveryAfterFlush = await flushRecovery();
-    if (recoveryAfterFlush === "stored") {
-      await perform();
-      return;
-    }
+    // Recovery is best-effort safety, never authorization to discard the
+    // foreground Project. Even a confirmed write still requires a choice.
+    await flushRecovery();
     setReplaceGuard({ intent, perform });
   }
 
@@ -4826,6 +4874,54 @@ export function App({
     } else {
       setStatus(`Download failed: ${outcome.message}`);
     }
+  }
+
+  function createNewProject(): void {
+    void guardDirtyReplacement("Create a new Project", () => {
+      const next = createEmptyProject(
+        createId("project"),
+        "New Circuit",
+        createId("document"),
+      );
+      replaceActiveProject(next, DEFAULT_VIEWBOX, { source: "new" });
+      setStatus("Created a new Project · Previous Project is available");
+    });
+  }
+
+  function restorePreviousProject(): void {
+    const previous = previousProject;
+    if (!previous) return;
+    void guardDirtyReplacement(`Return to ${previous.project.name}`, () => {
+      const restored = replaceActiveProject(
+        previous.project,
+        previous.viewBox,
+        {
+          source: "recovered",
+          fileState: previous.fileState,
+          formalBaseline: previous.formalBaseline,
+        },
+      );
+      setStatus(
+        `Returned to Previous Project ${previous.project.name} at revision ${restored.revision}`,
+      );
+    });
+  }
+
+  function revertToFormalProjectBaseline(): void {
+    const baseline = formalProjectBaseline;
+    if (!baseline || !isDirtyWork()) return;
+    void guardDirtyReplacement("Revert to the last saved Project", () => {
+      const restored = replaceActiveProject(
+        baseline.project,
+        baseline.viewBox,
+        {
+          source: "opened-file",
+          fileState: "opened",
+          formalBaseline: baseline,
+        },
+      );
+      setStatus(`Reverted to saved Project revision ${restored.revision}`);
+    });
   }
 
   function openRecoveryDialog(): void {
@@ -4863,16 +4959,21 @@ export function App({
         );
         return;
       }
-      // Restoring forks a fresh working copy instead of overwriting the
-      // stored record another tab may still be writing.
-      const recoveredDocument = replaceActiveProject(
-        read.project,
-        DEFAULT_VIEWBOX,
-        { source: "recovered" },
+      await guardDirtyReplacement(
+        `Restore recovered Project ${read.project.name}`,
+        async () => {
+          // Restoring forks a fresh working copy instead of overwriting the
+          // stored record another tab may still be writing.
+          const recoveredDocument = replaceActiveProject(
+            read.project,
+            DEFAULT_VIEWBOX,
+            { source: "recovered" },
+          );
+          setRecoveryDialogOpen(false);
+          await discoverRecovery();
+          setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
+        },
       );
-      setRecoveryDialogOpen(false);
-      await discoverRecovery();
-      setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
     })();
   }
 
@@ -4943,32 +5044,38 @@ export function App({
       const restoredDocument = replaceActiveProject(
         read.project,
         DEFAULT_VIEWBOX,
-        { source: "recovered", keepWorkingCopy: true },
+        {
+          source: "recovered",
+          keepWorkingCopy: true,
+          rememberPrevious: false,
+        },
       );
       setStatus(`Restored recovery revision ${restoredDocument.revision}`);
     })();
   }, [restoreAfterRefresh, recoveryReady, recoveryWorkingCopyId]);
 
-  // Any committed revision inside one Project session makes the working copy
-  // dirty relative to its formal file again. A replacement re-baselines via
-  // its own projectSessionId and sets the state explicitly.
+  const currentProjectChangeToken = projectChangeToken(project);
+
+  // Any Document or Project-structure revision inside one session makes the
+  // working copy dirty. A replacement changes projectSessionId and establishes
+  // a new observation baseline without confusing it with Document Undo.
   useEffect(() => {
     const baseline = fileStateBaselineRef.current;
     if (baseline === null || baseline.session !== projectSessionId) {
       fileStateBaselineRef.current = {
         session: projectSessionId,
-        revision: document.revision,
+        token: currentProjectChangeToken,
       };
       return;
     }
-    if (baseline.revision !== document.revision) {
+    if (baseline.token !== currentProjectChangeToken) {
       fileStateBaselineRef.current = {
         session: projectSessionId,
-        revision: document.revision,
+        token: currentProjectChangeToken,
       };
       setFileState("dirty");
     }
-  }, [document.revision, projectSessionId]);
+  }, [currentProjectChangeToken, projectSessionId]);
 
   function refreshApp(): void {
     void (async () => {
@@ -4983,23 +5090,27 @@ export function App({
 
   async function openProjectFile(file: File | null): Promise<void> {
     if (!file) return;
-    await guardDirtyReplacement(`Open ${file.name}`, async () => {
-      const staged = await stageProjectFile(file, (candidate) =>
-        findUnsupportedProjectSymbolIds(candidate, builtInSymbols),
+    const staged = await stageProjectFile(file, (candidate) =>
+      findUnsupportedProjectSymbolIds(candidate, builtInSymbols),
+    );
+    if (staged.status === "rejected") {
+      // Validate a candidate before asking permission to replace the current
+      // Project. Invalid input never creates a destructive-choice dialog.
+      setStatus(
+        `Project not opened — ${formatProjectOpenDiagnostics(staged.diagnostics)}`,
       );
-      if (staged.status === "rejected") {
-        // A rejected user file keeps a code and path in the status line so
-        // the reason survives later status updates.
-        setStatus(
-          `Project not opened — ${formatProjectOpenDiagnostics(staged.diagnostics)}`,
-        );
-        return;
-      }
+      return;
+    }
+    await guardDirtyReplacement(`Open ${file.name}`, () => {
       // A successful open retains the outgoing Project's recovery records
       // and immediately seeds the incoming Project's own working copy.
       replaceActiveProject(staged.project, DEFAULT_VIEWBOX, {
         source: "opened-file",
         formalFileHint: { name: staged.fileName },
+        formalBaseline: {
+          project: structuredClone(staged.project),
+          viewBox: { ...DEFAULT_VIEWBOX },
+        },
       });
       if (staged.migrated) setFileState("dirty");
       setStatus(
@@ -5008,12 +5119,6 @@ export function App({
           : `Opened ${staged.fileName} at revision ${staged.topDocumentRevision}`,
       );
     });
-  }
-
-  function loadVisualDemo(): void {
-    const next = createVisualDemoProject();
-    replaceActiveProject(next, { x: 20, y: -10, width: 430, height: 350 });
-    setStatus("Loaded Phase 5 visual demo");
   }
 
   // Single entry point for selecting a drafting object. Editing is opened
@@ -7183,6 +7288,9 @@ export function App({
               <details className="command-menu" name="editor-command-menu">
                 <summary>File</summary>
                 <div className="command-popover">
+                  <button type="button" onClick={createNewProject}>
+                    New Project
+                  </button>
                   <button type="button" onClick={saveProjectFile}>
                     Save Project
                   </button>
@@ -7256,6 +7364,25 @@ export function App({
                     onClick={() => exportDesignNetlist("spectre")}
                   >
                     Spectre netlist
+                  </button>
+                  <button
+                    type="button"
+                    onClick={restorePreviousProject}
+                    disabled={previousProject === null}
+                    title={
+                      previousProject
+                        ? `Return to ${previousProject.project.name}`
+                        : "No previous Project in this editor session"
+                    }
+                  >
+                    Previous Project
+                  </button>
+                  <button
+                    type="button"
+                    onClick={revertToFormalProjectBaseline}
+                    disabled={formalProjectBaseline === null || !isDirtyWork()}
+                  >
+                    Revert to Last Saved
                   </button>
                   {recoverySessions.length > 0 ? (
                     <button type="button" onClick={openRecoveryDialog}>
