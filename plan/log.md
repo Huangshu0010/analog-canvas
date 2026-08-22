@@ -4882,3 +4882,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: worker gallery 17, units 78, gallery Playwright 21/21,
   typecheck, prettier, test-impact, diff checks.
 - Commit status: completed on `claude/gallery-version-history`.
+
+## 2026-08-22 — Exempt privileged submitters from the daily gallery quota
+
+- Plan: `plan/2026-08-22-exempt-admin-quota/plan.md` (complete)
+- The owner's session hit the 10-per-day hashed-IP submission quota.
+  `GalleryDO.submit` now takes `enforceLimit`; `handleSubmission` sends
+  `enforceLimit: !privileged`, so bearer/admin/moderator submissions and
+  updates are never rate-limited while ordinary and anonymous paths keep
+  the quota. Spec updated; rate-limit test reworked to cover both sides
+  (`worker/gallery.test.ts`, 17 passed). Typecheck clean.

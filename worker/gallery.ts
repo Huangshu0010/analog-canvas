@@ -257,26 +257,31 @@ export class GalleryDO {
     const entry = body.entry as EntryRow;
     const day = String(body.day);
     const submitterHash = String(body.submitterHash);
+    // The daily quota is anti-garbage protection for ordinary submitters;
+    // the bearer and admin/moderator sessions are exempt (they curate).
+    const enforceLimit = body.enforceLimit !== false;
     const outcome = this.state.storage.transactionSync(() => {
-      const used =
-        this.sql
-          .exec<{
-            count: number;
-          }>(
-            "SELECT count FROM gallery_submissions WHERE day = ? AND submitter_hash = ?",
-            day,
-            submitterHash,
-          )
-          .toArray()[0]?.count ?? 0;
-      if (used >= GALLERY_DAILY_SUBMISSION_LIMIT) {
-        return { status: "rate-limited" as const };
+      if (enforceLimit) {
+        const used =
+          this.sql
+            .exec<{
+              count: number;
+            }>(
+              "SELECT count FROM gallery_submissions WHERE day = ? AND submitter_hash = ?",
+              day,
+              submitterHash,
+            )
+            .toArray()[0]?.count ?? 0;
+        if (used >= GALLERY_DAILY_SUBMISSION_LIMIT) {
+          return { status: "rate-limited" as const };
+        }
+        this.sql.exec(
+          `INSERT INTO gallery_submissions(day, submitter_hash, count) VALUES (?, ?, 1)
+           ON CONFLICT(day, submitter_hash) DO UPDATE SET count = count + 1`,
+          day,
+          submitterHash,
+        );
       }
-      this.sql.exec(
-        `INSERT INTO gallery_submissions(day, submitter_hash, count) VALUES (?, ?, 1)
-         ON CONFLICT(day, submitter_hash) DO UPDATE SET count = count + 1`,
-        day,
-        submitterHash,
-      );
       this.sql.exec(
         `INSERT INTO gallery_entries(
           id, name, author, description, created_at, schema_version,
@@ -821,6 +826,7 @@ async function handleSubmission(
     {
       day: now.toISOString().slice(0, 10),
       submitterHash: await submitterHash(request),
+      enforceLimit: !privileged,
       entry: {
         id: crypto.randomUUID(),
         name,

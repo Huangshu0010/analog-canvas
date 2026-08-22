@@ -48,8 +48,10 @@ trimmed `name` (required, ≤120), optional `author` (≤40), `description`
 chars each, at most 5, deduplicated — `sanitizeGalleryTags` is the one
 normalization for writes and filters), `projectText` ≤2 MiB. The Worker validates, stamps the canonical
 serialization, renders the preview, and stores the entry as `public`.
-Submissions count against a per-submitter (hashed IP) limit of 10 per UTC
-day.
+Ordinary and anonymous submissions count against a per-submitter (hashed
+IP) limit of 10 per UTC day; privileged submitters (the bearer and
+admin/moderator sessions) are exempt — the quota is anti-garbage
+protection, and curators are the ones cleaning up.
 
 Publishing authority (since G3): the bearer and admin/moderator sessions
 publish directly as `public`; an ordinary signed-in session submits into
