@@ -2261,7 +2261,9 @@ test("R rotates a copy preview before committing the copied component", async ({
   await page.mouse.move(box.x + 560, box.y + 340);
   const previewSymbol = page
     .getByTestId("copy-placement-preview")
-    .locator('[data-object-id="R1"] > g')
+    // The ghost is built from the same dry-run paste transaction as its
+    // commit, so it owns a reserved copy ID rather than the source ID.
+    .locator("[data-object-id] > g")
     .first();
   await expect(previewSymbol).toHaveAttribute("transform", /rotate\(0\)/);
 

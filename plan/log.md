@@ -4475,3 +4475,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   verified in the running editor.
 - Commit status: completed on `claude/differential-output-opamp`; mainline
   merge gated on the remote required checks.
+## 2026-08-22 - Unified copy placement transforms
+
+- Target: `plan/2026-08-22-unified-copy-transform/plan.md` (completed).
+- Changed areas: made copy ghost rendering inspect the same dry-run edit
+  transaction used by commit; replayed secondary rotate/reflect commands in
+  input order; corrected already-oriented object-label projection; and adapted
+  the browser assertion to the ghost's reserved copy ID.
+- Validation: focused clipboard/orientation unit tests, focused copy-preview
+  browser workflow, `pnpm ci:static`, preflight, and diff checks passed.
+- Commit status: committed locally on `codex/unified-transform-power-bulk`;
+  remote mainline delivery remains gated.

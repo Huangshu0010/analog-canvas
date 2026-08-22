@@ -6,6 +6,7 @@ import {
 
 import {
   clipboardPlacementAnchor,
+  copyPlacementOrientationEdits,
   copySelection,
   proposePaste,
 } from "../clipboard/clipboard";
@@ -20,7 +21,7 @@ import {
   type WireSource,
 } from "@icm/edit-engine";
 import { resolveEndpointPoint } from "@icm/derived";
-import type { Orientation, Point, SchematicDocument } from "@icm/model";
+import type { Point, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 import type { SnapGuideLine, SnapResult } from "../../snap/engine";
 
@@ -33,7 +34,6 @@ import {
   type CanvasDragSession,
 } from "../../canvas/canvas-drag-session";
 import { startCanvasDragVisual } from "../../canvas/canvas-drag-visual";
-import type { PlacementOrientationOperation } from "../../interaction/shortcut-orientation";
 import {
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
@@ -105,10 +105,6 @@ export interface UseSelectionInteractionOptions {
     anchor: Point,
   ) => void;
   setCopyPreviewPoint: (point: Point) => void;
-  applyOrientationOperations: (
-    orientation: Orientation,
-    operations: readonly PlacementOrientationOperation[],
-  ) => Orientation;
   nextUniqueSuffix: () => number;
   nextNoConnectId: () => string;
   endpointTestId: (endpoint: WireSource["endpoint"]) => string;
@@ -784,36 +780,10 @@ export function useSelectionInteraction(
       options.cancelAllTransientInteraction();
       return;
     }
-    const orientationEdits = proposal.instanceIds.flatMap(
-      (instanceId, index): SchematicEdit[] => {
-        const source =
-          options.copyPlacement!.clipboard.instances[index]?.placement;
-        if (!source) return [];
-        const orientation = options.applyOrientationOperations(
-          source,
-          options.copyPlacement!.orientationOperations,
-        );
-        return [
-          ...(orientation.mirror === source.mirror
-            ? []
-            : [
-                {
-                  kind: "mirror_instance" as const,
-                  instanceId,
-                  mirror: orientation.mirror,
-                },
-              ]),
-          ...(orientation.rotation === source.rotation
-            ? []
-            : [
-                {
-                  kind: "rotate_instance" as const,
-                  instanceId,
-                  rotation: orientation.rotation,
-                },
-              ]),
-        ];
-      },
+    const orientationEdits = copyPlacementOrientationEdits(
+      options.copyPlacement.clipboard.instances,
+      proposal.instanceIds,
+      options.copyPlacement.orientationOperations,
     );
     const edits = [...proposal.edits, ...orientationEdits];
     const editsCellInterface = edits.some(

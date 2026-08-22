@@ -366,10 +366,7 @@ import {
   looseRouteAnchorIds,
   NET_LABEL_MAX_NORMAL_OFFSET,
 } from "../features/wiring/route-interaction-geometry";
-import {
-  applyOrientationOperations,
-  reflectOrientation,
-} from "../interaction/shortcut-orientation";
+import { reflectOrientation } from "../interaction/shortcut-orientation";
 import type { ScreenFlip } from "../interaction/shortcut-orientation";
 import {
   buildDraftingAnchors,
@@ -861,6 +858,7 @@ export function App({
           copyPlacement.clipboard,
           offset,
           copyPlacement.orientationOperations,
+          resolver,
         ),
         resolver,
         { bounds: viewBox },
@@ -1639,7 +1637,6 @@ export function App({
     paintSnapGuides,
     beginCopyPlacementInteraction,
     setCopyPreviewPoint,
-    applyOrientationOperations,
     nextUniqueSuffix: () => {
       uniqueSuffixCounter.current += 1;
       return uniqueSuffixCounter.current;
