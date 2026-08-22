@@ -90,7 +90,7 @@ fix(editor): unify copy placement transforms
 
 ## Outcome
 
-The initial ordered-operation work is committed as `36a1f65b`. The follow-up
+The initial ordered-operation work is committed as `e1f8e641`. The follow-up
 reflows canonical free-Port Net labels through the same upright reference
 placement after a normal or copied orientation edit, and makes a partial
 formal-Port ghost omit irrelevant Cell-interface metadata. Focused tests,
