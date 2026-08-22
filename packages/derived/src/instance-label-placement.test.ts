@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   defaultInstanceLabelPlacement,
+  hasDifferentialInputs,
   isBjtSymbol,
   isMosSymbol,
 } from "./instance-label-placement.js";
@@ -184,5 +185,20 @@ describe("instance label placement", () => {
     expect(value.alignment).toBe("end");
     expect(value.position.x).toBe(reference.position.x);
     expect(value.position.y - reference.position.y).toBe(30);
+  });
+});
+
+describe("differential input detection", () => {
+  it("recognizes the polarity-marked pairs and nothing else", () => {
+    for (const symbolId of ["opamp", "comparator"]) {
+      const resolved = resolver.resolve(symbolId);
+      expect(resolved).toBeDefined();
+      expect(hasDifferentialInputs(resolved!)).toBe(true);
+    }
+    for (const symbolId of ["resistor", "nmos", "voltage-amplifier"]) {
+      const resolved = resolver.resolve(symbolId);
+      expect(resolved).toBeDefined();
+      expect(hasDifferentialInputs(resolved!)).toBe(false);
+    }
   });
 });

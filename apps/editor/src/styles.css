@@ -216,8 +216,13 @@ body {
   gap: var(--icm-space-2);
   flex: 0 1 auto;
   min-width: 0;
-  max-width: min(16rem, 36vw);
   padding: 0;
+}
+
+/* Only the editor's menubar competes for horizontal space, so the brand
+   truncates there and renders in full on the gallery. */
+.app-chrome-main .app-brand {
+  max-width: min(16rem, 36vw);
   overflow: hidden;
 }
 
@@ -5278,24 +5283,6 @@ html.light .analytics-map-land path {
   position: sticky;
   top: 0;
   z-index: 2;
-}
-
-.gallery-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.gallery-brand h1 {
-  margin: 0;
-  font-size: 17px;
-  line-height: 1.2;
-}
-
-.gallery-brand p {
-  margin: 0;
-  font-size: 12px;
-  color: var(--icm-text-muted);
 }
 
 .gallery-actions {

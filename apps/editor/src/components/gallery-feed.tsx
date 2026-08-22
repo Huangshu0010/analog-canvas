@@ -89,19 +89,21 @@ export function GalleryFeed() {
   return (
     <main className="gallery-shell" data-testid="gallery-feed">
       <header className="gallery-chrome">
-        <a
-          className="gallery-brand"
-          href="/editor"
-          aria-label="Open the editor"
-          title="Open the editor"
-          data-testid="gallery-editor-link"
-        >
-          <span className="app-brand-mark" aria-hidden="true" />
-          <div>
+        <div className="app-brand">
+          <a
+            className="gallery-home-link"
+            href="/editor"
+            aria-label="Open the editor"
+            title="Open the editor"
+            data-testid="gallery-editor-link"
+          >
+            <span className="app-brand-mark" aria-hidden="true" />
             <h1>Analog Canvas</h1>
-            <p>Community circuit gallery</p>
+          </a>
+          <div className="app-brand-copy">
+            <p>Community gallery</p>
           </div>
-        </a>
+        </div>
         <nav className="gallery-actions">
           <AccountMenu />
           <a

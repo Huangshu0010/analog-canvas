@@ -4444,3 +4444,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   squareness, and panel resizing all exercised in a running editor.
 - Commit status: completed on `claude/publish-label-clarity`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 - Named differential input swap and one shared brand
+
+- Changed areas: new role-driven `hasDifferentialInputs` projection in
+  `@icm/derived`; instance properties offer "Swap + / − inputs" for op amps
+  and comparators, issuing the existing top/bottom reflection so marks and
+  terminals move together; the gallery brand adopts the editor's markup,
+  classes, and typography, links to the editor, and the editor's brand
+  truncation is scoped to the editor chrome so the gallery shows the full
+  wordmark.
+- Validation: typecheck, full unit suite (180 files / 1133 tests), full
+  Playwright suite (187 passed), prettier, diff checks; the swap and both
+  brands verified in the running app.
+- Commit status: completed on `claude/differential-input-swap`; mainline
+  merge gated on the remote required checks.

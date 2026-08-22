@@ -64,6 +64,7 @@ import {
   endpointKey,
   findHierarchyPath,
   findHierarchyPaths,
+  hasDifferentialInputs,
   isMosBulkTerminal,
   isSchematicAnnotationVisible,
   isVisibleEndpoint,
@@ -932,6 +933,11 @@ export function App({
     selectedIds.length === 1
       ? document.instances.find((instance) => instance.id === selectedId)
       : undefined;
+  const selectedInstanceHasDifferentialInputs = (() => {
+    if (!selectedInstance) return false;
+    const resolved = resolver.resolve(selectedInstance.symbolId);
+    return resolved ? hasDifferentialInputs(resolved) : false;
+  })();
   const selectedHierarchyCell = selectedInstance
     ? project.documents.find(
         (candidate) =>
@@ -8544,6 +8550,17 @@ export function App({
                         >
                           Mirror top/bottom
                         </button>
+                        {selectedInstanceHasDifferentialInputs ? (
+                          <button
+                            type="button"
+                            data-testid="swap-differential-inputs"
+                            aria-label="Swap the + and - inputs"
+                            title="Swap + / - inputs (Ctrl+R)"
+                            onClick={() => mirrorSelected("top-bottom")}
+                          >
+                            Swap + / − inputs
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           aria-label="Return component to Placement Tray"
