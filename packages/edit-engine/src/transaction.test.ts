@@ -411,7 +411,7 @@ describe("Edit Transaction envelope", () => {
             scope: "local",
             powerDomain: "vdd",
             start: { x: 10, y: 10 },
-            end: { x: 10, y: 40 },
+            end: { x: 40, y: 40 },
           },
         ],
       },

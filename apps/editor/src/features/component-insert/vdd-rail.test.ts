@@ -7,11 +7,24 @@ import {
 import { createEmptyDocument } from "@icm/model";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 
-import { constructVddRailEdits, planVddRailEdits } from "./vdd-rail";
+import {
+  constrainedPowerRailEndpoint,
+  constructVddRailEdits,
+  planVddRailEdits,
+} from "./vdd-rail";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("drawn VDD rail construction", () => {
+  it("uses the dominant snapped delta for horizontal and vertical gestures", () => {
+    expect(
+      constrainedPowerRailEndpoint({ x: 100, y: 100 }, { x: 180, y: 130 }),
+    ).toEqual({ x: 180, y: 100 });
+    expect(
+      constrainedPowerRailEndpoint({ x: 100, y: 100 }, { x: 120, y: 190 }),
+    ).toEqual({ x: 100, y: 190 });
+  });
+
   it("uses one explicit VDD Net and one horizontal editable power rail", () => {
     const edits = constructVddRailEdits({
       instanceId: "VDD3",
@@ -117,6 +130,39 @@ describe("drawn VDD rail construction", () => {
         binding: { kind: "net-name", netId: "net-power-vdd1" },
       },
     ]);
+  });
+
+  it("commits a vertical Power Rail with its label at the visual top end", () => {
+    const document = createEmptyDocument("main", "Main");
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "draw-vertical-power-rail",
+        documentId: document.id,
+        expectedRevision: document.revision,
+        actor: { kind: "human", id: "test" },
+        edits: constructVddRailEdits({
+          instanceId: "VDD1",
+          start: { x: 80, y: 220 },
+          end: { x: 80, y: 40 },
+        }),
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes).toMatchObject([
+      { presentation: "power-rail", netId: "net-power-vdd1" },
+    ]);
+    expect(result.document.annotations[0]).toMatchObject({
+      anchor: {
+        kind: "object",
+        objectId: "junction-vdd1-end",
+        fallbackPosition: { x: 90, y: 50 },
+      },
+      rotation: 0,
+    });
   });
 
   it("adds rail geometry to an existing explicitly global VDD Net", () => {

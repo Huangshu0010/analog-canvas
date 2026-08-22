@@ -17,8 +17,9 @@ contact.
 Route centerlines are one geometry protocol. Normal interactive Routes may use
 horizontal, vertical, or ±45-degree segments; orthogonal is the default
 authoring constraint, not a second persisted Route shape. `power-rail` is the
-single exception and remains horizontal-only. A future arbitrary-angle policy
-must use the same segment-geometry kernel and Route transaction.
+single exception: it is one straight, non-zero horizontal or vertical segment.
+A future arbitrary-angle policy must use the same segment-geometry kernel and
+Route transaction.
 
 ## Authoring rules
 
@@ -50,6 +51,9 @@ current Document, preserves an existing explicit scope, and otherwise creates
 a local Net. It adds two route-anchor Junctions, the rail Route, and one
 net-name-bound RichText power label. It creates no VDD Instance. Branch wires
 on the same Net use ordinary wire presentation and explicit contact evidence.
+The two rail endpoints remain directly resizable along the rail axis; moving
+the rail translates its full connected component, including tap Junctions,
+without splitting the rail into independent pieces.
 
 A named global Net is itself an explicit semantic bridge. Separate Ground or
 VDD markers on that Net do not require a drawn trunk or matching label and do

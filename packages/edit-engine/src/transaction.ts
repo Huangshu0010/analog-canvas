@@ -2035,10 +2035,14 @@ export function executeTransaction(
         break;
       }
       case "add_power_rail": {
-        if (edit.start.y !== edit.end.y || edit.start.x === edit.end.x) {
+        const horizontal =
+          edit.start.y === edit.end.y && edit.start.x !== edit.end.x;
+        const vertical =
+          edit.start.x === edit.end.x && edit.start.y !== edit.end.y;
+        if (!horizontal && !vertical) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            "A power rail must be a non-zero horizontal segment",
+            "A power rail must be one non-zero axis-aligned segment",
           );
         }
         const ids = [
@@ -2093,7 +2097,17 @@ export function executeTransaction(
             [duplicate],
           );
         }
-        const right = edit.start.x < edit.end.x ? edit.end : edit.start;
+        const labelEndpoint = horizontal
+          ? edit.start.x < edit.end.x
+            ? edit.end
+            : edit.start
+          : edit.start.y < edit.end.y
+            ? edit.start
+            : edit.end;
+        const labelJunctionId =
+          labelEndpoint === edit.end
+            ? edit.endJunctionId
+            : edit.startJunctionId;
         if (!existingSupplyNet) {
           draft.nets.push({
             id: edit.netId,
@@ -2135,12 +2149,12 @@ export function executeTransaction(
             netId: edit.netId,
             anchor: {
               kind: "object",
-              objectId:
-                edit.start.x < edit.end.x
-                  ? edit.endJunctionId
-                  : edit.startJunctionId,
+              objectId: labelJunctionId,
               localOffset: { x: 10, y: 10 },
-              fallbackPosition: { x: right.x + 10, y: right.y + 10 },
+              fallbackPosition: {
+                x: labelEndpoint.x + 10,
+                y: labelEndpoint.y + 10,
+              },
             },
             alignment: "start",
             rotation: 0,

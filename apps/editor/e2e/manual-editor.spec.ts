@@ -349,7 +349,7 @@ test("keeps a tapped VDD rail movable and stretchable as one supply bar", async 
     x: 30,
     y: 40,
   });
-  await expect(page.getByTestId("status")).toContainText("Moved VDD rail");
+  await expect(page.getByTestId("status")).toContainText("Moved Power Rail");
   const afterMove = await Promise.all(
     railIds.map((id) => readRoutePoints(page, id)),
   );
@@ -364,7 +364,7 @@ test("keeps a tapped VDD rail movable and stretchable as one supply bar", async 
     x: 80,
     y: 0,
   });
-  await expect(page.getByTestId("status")).toContainText("Resized VDD rail");
+  await expect(page.getByTestId("status")).toContainText("Resized Power Rail");
   const afterResize = await Promise.all(
     railIds.map((id) => readRoutePoints(page, id)),
   );

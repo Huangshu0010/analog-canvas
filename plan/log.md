@@ -4283,3 +4283,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   typecheck, affected gate (178 unit files / 1105 tests and 124 browser tests),
   test-impact, formatting, documentation, MCP projection, and diff checks.
 - Commit status: completed locally; remote mainline delivery remains gated.
+
+## 2026-08-22 — Axis-aware Power Rail and VDD Port labels
+
+- Target: `plan/2026-08-22-vdd-rail-port-presentation/plan.md` (completed).
+- Change: retained generic `Power Rail`/`Rail` naming and named-Net behavior;
+  GUI and Agent author horizontal or vertical rails, endpoint resize follows
+  the active axis with live preview, tapped movement stays connected, and
+  automatic VDD Port labels remain upright/clear through orientation changes
+  without overriding user-moved labels.
+- Validation: focused unit and browser tests, static contracts and typecheck,
+  affected gate (178 unit files / 1105 tests and 124 browser tests),
+  test-impact, formatting, documentation, MCP projection, and diff checks.
+- Commit status: completed locally; remote mainline delivery remains gated.

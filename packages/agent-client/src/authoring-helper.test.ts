@@ -118,7 +118,19 @@ describe("authoring helper compilation", () => {
     }
   });
 
-  it("rejects non-horizontal power rails", () => {
+  it("compiles vertical Power Rails and rejects diagonal geometry", () => {
+    const [transaction] = compile([
+      {
+        kind: "add-power-rail",
+        start: { x: 40, y: 0 },
+        end: { x: 40, y: 160 },
+      },
+    ]);
+    expect(transaction?.edits?.[0]).toMatchObject({
+      kind: "add_power_rail",
+      start: { x: 40, y: 0 },
+      end: { x: 40, y: 160 },
+    });
     expectCompileError(
       [
         {
@@ -127,7 +139,7 @@ describe("authoring helper compilation", () => {
           end: { x: 100, y: 40 },
         },
       ],
-      "horizontal",
+      "horizontal or vertical",
     );
   });
 

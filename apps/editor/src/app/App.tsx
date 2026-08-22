@@ -161,7 +161,10 @@ import { useComponentPlacement } from "../features/component-insert/use-componen
 import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
-import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
+import {
+  constrainedPowerRailEndpoint,
+  constructVddRailEdits,
+} from "../features/component-insert/vdd-rail";
 import { vddPowerLabelAnnotation } from "../features/component-insert/vdd-power-label";
 import {
   powerConnectionForSymbol,
@@ -5976,13 +5979,14 @@ export function App({
       event.currentTarget,
     );
     if (vddRailMode) {
+      const snapped = {
+        x: snapCoordinate(point.x, document.presentation.grid),
+        y: snapCoordinate(point.y, document.presentation.grid),
+      };
       setVddRailPreviewPoint(
         vddRailStart
-          ? {
-              x: snapCoordinate(point.x, document.presentation.grid),
-              y: vddRailStart.y,
-            }
-          : point,
+          ? constrainedPowerRailEndpoint(vddRailStart, snapped)
+          : snapped,
       );
       return;
     }
@@ -6714,7 +6718,7 @@ export function App({
             cancelledKind === "copy-placement"
               ? "Copy placement cancelled"
               : cancelledKind === "placing-vdd-rail"
-                ? "VDD rail cancelled"
+                ? "Power Rail cancelled"
                 : cancelledKind === "placing-component"
                   ? "Component placement cancelled"
                   : cancelledKind === "drawing"
@@ -9389,7 +9393,7 @@ export function App({
                     x1={vddRailStart.x}
                     y1={vddRailStart.y}
                     x2={componentPreviewPoint.x}
-                    y2={vddRailStart.y}
+                    y2={componentPreviewPoint.y}
                     strokeWidth={styleProfile.strokes.powerRail}
                   />
                 ) : componentPreviewPoint ? (
@@ -9523,7 +9527,11 @@ export function App({
                       (junction): junction is NonNullable<typeof junction> =>
                         Boolean(junction),
                     )
-                    .sort((left, right) => left.position.x - right.position.x);
+                    .sort((left, right) => {
+                      return left.position.x === right.position.x
+                        ? left.position.y - right.position.y
+                        : left.position.x - right.position.x;
+                    });
                   const routeCenter = centerOfBounds(
                     polylineBounds(geometry.centerline),
                   );
@@ -10285,7 +10293,7 @@ export function App({
           </p>
           <span className="statusbar-tool" data-testid="statusbar-tool">
             {vddRailMode
-              ? "Drawing VDD rail"
+              ? "Drawing Power Rail"
               : pendingSymbolId
                 ? `Placing ${pendingSymbolId}`
                 : tool === "pointer"

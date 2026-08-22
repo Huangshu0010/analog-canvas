@@ -220,15 +220,24 @@ export function validateRoute(
   }
   if (
     route.presentation === "power-rail" &&
-    !polyline.points
-      .slice(1)
-      .every(
-        (point, index) =>
-          polyline.points[index]!.y === point.y &&
-          polyline.points[index]!.x !== point.x,
-      )
+    !(
+      polyline.points
+        .slice(1)
+        .every(
+          (point, index) =>
+            polyline.points[index]!.y === point.y &&
+            polyline.points[index]!.x !== point.x,
+        ) ||
+      polyline.points
+        .slice(1)
+        .every(
+          (point, index) =>
+            polyline.points[index]!.x === point.x &&
+            polyline.points[index]!.y !== point.y,
+        )
+    )
   ) {
-    return `Power rail ${route.id} must contain only horizontal segments`;
+    return `Power rail ${route.id} must be straight and axis-aligned`;
   }
   for (const [endpoint, point, adjacent, mode] of [
     [
