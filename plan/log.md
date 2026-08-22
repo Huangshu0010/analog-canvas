@@ -4486,3 +4486,38 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   browser workflow, `pnpm ci:static`, preflight, and diff checks passed.
 - Commit status: committed locally on `codex/unified-transform-power-bulk`;
   remote mainline delivery remains gated.
+
+## 2026-08-22 - Canonical Port label transform follow-up
+
+- Target: `plan/2026-08-22-unified-copy-transform/plan.md` (completed).
+- Change: canonical free-Port Net labels now recover their single upright
+  reference placement after rotation or mirroring, including copy secondary
+  operations; partial formal-Port ghosts omit Cell-interface metadata outside
+  the fragment.
+- Validation: focused clipboard/Edit Engine tests, static contracts, preflight,
+  test-impact, and affected unit/component/hierarchy/editor browser gates.
+- Commit status: committed locally as `940c1785`; remote mainline delivery
+  remains gated.
+
+## 2026-08-22 - Explicit Ground placement policy
+
+- Target: `plan/2026-08-22-ground-placement-policy/plan.md` (completed).
+- Change: a user-placed Ground explicitly grounds an ordinary contacted Net by
+  merging into `0` or canonicalizing it; conflicting supply domains remain
+  rejected.
+- Validation: focused planner/placement tests, static contracts, preflight,
+  test-impact, and affected unit/component/hierarchy/editor browser gates.
+- Commit status: committed locally as `3cab904f`; remote mainline delivery
+  remains gated.
+
+## 2026-08-22 - Stable MOS bulk defaults
+
+- Target: `plan/2026-08-22-mos-bulk-defaults/plan.md` (completed).
+- Change: the first explicit Ground, VDD Port, or named Power Rail persists an
+  unset stable-ID NMOS/PMOS default; Properties exposes those choices without
+  overriding explicit or no-connect B decisions.
+- Validation: focused planner/derived/browser tests, static contracts,
+  preflight, test-impact, and affected unit/component/hierarchy/editor browser
+  gates.
+- Commit status: committed locally as `9ac90455`; remote mainline delivery
+  remains gated.
