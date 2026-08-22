@@ -4860,3 +4860,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   smoke, and all 205 browser tests.
 - Commit status: stacked review branch prepared for required remote checks and
   one PR merge to `main`.
+
+## 2026-08-22 — Hotfix: retire the stale gallery update offer
+
+- Target: `plan/2026-08-22-update-mode-guard/plan.md` (completed).
+- Change: the opened-entry context records its Project id and clears
+  the moment any other Project becomes active, so publishing can no
+  longer silently overwrite a stale entry (user-reported data loss);
+  the update option now names exactly what it replaces.
+- Validation: gallery Playwright 20/20, dialog units 26, typecheck,
+  prettier, test-impact, diff checks.
+- Commit status: completed on `claude/update-mode-guard`.

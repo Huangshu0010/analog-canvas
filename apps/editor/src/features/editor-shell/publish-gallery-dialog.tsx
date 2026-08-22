@@ -22,7 +22,7 @@ export interface PublishGalleryDialogProps {
   gateReport?: SubmissionGateReport | null;
   /** Present when the open circuit came from a gallery entry the signed-in
    * user may update (owner, admin, or moderator). */
-  updateTarget?: { id: string } | null;
+  updateTarget?: { id: string; name: string } | null;
   /** The opened entry's stored fields, prefilled once in update mode. */
   updateDefaults?: {
     author: string;
@@ -178,7 +178,7 @@ export function PublishGalleryDialog({
                   setModeTouched(true);
                 }}
               />
-              Update the opened gallery entry
+              Update “{updateTarget?.name}” (replaces that entry)
             </label>
             <label>
               <input
