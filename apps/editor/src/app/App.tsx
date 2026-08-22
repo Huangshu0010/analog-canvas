@@ -681,11 +681,24 @@ export function App({
   );
   const [galleryEntryContext, setGalleryEntryContext] = useState<{
     id: string;
+    name: string;
+    /** The opened Project's id: the context is only valid while that
+     * exact Project is still the active one. */
+    projectId: string;
     ownerUserId: string | null;
     author: string;
     description: string;
     tags: readonly string[];
   } | null>(null);
+  // The moment any OTHER Project replaces the opened gallery entry (new
+  // circuit, bundled example, import, …), the update offer must vanish —
+  // otherwise a later publish silently overwrites the stale entry.
+  const activeProjectId = project.id;
+  useEffect(() => {
+    setGalleryEntryContext((previous) =>
+      previous && previous.projectId !== activeProjectId ? null : previous,
+    );
+  }, [activeProjectId]);
   // The Examples panel reads the same community gallery as the landing
   // feed; null means unreachable, so the bundled list stands in.
   const [galleryExamples, setGalleryExamples] = useState<
@@ -1953,6 +1966,8 @@ export function App({
       replaceActiveProject(galleryProject);
       setGalleryEntryContext({
         id: entryId,
+        name: payload.entry?.name ?? galleryProject.name,
+        projectId: galleryProject.id,
         ownerUserId: payload.ownerUserId ?? null,
         author: payload.entry?.author ?? "",
         description: payload.entry?.description ?? "",
@@ -7800,7 +7815,7 @@ export function App({
               publishSession.role === "moderator" ||
               (galleryEntryContext.ownerUserId !== null &&
                 publishSession.id === galleryEntryContext.ownerUserId))
-              ? { id: galleryEntryContext.id }
+              ? { id: galleryEntryContext.id, name: galleryEntryContext.name }
               : null
           }
           updateDefaults={

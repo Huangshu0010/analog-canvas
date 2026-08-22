@@ -753,6 +753,8 @@ test("an opened gallery entry offers updating in place", async ({ page }) => {
   const dialog = page.getByTestId("publish-gallery-dialog");
   await expect(dialog).toBeVisible();
   await expect(page.getByTestId("publish-mode")).toBeVisible();
+  // The update option names exactly what it will replace.
+  await expect(page.getByTestId("publish-mode")).toContainText(ENTRY.name);
   await expect(dialog.getByText("updates the entry in place")).toBeVisible();
 
   await dialog.getByRole("button", { name: "Update entry" }).click();
@@ -761,6 +763,63 @@ test("an opened gallery entry offers updating in place", async ({ page }) => {
   );
   expect(updates).toHaveLength(1);
   expect(updates[0]!.body.name).toBe(ENTRY.name);
+});
+
+test("replacing the project retires the stale update offer", async ({
+  page,
+}) => {
+  await mockGallery(page, [ENTRY]);
+  await page.route("**/api/gallery?limit=60", (route) =>
+    // The panel sees an empty gallery, so it offers the bundled examples
+    // — opening one replaces the Project with a non-gallery one.
+    route.fulfill({ json: { entries: [], nextCursor: null } }),
+  );
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u1",
+          displayName: "Token Zhang",
+          email: "owner@example.com",
+          provider: "github",
+          role: "user",
+          isAdmin: true,
+        },
+      },
+    }),
+  );
+
+  await page.goto(`/g/${ENTRY.id}`);
+  await expect(page.getByTestId("status")).toContainText(
+    `Opened gallery circuit: ${ENTRY.name}`,
+  );
+
+  // Sanity: while the entry is the active Project, updating is offered.
+  await page.getByTestId("publish-gallery-button").click();
+  await expect(page.getByTestId("publish-mode")).toBeVisible();
+  await page
+    .getByTestId("publish-gallery-dialog")
+    .getByRole("button", { name: "Cancel" })
+    .click();
+
+  // Import a different Project over it: the gallery entry is no longer
+  // active, so publishing must NOT offer updating it any more.
+  await page.getByTestId("project-file").setInputFiles({
+    name: "fresh.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      serializeProject(createEmptyProject("fresh-project", "Fresh Start")),
+    ),
+  });
+  await expect(page.getByTestId("status")).toContainText(
+    "Opened fresh.icproj.json",
+  );
+
+  await page.getByTestId("publish-gallery-button").click();
+  const dialog = page.getByTestId("publish-gallery-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(page.getByTestId("publish-mode")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Publish" })).toBeVisible();
 });
 
 test("the Examples panel lists the gallery and opens an entry", async ({
