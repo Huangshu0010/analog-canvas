@@ -4605,3 +4605,23 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: component suite 13, gallery Playwright 11/11 (new
   placement scenario), typecheck, prettier, test-impact, diff checks.
 - Commit status: completed on `claude/gallery-masonry`.
+
+## 2026-08-22 - One annotation text house style
+
+- Changed areas: `semanticTextDocument` and `defaultDraftTextDocument` now
+  share one rule — capitalized italic leading symbol, remainder as its
+  subscript — replacing the `V*`/`I*` shorthand and the role-specific
+  instance-label regex. Subscripts stay upright except supply designators
+  (DD/SS/CC/EE/BB), carried as a nested italic span because the renderer
+  already honors that as a deliberate override. A trailing polarity sign stays
+  outside the subscript, and a value containing whitespace stays prose so a
+  drafting note is not swallowed into one long subscript.
+- Historical documents need no migration: bound annotations are pure
+  projections re-derived on read by `resolveAnnotationText`.
+- Validation: full unit suite (1155), full Playwright suite (189 passed),
+  visual and export golden `--check` both clean (goldens carry `Vin+`/`Vout`,
+  which the superseded rule split identically), typecheck, prettier, diff
+  checks; rendered output inspected per glyph for VDD/VSS/VCC/Vin/Vout/Iout/
+  CLK/A and both drafting cases.
+- Commit status: completed on `claude/semantic-text-subscripts`; mainline
+  merge gated on the remote required checks.
