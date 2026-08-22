@@ -4803,3 +4803,60 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   (Expected 70, Received 0); typecheck, prettier, diff checks.
 - Commit status: completed on `claude/marquee-drag`; mainline merge gated on
   the remote required checks.
+
+## 2026-08-22 - Canonical MOS presentation for SKY130 calls
+
+- Target: `plan/2026-08-22-sky130-canonical-mos-mapping/plan.md` (completed).
+- Changed areas: reviewed SKY130 external calls now reuse canonical
+  `nmos`/`pmos` symbols through import, Model-field switching, definition
+  synchronization, and Insert, while preserving external X binding and ordered
+  D/G/S/B export; incompatible external definitions keep the generic block.
+- Validation: focused contracts (64), preflight, affected units (1171),
+  hierarchy Playwright (12), manual-editor Playwright (93), branch verification,
+  workspace build, production smoke, test-impact, and diff checks.
+- Commit status: completed on `codex/sky130-canonical-mos-mapping`.
+
+## 2026-08-22 - Local named VDD Port netlist export
+
+- Target: `plan/2026-08-22-vdd-port-local-net-export/plan.md` (completed).
+- Changed areas: net-marker extraction now applies the global-Net requirement
+  only to Ground; a VDD Port accepts an explicitly named local or global
+  `powerDomain: vdd` Net, emits no marker record, and rejects named non-VDD
+  Nets. The deterministic export specification now records the same policy.
+- Validation: focused netlist contract (17), preflight static/type/docs and
+  test-impact checks, affected workspace units (1173), and diff checks.
+- Commit status: completed on `codex/sky130-canonical-mos-mapping` as a stacked
+  fix after the canonical SKY130 MOS commit.
+
+## 2026-08-22 - Junction dots follow visible conductor directions
+
+- Changed areas: contact evidence now classifies a visible Junction dot from
+  distinct Route-arm and terminal-stem directions instead of adding terminal
+  objects to Route direction counts; three-or-more coincident terminals remain
+  an explicit dot rule. Removed the unused raw Route-arm count and aligned the
+  connectivity specification and Junction-role comment.
+- Protected cases: three collinear MOS Gates stay electrically connected but
+  dotless at the middle Gate; true perpendicular taps, three-way and 45-degree
+  branches remain dotted; right-angle terminal exits, rotation, and mirroring
+  use the same direction protocol.
+- Validation: focused derived tests (12), focused Playwright regression (1),
+  preflight/static/typecheck, full affected unit suite (1177), hierarchy
+  Playwright (12), project-file Playwright (8), and workspace build passed.
+- Commit status: completed on `codex/junction-visible-directions`; mainline
+  delivery remains gated on the canonical local and remote checks.
+
+## 2026-08-22 - Stacked SKY130, VDD export, and Junction mainline delivery
+
+- Target: `plan/2026-08-22-stack-sky130-vdd-junction-mainline/plan.md`
+  (completed).
+- Changed areas: rebased the canonical SKY130 MOS and local named VDD export
+  commits onto `origin/main@dff17f82`, then stacked the Junction
+  visible-direction commit. Only additive plan-log conflicts required manual
+  resolution; no new model, binding, routing, or persistence protocol was
+  introduced during integration.
+- Validation: focused union units (78) and Junction browser case (1), preflight,
+  affected units (1185), hierarchy (12), project-file (8), manual-editor (98),
+  frozen dependency install, and canonical `ci:check` including build, release
+  smoke, and all 205 browser tests.
+- Commit status: stacked review branch prepared for required remote checks and
+  one PR merge to `main`.

@@ -269,6 +269,60 @@ describe("current formal cell interface", () => {
     expect(result.ir?.globals).toEqual(["0"]);
   });
 
+  it("exports a local named VDD Port Net without inventing a marker record", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "VDD1",
+      symbolId: "vdd-port",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-vdd",
+      name: "VDD",
+      scope: "local",
+      powerDomain: "vdd",
+      terminals: [{ instanceId: "VDD1", pinName: "P" }],
+    });
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.cells[0]?.instances).toEqual([]);
+    expect(result.ir?.cells[0]?.nets).toContainEqual({
+      id: "net-vdd",
+      name: "VDD",
+      scope: "local",
+    });
+    expect(result.ir?.globals).toEqual([]);
+  });
+
+  it("rejects a VDD Port attached to a named non-VDD Net", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "VDD1",
+      symbolId: "vdd-port",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-signal",
+      name: "SIGNAL",
+      scope: "local",
+      terminals: [{ instanceId: "VDD1", pinName: "P" }],
+    });
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.ir).toBeNull();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "INVALID_NET_MARKER",
+        objectIds: ["VDD1", "net-signal"],
+      }),
+    );
+  });
+
   it("emits a resolved shared external interface without inventing an empty Cell", () => {
     const project = createEmptyProject("project", "Project");
     const document = project.documents[0]!;
@@ -463,5 +517,61 @@ describe("current formal cell interface", () => {
       { pinName: "B", netName: "NET_B" },
       { pinName: "A", netName: "NET_A" },
     ]);
+  });
+
+  it("exports a canonical MOS symbol as an ordered external SKY130 X call", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    project.externalSubcircuitDefinitions.push({
+      id: "sky130-nfet",
+      name: "sky130_fd_pr__nfet_01v8",
+      terminals: ["D", "G", "S", "B"].map((name, index) => ({
+        id: `terminal-${index}`,
+        name,
+        direction: "passive",
+      })),
+      formalParameters: [],
+      interfaceStatus: "declared",
+    });
+    document.instances.push({
+      id: "XM1",
+      symbolId: "nmos",
+      placement: null,
+      netlist: {
+        reference: "XM1",
+        binding: {
+          kind: "external-subcircuit",
+          definitionId: "sky130-nfet",
+        },
+        parameters: { l: "150n", w: "2u", nf: "4" },
+      },
+    });
+    for (const [pinName, netName] of [
+      ["D", "DRAIN"],
+      ["G", "GATE"],
+      ["S", "SOURCE"],
+      ["B", "BODY"],
+    ] as const) {
+      document.nets.push({
+        id: `net-${pinName.toLowerCase()}`,
+        name: netName,
+        scope: "local",
+        terminals: [{ instanceId: "XM1", pinName }],
+      });
+    }
+
+    const result = analyzeDesignNetlist(project);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.cells[0]!.instances[0]).toMatchObject({
+      reference: "XM1",
+      target: "sky130_fd_pr__nfet_01v8",
+      nodes: [
+        { pinName: "D", netName: "DRAIN" },
+        { pinName: "G", netName: "GATE" },
+        { pinName: "S", netName: "SOURCE" },
+        { pinName: "B", netName: "BODY" },
+      ],
+    });
   });
 });
