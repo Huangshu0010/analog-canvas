@@ -45,7 +45,7 @@ Acceptance: feed loads from the deployed worker; a seeded entry renders as
 a tile, opens in the editor, and survives recycle/restore; all existing
 editor behavior reachable at `/editor` unchanged.
 
-## Phase G2 — Accounts and sign-in (implemented, dark until secrets)
+## Phase G2 — Accounts and sign-in (live: all three providers lit)
 
 - `AuthDO` (users, sessions): GitHub and Google OAuth code flows on the
   worker plus email magic-link sign-in (Resend) — any one credential
@@ -71,6 +71,12 @@ editor behavior reachable at `/editor` unchanged.
     verified at the mail provider).
   - Admin: `ADMIN_EMAILS` (comma-separated owner emails).
   - Then re-run the Deploy Cloudflare workflow once.
+- Provisioned 2026-08-22: GitHub OAuth App (owner account), Google OAuth
+  client (consent screen published to production, basic scopes only), and
+  Resend with the verified `tokenzhang.com` domain (DKIM/SPF/MX/DMARC on
+  Cloudflare DNS; magic links send from `login@tokenzhang.com`);
+  `/api/auth/providers` reports all three enabled and a production magic
+  link delivered end to end.
 
 Acceptance: sign in/out round-trips on the deployed site with any single
 provider; display-name edits stick; the owner's account sees admin
