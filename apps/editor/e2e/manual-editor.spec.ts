@@ -2912,7 +2912,7 @@ test("exports structural SPICE and Spectre netlists while exposing instance auth
 test("selects a reviewed SKY130 MOS through the existing Model field", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/editor");
   await placeComponent(page, "nmos", { x: 360, y: 220 });
   await openSelectionShelf(page);
   const properties = page.getByRole("complementary", { name: "Properties" });
