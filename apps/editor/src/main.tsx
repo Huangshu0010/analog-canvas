@@ -25,6 +25,18 @@ const GalleryFeed = lazy(() =>
   })),
 );
 
+const ReviewQueue = lazy(() =>
+  import("./components/review-queue").then((module) => ({
+    default: module.ReviewQueue,
+  })),
+);
+
+const MySubmissions = lazy(() =>
+  import("./components/my-submissions").then((module) => ({
+    default: module.MySubmissions,
+  })),
+);
+
 /** `/` is the gallery, `/editor` the editor, `/g/<id>` one gallery entry. */
 function galleryEntryIdOf(path: string): string | null {
   const match = /^\/g\/([A-Za-z0-9-]{1,64})\/?$/.exec(path);
@@ -92,6 +104,24 @@ function Root() {
         fallback={<div className="analytics-loading">Loading gallery…</div>}
       >
         <GalleryFeed />
+      </Suspense>
+    );
+  }
+  if (/^\/review\/?$/.test(path)) {
+    return (
+      <Suspense
+        fallback={<div className="analytics-loading">Loading review…</div>}
+      >
+        <ReviewQueue />
+      </Suspense>
+    );
+  }
+  if (/^\/mine\/?$/.test(path)) {
+    return (
+      <Suspense
+        fallback={<div className="analytics-loading">Loading submissions…</div>}
+      >
+        <MySubmissions />
       </Suspense>
     );
   }

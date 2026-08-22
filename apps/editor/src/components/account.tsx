@@ -12,6 +12,8 @@ export interface SessionUser {
   displayName: string;
   email: string | null;
   provider: string;
+  /** "user" or "moderator" (appointed by the super-admin). */
+  role: string;
   isAdmin: boolean;
 }
 
@@ -178,7 +180,23 @@ export function AccountMenuView({
           <span className="account-owner-badge" data-testid="account-owner">
             Owner
           </span>
+        ) : user.role === "moderator" ? (
+          <span className="account-owner-badge" data-testid="account-mod">
+            Reviewer
+          </span>
         ) : null}
+        {user.isAdmin || user.role === "moderator" ? (
+          <a
+            className="account-link"
+            href="/review"
+            data-testid="account-review-link"
+          >
+            Review
+          </a>
+        ) : null}
+        <a className="account-link" href="/mine" data-testid="account-mine">
+          My submissions
+        </a>
         <button
           type="button"
           className="account-signout"

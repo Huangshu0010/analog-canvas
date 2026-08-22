@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@icm/agent-adapter": "workspace:*",
+    "@icm/derived": "workspace:*",
     "@icm/model": "workspace:*",
     "@icm/project-protocol": "workspace:*",
     "@icm/render-svg": "workspace:*",

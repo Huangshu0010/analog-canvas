@@ -418,6 +418,54 @@ describe("Google OAuth", () => {
   });
 });
 
+describe("moderator appointment", () => {
+  it("lets only the admin set a role, applied across the email's accounts", async () => {
+    const auth = harness({
+      RESEND_API_KEY: "rk",
+      ADMIN_EMAILS: "owner@example.com",
+    });
+    const adminCookie = await emailSignIn(auth, "owner@example.com");
+    const reviewerCookie = await emailSignIn(auth, "reviewer@example.com");
+    expect((await me(auth, reviewerCookie))?.role).toBe("user");
+
+    const denied = await auth.call("/api/auth/users/role", {
+      method: "POST",
+      cookie: reviewerCookie,
+      body: JSON.stringify({
+        email: "reviewer@example.com",
+        role: "moderator",
+      }),
+    });
+    expect(denied.status).toBe(401);
+
+    const appointed = await auth.call("/api/auth/users/role", {
+      method: "POST",
+      cookie: adminCookie,
+      body: JSON.stringify({
+        email: "Reviewer@Example.com",
+        role: "moderator",
+      }),
+    });
+    expect(appointed.status).toBe(200);
+    expect((await me(auth, reviewerCookie))?.role).toBe("moderator");
+
+    const unknown = await auth.call("/api/auth/users/role", {
+      method: "POST",
+      cookie: adminCookie,
+      body: JSON.stringify({ email: "ghost@example.com", role: "moderator" }),
+    });
+    expect(unknown.status).toBe(404);
+
+    const revoked = await auth.call("/api/auth/users/role", {
+      method: "POST",
+      cookie: adminCookie,
+      body: JSON.stringify({ email: "reviewer@example.com", role: "user" }),
+    });
+    expect(revoked.status).toBe(200);
+    expect((await me(auth, reviewerCookie))?.role).toBe("user");
+  });
+});
+
 describe("sessionUserOf (module seam for the gallery)", () => {
   it("resolves the signed-in user through the binding and null otherwise", async () => {
     const auth = harness({ RESEND_API_KEY: "rk", ADMIN_EMAILS: "b@e.co" });

@@ -47,17 +47,74 @@ describe("PublishGalleryDialog", () => {
     expect(markup).toContain('value="Token Zhang"');
   });
 
-  it("keeps the passphrase row for an ordinary signed-in user", () => {
+  it("offers submit-for-review, not a passphrase, to an ordinary user", () => {
     const markup = renderToStaticMarkup(
       createElement(PublishGalleryDialog, {
         defaultName: "Ring Oscillator",
-        session: { displayName: "Visitor", isAdmin: false },
+        session: { displayName: "Visitor", isAdmin: false, role: "user" },
+        gateReport: { ok: true, failures: [] },
         publish: () => Promise.resolve({ status: "unauthorized" as const }),
         onPublished: () => undefined,
         onClose: () => undefined,
       }),
     );
-    expect(markup).toContain("Owner passphrase");
-    expect(markup).toMatch(/disabled=""[^>]*>Publish</u);
+    expect(markup).not.toContain("Owner passphrase");
+    expect(markup).toContain("Submit for review");
+    expect(markup).toContain("review queue");
+    expect(markup).not.toMatch(/disabled=""[^>]*>Submit for review</u);
+  });
+
+  it("blocks an ordinary user on gate failures and lists them", () => {
+    const markup = renderToStaticMarkup(
+      createElement(PublishGalleryDialog, {
+        defaultName: "Ring Oscillator",
+        session: { displayName: "Visitor", isAdmin: false, role: "user" },
+        gateReport: {
+          ok: false,
+          failures: [
+            {
+              code: "floating-endpoints",
+              message:
+                "Floating endpoints: wire each pin, name its net, or mark it NoConnect",
+              count: 2,
+              examples: ["M1.g", "R2.2"],
+            },
+          ],
+        },
+        publish: () => Promise.resolve({ status: "unauthorized" as const }),
+        onPublished: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+    expect(markup).toContain("publish-gallery-gates-blocking");
+    expect(markup).toContain("Fix these before submitting:");
+    expect(markup).toContain("M1.g, R2.2");
+    expect(markup).toMatch(/disabled=""[^>]*>Submit for review</u);
+  });
+
+  it("shows the same failures as informational for a moderator", () => {
+    const markup = renderToStaticMarkup(
+      createElement(PublishGalleryDialog, {
+        defaultName: "Ring Oscillator",
+        session: { displayName: "Rev", isAdmin: false, role: "moderator" },
+        gateReport: {
+          ok: false,
+          failures: [
+            {
+              code: "empty-project",
+              message: "Too little content",
+              count: 1,
+              examples: [],
+            },
+          ],
+        },
+        publish: () => Promise.resolve({ status: "unauthorized" as const }),
+        onPublished: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+    expect(markup).not.toContain("publish-gallery-gates-blocking");
+    expect(markup).toContain("informational for your role");
+    expect(markup).not.toMatch(/disabled=""[^>]*>Publish</u);
   });
 });

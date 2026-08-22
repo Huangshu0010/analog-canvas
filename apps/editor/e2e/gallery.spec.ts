@@ -257,6 +257,93 @@ test("an admin session publishes without the passphrase row", async ({
   expect(posted).toEqual([{ authorization: null, author: "Token Zhang" }]);
 });
 
+test("an ordinary user sees blocking quality gates on an empty project", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u9",
+          displayName: "Visitor",
+          email: "visitor@example.com",
+          provider: "email",
+          role: "user",
+          isAdmin: false,
+        },
+      },
+    }),
+  );
+
+  await page.goto("/editor");
+  await clickCommand(page, "File", "Publish to Gallery…");
+  const dialog = page.getByTestId("publish-gallery-dialog");
+  await expect(dialog).toBeVisible();
+
+  // The empty canvas fails the content gate, evaluated locally.
+  const gates = page.getByTestId("publish-gallery-gates");
+  await expect(gates).toBeVisible();
+  await expect(gates).toContainText("Fix these before submitting");
+  await expect(gates).toContainText("Too little content");
+  await expect(dialog.getByLabel("Owner passphrase")).toHaveCount(0);
+  await expect(
+    dialog.getByRole("button", { name: "Submit for review" }),
+  ).toBeDisabled();
+});
+
+test("a reviewer approves a pending submission from the review queue", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u1",
+          displayName: "Token Zhang",
+          email: "owner@example.com",
+          provider: "github",
+          role: "user",
+          isAdmin: true,
+        },
+      },
+    }),
+  );
+  await page.route("**/api/gallery/review", (route) =>
+    route.fulfill({
+      json: {
+        entries: [
+          {
+            id: "p-1",
+            name: "Pending Filter",
+            author: "maker",
+            description: "Second-order RC",
+            createdAt: "2026-08-22T09:00:00.000Z",
+          },
+        ],
+      },
+    }),
+  );
+  await page.route("**/api/gallery/p-1/preview.svg", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#fff"/></svg>',
+    }),
+  );
+  const decisions: string[] = [];
+  await page.route("**/api/gallery/p-1/approve", (route) => {
+    decisions.push("approve");
+    return route.fulfill({ json: { id: "p-1", status: "public" } });
+  });
+
+  await page.goto("/review");
+  const card = page.getByTestId("review-card-p-1");
+  await expect(card).toBeVisible();
+  await expect(card).toContainText("Pending Filter");
+  await card.getByTestId("review-approve-p-1").click();
+  await expect(page.getByTestId("review-empty")).toBeVisible();
+  expect(decisions).toEqual(["approve"]);
+});
+
 test("bundled starter tiles open their example in the editor", async ({
   page,
 }) => {

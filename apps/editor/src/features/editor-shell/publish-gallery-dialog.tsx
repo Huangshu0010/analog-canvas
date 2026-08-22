@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import type { SubmissionGateReport } from "@icm/derived";
+
 import {
   describePublishOutcome,
   forgetOnUnauthorized,
@@ -14,28 +16,39 @@ import {
 
 export interface PublishGalleryDialogProps {
   defaultName: string;
-  /** The signed-in user, if any; an admin session publishes cookie-side. */
+  /** The signed-in user, if any; admins and moderators publish directly. */
   session?: PublishSessionUser | null;
+  /** Quality-gate evaluation of the live Project (phase G3). */
+  gateReport?: SubmissionGateReport | null;
   publish: (fields: GalleryPublishFields) => Promise<GalleryPublishOutcome>;
-  onPublished: (outcome: { id: string; name: string }) => void;
+  onPublished: (outcome: {
+    id: string;
+    name: string;
+    pending: boolean;
+  }) => void;
   onClose: () => void;
 }
 
 /**
- * File > "Publish to Gallery…". A signed-in super-admin (G2) publishes
- * directly on the session — no passphrase row. Anyone else needs the
- * gallery owner's passphrase (remembered for the browser session,
+ * File > "Publish to Gallery…". Admin and moderator sessions publish
+ * directly; an ordinary signed-in user submits into the review queue and
+ * must pass the quality gates (listed live, blocking). Without a session
+ * the owner-passphrase path remains (remembered per browser session,
  * forgotten on a 401). The author byline prefills from the account's
  * display name, else from the last successful publish.
  */
 export function PublishGalleryDialog({
   defaultName,
   session = null,
+  gateReport = null,
   publish,
   onPublished,
   onClose,
 }: PublishGalleryDialogProps) {
-  const admin = session?.isAdmin === true;
+  const privileged = session?.isAdmin === true || session?.role === "moderator";
+  const ordinary = session !== null && !privileged;
+  const anonymous = session === null;
+  const gatesBlock = ordinary && gateReport !== null && !gateReport.ok;
   const [name, setName] = useState(defaultName);
   const [author, setAuthor] = useState(
     () => rememberedPublishAuthor() || session?.displayName || "",
@@ -61,12 +74,16 @@ export function PublishGalleryDialog({
       name,
       author,
       description,
-      token: admin ? "" : token,
+      token: anonymous ? token : "",
     });
-    if (outcome.status === "published") {
-      if (!admin) rememberPublishToken(token);
+    if (outcome.status === "published" || outcome.status === "pending-review") {
+      if (anonymous) rememberPublishToken(token);
       rememberPublishAuthor(author);
-      onPublished({ id: outcome.id, name: name.trim() });
+      onPublished({
+        id: outcome.id,
+        name: name.trim(),
+        pending: outcome.status === "pending-review",
+      });
       return;
     }
     if (forgetOnUnauthorized(outcome)) setToken("");
@@ -128,7 +145,7 @@ export function PublishGalleryDialog({
               onChange={(event) => setDescription(event.currentTarget.value)}
             />
           </label>
-          {admin ? null : (
+          {anonymous ? (
             <label>
               Owner passphrase
               <input
@@ -138,12 +155,41 @@ export function PublishGalleryDialog({
                 onChange={(event) => setToken(event.currentTarget.value)}
               />
             </label>
-          )}
+          ) : null}
         </div>
+        {gateReport && gateReport.failures.length > 0 ? (
+          <div
+            className={
+              gatesBlock
+                ? "publish-gallery-gates publish-gallery-gates-blocking"
+                : "publish-gallery-gates"
+            }
+            data-testid="publish-gallery-gates"
+          >
+            <p>
+              {gatesBlock
+                ? "Fix these before submitting:"
+                : "Quality checks (informational for your role):"}
+            </p>
+            <ul>
+              {gateReport.failures.map((failure) => (
+                <li key={failure.code}>
+                  {failure.message}
+                  {failure.count > 1 ? ` (${failure.count})` : ""}
+                  {failure.examples.length > 0
+                    ? ` — ${failure.examples.join(", ")}`
+                    : ""}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <p className="publish-gallery-note">
-          {admin
-            ? `Signed in as ${session?.displayName} — this publishes directly as the gallery owner.`
-            : "Publishing is owner-approved for now: it needs the gallery owner's passphrase. Community sign-in with review is on the roadmap — until then, send your circuit file to the owner."}
+          {privileged
+            ? `Signed in as ${session?.displayName} — this publishes directly.`
+            : ordinary
+              ? `Signed in as ${session?.displayName} — your circuit enters the review queue and appears once a reviewer approves it.`
+              : "Publishing is owner-approved for now: it needs the gallery owner's passphrase, or sign in on the gallery page to submit for review."}
         </p>
         {error ? (
           <p role="alert" className="publish-gallery-error">
@@ -158,11 +204,14 @@ export function PublishGalleryDialog({
             type="button"
             className="publish-gallery-primary"
             disabled={
-              busy || name.trim() === "" || (!admin && token.trim() === "")
+              busy ||
+              name.trim() === "" ||
+              (anonymous && token.trim() === "") ||
+              gatesBlock
             }
             onClick={() => void submit()}
           >
-            {busy ? "Publishing…" : "Publish"}
+            {busy ? "Publishing…" : ordinary ? "Submit for review" : "Publish"}
           </button>
         </div>
       </section>

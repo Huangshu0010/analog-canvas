@@ -4396,3 +4396,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: worker suites, typecheck, prettier, test-impact; production
   GitHub sign-in verified after deploy.
 - Commit status: completed on `claude/auth-fetch-binding`.
+
+## 2026-08-22 — Gallery phase G3: review queue with quality gates
+
+- Target: `plan/2026-08-22-gallery-review-g3/plan.md` (completed).
+- Change: shared `evaluateSubmissionGates` (@icm/derived) — zero ERC
+  errors, zero floating endpoints (wire / named net / NoConnect), no
+  near-empty projects — enforced in the worker (422) and previewed
+  blocking in the publish dialog; ordinary signed-in submissions enter
+  `pending` until a reviewer approves or rejects with a stored optional
+  reason; in-app moderator appointment by email; `/review` and `/mine`
+  pages; feed account links; root workspace gained `@icm/derived`.
+- Validation: gates 5, worker 47, editor units 31, full unit sweep 1132,
+  gallery Playwright 10/10, typecheck, prettier, test-impact, diff
+  checks.
+- Commit status: completed on `claude/gallery-review-g3`; mainline merge
+  gated on the remote required checks.
