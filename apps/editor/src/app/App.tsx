@@ -208,6 +208,10 @@ import {
   quickPlaceRequest,
   ShapesPanel,
 } from "../features/editor-shell/shapes-panel";
+import {
+  differentialOutputSibling,
+  planDifferentialOutputSwap,
+} from "../features/editor-shell/differential-output-swap";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
@@ -8550,6 +8554,26 @@ export function App({
                         >
                           Mirror top/bottom
                         </button>
+                        {differentialOutputSibling(
+                          selectedInstance.symbolId,
+                        ) ? (
+                          <button
+                            type="button"
+                            data-testid="swap-differential-outputs"
+                            aria-label="Swap the + and - outputs"
+                            title="Swap the + and - outputs"
+                            onClick={() =>
+                              transact(
+                                planDifferentialOutputSwap(
+                                  selectedInstance.id,
+                                  selectedInstance.symbolId,
+                                ),
+                              )
+                            }
+                          >
+                            Swap + / − outputs
+                          </button>
+                        ) : null}
                         {selectedInstanceHasDifferentialInputs ? (
                           <button
                             type="button"
