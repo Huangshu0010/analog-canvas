@@ -4496,7 +4496,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   the fragment.
 - Validation: focused clipboard/Edit Engine tests, static contracts, preflight,
   test-impact, and affected unit/component/hierarchy/editor browser gates.
-- Commit status: committed locally as `d5da3225`; remote mainline delivery
+- Commit status: committed locally as `2385a49e`; remote mainline delivery
   remains gated.
 
 ## 2026-08-22 - Explicit Ground placement policy
@@ -4507,7 +4507,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   rejected.
 - Validation: focused planner/placement tests, static contracts, preflight,
   test-impact, and affected unit/component/hierarchy/editor browser gates.
-- Commit status: committed locally as `4baa4350`; remote mainline delivery
+- Commit status: committed locally as `77dc2ba6`; remote mainline delivery
   remains gated.
 
 ## 2026-08-22 - Stable MOS bulk defaults
@@ -4519,7 +4519,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: focused planner/derived/browser tests, static contracts,
   preflight, test-impact, and affected unit/component/hierarchy/editor browser
   gates.
-- Commit status: committed locally as `d4338e56`; remote mainline delivery
+- Commit status: committed locally as `bce653cb`; remote mainline delivery
   remains gated.
 
 ## 2026-08-22 - Bundled Example MOS bulk semantics
@@ -4532,5 +4532,5 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: live editor `Issues (0)` for both fixtures; focused Example and
   bulk tests; focused Example browser workflow; static contracts, preflight,
   test-impact, and affected unit/component/hierarchy/editor gates.
-- Commit status: committed locally as `cd180595`; mainline delivery proceeds
+- Commit status: committed locally as `c2e85ff7`; mainline delivery proceeds
   through the canonical local and remote gates.
