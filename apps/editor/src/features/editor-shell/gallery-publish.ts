@@ -1,3 +1,4 @@
+import type { SubmissionGateFailure } from "@icm/derived";
 import type { CircuitProject } from "@icm/model";
 import { serializeProject } from "@icm/project-protocol";
 
@@ -20,10 +21,14 @@ export interface GalleryPublishFields {
 export interface PublishSessionUser {
   displayName: string;
   isAdmin: boolean;
+  /** "user" or "moderator"; moderators publish directly (phase G3). */
+  role?: string;
 }
 
 export type GalleryPublishOutcome =
   | { status: "published"; id: string }
+  | { status: "pending-review"; id: string }
+  | { status: "gate-failed"; failures: readonly SubmissionGateFailure[] }
   | { status: "unauthorized" }
   | { status: "too-large" }
   | { status: "rate-limited" }
@@ -62,11 +67,18 @@ export async function publishProjectToGallery(
   if (response.status === 201) {
     const payload = (await response.json().catch(() => null)) as {
       id?: unknown;
+      status?: unknown;
     } | null;
-    return {
-      status: "published",
-      id: typeof payload?.id === "string" ? payload.id : "",
-    };
+    const id = typeof payload?.id === "string" ? payload.id : "";
+    return payload?.status === "pending"
+      ? { status: "pending-review", id }
+      : { status: "published", id };
+  }
+  if (response.status === 422) {
+    const payload = (await response.json().catch(() => null)) as {
+      failures?: SubmissionGateFailure[];
+    } | null;
+    return { status: "gate-failed", failures: payload?.failures ?? [] };
   }
   if (response.status === 401) return { status: "unauthorized" };
   if (response.status === 413) return { status: "too-large" };
@@ -88,6 +100,10 @@ export function describePublishOutcome(outcome: GalleryPublishOutcome): string {
   switch (outcome.status) {
     case "published":
       return "Published to the gallery";
+    case "pending-review":
+      return "Submitted — your circuit is waiting for review";
+    case "gate-failed":
+      return "The submission did not pass the quality gates";
     case "unauthorized":
       return "The passphrase was not accepted, so it was forgotten — ask the gallery owner for the current one";
     case "too-large":

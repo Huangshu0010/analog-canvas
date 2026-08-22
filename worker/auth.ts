@@ -56,6 +56,8 @@ export interface SessionUser {
   displayName: string;
   email: string | null;
   provider: string;
+  /** "user" or "moderator" (appointed by the super-admin). */
+  role: string;
   isAdmin: boolean;
 }
 
@@ -65,6 +67,7 @@ interface UserRow {
   provider_id: string;
   email: string | null;
   display_name: string;
+  role: string;
   created_at: string;
 }
 
@@ -196,10 +199,19 @@ export class AuthDO {
         provider_id TEXT NOT NULL,
         email TEXT,
         display_name TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
         created_at TEXT NOT NULL,
         UNIQUE (provider, provider_id)
       ) WITHOUT ROWID
     `);
+    try {
+      // Additive upgrade for databases created before roles existed.
+      this.sql.exec(
+        "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'",
+      );
+    } catch {
+      // Column already present.
+    }
     this.sql.exec(`
       CREATE TABLE IF NOT EXISTS sessions (
         token_hash TEXT PRIMARY KEY,
@@ -266,6 +278,9 @@ export class AuthDO {
     if (route === "profile" && method === "POST") {
       return this.renameProfile(request);
     }
+    if (route === "users/role" && method === "POST") {
+      return this.setRole(request);
+    }
     return Response.json({ error: "not-found" }, { status: 404 });
   }
 
@@ -299,6 +314,7 @@ export class AuthDO {
       displayName: row.display_name,
       email: row.email,
       provider: row.provider,
+      role: row.role ?? "user",
       isAdmin:
         row.email !== null &&
         adminEmails(this.env).includes(row.email.toLowerCase()),
@@ -355,15 +371,17 @@ export class AuthDO {
       email,
       display_name:
         defaultDisplayName.trim().slice(0, AUTH_DISPLAY_NAME_MAX) || "Someone",
+      role: "user",
       created_at: this.now().toISOString(),
     };
     this.sql.exec(
-      "INSERT INTO users(id, provider, provider_id, email, display_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO users(id, provider, provider_id, email, display_name, role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
       row.id,
       row.provider,
       row.provider_id,
       row.email,
       row.display_name,
+      row.role,
       row.created_at,
     );
     return row;
@@ -721,6 +739,42 @@ export class AuthDO {
       user.id,
     );
     return noStoreJson({ user: { ...user, displayName } });
+  }
+
+  /**
+   * Super-admin appoints (or revokes) moderators by email; the role
+   * applies to every account carrying that verified email, so it covers
+   * a person's GitHub, Google, and email identities at once.
+   */
+  private async setRole(request: Request): Promise<Response> {
+    if (!sameOrigin(request)) {
+      return Response.json({ error: "forbidden" }, { status: 403 });
+    }
+    const caller = await this.sessionUser(request);
+    if (!caller?.isAdmin) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const body = (await request.json().catch(() => null)) as {
+      email?: unknown;
+      role?: unknown;
+    } | null;
+    const email = normalizedEmail(body?.email);
+    const role = body?.role;
+    if (!email || (role !== "user" && role !== "moderator")) {
+      return Response.json({ error: "invalid-fields" }, { status: 400 });
+    }
+    const targets = this.sql
+      .exec<UserRow>("SELECT * FROM users WHERE lower(email) = ?", email)
+      .toArray();
+    if (targets.length === 0) {
+      return Response.json({ error: "no-such-user" }, { status: 404 });
+    }
+    this.sql.exec(
+      "UPDATE users SET role = ? WHERE lower(email) = ?",
+      role,
+      email,
+    );
+    return noStoreJson({ updated: targets.length, role });
   }
 }
 
