@@ -4349,3 +4349,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   checks, production smoke, and 171 browser tests passed.
 - Commit status: ready to commit on
   `codex/sky130-external-mos-presentation`.
+
+## 2026-08-22 - SKY130, logic-gate, VDD, and capacitor integration
+
+- Target: `plan/2026-08-22-sky130-logic-vdd-cap-stack/plan.md` (completed).
+- Changed areas: stacked the completed VDD/capacitor, Razavi logic-gate, and
+  SKY130 external-MOS work on latest `main`; retained the existing device,
+  external-subcircuit, named-Net, routing, and symbol/catalog boundaries; and
+  updated the SKY130 browser scenario to the current `/editor` route.
+- Validation: Razavi drift checks; 177 focused tests; affected browser gates;
+  branch verification with 1120 tests/build/smoke; frozen install and canonical
+  `pnpm ci:check` with 185 browser tests; all six GitHub checks passed on PR
+  #159 before close-out.
+- Commit status: delivered to `codex/sky130-logic-vdd-cap-stack`; PR #159 open
+  for review, superseding closed draft PR #141.

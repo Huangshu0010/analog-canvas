@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -117,4 +117,17 @@ chore(integration): stack schematic presentation work
 
 ## Outcome
 
-Pending.
+Stacked the three local-main VDD/capacitor commits, the two Razavi logic-gate
+commits, and the SKY130 external-MOS commit onto `a33a01e8` without changing
+their domain contracts. The only required integration repair updated the
+SKY130 browser scenario from the now-gallery root route to `/editor`; all code
+conflicts were limited to preserving the union of factual `plan/log.md`
+entries.
+
+Validation passed: Razavi generator/catalog drift checks; 16 focused unit
+files / 177 tests; affected browser gates (22 component-insert, 11 hierarchy,
+1 Agent, and 92 manual-editor tests); branch verification (179 files / 1120
+tests, builds, production smoke); frozen install and canonical `pnpm ci:check`
+(1120 tests, release/golden/smoke checks, and 185 browser tests). PR #159 was
+created and all six GitHub Actions checks passed on integration commit
+`86a52d5a`; the narrower SKY130 draft PR #141 was closed as superseded.
