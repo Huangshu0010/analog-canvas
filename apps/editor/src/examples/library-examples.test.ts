@@ -9,11 +9,15 @@ import {
 
 describe("bundled Library Project examples", () => {
   it("ships canonical, schema-current, openable Projects", () => {
-    // The curated pair stays; promoted examples may extend the set (see
-    // scripts/promote-example.mjs), so the contract is per-example, not a
+    // Bundled examples can grow, so the contract is per-example rather than a
     // frozen count or single-document shape.
     expect(libraryProjectExamples.map((example) => example.id)).toEqual(
-      expect.arrayContaining(["common-source-amplifier", "two-stage-op-amp"]),
+      expect.arrayContaining([
+        "common-source-amplifier",
+        "two-stage-op-amp",
+        "current-mirror-loaded-differential-pair",
+        "fully-differential-two-stage-op-amp",
+      ]),
     );
     expect(
       new Set(libraryProjectExamples.map((example) => example.id)).size,

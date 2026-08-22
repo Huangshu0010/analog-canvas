@@ -942,7 +942,7 @@ test("opens named full-width Project examples from the left tool rail", async ({
   const exampleList = panel.locator(".shapes-example-list");
   const examples = exampleList.locator(".shapes-example-card");
   await expect(panel).toHaveAttribute("data-open", "true");
-  await expect(examples).toHaveCount(2);
+  await expect(examples).toHaveCount(4);
   expect(
     await exampleList.evaluate(
       (element) =>
@@ -955,6 +955,19 @@ test("opens named full-width Project examples from the left tool rail", async ({
   await expect(
     panel.getByTestId("shapes-example-two-stage-op-amp"),
   ).toContainText("Two-Stage Op Amp");
+  await expect(
+    panel.getByTestId("shapes-example-current-mirror-loaded-differential-pair"),
+  ).toContainText("Current-Mirror-Loaded Differential Pair");
+  await expect(
+    panel.getByTestId("shapes-example-fully-differential-two-stage-op-amp"),
+  ).toContainText("Fully Differential Two-Stage Op Amp");
+
+  await examplesToggle.click();
+  await expect(panel).toHaveAttribute("data-open", "false");
+  await expect(examplesToggle).toHaveAttribute("aria-expanded", "false");
+
+  await examplesToggle.click();
+  await expect(panel).toHaveAttribute("data-open", "true");
 
   await panel.getByTestId("shapes-example-common-source-amplifier").click();
   await expect(page.getByTestId("status")).toHaveText(

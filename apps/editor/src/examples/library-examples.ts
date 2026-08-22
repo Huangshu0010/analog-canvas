@@ -2,6 +2,8 @@ import type { CircuitProject } from "@icm/model";
 import { parseProject } from "@icm/project-protocol";
 
 import commonSourceAmplifier from "./common-source-amplifier.icproj.json";
+import currentMirrorLoadedDifferentialPair from "./current-mirror-loaded-differential-pair.icproj.json";
+import fullyDifferentialTwoStageOpAmp from "./fully-differential-two-stage-op-amp.icproj.json";
 import twoStageOpAmp from "./two-stage-op-amp.icproj.json";
 
 export interface LibraryProjectExample {
@@ -32,6 +34,18 @@ export const libraryProjectExamples: readonly LibraryProjectExample[] = [
     name: "Two-Stage Op Amp",
     description: "Miller-compensated amplifier",
     project: bundledProject(twoStageOpAmp),
+  },
+  {
+    id: "current-mirror-loaded-differential-pair",
+    name: "Current-Mirror-Loaded Differential Pair",
+    description: "NMOS differential pair with PMOS active load",
+    project: bundledProject(currentMirrorLoadedDifferentialPair),
+  },
+  {
+    id: "fully-differential-two-stage-op-amp",
+    name: "Fully Differential Two-Stage Op Amp",
+    description: "Differential CMOS amplifier with capacitive loads",
+    project: bundledProject(fullyDifferentialTwoStageOpAmp),
   },
 ];
 
