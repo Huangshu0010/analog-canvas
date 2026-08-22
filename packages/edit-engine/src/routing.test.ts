@@ -253,7 +253,7 @@ describe("routing Edit Engine", () => {
       resolver,
       "rail-left",
       "end",
-      160,
+      { x: 160, y: 90 },
     );
     const resized = executeTransaction(
       document,
@@ -317,6 +317,58 @@ describe("routing Edit Engine", () => {
       { x: 50, y: 20 },
       { x: 50, y: 100 },
     ]);
+  });
+
+  it("resizes a vertical Power Rail only along its y axis", () => {
+    const document = createEmptyDocument("vertical-rail", "Vertical rail");
+    document.nets.push({
+      id: "VDD",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+    });
+    document.junctions.push(
+      {
+        id: "rail-top",
+        netId: "VDD",
+        position: { x: 40, y: 0 },
+        role: "route-anchor",
+      },
+      {
+        id: "rail-bottom",
+        netId: "VDD",
+        position: { x: 40, y: 100 },
+        role: "route-anchor",
+      },
+    );
+    document.routes.push({
+      id: "vertical-rail-route",
+      netId: "VDD",
+      from: { kind: "junction", junctionId: "rail-top" },
+      to: { kind: "junction", junctionId: "rail-bottom" },
+      waypoints: [],
+      segmentModes: ["manual"],
+      presentation: "power-rail",
+    });
+
+    const proposal = proposePowerRailEndpointResize(
+      document,
+      resolver,
+      "vertical-rail-route",
+      "start",
+      { x: 999, y: -60 },
+    );
+    const resized = executeTransaction(
+      document,
+      transaction(document.id, document.revision, proposal.edits),
+      context,
+    );
+    expect(resized.ok).toBe(true);
+    if (!resized.ok) return;
+    expect(
+      resized.document.junctions.find((junction) => junction.id === "rail-top"),
+    ).toMatchObject({ position: { x: 40, y: -60 } });
   });
 
   it("plans a power rail and its label as one visual deletion", () => {

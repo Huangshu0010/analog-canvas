@@ -1,11 +1,36 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
 
 import { compileSourceBundle, compileSpiceSources } from "./compiler.js";
 import { importCompileResult } from "./importer.js";
 import { loadSourceBundleFromFile } from "./node-source.js";
 
 describe("SPICE elaboration and Project import", () => {
+  it("imports capacitor source positions onto stable plate pins", async () => {
+    const imported = importCompileResult(
+      await compileSpiceSources(
+        [
+          {
+            path: "capacitor.spi",
+            bytes: Buffer.from("Capacitor test\nC1 TOP BOT 2p\n.end\n"),
+          },
+        ],
+        "capacitor.spi",
+      ),
+    );
+    const capacitor = imported.project?.documents[0]?.instances[0];
+    expect(capacitor).toMatchObject({
+      symbolId: "capacitor",
+      importProvenance: {
+        terminalMapping: [
+          { sourcePosition: 0, pinName: "1" },
+          { sourcePosition: 1, pinName: "2" },
+        ],
+      },
+    });
+  });
+
   it("imports ordered Cell formal parameter defaults", async () => {
     const imported = importCompileResult(
       await compileSpiceSources(
@@ -247,6 +272,19 @@ Q2 collector base emitter QPREF
       reference: "XM1",
       binding: expect.objectContaining({ kind: "external-subcircuit" }),
       parameters: { l: "1.0", w: "96", nf: "12" },
+    });
+    const resolved = createProjectSymbolResolver(
+      imported.project!,
+      builtInSymbols,
+    ).resolve(document.instances[0]!.symbolId);
+    const nmos = builtInSymbols.find((symbol) => symbol.id === "nmos");
+    expect(resolved).toMatchObject({
+      definition: {
+        pins: nmos?.pins,
+        primitives: nmos?.primitives,
+        variants: [],
+        hierarchicalBlock: true,
+      },
     });
     expect(
       document.nets

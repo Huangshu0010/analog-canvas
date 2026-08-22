@@ -244,7 +244,7 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
   );
 });
 
-test("places a named power rail from I", async ({ page }) => {
+test("places a named vertical Power Rail from I", async ({ page }) => {
   await emulateDownloadOnlyBrowser(page);
   await page.goto("/editor");
   await page.keyboard.press("i");
@@ -260,10 +260,20 @@ test("places a named power rail from I", async ({ page }) => {
   await canvas.hover({ position: { x: 260, y: 140 } });
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 260, y: 140 } });
-  await canvas.click({ position: { x: 500, y: 140 } });
+  await canvas.click({ position: { x: 260, y: 380 } });
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("component-input-plane")).toHaveCount(0);
   await expect(page.getByTestId("instance-count")).toHaveText("0");
+  const railPoints = await page
+    .getByTestId("route-hit-route-vdd1-rail")
+    .evaluate((element) =>
+      Array.from((element as SVGPolylineElement).points).map((point) => ({
+        x: point.x,
+        y: point.y,
+      })),
+    );
+  expect(new Set(railPoints.map((point) => point.x)).size).toBe(1);
+  expect(railPoints.at(-1)!.y).not.toBe(railPoints[0]!.y);
 
   const saved = JSON.parse(
     (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
@@ -741,7 +751,7 @@ test("shows the complete foldable categorized Library, quick-places a device, an
   const categories = panel.locator('[data-testid^="shapes-category-"]');
 
   await expect(panel).toHaveAttribute("data-open", "true");
-  await expect(libraryChips).toHaveCount(30);
+  await expect(libraryChips).toHaveCount(32);
   await expect(categories).toHaveCount(7);
   const transistorCategory = page.getByTestId("shapes-category-transistors");
   const transistorChips = transistorCategory.locator(
@@ -848,7 +858,7 @@ test("shows the complete foldable categorized Library, quick-places a device, an
   expect(artworkGeometry.every((artwork) => artwork.separatedFromLabel)).toBe(
     true,
   );
-  await expect(libraryChips.locator("span")).toHaveCount(30);
+  await expect(libraryChips.locator("span")).toHaveCount(32);
   await expect(transistorCategory).toHaveJSProperty("open", true);
   await transistorCategory.locator("summary").click();
   await expect(transistorCategory).toHaveJSProperty("open", false);

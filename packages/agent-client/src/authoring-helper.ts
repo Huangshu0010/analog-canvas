@@ -651,11 +651,15 @@ function compileAddPowerRail(
   allocateId: AllocateId,
   pushEdit: PushEdit,
 ): void {
-  if (action.start.y !== action.end.y || action.start.x === action.end.x) {
+  const horizontal =
+    action.start.y === action.end.y && action.start.x !== action.end.x;
+  const vertical =
+    action.start.x === action.end.x && action.start.y !== action.end.y;
+  if (!horizontal && !vertical) {
     throw new ActionCompileError(
       index,
       action.kind,
-      "a VDD rail must be a non-zero horizontal segment (equal y, different x)",
+      "a Power Rail must be one non-zero horizontal or vertical segment",
     );
   }
   const supplyNet = document.nets.find(

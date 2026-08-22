@@ -82,6 +82,21 @@ const closedSwitchEvidence = JSON.parse(
 };
 const normalize = (value: string) =>
   `${value.replaceAll("\r\n", "\n").trimEnd()}\n`;
+const pathPoints = (data: string) => {
+  const numbers = [...data.matchAll(/-?\d+(?:\.\d+)?/gu)].map((match) =>
+    Number(match[0]),
+  );
+  const points: Array<{ x: number; y: number }> = [];
+  for (let index = 0; index < numbers.length; index += 2) {
+    const x = numbers[index];
+    const y = numbers[index + 1];
+    if (x === undefined || y === undefined) {
+      throw new Error(`Malformed path coordinate list: ${data}`);
+    }
+    points.push({ x, y });
+  }
+  return points;
+};
 const logicalPoint = (
   measurement: (typeof mosGeometry.symbols)["nmos"],
   point: { x: number; y: number },
@@ -148,6 +163,8 @@ describe("Razavi symbol catalog", () => {
       ["vdd-port", "reviewed", "razavi-reference-v1"],
       ["voltage-amplifier", "reviewed", "razavi-reference-v1"],
       ["voltage-source", "reviewed", "razavi-reference-v1"],
+      ["xnor-gate", "reviewed", "razavi-reference-v1"],
+      ["xor-gate", "reviewed", "razavi-reference-v1"],
     ]);
   });
 
@@ -195,7 +212,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(28);
+    expect(razaviCatalogSymbols).toHaveLength(30);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -235,6 +252,8 @@ describe("Razavi symbol catalog", () => {
       "vdd-port",
       "voltage-amplifier",
       "voltage-source",
+      "xnor-gate",
+      "xor-gate",
     ]);
     for (const entry of razaviSymbolCatalogEntries) {
       expect(isRazaviProductCatalogEntry(entry)).toBe(
@@ -947,8 +966,20 @@ describe("Razavi symbol catalog", () => {
 });
 
 describe("logic-gate and comparator family", () => {
-  const twoInputGates = ["and-gate", "or-gate", "nand-gate", "nor-gate"];
-  const invertingShapes = new Set(["inverter", "nand-gate", "nor-gate"]);
+  const twoInputGates = [
+    "and-gate",
+    "or-gate",
+    "nand-gate",
+    "nor-gate",
+    "xor-gate",
+    "xnor-gate",
+  ];
+  const invertingShapes = new Set([
+    "inverter",
+    "nand-gate",
+    "nor-gate",
+    "xnor-gate",
+  ]);
   const family = ["inverter", ...twoInputGates, "comparator"];
 
   it("keeps gate pin identities and the comparator op-amp pinout", () => {
@@ -975,6 +1006,71 @@ describe("logic-gate and comparator family", () => {
     }
   });
 
+  it("keeps source leads and negation bubbles joined to their gate bodies", () => {
+    const inverter = requireRazaviCatalogSymbol("inverter");
+    const inverterLead = inverter.primitives[0];
+    const inverterBody = inverter.primitives[1];
+    if (!inverterLead || inverterLead.kind !== "line") {
+      throw new Error("Inverter input lead is missing");
+    }
+    if (!inverterBody || inverterBody.kind !== "path") {
+      throw new Error("Inverter body path is missing");
+    }
+    const inverterBodyMinX = Math.min(
+      ...pathPoints(inverterBody.data).map((point) => point.x),
+    );
+    expect(inverterLead.to.x).toBeCloseTo(inverterBodyMinX, 5);
+
+    const nand = requireRazaviCatalogSymbol("nand-gate");
+    const nandBody = nand.primitives.find(
+      (primitive) => primitive.kind === "path",
+    );
+    const nandBubble = nand.primitives.find(
+      (primitive) => primitive.part === "negation-bubble",
+    );
+    if (!nandBody || nandBody.kind !== "path") return;
+    const nandBodyMinX = Math.min(
+      ...pathPoints(nandBody.data).map((point) => point.x),
+    );
+    for (const lead of nand.primitives.slice(0, 2)) {
+      expect(lead).toMatchObject({ kind: "line" });
+      if (lead.kind !== "line") continue;
+      expect(lead.to.x).toBeLessThanOrEqual(nandBodyMinX);
+      expect(nandBodyMinX - lead.to.x).toBeLessThan(0.5);
+    }
+    expect(nandBubble).toMatchObject({
+      kind: "circle",
+      style: { strokeRole: "emphasis" },
+    });
+  });
+
+  it("keeps logic gates in the reviewed component-family scale", () => {
+    const nand = requireRazaviCatalogSymbol("nand-gate");
+    const resistor = requireRazaviCatalogSymbol("resistor");
+    const capacitor = requireRazaviCatalogSymbol("capacitor");
+    const nmos = requireRazaviCatalogSymbol("nmos");
+    const inputPitch = Math.abs(
+      (nand.pins.find((pin) => pin.name === "B")?.at.y ?? 0) -
+        (nand.pins.find((pin) => pin.name === "A")?.at.y ?? 0),
+    );
+    const resistorTop = resistor.pins.find((pin) => pin.name === "1");
+    const resistorBottom = resistor.pins.find((pin) => pin.name === "2");
+    const capacitorTop = capacitor.pins.find((pin) => pin.name === "1");
+    const capacitorBottom = capacitor.pins.find((pin) => pin.name === "2");
+    if (!resistorTop || !resistorBottom || !capacitorTop || !capacitorBottom) {
+      throw new Error("Reviewed passive pin geometry is incomplete");
+    }
+    const resistorSpan = Math.abs(resistorBottom.at.y - resistorTop.at.y);
+    const capacitorSpan = Math.abs(capacitorBottom.at.y - capacitorTop.at.y);
+    const mosSpan = Math.abs(
+      (nmos.pins.find((pin) => pin.name === "S")?.at.y ?? 0) -
+        (nmos.pins.find((pin) => pin.name === "D")?.at.y ?? 0),
+    );
+    expect(inputPitch).toBe(20);
+    expect([resistorSpan, capacitorSpan, mosSpan]).toEqual([40, 40, 40]);
+    expect(inputPitch * 2).toBe(resistorSpan);
+  });
+
   it("stays manual-only for netlist mapping like the op-amp", () => {
     for (const symbolId of family) {
       const entry = getRazaviCatalogEntry(symbolId);
@@ -983,5 +1079,32 @@ describe("logic-gate and comparator family", () => {
       expect(entry?.automaticMappings).toEqual([]);
       expect(entry?.manualOnlyReason).toBeTruthy();
     }
+  });
+
+  it("keeps OR/XNOR as exact compositions of direct textbook evidence", () => {
+    const nor = requireRazaviCatalogSymbol("nor-gate");
+    const or = requireRazaviCatalogSymbol("or-gate");
+    expect(
+      or.primitives.filter((primitive) => primitive.kind === "path"),
+    ).toEqual(nor.primitives.filter((primitive) => primitive.kind === "path"));
+    expect(
+      or.primitives.some((primitive) => primitive.part === "negation-bubble"),
+    ).toBe(false);
+
+    const xor = requireRazaviCatalogSymbol("xor-gate");
+    const xnor = requireRazaviCatalogSymbol("xnor-gate");
+    expect(
+      xnor.primitives.filter((primitive) => primitive.kind === "path"),
+    ).toEqual(xor.primitives.filter((primitive) => primitive.kind === "path"));
+    const xnorBubble = xnor.primitives.find(
+      (primitive) => primitive.part === "negation-bubble",
+    );
+    const norBubble = nor.primitives.find(
+      (primitive) => primitive.part === "negation-bubble",
+    );
+    expect(xnorBubble).toMatchObject({
+      kind: "circle",
+      radius: norBubble?.kind === "circle" ? norBubble.radius : undefined,
+    });
   });
 });

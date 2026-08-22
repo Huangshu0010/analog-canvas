@@ -65,8 +65,9 @@ The effective polyline is `[resolved(from), ...waypoints, resolved(to)]`.
 Endpoint coordinates come from Instance terminals or Junctions; they are
 not duplicated in `waypoints`. Normal interactive route geometry must be
 octilinear (horizontal, vertical, or ±45°); orthogonal is the default
-authoring constraint, and `power-rail` remains horizontal-only. The Agent may
-request the same `wireIntent.routingMode: "octilinear"` constraint as GUI, and
+authoring constraint. A `power-rail` is exactly one non-zero horizontal or
+vertical segment. The Agent may request the same
+`wireIntent.routingMode: "octilinear"` constraint as GUI, and
 `segmentModes.length` must equal the number of polyline segments.
 
 Segment modes describe/edit segment handling; they do not generate geometry.

@@ -1,4 +1,6 @@
-import type { Annotation, Point } from "@icm/model";
+import { defaultVddPowerLabelPlacement } from "@icm/derived";
+import type { Annotation, SchematicDocument } from "@icm/model";
+import type { ResolvedSymbol } from "@icm/symbols";
 
 /**
  * The placed VDD power port keeps the reviewed marker artwork (a filled bar
@@ -8,27 +10,35 @@ import type { Annotation, Point } from "@icm/model";
  * can never overwrite each other's label.
  */
 export function vddPowerLabelAnnotation(options: {
-  instanceId: string;
+  instance: SchematicDocument["instances"][number];
+  resolved: ResolvedSymbol;
   netId: string;
-  position: Point;
+  grid: number;
 }): Annotation {
+  const placement = defaultVddPowerLabelPlacement(
+    options.instance,
+    options.resolved,
+    options.grid,
+  );
+  if (!placement || !options.instance.placement) {
+    throw new Error("VDD Port power label requires a placed VDD Port Symbol");
+  }
+  const position = options.instance.placement.position;
   return {
-    id: `power-label-${options.instanceId.toLowerCase()}`,
+    id: `power-label-${options.instance.id.toLowerCase()}`,
     kind: "power-label",
     binding: { kind: "net-name", netId: options.netId },
     netId: options.netId,
     anchor: {
       kind: "object",
-      objectId: options.instanceId,
-      // Both offset fields are page-grid coordinates; {10, 10} matches the
-      // drawn rail label's offset from its anchor.
-      localOffset: { x: 10, y: 10 },
-      fallbackPosition: {
-        x: options.position.x + 10,
-        y: options.position.y + 10,
+      objectId: options.instance.id,
+      localOffset: {
+        x: placement.position.x - position.x,
+        y: placement.position.y - position.y,
       },
+      fallbackPosition: placement.position,
     },
-    alignment: "start",
+    alignment: placement.alignment,
     rotation: 0,
     locked: false,
   };

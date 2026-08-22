@@ -35,6 +35,8 @@ const PRODUCT_IDS = [
   "vdd-port",
   "voltage-amplifier",
   "voltage-source",
+  "xnor-gate",
+  "xor-gate",
 ] as const;
 
 describe("Razavi-only product Symbol Library", () => {

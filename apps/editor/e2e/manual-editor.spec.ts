@@ -349,7 +349,7 @@ test("keeps a tapped VDD rail movable and stretchable as one supply bar", async 
     x: 30,
     y: 40,
   });
-  await expect(page.getByTestId("status")).toContainText("Moved VDD rail");
+  await expect(page.getByTestId("status")).toContainText("Moved Power Rail");
   const afterMove = await Promise.all(
     railIds.map((id) => readRoutePoints(page, id)),
   );
@@ -364,7 +364,7 @@ test("keeps a tapped VDD rail movable and stretchable as one supply bar", async 
     x: 80,
     y: 0,
   });
-  await expect(page.getByTestId("status")).toContainText("Resized VDD rail");
+  await expect(page.getByTestId("status")).toContainText("Resized Power Rail");
   const afterResize = await Promise.all(
     railIds.map((id) => readRoutePoints(page, id)),
   );
@@ -1849,6 +1849,42 @@ test("Properties toggles reference label visibility for one or many components",
   ).toHaveCount(1);
 });
 
+test("shows fixed and variable capacitor plate terminals as read-only Properties", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await placeComponent(page, "capacitor", { x: 280, y: 180 });
+  await placeComponent(page, "variable-capacitor", { x: 480, y: 180 });
+
+  await page.getByTestId("hit-C1").click();
+  await openSelectionShelf(page);
+  const properties = page.getByRole("complementary", { name: "Properties" });
+  let plateCard = properties.getByRole("group", {
+    name: "Capacitor plate terminals",
+  });
+  await expect(
+    plateCard.getByText("Electrical terminals", { exact: true }),
+  ).toBeVisible();
+  await expect(plateCard.getByLabel("Top plate terminal")).toHaveText(
+    "Pin 1 · Unconnected",
+  );
+  await expect(plateCard.getByLabel("Bottom plate terminal")).toHaveText(
+    "Pin 2 · Unconnected",
+  );
+  await expect(plateCard.locator("input, select, button")).toHaveCount(0);
+
+  await page.getByTestId("hit-C2").click();
+  plateCard = properties.getByRole("group", {
+    name: "Capacitor plate terminals",
+  });
+  await expect(plateCard.getByLabel("Top plate terminal")).toHaveText(
+    "Pin P1 · Unconnected",
+  );
+  await expect(plateCard.getByLabel("Bottom plate terminal")).toHaveText(
+    "Pin P2 · Unconnected",
+  );
+});
+
 test("value display projects MOS W/L and passive values beside the reference", async ({
   page,
 }) => {
@@ -2871,6 +2907,54 @@ test("exports structural SPICE and Spectre netlists while exposing instance auth
   ).toBeVisible();
   await expect(properties.getByLabel("Component model target")).toBeVisible();
   await expect(properties.getByText(/^Model:/u)).toHaveCount(0);
+});
+
+test("selects a reviewed SKY130 MOS through the existing Model field", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await placeComponent(page, "nmos", { x: 360, y: 220 });
+  await openSelectionShelf(page);
+  const properties = page.getByRole("complementary", { name: "Properties" });
+  const model = properties.getByLabel("Component model target");
+
+  await expect(
+    properties.locator('datalist option[value="sky130_fd_pr__nfet_01v8"]'),
+  ).toHaveCount(1);
+  await model.fill("sky130_fd_pr__nfet_01v8");
+  await model.press("Tab");
+
+  await expect(properties).toContainText("External subcircuit · X reference");
+  await expect(
+    properties.getByLabel("Component netlist reference"),
+  ).toHaveValue("X1");
+  await expect(properties.getByLabel("Component nf")).toBeVisible();
+  await expect(
+    properties.getByLabel("Component m", { exact: true }),
+  ).toHaveCount(0);
+
+  const saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  );
+  expect(saved.externalSubcircuitDefinitions).toEqual([
+    expect.objectContaining({
+      name: "sky130_fd_pr__nfet_01v8",
+      terminals: [
+        expect.objectContaining({ name: "D" }),
+        expect.objectContaining({ name: "G" }),
+        expect.objectContaining({ name: "S" }),
+        expect.objectContaining({ name: "B" }),
+      ],
+    }),
+  ]);
+  expect(saved.documents[0].instances[0]).toMatchObject({
+    id: "M1",
+    schematicReference: "M1",
+    netlist: {
+      reference: "X1",
+      binding: { kind: "external-subcircuit" },
+    },
+  });
 });
 
 test("uses automatic recovery and guards shortcuts while typing", async ({

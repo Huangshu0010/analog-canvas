@@ -34,6 +34,7 @@ import {
   planEditCellTerminalAnnotation,
   planSetCellTerminalPlacement,
   planUpdateCellTerminalDirection,
+  planSetMosModelTarget,
   planInstanceUnplacement,
   proposeSetCellFormalParameters,
   proposeUpsertExternalSubcircuitDefinition,
@@ -119,6 +120,8 @@ import {
   externalSubcircuitSymbolId,
   findUnsupportedProjectSymbolIds,
   hierarchicalSymbolId,
+  resolvePdkSymbolMapping,
+  reviewedSky130MosModelSuggestions,
 } from "@icm/symbols";
 import { clipboardPreviewDocument } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
@@ -161,14 +164,20 @@ import { useComponentPlacement } from "../features/component-insert/use-componen
 import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
-import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
+import {
+  constrainedPowerRailEndpoint,
+  constructVddRailEdits,
+} from "../features/component-insert/vdd-rail";
 import { vddPowerLabelAnnotation } from "../features/component-insert/vdd-power-label";
 import {
   powerConnectionForSymbol,
   proposePlacementContact,
   proposedStandalonePowerConnection,
 } from "../features/component-insert/placement-connectivity";
-import { componentParameters } from "../features/component-insert/component-parameters";
+import {
+  componentParameters,
+  externalMosComponentParameters,
+} from "../features/component-insert/component-parameters";
 import {
   endpointTestId,
   instanceLabelAnnotationFor,
@@ -299,6 +308,7 @@ import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
 import { InstanceTableDialog } from "../features/properties/instance-table-dialog";
+import { capacitorPlatePropertyRows } from "../features/properties/capacitor-plate-properties";
 import { useEditorPanels } from "../features/editor-shell/use-editor-panels";
 import {
   type InstanceMovePreview,
@@ -897,6 +907,9 @@ export function App({
   const selectedDevice = selectedInstance
     ? deviceDescriptor(selectedInstance.symbolId)
     : undefined;
+  const selectedCapacitorPlateRows = selectedInstance
+    ? capacitorPlatePropertyRows(document, selectedInstance)
+    : null;
   const selectedBinding = selectedInstance?.netlist?.binding;
   const selectedExternalSubcircuit =
     selectedBinding?.kind === "external-subcircuit"
@@ -904,6 +917,27 @@ export function App({
           (definition) => definition.id === selectedBinding.definitionId,
         )
       : undefined;
+  const selectedExternalMosMapping = selectedExternalSubcircuit
+    ? (() => {
+        const mapping = resolvePdkSymbolMapping(
+          selectedExternalSubcircuit.name,
+          selectedExternalSubcircuit.terminals.length,
+        );
+        return mapping &&
+          selectedExternalSubcircuit.terminals.every(
+            (terminal, index) =>
+              terminal.name.toLowerCase() ===
+              mapping.pinNames[index]?.toLowerCase(),
+          )
+          ? mapping
+          : undefined;
+      })()
+    : undefined;
+  const selectedPropertyDevice =
+    selectedDevice ??
+    (selectedExternalMosMapping
+      ? deviceDescriptor(selectedExternalMosMapping.symbolId)
+      : undefined);
   const selectedCellSymbolLayout = useMemo(() => {
     if (
       !cellSymbolLayoutEnabled ||
@@ -1019,6 +1053,7 @@ export function App({
     selectedRouteNetLabel: selectedRouteNetLabel ?? null,
     selectedRouteNetLabels,
     selectedInstance,
+    componentParametersForInstance: propertyParametersForInstance,
     wireSourceActive: wireSource !== null,
     netLabelEditorInputRef,
     transact,
@@ -5511,7 +5546,7 @@ export function App({
       const netlistParameters = { ...baseNetlist.parameters };
       const set: Record<string, string> = {};
       const unset: string[] = [];
-      for (const parameter of componentParameters(instance.symbolId)) {
+      for (const parameter of propertyParametersForInstance(instance)) {
         const value = (draft.parameters[parameter.key] ?? "").trim();
         const current = netlistParameters[parameter.key];
         if (value === "") {
@@ -5579,6 +5614,40 @@ export function App({
 
   function updateSelectedModelTarget(value: string): void {
     if (!selectedInstance?.netlist) return;
+    if (
+      selectedPropertyDevice?.symbolId === "nmos" ||
+      selectedPropertyDevice?.symbolId === "pmos"
+    ) {
+      try {
+        const edits = planSetMosModelTarget(
+          project,
+          document.id,
+          selectedInstance.id,
+          value,
+        );
+        if (edits.length === 0) return;
+        if (commitStructure("set-mos-model-target", edits)) {
+          const target = value.trim();
+          const mapping = target
+            ? resolvePdkSymbolMapping(target, 4)
+            : undefined;
+          setStatus(
+            mapping
+              ? `Set external X target ${target}`
+              : target
+                ? `Set model target ${target}`
+                : `Cleared model target for ${selectedInstance.id}`,
+          );
+        }
+      } catch (error) {
+        setStatus(
+          error instanceof Error
+            ? error.message
+            : "Could not set MOS model target",
+        );
+      }
+      return;
+    }
     const binding = bindingForEditedModel(selectedInstance.symbolId, value);
     const nextBinding = binding ?? null;
     const currentBinding = selectedInstance.netlist.binding ?? null;
@@ -5598,6 +5667,32 @@ export function App({
           : `Cleared model target for ${selectedInstance.id}`,
       );
     }
+  }
+
+  function propertyParametersForInstance(
+    instance: SchematicDocument["instances"][number],
+  ) {
+    const binding = instance.netlist?.binding;
+    if (binding?.kind === "external-subcircuit") {
+      const definition = project.externalSubcircuitDefinitions.find(
+        (candidate) => candidate.id === binding.definitionId,
+      );
+      const mapping = definition
+        ? resolvePdkSymbolMapping(definition.name, definition.terminals.length)
+        : undefined;
+      if (
+        definition &&
+        (mapping?.symbolId === "nmos" || mapping?.symbolId === "pmos") &&
+        definition.terminals.every(
+          (terminal, index) =>
+            terminal.name.toLowerCase() ===
+            mapping.pinNames[index]?.toLowerCase(),
+        )
+      ) {
+        return externalMosComponentParameters(mapping.symbolId);
+      }
+    }
+    return componentParameters(instance.symbolId);
   }
 
   function updateSelectedSchematicName(value: string): void {
@@ -5976,13 +6071,14 @@ export function App({
       event.currentTarget,
     );
     if (vddRailMode) {
+      const snapped = {
+        x: snapCoordinate(point.x, document.presentation.grid),
+        y: snapCoordinate(point.y, document.presentation.grid),
+      };
       setVddRailPreviewPoint(
         vddRailStart
-          ? {
-              x: snapCoordinate(point.x, document.presentation.grid),
-              y: vddRailStart.y,
-            }
-          : point,
+          ? constrainedPowerRailEndpoint(vddRailStart, snapped)
+          : snapped,
       );
       return;
     }
@@ -6714,7 +6810,7 @@ export function App({
             cancelledKind === "copy-placement"
               ? "Copy placement cancelled"
               : cancelledKind === "placing-vdd-rail"
-                ? "VDD rail cancelled"
+                ? "Power Rail cancelled"
                 : cancelledKind === "placing-component"
                   ? "Component placement cancelled"
                   : cancelledKind === "drawing"
@@ -7955,7 +8051,7 @@ export function App({
                       </div>
                       <div>
                         <dt>Device class</dt>
-                        <dd>{selectedDevice?.deviceClass ?? "none"}</dd>
+                        <dd>{selectedPropertyDevice?.deviceClass ?? "none"}</dd>
                       </div>
                       <div>
                         <dt>Cell</dt>
@@ -7963,6 +8059,33 @@ export function App({
                       </div>
                     </dl>
                   </div>
+                  {selectedCapacitorPlateRows ? (
+                    <div
+                      className="property-card property-terminal-card"
+                      role="group"
+                      aria-label="Capacitor plate terminals"
+                    >
+                      <div className="property-section-heading">
+                        Electrical terminals
+                      </div>
+                      <dl className="component-readonly-fields">
+                        {selectedCapacitorPlateRows.map((row) => (
+                          <div key={row.role}>
+                            <dt>{row.label}</dt>
+                            <dd aria-label={`${row.label} terminal`}>
+                              Pin {row.pinName} ·{" "}
+                              {row.netName ?? row.netId ?? "Unconnected"}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                      <small>
+                        Plate roles are defined by the device. Change their Net
+                        connections through wiring or orientation, not by
+                        renaming the roles.
+                      </small>
+                    </div>
+                  ) : null}
                   {selectedInstance.netlist ? (
                     <div
                       className="property-card property-target-card"
@@ -7971,26 +8094,27 @@ export function App({
                       <div className="property-section-heading">
                         Netlist target
                       </div>
-                      {selectedInstance.netlist.binding?.kind === "model" ? (
+                      {selectedInstance.netlist.binding?.kind === "model" ||
+                      selectedDevice?.targetPolicy === "required-model" ||
+                      selectedExternalMosMapping ? (
                         <label>
                           Model
                           <input
                             key={`${selectedInstance.id}-${document.revision}-model-target`}
                             aria-label="Component model target"
-                            defaultValue={selectedInstance.netlist.binding.name}
-                            onBlur={(event) =>
-                              updateSelectedModelTarget(
-                                event.currentTarget.value,
-                              )
+                            list={
+                              selectedPropertyDevice?.symbolId === "nmos" ||
+                              selectedPropertyDevice?.symbolId === "pmos"
+                                ? `mos-model-options-${selectedPropertyDevice.symbolId}`
+                                : undefined
                             }
-                          />
-                        </label>
-                      ) : selectedDevice?.targetPolicy === "required-model" ? (
-                        <label>
-                          Model
-                          <input
-                            key={`${selectedInstance.id}-${document.revision}-model-target`}
-                            aria-label="Component model target"
+                            defaultValue={
+                              selectedInstance.netlist.binding?.kind === "model"
+                                ? selectedInstance.netlist.binding.name
+                                : selectedExternalMosMapping
+                                  ? selectedExternalSubcircuit?.name
+                                  : ""
+                            }
                             placeholder="Model name"
                             onBlur={(event) =>
                               updateSelectedModelTarget(
@@ -7998,6 +8122,21 @@ export function App({
                               )
                             }
                           />
+                          {selectedPropertyDevice?.symbolId === "nmos" ||
+                          selectedPropertyDevice?.symbolId === "pmos" ? (
+                            <datalist
+                              id={`mos-model-options-${selectedPropertyDevice.symbolId}`}
+                            >
+                              {reviewedSky130MosModelSuggestions(
+                                selectedPropertyDevice.symbolId,
+                              ).map((model) => (
+                                <option value={model} key={model} />
+                              ))}
+                            </datalist>
+                          ) : null}
+                          {selectedExternalMosMapping ? (
+                            <small>External subcircuit · X reference</small>
+                          ) : null}
                         </label>
                       ) : selectedInstance.netlist.binding?.kind ===
                         "primitive" ? (
@@ -8031,7 +8170,7 @@ export function App({
                   <div className="property-card property-parameters-card">
                     <div className="property-section-heading">Parameters</div>
                     <div className="component-parameter-grid">
-                      {componentParameters(selectedInstance.symbolId).map(
+                      {propertyParametersForInstance(selectedInstance).map(
                         (parameter, index) => (
                           <label key={parameter.key} title={parameter.help}>
                             <span className="property-parameter-name">
@@ -9389,7 +9528,7 @@ export function App({
                     x1={vddRailStart.x}
                     y1={vddRailStart.y}
                     x2={componentPreviewPoint.x}
-                    y2={vddRailStart.y}
+                    y2={componentPreviewPoint.y}
                     strokeWidth={styleProfile.strokes.powerRail}
                   />
                 ) : componentPreviewPoint ? (
@@ -9523,7 +9662,11 @@ export function App({
                       (junction): junction is NonNullable<typeof junction> =>
                         Boolean(junction),
                     )
-                    .sort((left, right) => left.position.x - right.position.x);
+                    .sort((left, right) => {
+                      return left.position.x === right.position.x
+                        ? left.position.y - right.position.y
+                        : left.position.x - right.position.x;
+                    });
                   const routeCenter = centerOfBounds(
                     polylineBounds(geometry.centerline),
                   );
@@ -10285,7 +10428,7 @@ export function App({
           </p>
           <span className="statusbar-tool" data-testid="statusbar-tool">
             {vddRailMode
-              ? "Drawing VDD rail"
+              ? "Drawing Power Rail"
               : pendingSymbolId
                 ? `Placing ${pendingSymbolId}`
                 : tool === "pointer"

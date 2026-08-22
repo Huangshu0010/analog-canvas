@@ -28,6 +28,8 @@ describe("component insertion catalog", () => {
     expect(symbolCategory("or-gate")).toBe("Logic Gates");
     expect(symbolCategory("nand-gate")).toBe("Logic Gates");
     expect(symbolCategory("nor-gate")).toBe("Logic Gates");
+    expect(symbolCategory("xor-gate")).toBe("Logic Gates");
+    expect(symbolCategory("xnor-gate")).toBe("Logic Gates");
     expect(symbolCategory("npn")).toBe("Transistors");
     expect(symbolCategory("diode")).toBe("Passives");
     expect(symbolCategory("ideal-switch")).toBe("Switches");

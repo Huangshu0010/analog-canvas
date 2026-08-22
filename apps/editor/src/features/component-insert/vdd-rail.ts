@@ -15,6 +15,22 @@ export type VddRailPlan =
   | { ok: false; message: string };
 
 /**
+ * Constrain a snapped pointer to one straight Power Rail axis. The dominant
+ * delta selects the axis and ties retain the established horizontal gesture.
+ * Preview and commit must both use this one projection.
+ */
+export function constrainedPowerRailEndpoint(
+  start: Point,
+  pointer: Point,
+): Point {
+  const dx = pointer.x - start.x;
+  const dy = pointer.y - start.y;
+  return Math.abs(dx) >= Math.abs(dy)
+    ? { x: pointer.x, y: start.y }
+    : { x: start.x, y: pointer.y };
+}
+
+/**
  * Persist the visual VDD rail as an ordinary editable Route rather than as a
  * stretchable Symbol. The explicitly tagged Net is the electrical authority;
  * its route anchors and rail own all visible geometry.

@@ -159,6 +159,86 @@
       "rasterPath": "voltage-amplifier-reference.png",
       "rasterSha256": "f111f61f91eb2d45fb909c68eae62d083716a1be4a3865ce0ee2dcaf51c070f1",
       "scope": ["single-ended voltage-gain block geometry"]
+    },
+    {
+      "id": "razavi-textbook-logic-xor-gate",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 671,
+        "printedPage": 652,
+        "figure": "16.2"
+      },
+      "extractPath": "logic-xor-gate-vector-source.json",
+      "extractSha256": "39f282089c3e5431ff11b01a094f7b698a068276488185ce429bc26a32254274",
+      "rasterPath": "logic-xor-gate-reference.png",
+      "rasterSha256": "bdc0105584abbec9f10e4cd6851f5a2071b802cbdb2f2504107640a2a69ee592",
+      "scope": ["direct XOR body, exclusive curve, and lead junctions"]
+    },
+    {
+      "id": "razavi-textbook-logic-and-gate",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 687,
+        "printedPage": 668,
+        "figure": "16.24(a)"
+      },
+      "extractPath": "logic-and-gate-vector-source.json",
+      "extractSha256": "5181ae0957f75795d636e132e894c12e7e2b81aa3f210e07eb36034f2e3b311b",
+      "rasterPath": "logic-and-gate-reference.png",
+      "rasterSha256": "96148c476267e75ccdd35cc9d453b1c69624db86623244c538c67797591a7a5e",
+      "scope": ["direct AND body and lead junctions"]
+    },
+    {
+      "id": "razavi-textbook-logic-nor-gate",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 687,
+        "printedPage": 668,
+        "figure": "16.24(b)"
+      },
+      "extractPath": "logic-nor-gate-vector-source.json",
+      "extractSha256": "99be0b678d21f55eae8f9e94d43cd83a69be464e12bd3272003a9e61fa07dbe6",
+      "rasterPath": "logic-nor-gate-reference.png",
+      "rasterSha256": "15151d0b3854ec8a068dfb5974cb78551b3df624ffd580a4b4c0587e0d63b0eb",
+      "scope": ["direct NOR body, negation bubble, and lead junctions"]
+    },
+    {
+      "id": "razavi-textbook-logic-nand-gate",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 688,
+        "printedPage": 669,
+        "figure": "16.25(a)"
+      },
+      "extractPath": "logic-nand-gate-vector-source.json",
+      "extractSha256": "3bc680cc6fd537605708ad7c14eee8621bacc59c71800935d13ba1b0b225ac1a",
+      "rasterPath": "logic-nand-gate-reference.png",
+      "rasterSha256": "a63cb3b84e5a409f30da039f00387e6769cad19a38ad7d90cc403d864c4280d0",
+      "scope": ["direct NAND body, negation bubble, and lead junctions"]
+    },
+    {
+      "id": "razavi-textbook-logic-inverter",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 688,
+        "printedPage": 669,
+        "figure": "16.25(a)"
+      },
+      "extractPath": "logic-inverter-vector-source.json",
+      "extractSha256": "32f8386123fcbdc2fba59bb1a82dee9c7ea3c4394cbbbf2fb61fc4335c28c817",
+      "rasterPath": "logic-inverter-reference.png",
+      "rasterSha256": "4911da6e698c75449502cf3438166cb4ee48b33350b6ad0edf994ce6857b6c4c",
+      "scope": ["direct inverter triangle, negation bubble, and lead junctions"]
     }
   ],
   "mosGeometryPath": "mos-geometry.json",
@@ -179,8 +259,10 @@
   "opampGeometrySha256": "cc0b623c3620cf70161f353f7abcfa01b1f14daa5108d23f3800c0ca9c202c06",
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
   "commonSymbolGeometrySha256": "de9531139628f23ecdadf7dbc51d64ad176d790cb17f6929ef7fbaae597c398a",
+  "logicGateGeometryPath": "logic-gate-geometry.json",
+  "logicGateGeometrySha256": "82ab85760e6c5db3f1201a792fbad19d7a3dad32dfc42c90bd69603f693c88f8",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "5d04ed4de4f2d7a5ca6fe8efcd933fe394ed42c0e65858e3de7f85965c66c56d",
+  "fidelityTargetsSha256": "d027193bdfac07f3cbe51e11159b39e763b4a1485a57db0d5672fa5be55a906f",
   "pixels": {
     "width": 1204,
     "height": 794
@@ -196,7 +278,8 @@
     "VDD supply marker geometry",
     "PDF-derived inductor geometry and stroke treatment",
     "PDF-derived three-terminal op-amp geometry and polarity marks",
-    "PDF-derived common BJT, diode, gain-block, and switch families"
+    "PDF-derived common BJT, diode, gain-block, and switch families",
+    "PDF-derived logic-gate bodies, bubbles, and lead junctions"
   ],
   "notes": [
     "This manifest is the sole visual authority for Razavi style v1.",

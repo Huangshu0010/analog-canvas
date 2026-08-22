@@ -13,14 +13,22 @@
       "automaticMappings": [],
       "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
       "assetPath": "and-gate.symbol.json",
-      "assetHash": "5f250c89d83e078ef856dc3525b1f045041a548e4e0ae934ffead28af1914b57",
+      "assetHash": "82bbd0774b883871c429459ed6ec5dac200c036748969aed18a6426212e2d8e5",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+          "fixtures/visual-reference/razavi-reference-v1/logic-and-gate-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/logic-and-gate-reference.png"
         ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/logic-and-gate-vector-source.json",
+        "converterPath": "scripts/generate-razavi-logic-gate-assets.mjs",
+        "converterVersion": 1
       }
     },
     {
@@ -264,14 +272,22 @@
       "automaticMappings": [],
       "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
       "assetPath": "inverter.symbol.json",
-      "assetHash": "e019a1a1326406ecb58136e1c5e950eb8c07427ad94cdb59021c2963e4d134b4",
+      "assetHash": "3a2bb65468bc459eacb60bf4ade552fa6f18627b43357963ccd1201a5bf86d4f",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+          "fixtures/visual-reference/razavi-reference-v1/logic-inverter-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/logic-inverter-reference.png"
         ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/logic-inverter-vector-source.json",
+        "converterPath": "scripts/generate-razavi-logic-gate-assets.mjs",
+        "converterVersion": 1
       }
     },
     {
@@ -284,14 +300,22 @@
       "automaticMappings": [],
       "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
       "assetPath": "nand-gate.symbol.json",
-      "assetHash": "da04780ea84b0e495d59ecb4f76159c0b84303c1d560f67e0c902bb14e4814ad",
+      "assetHash": "c18a6dc17e869e5014e6f173db16c91816d20d6bd807907d541d2f13897ff8e3",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+          "fixtures/visual-reference/razavi-reference-v1/logic-nand-gate-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/logic-nand-gate-reference.png"
         ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/logic-nand-gate-vector-source.json",
+        "converterPath": "scripts/generate-razavi-logic-gate-assets.mjs",
+        "converterVersion": 1
       }
     },
     {
@@ -323,14 +347,22 @@
       "automaticMappings": [],
       "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
       "assetPath": "nor-gate.symbol.json",
-      "assetHash": "221944c93a1d805f4bd9a86761208485c72b02316cdb60f76c677ed616c38422",
+      "assetHash": "57a76caf0f646e15bd9bec13686db77ed510f343140c9693ae1bcc767c61a4fc",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+          "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-reference.png"
         ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-vector-source.json",
+        "converterPath": "scripts/generate-razavi-logic-gate-assets.mjs",
+        "converterVersion": 1
       }
     },
     {
@@ -398,14 +430,22 @@
       "automaticMappings": [],
       "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
       "assetPath": "or-gate.symbol.json",
-      "assetHash": "c7dbc84e59a3d04dff00c4aeb62194247b3af740cde1cda9a1b93351e2093b60",
+      "assetHash": "794a35ea841ee54120b263bcc98a0ecf9340f91a42ccc8dd8e5faad8dfe8345a",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
+          "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-reference.png"
         ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-vector-source.json",
+        "converterPath": "scripts/generate-razavi-logic-gate-assets.mjs",
+        "converterVersion": 1
       }
     },
     {
@@ -642,6 +682,64 @@
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePath": "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
         "converterPath": "scripts/generate-razavi-peripheral-assets.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
+      "symbolId": "xnor-gate",
+      "name": "XNOR Gate",
+      "category": "logic",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["A", "B", "Y"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+      "assetPath": "xnor-gate.symbol.json",
+      "assetHash": "375b1a63d11454dba18c752260a65bdffa06e32096cef27c8a1f7dbedc40e086",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-reference.png",
+          "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-vector-source.json",
+        "converterPath": "scripts/generate-razavi-logic-gate-assets.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
+      "symbolId": "xor-gate",
+      "name": "XOR Gate",
+      "category": "logic",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["A", "B", "Y"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+      "assetPath": "xor-gate.symbol.json",
+      "assetHash": "bf250902e48dc614618982b73e2f0d23d42284513dc2c15f63c7c135882f5b94",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-vector-source.json",
+        "converterPath": "scripts/generate-razavi-logic-gate-assets.mjs",
         "converterVersion": 1
       }
     }

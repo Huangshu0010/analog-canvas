@@ -4272,3 +4272,94 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   8/8, typecheck, prettier, test-impact, diff checks.
 - Commit status: completed on `claude/gallery-auth-g2`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 — Fixed and variable capacitor plate semantics
+
+- Target: `plan/2026-08-22-capacitor-plate-semantics/plan.md` (completed).
+- Change: device descriptors now assign stable top/bottom plate roles to
+  fixed capacitor pins `1/2` and variable-capacitor pins `P1/P2`; Project JSON,
+  Symbol artwork, and SPICE syntax/order remain unchanged.
+- Validation: focused device/SPICE/netlist tests (18), static contracts and
+  typecheck, affected gate (178 unit files / 1105 tests and 124 browser tests),
+  test-impact, formatting, documentation, MCP projection, and diff checks.
+- Commit status: completed locally; remote mainline delivery remains gated.
+
+## 2026-08-22 — Axis-aware Power Rail and VDD Port labels
+
+- Target: `plan/2026-08-22-vdd-rail-port-presentation/plan.md` (completed).
+- Change: retained generic `Power Rail`/`Rail` naming and named-Net behavior;
+  GUI and Agent author horizontal or vertical rails, endpoint resize follows
+  the active axis with live preview, tapped movement stays connected, and
+  automatic VDD Port labels remain upright/clear through orientation changes
+  without overriding user-moved labels.
+- Validation: focused unit and browser tests, static contracts and typecheck,
+  affected gate (178 unit files / 1105 tests and 124 browser tests),
+  test-impact, formatting, documentation, MCP projection, and diff checks.
+- Commit status: completed locally; remote mainline delivery remains gated.
+
+## 2026-08-22 — Capacitor plate facts in Properties
+
+- Target: `plan/2026-08-22-capacitor-plate-properties/plan.md` (completed).
+- Change: selected fixed and variable capacitors now show read-only Top/Bottom
+  plate rows with stable Pin names and current named Net, unnamed Net ID, or
+  unconnected state; no instance override or Project protocol field was added.
+- Validation: focused unit/browser checks, static contracts and typecheck,
+  affected unit gate (179 files / 1108 tests), editor browser gate (91 tests),
+  test-impact, formatting, and diff checks.
+- Commit status: completed locally; remote mainline delivery remains gated.
+
+## 2026-08-22 — Razavi logic-gate family alignment
+
+- Target: `plan/2026-08-22-razavi-logic-gate-alignment/plan.md` (completed).
+- Change: extracted hash-pinned native textbook vectors for inverter, AND,
+  NAND, NOR, and XOR; generated reviewed OR/XNOR compositions; registered all
+  seven gates in the runtime, GUI, Agent catalog, and MCP resources; added a
+  symbol-only fidelity runner without restoring the retired scene pipeline.
+- Validation: deterministic 11/11 evidence regeneration and wrong-source
+  rejection; direct hard IoU inverter 0.7172, AND 0.9326, NAND 0.8301, NOR
+  0.9064, XOR 0.9101; generator/catalog drift checks; focused and affected
+  gates; canonical CI passed 1097 unit and 183 browser tests on an isolated
+  local port, with release verification and production smoke.
+- Commit status: completed on `codex/razavi-logic-gate-alignment`; remote
+  required checks pending.
+
+## 2026-08-22 — Logic-gate continuity and scale follow-up
+
+- Target: `plan/2026-08-22-razavi-logic-gate-continuity-scale/plan.md`
+  (completed).
+- Change: corrected vertical PDF lead endpoint selection for NAND/inverter and
+  restored source-weight negation bubbles, closing visible lead/body and
+  body/bubble gaps; retained the measured family scale after a common-canvas
+  NAND/inverter/MOS/resistor/capacitor comparison.
+- Validation: deterministic 11/11 extraction; direct hard IoU inverter 0.8018,
+  NAND 0.9180, NOR 0.9417; generator drift and focused geometry tests; affected
+  gates; canonical CI passed 1099 unit and 183 browser tests.
+- Commit status: completed on `codex/razavi-logic-gate-alignment`; remote
+  required checks pending.
+
+## 2026-08-22 - SKY130 external MOS presentation
+
+- Changed areas: reused explicit four-terminal Razavi NMOS/PMOS artwork for
+  reviewed SKY130 external definitions; added an atomic Model-field transition
+  between ordinary `M` model binding and external `X` binding; exposed `nf`
+  without converting retained `m`; and preserved generic-block fallback.
+- Validation: focused symbol/planner/import/editor tests, `gate:preflight`,
+  `gate:affected` (167 files / 1018 unit tests plus all selected browser
+  suites), frozen install, and canonical `pnpm ci:check` with builds, release
+  checks, production smoke, and 171 browser tests passed.
+- Commit status: ready to commit on
+  `codex/sky130-external-mos-presentation`.
+
+## 2026-08-22 - SKY130, logic-gate, VDD, and capacitor integration
+
+- Target: `plan/2026-08-22-sky130-logic-vdd-cap-stack/plan.md` (completed).
+- Changed areas: stacked the completed VDD/capacitor, Razavi logic-gate, and
+  SKY130 external-MOS work on latest `main`; retained the existing device,
+  external-subcircuit, named-Net, routing, and symbol/catalog boundaries; and
+  updated the SKY130 browser scenario to the current `/editor` route.
+- Validation: Razavi drift checks; 177 focused tests; affected browser gates;
+  branch verification with 1120 tests/build/smoke; frozen install and canonical
+  `pnpm ci:check` with 185 browser tests; all six GitHub checks passed on PR
+  #159 before close-out.
+- Commit status: delivered to `codex/sky130-logic-vdd-cap-stack`; PR #159 open
+  for review, superseding closed draft PR #141.

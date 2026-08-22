@@ -93,15 +93,16 @@ existing global ground supply Net. Power Rail is a virtual Library item presente
 through the same I-dialog, Library, and placement input plane as components.
 Its editor-local VDD artwork is preview-only and is not registered with the
 product Symbol Resolver. Before the first click the artwork follows the
-pointer; after the first click the preview becomes the horizontal rail. The
-second click creates/reuses the selected named Net in this Document, creates two
-route-anchor Junctions and one `power-rail` Route, and persists one net-name-bound
-RichText power-label annotation. A new Net is local; a matching explicitly
-global Net keeps its scope. The Route is the only rail geometry: the annotation
-adds no supply bar or terminal stub, and the semantic name uses the shared
-Razavi schematic-math style. It creates no VDD Instance and exits placement
-after the commit. Deleting the rail also deletes its power label and rail-only
-Junctions; an otherwise-unused local Net follows the ordinary orphan lifecycle.
+pointer; after the first click the preview becomes a straight horizontal or
+vertical rail, selected by the pointer's dominant axis. The second click
+creates/reuses the selected named Net in this Document, creates two route-anchor
+Junctions and one `power-rail` Route, and persists one net-name-bound RichText
+power-label annotation. A new Net is local; a matching explicitly global Net
+keeps its scope. The Route is the only rail geometry: the annotation adds no
+supply bar or terminal stub, and the semantic name uses the shared Razavi
+schematic-math style. It creates no VDD Instance and exits placement after the
+commit. Deleting the rail also deletes its power label and rail-only Junctions;
+an otherwise-unused local Net follows the ordinary orphan lifecycle.
 
 ## Interaction states
 
@@ -235,7 +236,9 @@ point by one common delta. A boundary stretch may alter only geometry adjacent
 to the moved endpoint (or add one local orthogonal elbow); remote waypoints
 remain untouched. A protected adjacent `locked` or `trunk` segment rejects the
 gesture rather than being rerouted. Power rails use their explicit translate
-and endpoint-resize intents, never an inferred route search.
+and endpoint-resize intents, never an inferred route search. Endpoint resize is
+limited to the rail's current axis. Whole-rail translation includes its tap
+Junctions and incident geometry, so a connected rail does not fragment.
 
 Normal canvas hit ranking prefers a symbol, Route, or Junction over an
 overlapping label so routine moves do not accidentally drag text. Text remains

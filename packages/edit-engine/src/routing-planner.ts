@@ -379,41 +379,61 @@ export function proposePowerRailTranslation(
   };
 }
 
-/** Resize the left or right visual end of a continuous horizontal VDD rail. */
+/** Resize the leading or trailing visual end of one straight Power Rail. */
 export function proposePowerRailEndpointResize(
   document: SchematicDocument,
   resolver: SymbolResolver,
   routeId: string,
   side: "start" | "end",
-  x: number,
+  point: Point,
 ): RouteEditPlan {
   const component = derivePowerRailComponent(document, routeId);
   if (!component || component.endpointJunctionIds.length !== 2) {
-    throw new Error("VDD rail must have exactly two editable ends");
+    throw new Error("Power rail must have exactly two editable ends");
   }
-  const endpoints = component.endpointJunctionIds
-    .map((junctionId) =>
-      document.junctions.find((junction) => junction.id === junctionId)!,
-    )
-    .sort((left, right) => left.position.x - right.position.x);
+  const endpoints = component.endpointJunctionIds.map((junctionId) =>
+    document.junctions.find((junction) => junction.id === junctionId)!,
+  );
+  const horizontal =
+    endpoints[0]!.position.y === endpoints[1]!.position.y &&
+    endpoints[0]!.position.x !== endpoints[1]!.position.x;
+  const vertical =
+    endpoints[0]!.position.x === endpoints[1]!.position.x &&
+    endpoints[0]!.position.y !== endpoints[1]!.position.y;
+  if (!horizontal && !vertical) {
+    throw new Error("Power rail must be straight and axis-aligned");
+  }
+  endpoints.sort((left, right) =>
+    horizontal
+      ? left.position.x - right.position.x
+      : left.position.y - right.position.y,
+  );
   const start = endpoints[0]!;
   const end = endpoints[1]!;
   const target = side === "start" ? start : end;
   const fixed = side === "start" ? end : start;
+  const coordinate = horizontal ? point.x : point.y;
+  const fixedCoordinate = horizontal ? fixed.position.x : fixed.position.y;
   if (
-    (side === "start" && x >= fixed.position.x) ||
-    (side === "end" && x <= fixed.position.x)
+    (side === "start" && coordinate >= fixedCoordinate) ||
+    (side === "end" && coordinate <= fixedCoordinate)
   ) {
-    throw new Error("VDD rail must retain a non-zero horizontal length");
+    throw new Error("Power rail must retain a non-zero length");
   }
   const proposal = proposeJunctionGroupTranslation(document, resolver, [
     {
       junctionId: target.id,
-      position: { x, y: target.position.y },
+      position: horizontal
+        ? { x: coordinate, y: target.position.y }
+        : { x: target.position.x, y: coordinate },
     },
   ]);
   return {
     routeId,
+    preview: {
+      routes: proposal.routes,
+      junctions: proposal.junctions,
+    },
     edits: [
       ...proposal.junctions.map((move): SchematicEdit => ({
         kind: "move_junction",

@@ -40,7 +40,7 @@ import {
   proposedStandalonePowerConnection,
   type PlacementContactProposal,
 } from "./placement-connectivity";
-import { planVddRailEdits } from "./vdd-rail";
+import { constrainedPowerRailEndpoint, planVddRailEdits } from "./vdd-rail";
 import { vddPowerLabelAnnotation } from "./vdd-power-label";
 import {
   defaultInstanceDisplayAnnotations,
@@ -201,12 +201,19 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return;
     }
     const powerNetId = standalonePower.powerNetId ?? contact.powerNetId;
+    const resolvedPowerSymbol = options.resolver.resolve(
+      instance.symbolId,
+      instance.symbolVariantId,
+    );
     const vddPowerLabel =
-      powerConnectionForSymbol(symbolId)?.domain === "vdd" && powerNetId
+      powerConnectionForSymbol(symbolId)?.domain === "vdd" &&
+      powerNetId &&
+      resolvedPowerSymbol
         ? vddPowerLabelAnnotation({
-            instanceId: id,
+            instance,
+            resolved: resolvedPowerSymbol,
             netId: powerNetId,
-            position,
+            grid: options.document.presentation.grid,
           })
         : null;
     const projectedDocument = structuredClone(options.document);
@@ -851,17 +858,20 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         options.setVddRailStart(point);
         options.setVddRailPreviewPoint(point);
         options.setStatus(
-          `${options.vddRailNetName ?? "VDD"} rail: click the right end (Esc cancels)`,
-        );
-      } else if (point.x === options.vddRailStart.x) {
-        options.setStatus(
-          `${options.vddRailNetName ?? "VDD"} rail needs a non-zero horizontal length`,
+          `${options.vddRailNetName ?? "VDD"} rail: click the second end (Esc cancels)`,
         );
       } else {
-        placeVddRail(options.vddRailStart, {
-          x: point.x,
-          y: options.vddRailStart.y,
-        });
+        const end = constrainedPowerRailEndpoint(options.vddRailStart, point);
+        if (
+          end.x === options.vddRailStart.x &&
+          end.y === options.vddRailStart.y
+        ) {
+          options.setStatus(
+            `${options.vddRailNetName ?? "VDD"} rail needs a non-zero length`,
+          );
+        } else {
+          placeVddRail(options.vddRailStart, end);
+        }
       }
       return;
     }
