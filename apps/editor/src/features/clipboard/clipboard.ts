@@ -252,7 +252,10 @@ export function clipboardPreviewDocument(
         );
         if (previewClipboard) {
           return fallbackClipboardPreviewDocument(
-            result.document,
+            // A ghost contains only the copied fragment.  Retaining the
+            // full Cell interface here would leave it pointing at omitted
+            // formal Port markers and make the renderer reject the preview.
+            { ...result.document, netlist: undefined },
             previewClipboard,
             { x: 0, y: 0 },
           );

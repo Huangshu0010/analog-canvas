@@ -75,6 +75,15 @@ describe("schematic clipboard", () => {
       { instanceId: "P1", pinName: "P" },
       { instanceId: "P1-copy-1", pinName: "P" },
     ]);
+
+    const preview = clipboardPreviewDocument(
+      document,
+      clipboard!,
+      { x: 80, y: 0 },
+      [],
+      resolver,
+    );
+    expect(() => buildSvgScene(preview, resolver)).not.toThrow();
   });
 
   it("duplicates selected components, their named electrical Net, and route atomically", () => {

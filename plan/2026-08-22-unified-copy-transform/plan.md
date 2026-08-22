@@ -29,8 +29,10 @@ planner, and their adjacent tests.
 - `apps/editor/src/features/selection/use-selection-interaction.ts`
 - `apps/editor/src/features/selection/use-selection-interaction.test.ts`
 - `packages/edit-engine/src/transaction-instance-annotations.ts`
-- `packages/edit-engine/src/transaction-instance-annotations.test.ts`
+- `packages/edit-engine/src/transaction.test.ts`
 - `apps/editor/e2e/manual-editor.spec.ts`
+- `apps/editor/e2e/component-insert.spec.ts`
+- `apps/editor/e2e/hierarchy.spec.ts`
 
 Read-only shared dependencies:
 
@@ -88,8 +90,8 @@ fix(editor): unify copy placement transforms
 
 ## Outcome
 
-Copy Preview now dry-runs the same paste and ordered orientation edits as
-commit, then renders that candidate geometry.  Ordered secondary commands no
-longer collapse to one mirror/rotation pair, and already-oriented labels use
-the same old-local to new-world transform as the Edit Engine.  Focused unit,
-browser, formatting, static, and diff checks passed.
+The initial ordered-operation work is committed as `36a1f65b`. The follow-up
+reflows canonical free-Port Net labels through the same upright reference
+placement after a normal or copied orientation edit, and makes a partial
+formal-Port ghost omit irrelevant Cell-interface metadata. Focused tests,
+static contracts, preflight, test-impact, and the affected gate passed.

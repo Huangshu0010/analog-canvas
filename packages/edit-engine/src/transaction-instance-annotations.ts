@@ -104,6 +104,44 @@ function isCanonicalVddPowerLabel(
   );
 }
 
+/** A free Port label is the same upright reference-row placement, bound to a Net. */
+function isCanonicalPortNetLabel(
+  annotation: Annotation,
+  instance: SchematicDocument["instances"][number],
+  resolved: NonNullable<ReturnType<SymbolResolver["resolve"]>>,
+  document: SchematicDocument,
+  oldPosition: Point,
+  oldOrientation: Orientation,
+): boolean {
+  if (
+    (instance.symbolId !== "port" && instance.symbolId !== "port-filled") ||
+    annotation.kind !== "net-label" ||
+    annotation.binding?.kind !== "net-name" ||
+    annotation.anchor.kind !== "object" ||
+    annotation.anchor.objectId !== instance.id
+  ) {
+    return false;
+  }
+  const expected = defaultInstanceLabelPlacement(
+    { ...instance, placement: { position: oldPosition, ...oldOrientation } },
+    resolved,
+    resolveDocumentStyleProfile(document.presentation),
+    document.presentation.grid,
+    "reference",
+  );
+  if (!expected) return false;
+  const visiblePosition = {
+    x: oldPosition.x + annotation.anchor.localOffset.x,
+    y: oldPosition.y + annotation.anchor.localOffset.y,
+  };
+  return (
+    annotation.rotation === 0 &&
+    annotation.alignment === expected.alignment &&
+    samePoint(visiblePosition, expected.position) &&
+    samePoint(annotation.anchor.fallbackPosition, expected.position)
+  );
+}
+
 /**
  * Re-project the machine-managed Value annotation after a parameter edit.
  * A Value whose text no longer equals the previous projection is treated as
@@ -331,6 +369,43 @@ export function followAttachedAnnotations(
         },
         resolved,
         draft.presentation.grid,
+      );
+      if (next) {
+        annotation.anchor = {
+          ...annotation.anchor,
+          localOffset: {
+            x: next.position.x - newPosition.x,
+            y: next.position.y - newPosition.y,
+          },
+          fallbackPosition: next.position,
+        };
+        annotation.alignment = next.alignment;
+        annotation.rotation = 0;
+        changedObjectIds.add(annotation.id);
+        continue;
+      }
+    }
+    if (
+      instance &&
+      resolved &&
+      isCanonicalPortNetLabel(
+        annotation,
+        instance,
+        resolved,
+        draft,
+        oldPosition,
+        oldOrientation,
+      )
+    ) {
+      const next = defaultInstanceLabelPlacement(
+        {
+          ...instance,
+          placement: { position: newPosition, ...newOrientation },
+        },
+        resolved,
+        resolveDocumentStyleProfile(draft.presentation),
+        draft.presentation.grid,
+        "reference",
       );
       if (next) {
         annotation.anchor = {
