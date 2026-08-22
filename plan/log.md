@@ -4663,3 +4663,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   17/17, typecheck, prettier, test-impact, diff checks.
 - Commit status: completed on `claude/gallery-tags` (stacked on
   `claude/gallery-feed-g4`).
+
+## 2026-08-22 - Library category order and Bulk action reach
+
+- Changed areas: `CATEGORY_ORDER` now runs Transistors, Passives, Power and
+  Ports, Sources, Switches, Analog Blocks, Logic Gates — display order only,
+  no category membership change. The MOS bulk section moved to the head of the
+  selection panel and now leads with an accented "Draw bulk connection" button
+  instead of trailing its two default-Net selects.
+- Validation: component-insert unit tests (47), Playwright component-insert +
+  manual-editor specs (117 passed), typecheck, prettier, diff checks; both
+  changes confirmed in a running editor.
+- Commit status: completed on `claude/library-order-and-bulk`; mainline merge
+  gated on the remote required checks.
