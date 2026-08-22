@@ -4413,3 +4413,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   a running editor including a real 248→368px handle drag.
 - Commit status: completed on `claude/drop-panel-title-banner`; mainline
   merge gated on the remote required checks.
+
+## 2026-08-22 - Example import, square palette tiles, paste marker references
+
+- Changed areas: clicking a Library example now attaches its content to the
+  placement cursor as an ordinary clipboard payload instead of replacing the
+  Project (hierarchical examples still open as their own Project behind the
+  dirty guard); palette tiles became fixed squares in an auto-fill grid so a
+  wider panel fits more per row; the Publish button dropped its ellipsis; and
+  paste now allocates a free reference for schematic-only markers, fixing the
+  `Duplicate netlist instance reference: PWR1` rejection that a second example
+  import (or an ordinary copy of a ground/power port) triggered.
+- Validation: typecheck, full unit suite (179 files / 1121 tests), full
+  Playwright suite (185 passed), prettier, diff checks; example import, tile
+  squareness, and panel resizing all exercised in a running editor.
+- Commit status: completed on `claude/publish-label-clarity`; mainline merge
+  gated on the remote required checks.
