@@ -154,18 +154,6 @@ export function ShapesPanel({
       data-testid="shapes-library-panel"
       data-open={open ? "true" : "false"}
     >
-      <header className="shapes-panel-header">
-        <button
-          type="button"
-          className="shapes-panel-title"
-          onClick={() => onStartInsert(fullInsertLaunch())}
-          title="Open insert dialog (I)"
-        >
-          <span className="shapes-kicker">Quick place</span>
-          <span className="shapes-panel-heading">Library</span>
-        </button>
-      </header>
-
       <div className="shapes-panel-body">
         <details className="shapes-fold" open data-testid="shapes-fold-library">
           <summary className="shapes-fold-summary">

@@ -1,10 +1,23 @@
 import { useEffect, useState } from "react";
 import type { MutableRefObject } from "react";
 
+export const LIBRARY_WIDTH_MIN = 180;
+export const LIBRARY_WIDTH_MAX = 520;
+export const LIBRARY_WIDTH_DEFAULT = 248;
+
+export function clampLibraryWidth(width: number): number {
+  if (!Number.isFinite(width)) return LIBRARY_WIDTH_DEFAULT;
+  return Math.min(
+    LIBRARY_WIDTH_MAX,
+    Math.max(LIBRARY_WIDTH_MIN, Math.round(width)),
+  );
+}
+
 export interface UseEditorPanelsOptions {
   initialCompact: boolean;
   compactMediaQuery: string;
   libraryStorageKey: string;
+  libraryWidthStorageKey: string;
   helpButtonRef: MutableRefObject<HTMLButtonElement | null>;
   helpCloseRef: MutableRefObject<HTMLButtonElement | null>;
   aboutButtonRef: MutableRefObject<HTMLButtonElement | null>;
@@ -19,6 +32,19 @@ export function useEditorPanels(options: UseEditorPanelsOptions) {
       return window.localStorage.getItem(options.libraryStorageKey) !== "false";
     } catch {
       return true;
+    }
+  });
+  const [libraryWidth, setLibraryWidthState] = useState(() => {
+    if (typeof window === "undefined") return LIBRARY_WIDTH_DEFAULT;
+    try {
+      const stored = window.localStorage.getItem(
+        options.libraryWidthStorageKey,
+      );
+      return stored === null
+        ? LIBRARY_WIDTH_DEFAULT
+        : clampLibraryWidth(Number(stored));
+    } catch {
+      return LIBRARY_WIDTH_DEFAULT;
     }
   });
   const [compactLayout, setCompactLayout] = useState(options.initialCompact);
@@ -69,6 +95,17 @@ export function useEditorPanels(options: UseEditorPanelsOptions) {
       window.localStorage.setItem(options.libraryStorageKey, String(open));
     } catch {
       // Library visibility stays usable when browser storage is unavailable.
+    }
+  };
+
+  /** Commit a dragged panel width, clamped to the readable range. */
+  const setLibraryWidth = (width: number): void => {
+    const next = clampLibraryWidth(width);
+    setLibraryWidthState(next);
+    try {
+      window.localStorage.setItem(options.libraryWidthStorageKey, String(next));
+    } catch {
+      // The panel stays resizable when browser storage is unavailable.
     }
   };
 
@@ -151,6 +188,7 @@ export function useEditorPanels(options: UseEditorPanelsOptions) {
     helpOpen,
     leftPanelMode,
     libraryPanelOpen,
+    libraryWidth,
     searchOpen,
     searchQuery,
     selectionOpen,
@@ -163,6 +201,7 @@ export function useEditorPanels(options: UseEditorPanelsOptions) {
     setHelpOpen,
     setLeftPanelMode,
     setLibraryPanelOpen,
+    setLibraryWidth,
     setSearchOpen,
     setSearchQuery,
     setSelectionOpen,

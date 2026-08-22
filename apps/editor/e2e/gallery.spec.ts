@@ -4,8 +4,6 @@ import type { Page } from "@playwright/test";
 import { createEmptyProject } from "@icm/model";
 import { serializeProject } from "@icm/project-protocol";
 
-import { clickCommand } from "./editor-fixtures.js";
-
 const ENTRY = {
   id: "g-ring",
   name: "Ring Oscillator",
@@ -82,7 +80,10 @@ test("a gallery tile opens its circuit in the editor", async ({ page }) => {
   await expect(
     page.getByRole("link", { name: "Back to the gallery", exact: true }),
   ).toHaveAttribute("href", "/");
-  await expect(page.locator(".app-brand-copy h1")).toHaveText("Analog Canvas");
+  // The wordmark is part of the gallery link now, so the switch works both ways.
+  await expect(page.locator(".gallery-home-link h1")).toHaveText(
+    "Analog Canvas",
+  );
   const backLink = page.getByTestId("toolbar-gallery-link");
   await expect(backLink).toBeVisible();
   await backLink.click();
@@ -162,7 +163,7 @@ test("a signed-in owner renames the display name and signs out", async ({
   expect(loggedOut).toBe(1);
 });
 
-test("File > Publish to Gallery posts the live Project with the passphrase", async ({
+test("the Publish button posts the live Project with the passphrase", async ({
   page,
 }) => {
   const posted: { authorization: string | null; body: string }[] = [];
@@ -181,7 +182,7 @@ test("File > Publish to Gallery posts the live Project with the passphrase", asy
   });
 
   await page.goto("/editor");
-  await clickCommand(page, "File", "Publish to Gallery…");
+  await page.getByTestId("publish-gallery-button").click();
   const dialog = page.getByTestId("publish-gallery-dialog");
   await expect(dialog).toBeVisible();
 
@@ -208,7 +209,7 @@ test("File > Publish to Gallery posts the live Project with the passphrase", asy
   expect(JSON.parse(body.projectText).schemaVersion).toBe(ENTRY.schemaVersion);
 
   // The passphrase is remembered for the session and offered on reopen.
-  await clickCommand(page, "File", "Publish to Gallery…");
+  await page.getByTestId("publish-gallery-button").click();
   await expect(
     page.getByTestId("publish-gallery-dialog").getByLabel("Owner passphrase"),
   ).toHaveValue("secret-token");
@@ -241,7 +242,7 @@ test("an admin session publishes without the passphrase row", async ({
   });
 
   await page.goto("/editor");
-  await clickCommand(page, "File", "Publish to Gallery…");
+  await page.getByTestId("publish-gallery-button").click();
   const dialog = page.getByTestId("publish-gallery-dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("Signed in as Token Zhang")).toBeVisible();
