@@ -526,6 +526,125 @@ function wiredProjectText(name = "Wired"): string {
   return serializeProject(project);
 }
 
+describe("gallery version history", () => {
+  it("snapshots on every update, lists, restores (reversibly), and guards", async () => {
+    const env = environment(ADMIN_TOKEN);
+    const id = await submitOne(env, "Versioned v1");
+
+    function updateRequest(name: string): Request {
+      return new Request(`${ORIGIN}/api/gallery/${id}`, {
+        method: "PUT",
+        headers: {
+          Origin: ORIGIN,
+          Authorization: `Bearer ${ADMIN_TOKEN}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          author: "tz",
+          projectText: projectText(name),
+        }),
+      });
+    }
+    await route(env, updateRequest("Versioned v2"));
+    await route(env, updateRequest("Versioned v3"));
+
+    // Anonymous callers see nothing.
+    const denied = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}/versions`),
+    );
+    expect(denied.status).toBe(401);
+
+    const listed = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}/versions`, {
+        headers: adminHeaders(ADMIN_TOKEN),
+      }),
+    );
+    const { versions } = (await listed.json()) as {
+      versions: { versionId: string; versionNo: number; name: string }[];
+    };
+    expect(versions.map((version) => version.name)).toEqual([
+      "Versioned v2",
+      "Versioned v1",
+    ]);
+
+    const versionPreview = await route(
+      env,
+      new Request(
+        `${ORIGIN}/api/gallery/${id}/versions/${versions[1]!.versionId}/preview.svg`,
+        { headers: adminHeaders(ADMIN_TOKEN) },
+      ),
+    );
+    expect(versionPreview.headers.get("content-type")).toBe("image/svg+xml");
+
+    // Restore v1: current v3 is snapshotted first, entry becomes v1.
+    const restored = await route(
+      env,
+      new Request(
+        `${ORIGIN}/api/gallery/${id}/versions/${versions[1]!.versionId}/restore`,
+        {
+          method: "POST",
+          headers: { Origin: ORIGIN, ...adminHeaders(ADMIN_TOKEN) },
+        },
+      ),
+    );
+    expect(restored.status).toBe(200);
+    const detail = (await (
+      await route(env, new Request(`${ORIGIN}/api/gallery/${id}`))
+    ).json()) as { entry: { name: string } };
+    expect(detail.entry.name).toBe("Versioned v1");
+
+    const afterRestore = (await (
+      await route(
+        env,
+        new Request(`${ORIGIN}/api/gallery/${id}/versions`, {
+          headers: adminHeaders(ADMIN_TOKEN),
+        }),
+      )
+    ).json()) as { versions: { name: string }[] };
+    expect(afterRestore.versions.map((version) => version.name)).toEqual([
+      "Versioned v3",
+      "Versioned v2",
+      "Versioned v1",
+    ]);
+  });
+
+  it("prunes history beyond the per-entry cap", async () => {
+    const env = environment(ADMIN_TOKEN);
+    const id = await submitOne(env, "Cap 0");
+    for (let index = 1; index <= 24; index += 1) {
+      await route(
+        env,
+        new Request(`${ORIGIN}/api/gallery/${id}`, {
+          method: "PUT",
+          headers: {
+            Origin: ORIGIN,
+            Authorization: `Bearer ${ADMIN_TOKEN}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            name: `Cap ${index}`,
+            projectText: projectText(`Cap ${index}`),
+          }),
+        }),
+      );
+    }
+    const listed = (await (
+      await route(
+        env,
+        new Request(`${ORIGIN}/api/gallery/${id}/versions`, {
+          headers: adminHeaders(ADMIN_TOKEN),
+        }),
+      )
+    ).json()) as { versions: { versionNo: number }[] };
+    expect(listed.versions).toHaveLength(20);
+    expect(listed.versions[0]!.versionNo).toBe(24);
+    expect(listed.versions.at(-1)!.versionNo).toBe(5);
+  });
+});
+
 describe("gallery circuit tags", () => {
   it("normalizes tags on write, filters as an OR-union, and aggregates", async () => {
     const env = environment(ADMIN_TOKEN);
