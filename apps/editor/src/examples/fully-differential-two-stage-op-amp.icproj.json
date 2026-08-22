@@ -557,6 +557,10 @@
       "instances": [
         {
           "id": "M1",
+          "mosBulkBinding": {
+            "netId": "net-power-vdd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M1"
@@ -575,6 +579,10 @@
         },
         {
           "id": "M2",
+          "mosBulkBinding": {
+            "netId": "net-power-vdd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M2"
@@ -593,6 +601,10 @@
         },
         {
           "id": "M3",
+          "mosBulkBinding": {
+            "netId": "net-power-vdd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M3"
@@ -611,6 +623,10 @@
         },
         {
           "id": "M4",
+          "mosBulkBinding": {
+            "netId": "net-power-vdd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M4"
@@ -629,6 +645,10 @@
         },
         {
           "id": "M5",
+          "mosBulkBinding": {
+            "netId": "net-contact-gnd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M5"
@@ -647,6 +667,10 @@
         },
         {
           "id": "M6",
+          "mosBulkBinding": {
+            "netId": "net-contact-gnd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M6"
@@ -665,6 +689,10 @@
         },
         {
           "id": "M7",
+          "mosBulkBinding": {
+            "netId": "net-contact-gnd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M7"
@@ -683,6 +711,10 @@
         },
         {
           "id": "M8",
+          "mosBulkBinding": {
+            "netId": "net-contact-gnd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M8"
@@ -1114,6 +1146,10 @@
       ],
       "layoutGroups": [],
       "name": "Main",
+      "mosBulkDefaults": {
+        "nmosNetId": "net-contact-gnd1",
+        "pmosNetId": "net-power-vdd1"
+      },
       "netlist": {
         "formalParameters": [],
         "name": "Main",
@@ -1184,6 +1220,22 @@
             {
               "instanceId": "I2",
               "pinName": "-"
+            },
+            {
+              "instanceId": "M5",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "M6",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "M7",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "M8",
+              "pinName": "B"
             }
           ]
         },
@@ -1211,6 +1263,22 @@
             {
               "instanceId": "M4",
               "pinName": "S"
+            },
+            {
+              "instanceId": "M1",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "M2",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "M3",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "M4",
+              "pinName": "B"
             }
           ]
         },

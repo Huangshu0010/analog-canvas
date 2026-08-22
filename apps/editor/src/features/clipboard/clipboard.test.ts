@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   clipboardPlacementAnchor,
   clipboardPreviewDocument,
+  copyPlacementOrientationEdits,
   copySelection,
   proposePaste,
 } from "./clipboard";
@@ -74,6 +75,15 @@ describe("schematic clipboard", () => {
       { instanceId: "P1", pinName: "P" },
       { instanceId: "P1-copy-1", pinName: "P" },
     ]);
+
+    const preview = clipboardPreviewDocument(
+      document,
+      clipboard!,
+      { x: 80, y: 0 },
+      [],
+      resolver,
+    );
+    expect(() => buildSvgScene(preview, resolver)).not.toThrow();
   });
 
   it("duplicates selected components, their named electrical Net, and route atomically", () => {
@@ -206,6 +216,111 @@ describe("schematic clipboard", () => {
       position: { x: 140, y: 80 },
       rotation: 0,
       mirror: "x",
+    });
+  });
+
+  it("replays copy secondary commands in their input order", () => {
+    const instance: Instance = {
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 90,
+        mirror: "none",
+      },
+    };
+    expect(
+      copyPlacementOrientationEdits(
+        [instance],
+        ["R1-copy-1"],
+        [
+          { kind: "rotate", deltaDegrees: 90 },
+          { kind: "reflect", direction: "left-right" },
+          { kind: "rotate", deltaDegrees: 90 },
+        ],
+      ),
+    ).toEqual([
+      { kind: "rotate_instance", instanceId: "R1-copy-1", rotation: 180 },
+      { kind: "mirror_instance", instanceId: "R1-copy-1", mirror: "x" },
+      { kind: "rotate_instance", instanceId: "R1-copy-1", rotation: 270 },
+    ]);
+  });
+
+  it("uses the Edit Engine transform for an already oriented copied label", () => {
+    const document = createEmptyDocument("document-main", "Oriented label");
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 90,
+        mirror: "none",
+      },
+    });
+    document.annotations.push({
+      id: "label-r1",
+      kind: "instance-label",
+      content: semanticTextDocument("R1", "instance-label"),
+      anchor: {
+        kind: "object",
+        objectId: "R1",
+        localOffset: { x: 0, y: -20 },
+        fallbackPosition: { x: 100, y: 80 },
+      },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+    const clipboard = copySelection(document, ["R1"])!;
+    const operations = [{ kind: "rotate", deltaDegrees: 90 } as const];
+    const preview = clipboardPreviewDocument(
+      document,
+      clipboard,
+      { x: 40, y: 0 },
+      operations,
+      resolver,
+    );
+    const proposal = proposePaste(document, clipboard, { x: 40, y: 0 }, 1);
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "paste-oriented-label",
+        documentId: document.id,
+        expectedRevision: document.revision,
+        actor: { kind: "human", id: "test" },
+        edits: [
+          ...proposal.edits,
+          ...copyPlacementOrientationEdits(
+            clipboard.instances,
+            proposal.instanceIds,
+            operations,
+          ),
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const previewInstanceId = preview.instances[0]?.id;
+    const previewLabel = preview.annotations.find(
+      (annotation) =>
+        annotation.anchor.kind === "object" &&
+        annotation.anchor.objectId === previewInstanceId,
+    );
+    const committedLabel = result.document.annotations.find(
+      (annotation) => annotation.id === "label-r1-copy-1",
+    );
+    expect(previewLabel?.anchor).toEqual({
+      kind: "object",
+      objectId: "R1-copy-0",
+      localOffset: { x: 20, y: 0 },
+      fallbackPosition: { x: 160, y: 100 },
+    });
+    expect(committedLabel?.anchor).toEqual({
+      kind: "object",
+      objectId: "R1-copy-1",
+      localOffset: { x: 20, y: 0 },
+      fallbackPosition: { x: 160, y: 100 },
     });
   });
 

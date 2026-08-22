@@ -69,7 +69,7 @@ test("mirrors component and copy placement previews before their commits", async
   await page.mouse.move(box.x + 520, box.y + 220);
   const copyPreview = page
     .getByTestId("copy-placement-preview")
-    .locator('[data-object-id="R1"] > g')
+    .locator("[data-object-id] > g")
     .first();
   await page.keyboard.press("Control+r");
   await expect(copyPreview).toHaveAttribute("transform", /rotate\(180\)/u);

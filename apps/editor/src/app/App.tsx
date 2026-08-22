@@ -296,6 +296,7 @@ import { referencedDocumentId } from "../document/editor-session";
 import { useInteractionState } from "../interaction/interaction-state";
 import type { EditorTool } from "../interaction/interaction-state";
 import { resolveTextEditingTarget } from "../features/text-editing/text-editing";
+import { planMosBulkDefaultUpdate } from "../features/component-insert/mos-bulk-defaults";
 import {
   defaultRazaviSymbolVariantId,
   materializeRazaviProjectBulkConnections,
@@ -366,10 +367,7 @@ import {
   looseRouteAnchorIds,
   NET_LABEL_MAX_NORMAL_OFFSET,
 } from "../features/wiring/route-interaction-geometry";
-import {
-  applyOrientationOperations,
-  reflectOrientation,
-} from "../interaction/shortcut-orientation";
+import { reflectOrientation } from "../interaction/shortcut-orientation";
 import type { ScreenFlip } from "../interaction/shortcut-orientation";
 import {
   buildDraftingAnchors,
@@ -861,6 +859,7 @@ export function App({
           copyPlacement.clipboard,
           offset,
           copyPlacement.orientationOperations,
+          resolver,
         ),
         resolver,
         { bounds: viewBox },
@@ -1639,7 +1638,6 @@ export function App({
     paintSnapGuides,
     beginCopyPlacementInteraction,
     setCopyPreviewPoint,
-    applyOrientationOperations,
     nextUniqueSuffix: () => {
       uniqueSuffixCounter.current += 1;
       return uniqueSuffixCounter.current;
@@ -3201,6 +3199,21 @@ export function App({
     if (!result.ok) return;
     resetInteractionState();
     setStatus(`Cleared Cell ${document.name} · Undo restores it`);
+  }
+
+  function updateMosBulkDefault(
+    kind: "nmos" | "pmos",
+    netId: string | null,
+  ): void {
+    const result = transact([
+      ...planMosBulkDefaultUpdate(document, kind, netId),
+    ]);
+    if (!result.ok) return;
+    setStatus(
+      `${kind === "nmos" ? "NMOS" : "PMOS"} bulk default ${
+        netId ? "updated" : "cleared"
+      }`,
+    );
   }
 
   function nextRoutingSuffix(): number {
@@ -8983,6 +8996,46 @@ export function App({
                   {selectedHiddenBulkNet ? (
                     <p>Explicit bulk is shown with a Razavi dashed route.</p>
                   ) : null}
+                  <label>
+                    Default NMOS bulk Net
+                    <select
+                      aria-label="Default NMOS bulk Net"
+                      value={document.mosBulkDefaults?.nmosNetId ?? ""}
+                      onChange={(event) =>
+                        updateMosBulkDefault(
+                          "nmos",
+                          event.currentTarget.value || null,
+                        )
+                      }
+                    >
+                      <option value="">None</option>
+                      {document.nets.map((net) => (
+                        <option key={net.id} value={net.id}>
+                          {net.name ?? net.id}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Default PMOS bulk Net
+                    <select
+                      aria-label="Default PMOS bulk Net"
+                      value={document.mosBulkDefaults?.pmosNetId ?? ""}
+                      onChange={(event) =>
+                        updateMosBulkDefault(
+                          "pmos",
+                          event.currentTarget.value || null,
+                        )
+                      }
+                    >
+                      <option value="">None</option>
+                      {document.nets.map((net) => (
+                        <option key={net.id} value={net.id}>
+                          {net.name ?? net.id}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <button type="button" onClick={drawSelectedMosBulk}>
                     Draw bulk connection
                   </button>
