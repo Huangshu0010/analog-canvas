@@ -4307,3 +4307,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   affected unit gate (179 files / 1108 tests), editor browser gate (91 tests),
   test-impact, formatting, and diff checks.
 - Commit status: completed locally; remote mainline delivery remains gated.
+
+## 2026-08-22 — Razavi logic-gate family alignment
+
+- Target: `plan/2026-08-22-razavi-logic-gate-alignment/plan.md` (completed).
+- Change: extracted hash-pinned native textbook vectors for inverter, AND,
+  NAND, NOR, and XOR; generated reviewed OR/XNOR compositions; registered all
+  seven gates in the runtime, GUI, Agent catalog, and MCP resources; added a
+  symbol-only fidelity runner without restoring the retired scene pipeline.
+- Validation: deterministic 11/11 evidence regeneration and wrong-source
+  rejection; direct hard IoU inverter 0.7172, AND 0.9326, NAND 0.8301, NOR
+  0.9064, XOR 0.9101; generator/catalog drift checks; focused and affected
+  gates; canonical CI passed 1097 unit and 183 browser tests on an isolated
+  local port, with release verification and production smoke.
+- Commit status: completed on `codex/razavi-logic-gate-alignment`; remote
+  required checks pending.

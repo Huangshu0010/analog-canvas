@@ -28,6 +28,8 @@ const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   "nand-gate": "NAND",
   "nor-gate": "NOR",
   "or-gate": "OR",
+  "xnor-gate": "XNOR",
+  "xor-gate": "XOR",
   pnp: "PNP",
   "port-filled": "Filled",
   resistor: "Res",

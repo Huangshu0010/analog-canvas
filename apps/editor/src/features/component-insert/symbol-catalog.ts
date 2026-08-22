@@ -41,9 +41,15 @@ export function symbolCategory(symbolId: string): string {
     return "Analog Blocks";
   }
   if (
-    ["inverter", "and-gate", "or-gate", "nand-gate", "nor-gate"].includes(
-      symbolId,
-    )
+    [
+      "inverter",
+      "and-gate",
+      "or-gate",
+      "nand-gate",
+      "nor-gate",
+      "xor-gate",
+      "xnor-gate",
+    ].includes(symbolId)
   ) {
     return "Logic Gates";
   }

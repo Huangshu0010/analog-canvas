@@ -148,6 +148,8 @@ describe("Razavi symbol catalog", () => {
       ["vdd-port", "reviewed", "razavi-reference-v1"],
       ["voltage-amplifier", "reviewed", "razavi-reference-v1"],
       ["voltage-source", "reviewed", "razavi-reference-v1"],
+      ["xnor-gate", "reviewed", "razavi-reference-v1"],
+      ["xor-gate", "reviewed", "razavi-reference-v1"],
     ]);
   });
 
@@ -195,7 +197,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(28);
+    expect(razaviCatalogSymbols).toHaveLength(30);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -235,6 +237,8 @@ describe("Razavi symbol catalog", () => {
       "vdd-port",
       "voltage-amplifier",
       "voltage-source",
+      "xnor-gate",
+      "xor-gate",
     ]);
     for (const entry of razaviSymbolCatalogEntries) {
       expect(isRazaviProductCatalogEntry(entry)).toBe(
@@ -947,8 +951,20 @@ describe("Razavi symbol catalog", () => {
 });
 
 describe("logic-gate and comparator family", () => {
-  const twoInputGates = ["and-gate", "or-gate", "nand-gate", "nor-gate"];
-  const invertingShapes = new Set(["inverter", "nand-gate", "nor-gate"]);
+  const twoInputGates = [
+    "and-gate",
+    "or-gate",
+    "nand-gate",
+    "nor-gate",
+    "xor-gate",
+    "xnor-gate",
+  ];
+  const invertingShapes = new Set([
+    "inverter",
+    "nand-gate",
+    "nor-gate",
+    "xnor-gate",
+  ]);
   const family = ["inverter", ...twoInputGates, "comparator"];
 
   it("keeps gate pin identities and the comparator op-amp pinout", () => {
@@ -983,5 +999,32 @@ describe("logic-gate and comparator family", () => {
       expect(entry?.automaticMappings).toEqual([]);
       expect(entry?.manualOnlyReason).toBeTruthy();
     }
+  });
+
+  it("keeps OR/XNOR as exact compositions of direct textbook evidence", () => {
+    const nor = requireRazaviCatalogSymbol("nor-gate");
+    const or = requireRazaviCatalogSymbol("or-gate");
+    expect(
+      or.primitives.filter((primitive) => primitive.kind === "path"),
+    ).toEqual(nor.primitives.filter((primitive) => primitive.kind === "path"));
+    expect(
+      or.primitives.some((primitive) => primitive.part === "negation-bubble"),
+    ).toBe(false);
+
+    const xor = requireRazaviCatalogSymbol("xor-gate");
+    const xnor = requireRazaviCatalogSymbol("xnor-gate");
+    expect(
+      xnor.primitives.filter((primitive) => primitive.kind === "path"),
+    ).toEqual(xor.primitives.filter((primitive) => primitive.kind === "path"));
+    const xnorBubble = xnor.primitives.find(
+      (primitive) => primitive.part === "negation-bubble",
+    );
+    const norBubble = nor.primitives.find(
+      (primitive) => primitive.part === "negation-bubble",
+    );
+    expect(xnorBubble).toMatchObject({
+      kind: "circle",
+      radius: norBubble?.kind === "circle" ? norBubble.radius : undefined,
+    });
   });
 });

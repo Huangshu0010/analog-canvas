@@ -681,6 +681,62 @@ export const agentRazaviAuthoringCatalog = {
       ],
       variants: [],
     },
+    {
+      symbolId: "xnor-gate",
+      name: "XNOR Gate",
+      category: "logic",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "A",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "B",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "Y",
+          role: "output",
+          direction: "east",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
+    {
+      symbolId: "xor-gate",
+      name: "XOR Gate",
+      category: "logic",
+      defaultVariantId: null,
+      labelVisibility: "shown",
+      pins: [
+        {
+          name: "A",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "B",
+          role: "input",
+          direction: "west",
+          visibility: "visible",
+        },
+        {
+          name: "Y",
+          role: "output",
+          direction: "east",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
   ],
   primitives: [
     {

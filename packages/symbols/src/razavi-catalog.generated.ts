@@ -24,16 +24,26 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "and-gate.symbol.json",
     assetHash:
-      "5f250c89d83e078ef856dc3525b1f045041a548e4e0ae934ffead28af1914b57",
+      "82bbd0774b883871c429459ed6ec5dac200c036748969aed18a6426212e2d8e5",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+        "fixtures/visual-reference/razavi-reference-v1/logic-and-gate-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-and-gate-reference.png",
       ],
       calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/logic-and-gate-vector-source.json",
+      converterPath: "scripts/generate-razavi-logic-gate-assets.mjs",
+      converterVersion: 1,
     },
   },
   {
@@ -324,16 +334,26 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "inverter.symbol.json",
     assetHash:
-      "e019a1a1326406ecb58136e1c5e950eb8c07427ad94cdb59021c2963e4d134b4",
+      "0f9507463ea7fbb5395f240322b3e6c8320019f440213f4b4b3505763650e855",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+        "fixtures/visual-reference/razavi-reference-v1/logic-inverter-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-inverter-reference.png",
       ],
       calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/logic-inverter-vector-source.json",
+      converterPath: "scripts/generate-razavi-logic-gate-assets.mjs",
+      converterVersion: 1,
     },
   },
   {
@@ -348,16 +368,26 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "nand-gate.symbol.json",
     assetHash:
-      "da04780ea84b0e495d59ecb4f76159c0b84303c1d560f67e0c902bb14e4814ad",
+      "a445e2890404a328bd77d6c4e7ffe7afab606c52ec2faf92b2ab718c6f8c14dc",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+        "fixtures/visual-reference/razavi-reference-v1/logic-nand-gate-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-nand-gate-reference.png",
       ],
       calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/logic-nand-gate-vector-source.json",
+      converterPath: "scripts/generate-razavi-logic-gate-assets.mjs",
+      converterVersion: 1,
     },
   },
   {
@@ -394,16 +424,26 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "nor-gate.symbol.json",
     assetHash:
-      "221944c93a1d805f4bd9a86761208485c72b02316cdb60f76c677ed616c38422",
+      "c62c2eeb47d8f3b0112d2792a988a46d3eef8183aeeb5a5e161fc2cfbbe0aca5",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+        "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-reference.png",
       ],
       calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-vector-source.json",
+      converterPath: "scripts/generate-razavi-logic-gate-assets.mjs",
+      converterVersion: 1,
     },
   },
   {
@@ -484,16 +524,26 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "or-gate.symbol.json",
     assetHash:
-      "c7dbc84e59a3d04dff00c4aeb62194247b3af740cde1cda9a1b93351e2093b60",
+      "794a35ea841ee54120b263bcc98a0ecf9340f91a42ccc8dd8e5faad8dfe8345a",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+        "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-reference.png",
       ],
       calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-vector-source.json",
+      converterPath: "scripts/generate-razavi-logic-gate-assets.mjs",
+      converterVersion: 1,
     },
   },
   {
@@ -777,6 +827,76 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       converterVersion: 1,
     },
   },
+  {
+    symbolId: "xnor-gate",
+    name: "XNOR Gate",
+    category: "logic",
+    reviewStatus: "reviewed",
+    pinOrder: ["A", "B", "Y"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+    assetPath: "xnor-gate.symbol.json",
+    assetHash:
+      "e45131e84f43c0617c43b426627eefb94948e7d09bcca0d1aba4eb231d7d1206",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-reference.png",
+        "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-nor-gate-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-vector-source.json",
+      converterPath: "scripts/generate-razavi-logic-gate-assets.mjs",
+      converterVersion: 1,
+    },
+  },
+  {
+    symbolId: "xor-gate",
+    name: "XOR Gate",
+    category: "logic",
+    reviewStatus: "reviewed",
+    pinOrder: ["A", "B", "Y"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
+    assetPath: "xor-gate.symbol.json",
+    assetHash:
+      "bf250902e48dc614618982b73e2f0d23d42284513dc2c15f63c7c135882f5b94",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/logic-gate-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/logic-xor-gate-vector-source.json",
+      converterPath: "scripts/generate-razavi-logic-gate-assets.mjs",
+      converterVersion: 1,
+    },
+  },
 ];
 
 export const razaviSemanticPrimitives: readonly RazaviSemanticPrimitiveEntry[] =
@@ -854,8 +974,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: -24,
-          y: -10,
+          x: -19.218764,
+          y: -9.999128,
         },
         style: {
           strokeRole: "normal",
@@ -870,8 +990,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: -24,
-          y: 10,
+          x: -19.218764,
+          y: 9.999128,
         },
         style: {
           strokeRole: "normal",
@@ -881,7 +1001,17 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M 0 -20 L -24 -20 L -24 20 L 0 20 A 20 20 0 0 0 0 -20 Z",
+        data: "M 0.155201 -15.077165 L -18.906618 -15.077165 L -18.906618 14.921964 L -1.016654 14.921964",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "path",
+        data: "M 0.155201 -15.234109 C 0.155201 -15.234109 0.155201 -15.234109 0.312146 -15.194001 C 0.467347 -15.155637 0.781236 -15.077165 0.936437 -15.0388 C 1.093382 -14.998692 1.093382 -14.998692 1.769989 -14.895806 C 2.446595 -14.791176 3.801552 -14.58366 5.011771 -14.231406 C 6.223734 -13.879152 7.290958 -13.385648 8.450606 -12.590461 C 9.60851 -11.797018 10.858837 -10.701892 11.821432 -9.556195 C 12.78577 -8.410498 13.462377 -7.21423 13.983782 -5.988316 C 14.505188 -4.764147 14.869649 -3.515564 15.064958 -2.212922 C 15.260267 -0.912024 15.286424 0.442933 15.155637 1.707211 C 15.02485 2.969745 14.738861 4.141599 14.205249 5.43029 C 13.671637 6.718982 12.8904 8.126253 11.992327 9.284157 C 11.094254 10.443805 10.0776 11.354085 9.244049 12.030691 C 8.410498 12.709042 7.760049 13.153719 7.069492 13.502485 C 6.378935 13.854739 5.650013 14.116314 4.999564 14.323829 C 4.347371 14.533089 3.775395 14.690034 3.26794 14.777226 C 2.758741 14.869649 2.317552 14.89755 1.860668 14.909757 C 1.405528 14.921964 0.936437 14.921964 0.442933 14.921964 C -0.052315 14.921964 -0.57372 14.921964 -0.833551 14.921964 C -1.095126 14.921964 -1.095126 14.921964 -1.095126 14.921964",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -892,7 +1022,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 20,
+          x: 15.781672,
           y: 0,
         },
         to: {
@@ -1903,7 +2033,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         to: {
-          x: -20,
+          x: -29.023455,
           y: 0,
         },
         style: {
@@ -1914,7 +2044,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -20 -20 L -20 20 L 13.65 0 Z",
+        data: "M 9.023455 0.0 L -14.727526 -15.000436 L -14.727526 13.748365 L 9.023455 0.0",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -1925,10 +2055,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "circle",
         center: {
-          x: 20,
-          y: 0,
+          x: 12.794489,
+          y: 0.009591,
         },
-        radius: 4,
+        radius: 3.750109,
         part: "negation-bubble",
         style: {
           strokeRole: "normal",
@@ -1939,7 +2069,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 24,
+          x: 16.525416,
           y: 0,
         },
         to: {
@@ -2014,7 +2144,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: -24,
+          x: -33.749237,
           y: -10,
         },
         style: {
@@ -2030,7 +2160,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: -24,
+          x: -33.827709,
           y: 10,
         },
         style: {
@@ -2041,7 +2171,17 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M 0 -20 L -24 -20 L -24 20 L 0 20 A 20 20 0 0 0 0 -20 Z",
+        data: "M -4.531345 15.07978 L -23.125817 15.07978 L -23.125817 -14.921092 L -5.234109 -14.921092",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "path",
+        data: "M -4.609818 15.07978 C -4.609818 15.07978 -4.609818 15.07978 -4.362194 15.06583 C -4.11457 15.051879 -3.619322 15.025722 -3.371698 15.013515 C -3.124074 15.001308 -3.124074 15.001308 -2.447467 14.894934 C -1.770861 14.792048 -0.417648 14.582788 0.792571 14.234022 C 2.004534 13.880024 3.073502 13.38652 4.23315 12.591333 C 5.391054 11.79789 6.641381 10.704508 7.603976 9.558811 C 8.566571 8.413114 9.244921 7.213358 9.766327 5.990932 C 10.285988 4.766763 10.652193 3.516436 10.847502 2.213794 C 11.041067 0.911152 11.068969 -0.442061 10.936437 -1.706339 C 10.807394 -2.968873 10.523149 -4.140727 9.986049 -5.429418 C 9.452437 -6.71811 8.671201 -8.125381 7.773128 -9.283285 C 6.875054 -10.442933 5.860145 -11.354957 5.026593 -12.031563 C 4.193042 -12.70817 3.542593 -13.151103 2.85378 -13.503357 C 2.159735 -13.853867 1.434301 -14.115442 0.780364 -14.322958 C 0.131659 -14.530473 -0.442061 -14.687418 -0.949516 -14.778097 C -1.458715 -14.870521 -1.901648 -14.894934 -2.356788 -14.908885 C -2.811928 -14.921092 -3.281018 -14.921092 -3.776266 -14.921092 C -4.269771 -14.921092 -4.791176 -14.921092 -5.052751 -14.921092 C -5.312582 -14.921092 -5.312582 -14.921092 -5.312582 -14.921092",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -2052,10 +2192,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "circle",
         center: {
-          x: 24,
-          y: 0,
+          x: 16.52716,
+          y: 0.010463,
         },
-        radius: 4,
+        radius: 3.375185,
         part: "negation-bubble",
         style: {
           strokeRole: "normal",
@@ -2066,8 +2206,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 28,
-          y: 0,
+          x: 19.531781,
+          y: 0.000872,
         },
         to: {
           x: 40,
@@ -2434,7 +2574,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: -19,
+          x: -17.782719,
           y: -10,
         },
         style: {
@@ -2450,7 +2590,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: -19,
+          x: -18.094864,
           y: 10,
         },
         style: {
@@ -2461,7 +2601,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -24 -20 Q -14 0 -24 20 Q 4 20 18.52 0 Q 4 -20 -24 -20 Z",
+        data: "M 13.410934 0.002616 C 13.410934 0.002616 13.410934 0.002616 11.027117 2.213794 C 8.643299 4.426715 3.875665 8.849071 -2.083006 11.829279 C -8.043421 14.809486 -15.196617 16.345802 -18.771471 17.114831 C -22.346325 17.882117 -22.346325 17.882117 -22.346325 17.882117 C -22.346325 17.882117 -22.346325 17.882117 -20.485657 14.786817 C -18.621501 11.689772 -14.896678 5.497428 -14.896678 -0.438574 C -14.896678 -6.374575 -18.621501 -12.055977 -20.485657 -14.896678 C -22.346325 -17.735635 -22.346325 -17.735635 -22.346325 -17.735635 C -22.346325 -17.735635 -22.346325 -17.735635 -18.771471 -16.991019 C -15.196617 -16.246403 -8.043421 -14.757172 -2.083006 -11.799634 C 3.875665 -8.84384 8.643299 -4.41974 11.027117 -2.208562 C 13.410934 0.002616 13.410934 0.002616 13.410934 0.002616",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -2472,10 +2612,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "circle",
         center: {
-          x: 24,
-          y: 0,
+          x: 17.617055,
+          y: -0.121196,
         },
-        radius: 4,
+        radius: 3.374313,
         part: "negation-bubble",
         style: {
           strokeRole: "normal",
@@ -2486,8 +2626,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 28,
-          y: 0,
+          x: 20.818729,
+          y: 0.002616,
         },
         to: {
           x: 40,
@@ -2888,7 +3028,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: -19,
+          x: -17.782719,
           y: -10,
         },
         style: {
@@ -2904,7 +3044,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: -19,
+          x: -18.094864,
           y: 10,
         },
         style: {
@@ -2915,7 +3055,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -24 -20 Q -14 0 -24 20 Q 4 20 20 0 Q 4 -20 -24 -20 Z",
+        data: "M 13.410934 0.002616 C 13.410934 0.002616 13.410934 0.002616 11.027117 2.213794 C 8.643299 4.426715 3.875665 8.849071 -2.083006 11.829279 C -8.043421 14.809486 -15.196617 16.345802 -18.771471 17.114831 C -22.346325 17.882117 -22.346325 17.882117 -22.346325 17.882117 C -22.346325 17.882117 -22.346325 17.882117 -20.485657 14.786817 C -18.621501 11.689772 -14.896678 5.497428 -14.896678 -0.438574 C -14.896678 -6.374575 -18.621501 -12.055977 -20.485657 -14.896678 C -22.346325 -17.735635 -22.346325 -17.735635 -22.346325 -17.735635 C -22.346325 -17.735635 -22.346325 -17.735635 -18.771471 -16.991019 C -15.196617 -16.246403 -8.043421 -14.757172 -2.083006 -11.799634 C 3.875665 -8.84384 8.643299 -4.41974 11.027117 -2.208562 C 13.410934 0.002616 13.410934 0.002616 13.410934 0.002616",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -2926,8 +3066,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 20,
-          y: 0,
+          x: 13.410934,
+          y: 0.002616,
         },
         to: {
           x: 40,
@@ -4137,6 +4277,266 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         to: {
           x: 0,
           y: 20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "xnor-gate",
+    name: "XNOR Gate",
+    viewBox: {
+      x: -44,
+      y: -24,
+      width: 88,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "A",
+        role: "input",
+        at: {
+          x: -40,
+          y: -10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "B",
+        role: "input",
+        at: {
+          x: -40,
+          y: 10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "Y",
+        role: "output",
+        at: {
+          x: 40,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: -10,
+        },
+        to: {
+          x: -14.420612,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: 10,
+        },
+        to: {
+          x: -14.106722,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M 23.63676 0.002616 C 23.63676 0.002616 23.63676 0.002616 21.252943 2.213794 C 18.869125 4.424972 14.101491 8.849071 8.141076 11.829279 C 2.182405 14.807743 -4.969047 16.344058 -8.545645 17.113087 C -12.122243 17.880373 -12.122243 17.880373 -12.122243 17.880373 C -12.122243 17.880373 -12.122243 17.880373 -10.259831 14.785073 C -8.397419 11.689772 -4.672596 5.497428 -4.672596 -0.440317 C -4.672596 -6.376319 -8.397419 -12.057721 -10.259831 -14.896678 C -12.122243 -17.737379 -12.122243 -17.737379 -12.122243 -17.737379 C -12.122243 -17.737379 -12.122243 -17.737379 -8.545645 -16.992763 C -4.969047 -16.248147 2.182405 -14.757172 8.141076 -11.801378 C 14.101491 -8.84384 18.869125 -4.421484 21.252943 -2.210306 C 23.63676 0.002616 23.63676 0.002616 23.63676 0.002616",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "path",
+        data: "M -18.651147 -17.735635 C -18.651147 -17.735635 -18.651147 -17.735635 -16.828843 -14.910629 C -15.004796 -12.083878 -11.360188 -6.432121 -11.346238 -0.482169 C -11.334031 5.467783 -14.954224 11.717674 -16.762577 14.842619 C -18.572674 17.969309 -18.572674 17.969309 -18.572674 17.969309",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "circle",
+        center: {
+          x: 27.842881,
+          y: 0.002616,
+        },
+        radius: 3.374313,
+        part: "negation-bubble",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 31.217194,
+          y: 0.002616,
+        },
+        to: {
+          x: 40,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "xor-gate",
+    name: "XOR Gate",
+    viewBox: {
+      x: -44,
+      y: -24,
+      width: 88,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "A",
+        role: "input",
+        at: {
+          x: -40,
+          y: -10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "B",
+        role: "input",
+        at: {
+          x: -40,
+          y: 10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "Y",
+        role: "output",
+        at: {
+          x: 40,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: -10,
+        },
+        to: {
+          x: -14.420612,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: 10,
+        },
+        to: {
+          x: -14.106722,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M 23.63676 0.002616 C 23.63676 0.002616 23.63676 0.002616 21.252943 2.213794 C 18.869125 4.424972 14.101491 8.849071 8.141076 11.829279 C 2.182405 14.807743 -4.969047 16.344058 -8.545645 17.113087 C -12.122243 17.880373 -12.122243 17.880373 -12.122243 17.880373 C -12.122243 17.880373 -12.122243 17.880373 -10.259831 14.785073 C -8.397419 11.689772 -4.672596 5.497428 -4.672596 -0.440317 C -4.672596 -6.376319 -8.397419 -12.057721 -10.259831 -14.896678 C -12.122243 -17.737379 -12.122243 -17.737379 -12.122243 -17.737379 C -12.122243 -17.737379 -12.122243 -17.737379 -8.545645 -16.992763 C -4.969047 -16.248147 2.182405 -14.757172 8.141076 -11.801378 C 14.101491 -8.84384 18.869125 -4.421484 21.252943 -2.210306 C 23.63676 0.002616 23.63676 0.002616 23.63676 0.002616",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "path",
+        data: "M -18.651147 -17.735635 C -18.651147 -17.735635 -18.651147 -17.735635 -16.828843 -14.910629 C -15.004796 -12.083878 -11.360188 -6.432121 -11.346238 -0.482169 C -11.334031 5.467783 -14.954224 11.717674 -16.762577 14.842619 C -18.572674 17.969309 -18.572674 17.969309 -18.572674 17.969309",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 23.63676,
+          y: 0,
+        },
+        to: {
+          x: 40,
+          y: 0,
         },
         style: {
           strokeRole: "normal",

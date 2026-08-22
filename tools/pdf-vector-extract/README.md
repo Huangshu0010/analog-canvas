@@ -11,6 +11,9 @@ The family extractors currently cover:
   Figure 8.26;
 - `extract-razavi-common-assets.py`: NPN/PNP BJT, diode, voltage amplifier,
   and ideal switch.
+- `extract-razavi-logic-gates.py`: inverter, AND, NAND, NOR, and XOR native
+  vectors from Figures 16.2, 16.24, and 16.25. OR and XNOR are explicitly
+  derived by the family generator from these direct sources.
 
 Each extractor writes:
 

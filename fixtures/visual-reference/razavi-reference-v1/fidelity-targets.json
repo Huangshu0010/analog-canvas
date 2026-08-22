@@ -189,6 +189,41 @@
       "measurementKey": "voltage-amplifier",
       "symbolId": "voltage-amplifier",
       "useVariant": false
+    },
+    {
+      "id": "logic-inverter",
+      "measurementPath": "logic-gate-geometry.json",
+      "measurementKey": "inverter",
+      "symbolId": "inverter",
+      "useVariant": false
+    },
+    {
+      "id": "logic-and-gate",
+      "measurementPath": "logic-gate-geometry.json",
+      "measurementKey": "and-gate",
+      "symbolId": "and-gate",
+      "useVariant": false
+    },
+    {
+      "id": "logic-nand-gate",
+      "measurementPath": "logic-gate-geometry.json",
+      "measurementKey": "nand-gate",
+      "symbolId": "nand-gate",
+      "useVariant": false
+    },
+    {
+      "id": "logic-nor-gate",
+      "measurementPath": "logic-gate-geometry.json",
+      "measurementKey": "nor-gate",
+      "symbolId": "nor-gate",
+      "useVariant": false
+    },
+    {
+      "id": "logic-xor-gate",
+      "measurementPath": "logic-gate-geometry.json",
+      "measurementKey": "xor-gate",
+      "symbolId": "xor-gate",
+      "useVariant": false
     }
   ]
 }
