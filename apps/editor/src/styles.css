@@ -219,11 +219,11 @@ body {
   padding: 0;
 }
 
-/* Only the editor's menubar competes for horizontal space, so the brand
-   truncates there and renders in full on the gallery. */
-.app-chrome-main .app-brand {
-  max-width: min(16rem, 36vw);
-  overflow: hidden;
+/* The wordmark is the product's name in both views and always shows in full;
+   only the variable-length project/document line yields to a narrow editor
+   chrome. */
+.app-chrome-main .app-brand-copy {
+  max-width: min(12rem, 24vw);
 }
 
 .app-brand-mark {
@@ -267,9 +267,11 @@ body {
   line-height: var(--icm-line-tight);
 }
 
+/* The menubar yields before the right-hand chrome does: at narrow widths it
+   scrolls its own row rather than pushing Analytics/About/Help off-screen. */
 .app-command-surface {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-start;
@@ -277,6 +279,17 @@ body {
   min-width: 0;
   margin-right: auto;
   overflow: visible;
+}
+
+@media (max-width: 900px) {
+  .app-command-surface {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .app-command-surface::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .app-chrome-actions {

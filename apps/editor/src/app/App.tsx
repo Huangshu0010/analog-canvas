@@ -7229,11 +7229,10 @@ export function App({
                 data-testid="publish-gallery-button"
                 aria-haspopup="dialog"
                 aria-expanded={publishGalleryOpen}
-                aria-label="Publish to Gallery"
                 title="Publish to Gallery"
                 onClick={() => setPublishGalleryOpen(true)}
               >
-                Publish
+                Publish to Gallery
               </button>
             </div>
           </nav>
