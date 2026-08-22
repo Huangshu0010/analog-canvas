@@ -4475,3 +4475,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   verified in the running editor.
 - Commit status: completed on `claude/differential-output-opamp`; mainline
   merge gated on the remote required checks.
+
+## 2026-08-22 - Publish button spells out its destination
+
+- Changed areas: the menubar publish control reads "Publish to Gallery"
+  instead of "Publish"; the redundant aria-label is dropped now that the
+  visible text carries the full action. CI caught that the longer label
+  pushed the right-hand chrome past a 720px viewport, so the menubar now
+  shrinks and scrolls its own row under 900px; with it able to yield, the
+  editor's truncation moved off the brand link onto the project/document
+  line, leaving both views with a pixel-identical 22px mark and an untruncated
+  wordmark.
+- Validation: typecheck, full unit suite (181 files / 1135 tests), full
+  Playwright suite (187 passed), prettier, markdown links, diff checks; brand
+  geometry measured in both views.
+- Commit status: completed on `claude/publish-full-label`; mainline merge
+  gated on the remote required checks.
