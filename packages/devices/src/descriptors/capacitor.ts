@@ -6,6 +6,10 @@ export const capacitorDevice = {
   deviceClass: "capacitor",
   referencePrefix: "C",
   pinOrder: ["1", "2"],
+  pinSemantics: [
+    { pinName: "1", role: "capacitor-top-plate" },
+    { pinName: "2", role: "capacitor-bottom-plate" },
+  ],
   targetPolicy: "builtin",
   parameters: [
     {

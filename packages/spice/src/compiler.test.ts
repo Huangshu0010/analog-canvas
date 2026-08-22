@@ -6,6 +6,30 @@ import { importCompileResult } from "./importer.js";
 import { loadSourceBundleFromFile } from "./node-source.js";
 
 describe("SPICE elaboration and Project import", () => {
+  it("imports capacitor source positions onto stable plate pins", async () => {
+    const imported = importCompileResult(
+      await compileSpiceSources(
+        [
+          {
+            path: "capacitor.spi",
+            bytes: Buffer.from("Capacitor test\nC1 TOP BOT 2p\n.end\n"),
+          },
+        ],
+        "capacitor.spi",
+      ),
+    );
+    const capacitor = imported.project?.documents[0]?.instances[0];
+    expect(capacitor).toMatchObject({
+      symbolId: "capacitor",
+      importProvenance: {
+        terminalMapping: [
+          { sourcePosition: 0, pinName: "1" },
+          { sourcePosition: 1, pinName: "2" },
+        ],
+      },
+    });
+  });
+
   it("imports ordered Cell formal parameter defaults", async () => {
     const imported = importCompileResult(
       await compileSpiceSources(

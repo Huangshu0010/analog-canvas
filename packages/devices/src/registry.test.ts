@@ -4,6 +4,7 @@ import {
   builtInDeviceDescriptors,
   deviceDescriptor,
   deviceDescriptorById,
+  devicePinSemanticRole,
   validateDeviceDescriptors,
 } from "./index.js";
 
@@ -52,6 +53,27 @@ describe("built-in device registry", () => {
     });
   });
 
+  it("keeps fixed and variable capacitor plate meaning on stable electrical pins", () => {
+    const capacitor = deviceDescriptor("capacitor");
+    const variableCapacitor = deviceDescriptor("variable-capacitor");
+    expect(capacitor).toBeDefined();
+    expect(variableCapacitor).toBeDefined();
+    if (!capacitor || !variableCapacitor) return;
+    expect(capacitor.pinOrder).toEqual(["1", "2"]);
+    expect(devicePinSemanticRole(capacitor, "1")).toBe("capacitor-top-plate");
+    expect(devicePinSemanticRole(capacitor, "2")).toBe(
+      "capacitor-bottom-plate",
+    );
+    expect(devicePinSemanticRole(capacitor, "3")).toBeUndefined();
+    expect(variableCapacitor.pinOrder).toEqual(["P1", "P2"]);
+    expect(devicePinSemanticRole(variableCapacitor, "P1")).toBe(
+      "capacitor-top-plate",
+    );
+    expect(devicePinSemanticRole(variableCapacitor, "P2")).toBe(
+      "capacitor-bottom-plate",
+    );
+  });
+
   it("keeps reviewed net markers non-emitting", () => {
     expect(deviceDescriptor("ground")).toMatchObject({
       deviceClass: "net-marker",
@@ -84,6 +106,39 @@ describe("built-in device registry", () => {
       expect.arrayContaining([
         expect.objectContaining({
           message: "Only MOS devices may support bulk binding",
+        }),
+      ]),
+    );
+  });
+
+  it("rejects incomplete or misplaced capacitor plate semantics", () => {
+    const capacitor = deviceDescriptor("capacitor");
+    const resistor = deviceDescriptor("resistor");
+    expect(capacitor).toBeDefined();
+    expect(resistor).toBeDefined();
+    if (!capacitor || !resistor) return;
+    expect(
+      validateDeviceDescriptors([
+        {
+          ...capacitor,
+          pinSemantics: [{ pinName: "1", role: "capacitor-top-plate" }],
+        },
+        {
+          ...resistor,
+          pinSemantics: [
+            { pinName: "1", role: "capacitor-top-plate" },
+            { pinName: "2", role: "capacitor-bottom-plate" },
+          ],
+        },
+      ]),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message:
+            "Capacitor devices must declare one top-plate and one bottom-plate pin semantic",
+        }),
+        expect.objectContaining({
+          message: "Only capacitor devices may declare plate semantics",
         }),
       ]),
     );

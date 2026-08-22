@@ -22,11 +22,11 @@ into persistent project data.
 
 ## Terminology
 
-| Term | Meaning |
-|---|---|
-| Positional terminal | A terminal whose zero-based position preserves source order |
-| Opaque statement | Preserved source text that has no recognized typed projection |
-| Target | Primitive, model, subcircuit, or opaque instance reference |
+| Term                | Meaning                                                       |
+| ------------------- | ------------------------------------------------------------- |
+| Positional terminal | A terminal whose zero-based position preserves source order   |
+| Opaque statement    | Preserved source text that has no recognized typed projection |
+| Target              | Primitive, model, subcircuit, or opaque instance reference    |
 
 ## Data model or interface
 
@@ -51,7 +51,11 @@ or execute it.
 - Unknown statements remain as opaque source references; recognized
   non-schematic statements remain typed preserved references.
 - Placement, routes, Junctions, symbols, layout intent, and SVG never enter IR.
-- IR never guesses pin roles from instance or model names.
+- IR never guesses pin roles from instance or model names. For the reviewed
+  built-in fixed capacitor, source terminal positions map deterministically to
+  canonical pins `1` and `2`; its variable-capacitor counterpart uses stable
+  pins `P1` and `P2`. Their device descriptors supply top-plate and bottom-plate
+  meaning without adding a field to Circuit IR or Project JSON.
 
 ## Operations and state transitions
 

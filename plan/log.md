@@ -4272,3 +4272,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   8/8, typecheck, prettier, test-impact, diff checks.
 - Commit status: completed on `claude/gallery-auth-g2`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 — Fixed and variable capacitor plate semantics
+
+- Target: `plan/2026-08-22-capacitor-plate-semantics/plan.md` (completed).
+- Change: device descriptors now assign stable top/bottom plate roles to
+  fixed capacitor pins `1/2` and variable-capacitor pins `P1/P2`; Project JSON,
+  Symbol artwork, and SPICE syntax/order remain unchanged.
+- Validation: focused device/SPICE/netlist tests (18), static contracts and
+  typecheck, affected gate (178 unit files / 1105 tests and 124 browser tests),
+  test-impact, formatting, documentation, MCP projection, and diff checks.
+- Commit status: completed locally; remote mainline delivery remains gated.

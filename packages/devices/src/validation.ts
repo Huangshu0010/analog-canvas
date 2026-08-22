@@ -51,6 +51,48 @@ export function validateDeviceDescriptors(
       }
       pinNames.add(pinName);
     }
+    const semanticPins = new Set<string>();
+    const semanticRoles = new Set<string>();
+    for (const semantic of descriptor.pinSemantics ?? []) {
+      if (!pinNames.has(semantic.pinName)) {
+        issues.push({
+          deviceId: descriptor.id,
+          message: `Device pin semantic references unknown pin: ${semantic.pinName}`,
+        });
+      }
+      if (semanticPins.has(semantic.pinName)) {
+        issues.push({
+          deviceId: descriptor.id,
+          message: `Duplicate device pin semantic: ${semantic.pinName}`,
+        });
+      }
+      semanticPins.add(semantic.pinName);
+      if (semanticRoles.has(semantic.role)) {
+        issues.push({
+          deviceId: descriptor.id,
+          message: `Duplicate device pin semantic role: ${semantic.role}`,
+        });
+      }
+      semanticRoles.add(semantic.role);
+    }
+    if (descriptor.deviceClass !== "capacitor" && semanticRoles.size > 0) {
+      issues.push({
+        deviceId: descriptor.id,
+        message: "Only capacitor devices may declare plate semantics",
+      });
+    }
+    if (
+      descriptor.deviceClass === "capacitor" &&
+      (semanticPins.size !== 2 ||
+        !semanticRoles.has("capacitor-top-plate") ||
+        !semanticRoles.has("capacitor-bottom-plate"))
+    ) {
+      issues.push({
+        deviceId: descriptor.id,
+        message:
+          "Capacitor devices must declare one top-plate and one bottom-plate pin semantic",
+      });
+    }
     const parameterNames = new Set<string>();
     const displayRoles = new Set<string>();
     for (const parameter of descriptor.parameters) {

@@ -20,6 +20,18 @@ export interface DeviceParameterDefinition {
   readonly displayRole: "value" | "width" | "length" | "multiplier" | "none";
 }
 
+/**
+ * Device-owned terminal meaning that is recovered from a stable Symbol pin.
+ * This is descriptor metadata, never Project JSON or a dialect parameter.
+ */
+export type DevicePinSemanticRole =
+  "capacitor-top-plate" | "capacitor-bottom-plate";
+
+export interface DevicePinSemantic {
+  readonly pinName: string;
+  readonly role: DevicePinSemanticRole;
+}
+
 export interface DeviceDescriptor {
   /** Stable device-protocol identity; it is not persisted in Project JSON. */
   readonly id: string;
@@ -28,6 +40,8 @@ export interface DeviceDescriptor {
   readonly deviceClass: NetlistDeviceClass;
   readonly referencePrefix: string | null;
   readonly pinOrder: readonly string[];
+  /** Optional fixed semantics for canonical pins; pin order remains electrical authority. */
+  readonly pinSemantics?: readonly DevicePinSemantic[];
   readonly targetPolicy: DeviceNetlistTargetPolicy;
   /** Ordered authoring metadata; placeholders never create persisted values. */
   readonly parameters: readonly DeviceParameterDefinition[];
@@ -41,6 +55,16 @@ export function requiredParameterNames(
   return descriptor.parameters
     .filter((parameter) => parameter.required)
     .map((parameter) => parameter.name);
+}
+
+/** Look up a device-owned semantic role without copying it into Project state. */
+export function devicePinSemanticRole(
+  descriptor: DeviceDescriptor,
+  pinName: string,
+): DevicePinSemanticRole | undefined {
+  return descriptor.pinSemantics?.find(
+    (semantic) => semantic.pinName === pinName,
+  )?.role;
 }
 
 export interface DeviceDescriptorIssue {
