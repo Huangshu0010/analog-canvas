@@ -4521,3 +4521,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   gates.
 - Commit status: committed locally as `d4338e56`; remote mainline delivery
   remains gated.
+
+## 2026-08-22 - Bundled Example MOS bulk semantics
+
+- Target: `plan/2026-08-22-example-mos-bulk-semantics/plan.md` (completed).
+- Change: repaired only the missing MOS body facts in the two bundled
+  differential Examples by recording their existing VDD/0 defaults, B
+  terminals, and `cell-default` bindings; added a per-Example unresolved-bulk
+  ERC regression.
+- Validation: live editor `Issues (0)` for both fixtures; focused Example and
+  bulk tests; focused Example browser workflow; static contracts, preflight,
+  test-impact, and affected unit/component/hierarchy/editor gates.
+- Commit status: pending local commit on `codex/unified-transform-power-bulk`.

@@ -21,6 +21,8 @@ routine records may be deleted under the retention rule in
   `2026-08-22-unified-copy-transform`,
   `2026-08-22-ground-placement-policy`, and
   `2026-08-22-mos-bulk-defaults`.
+- Added `2026-08-22-example-mos-bulk-semantics` as a fourth completed, resolved
+  record pending its normal archive pass.
 
 ## Completed plans awaiting an experience decision
 
