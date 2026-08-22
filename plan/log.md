@@ -4693,3 +4693,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   typecheck, prettier, diff checks.
 - Commit status: completed on `claude/duplicate-pin-names`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 — Hotfix: gallery pages scroll inside their shell
+
+- Target: `plan/2026-08-22-gallery-scroll-fix/plan.md` (completed).
+- Change: the editor locks #root/body with overflow hidden, so the
+  gallery pages had no scroll container — .gallery-shell/.review-shell
+  now scroll themselves (height 100%, overflow-y auto), which also
+  revives below-the-fold lazy previews; new e2e pins the shell as the
+  scroller.
+- Validation: gallery Playwright 18/18, prettier, test-impact, diff
+  checks; production verification after deploy.
+- Commit status: completed on `claude/gallery-scroll-fix`.
