@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -68,4 +68,8 @@ docs(plan): record examples mainline delivery
 
 ## Outcome
 
-Update after merge with the rebased commit, CI and remote-check status, and merge commit or PR reference.
+Rebased the Examples feature as `9463fd87` on `d24a5ee2` (`origin/main`),
+resolving only the concurrent `plan/log.md` entries. `pnpm gate:preflight --
+--base origin/main`, `pnpm install --frozen-lockfile`, and `pnpm ci:check`
+passed locally; Playwright recorded a passed run with no failed tests. The
+rebased review branch is ready to push for required GitHub checks and merge.

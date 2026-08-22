@@ -4373,3 +4373,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: focused unit/browser checks, preflight, and affected gate
   (1108 unit tests; 22 component-insert and 91 manual-editor browser tests).
 - Commit status: committed locally on `codex/examples-toggle-and-circuits`.
+
+## 2026-08-22 — Examples mainline delivery
+
+- Target: `plan/2026-08-22-merge-examples-main/plan.md` (completed).
+- Change: rebased the completed Examples feature on current `origin/main`,
+  retaining concurrent plan-log entries without changing product behavior.
+- Validation: preflight against `origin/main`, frozen dependency install, and
+  canonical `pnpm ci:check`; the full Playwright run recorded `passed` with no
+  failed tests.
+- Commit status: rebased review branch is ready for required GitHub checks and
+  merge to remote `main`.
