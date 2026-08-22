@@ -37,7 +37,15 @@ export function symbolCategory(symbolId: string): string {
   ) {
     return "Passives";
   }
-  if (["opamp", "voltage-amplifier", "comparator"].includes(symbolId)) {
+  if (
+    [
+      "opamp",
+      "opamp-differential",
+      "opamp-differential-crossed",
+      "voltage-amplifier",
+      "comparator",
+    ].includes(symbolId)
+  ) {
     return "Analog Blocks";
   }
   if (

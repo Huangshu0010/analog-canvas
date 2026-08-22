@@ -22,6 +22,8 @@ const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   "inductor-compact": "Ind",
   npn: "NPN",
   opamp: "OpAmp",
+  "opamp-differential": "FD Amp",
+  "opamp-differential-crossed": "FD Amp X",
   "and-gate": "AND",
   comparator: "Comp",
   inverter: "Inv",

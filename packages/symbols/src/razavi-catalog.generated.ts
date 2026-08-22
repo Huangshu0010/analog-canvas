@@ -509,7 +509,75 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       referencePath:
         "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
       converterPath: "scripts/generate-razavi-opamp-asset.mjs",
-      converterVersion: 1,
+      converterVersion: 2,
+    },
+  },
+  {
+    symbolId: "opamp-differential",
+    name: "Differential Op Amp",
+    category: "analog-block",
+    reviewStatus: "reviewed",
+    pinOrder: ["IN+", "IN-", "OUT+", "OUT-"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
+    assetPath: "opamp-differential.symbol.json",
+    assetHash:
+      "b6591da73f0ba470fff9800783c37cdc24ed198ee787c6e82c6a13f85741b057",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+      converterPath: "scripts/generate-razavi-opamp-asset.mjs",
+      converterVersion: 2,
+    },
+  },
+  {
+    symbolId: "opamp-differential-crossed",
+    name: "Differential Op Amp (crossed outputs)",
+    category: "analog-block",
+    reviewStatus: "reviewed",
+    pinOrder: ["IN+", "IN-", "OUT+", "OUT-"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
+    assetPath: "opamp-differential-crossed.symbol.json",
+    assetHash:
+      "d84c4a0beacc6453fd2e9b9348368a62ecfe4026e2dc607b116140bd397ae6be",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+      converterPath: "scripts/generate-razavi-opamp-asset.mjs",
+      converterVersion: 2,
     },
   },
   {
@@ -2962,6 +3030,482 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         to: {
           x: -14.296167,
           y: -12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "opamp-differential",
+    name: "Differential Op Amp",
+    viewBox: {
+      x: -54,
+      y: -28,
+      width: 98,
+      height: 56,
+    },
+    pins: [
+      {
+        name: "IN+",
+        role: "non-inverting-input",
+        at: {
+          x: -50,
+          y: 10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "IN-",
+        role: "inverting-input",
+        at: {
+          x: -50,
+          y: -10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "OUT+",
+        role: "output",
+        at: {
+          x: 40,
+          y: 10,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "OUT-",
+        role: "output",
+        at: {
+          x: 40,
+          y: -10,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -50,
+          y: -10,
+        },
+        to: {
+          x: -26.952962,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -50,
+          y: 10,
+        },
+        to: {
+          x: -26.797909,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 3.2014,
+          y: -10,
+        },
+        to: {
+          x: 40,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 3.2014,
+          y: 10,
+        },
+        to: {
+          x: 40,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M -26.7979 -24.9983 L -26.7979 25 L 3.2014 10 L 3.2014 -10 Z",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -18.047038,
+          y: 8.749129,
+        },
+        to: {
+          x: -18.047038,
+          y: 16.249129,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -21.796167,
+          y: 12.5,
+        },
+        to: {
+          x: -14.296167,
+          y: 12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -21.796167,
+          y: -12.5,
+        },
+        to: {
+          x: -14.296167,
+          y: -12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 14.4512,
+          y: 8.749129,
+        },
+        to: {
+          x: 14.4512,
+          y: 16.249129,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 18.2004,
+          y: 12.5,
+        },
+        to: {
+          x: 10.7004,
+          y: 12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 18.2004,
+          y: -12.5,
+        },
+        to: {
+          x: 10.7004,
+          y: -12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "opamp-differential-crossed",
+    name: "Differential Op Amp (crossed outputs)",
+    viewBox: {
+      x: -54,
+      y: -28,
+      width: 98,
+      height: 56,
+    },
+    pins: [
+      {
+        name: "IN+",
+        role: "non-inverting-input",
+        at: {
+          x: -50,
+          y: 10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "IN-",
+        role: "inverting-input",
+        at: {
+          x: -50,
+          y: -10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "OUT+",
+        role: "output",
+        at: {
+          x: 40,
+          y: -10,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "OUT-",
+        role: "output",
+        at: {
+          x: 40,
+          y: 10,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -50,
+          y: -10,
+        },
+        to: {
+          x: -26.952962,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -50,
+          y: 10,
+        },
+        to: {
+          x: -26.797909,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 3.2014,
+          y: -10,
+        },
+        to: {
+          x: 40,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 3.2014,
+          y: 10,
+        },
+        to: {
+          x: 40,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M -26.7979 -24.9983 L -26.7979 25 L 3.2014 10 L 3.2014 -10 Z",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -18.047038,
+          y: 8.749129,
+        },
+        to: {
+          x: -18.047038,
+          y: 16.249129,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -21.796167,
+          y: 12.5,
+        },
+        to: {
+          x: -14.296167,
+          y: 12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -21.796167,
+          y: -12.5,
+        },
+        to: {
+          x: -14.296167,
+          y: -12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 14.4512,
+          y: -8.749129,
+        },
+        to: {
+          x: 14.4512,
+          y: -16.249129,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 18.2004,
+          y: -12.5,
+        },
+        to: {
+          x: 10.7004,
+          y: -12.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 18.2004,
+          y: 12.5,
+        },
+        to: {
+          x: 10.7004,
+          y: 12.5,
         },
         style: {
           strokeRole: "normal",

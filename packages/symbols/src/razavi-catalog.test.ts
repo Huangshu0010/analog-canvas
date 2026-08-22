@@ -151,6 +151,8 @@ describe("Razavi symbol catalog", () => {
       ["nor-gate", "reviewed", "razavi-reference-v1"],
       ["npn", "reviewed", "razavi-reference-v1"],
       ["opamp", "reviewed", "razavi-reference-v1"],
+      ["opamp-differential", "reviewed", "razavi-reference-v1"],
+      ["opamp-differential-crossed", "reviewed", "razavi-reference-v1"],
       ["or-gate", "reviewed", "razavi-reference-v1"],
       ["pmos", "reviewed", "razavi-reference-v1"],
       ["pnp", "reviewed", "razavi-reference-v1"],
@@ -212,7 +214,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(30);
+    expect(razaviCatalogSymbols).toHaveLength(32);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -240,6 +242,8 @@ describe("Razavi symbol catalog", () => {
       "nor-gate",
       "npn",
       "opamp",
+      "opamp-differential",
+      "opamp-differential-crossed",
       "or-gate",
       "pmos",
       "pnp",

@@ -4459,3 +4459,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   brands verified in the running app.
 - Commit status: completed on `claude/differential-input-swap`; mainline
   merge gated on the remote required checks.
+
+## 2026-08-22 - Differential-output op amp and independent output swap
+
+- Changed areas: the op-amp generator now derives `opamp-differential` and
+  `opamp-differential-crossed` from the same pinned PDF vector evidence (body
+  truncated where the reviewed triangle edges reach the ±10 output height,
+  output marks reflected about the body centerline); both are reviewed palette
+  entries; instance properties gained "Swap + / − outputs", which exchanges
+  the two Symbols through the existing `set_instance_symbol` edit so terminal
+  names and attached Nets survive.
+- Validation: typecheck, full unit suite (181 files / 1135 tests), full
+  Playwright suite (187 passed), generator/catalog/agent-kit/MCP/visual-golden/
+  references drift checks, prettier, diff checks; both Symbols and the swap
+  verified in the running editor.
+- Commit status: completed on `claude/differential-output-opamp`; mainline
+  merge gated on the remote required checks.

@@ -16,6 +16,18 @@ const assetPath = resolve(
   root,
   "packages/symbols/assets/razavi-v1/opamp.symbol.json",
 );
+const differentialAssetPaths = {
+  "opamp-differential": resolve(
+    root,
+    "packages/symbols/assets/razavi-v1/opamp-differential.symbol.json",
+  ),
+  "opamp-differential-crossed": resolve(
+    root,
+    "packages/symbols/assets/razavi-v1/opamp-differential-crossed.symbol.json",
+  ),
+};
+/** Output pair height; the reviewed input pair uses the same ±10 offset. */
+const OUTPUT_PAIR_OFFSET = 10;
 const catalogPath = resolve(
   root,
   "packages/symbols/assets/razavi-v1/catalog.json",
@@ -110,37 +122,175 @@ const assetSource = normalize(
   await format(JSON.stringify(symbol, null, 2), { parser: "json" }),
 );
 
-const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
-const entry = catalog.entries.find(
-  (candidate) => candidate.symbolId === symbol.id,
+/**
+ * The fully differential amplifier is the same reviewed body with its apex
+ * truncated at the height of the output pair, so two outputs can leave a real
+ * edge instead of a point. Every number below is derived from the pinned
+ * evidence: the cut lands where the reviewed triangle edges reach ±10, and the
+ * output polarity marks are the reviewed input marks reflected about the
+ * body's own vertical centerline.
+ */
+const trianglePoints = [
+  ...geometry.trianglePathData.matchAll(
+    /(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/gu,
+  ),
+].map((match) => ({ x: Number(match[1]), y: Number(match[2]) }));
+if (trianglePoints.length !== 3) fail("triangle evidence is not a triangle");
+const apex = trianglePoints.reduce((best, point) =>
+  point.x > best.x ? point : best,
 );
-if (!entry) fail("missing catalog entry opamp");
-entry.assetHash = hash(assetSource);
-entry.generation = {
+const backEdgeX = Math.min(...trianglePoints.map((point) => point.x));
+const backTop = Math.min(...trianglePoints.map((point) => point.y));
+const backBottom = Math.max(...trianglePoints.map((point) => point.y));
+const round = (value) => Number(value.toFixed(4));
+/** Where a reviewed triangle edge crosses the given height. */
+const edgeXAtHeight = (backY, height) =>
+  backEdgeX + ((backY - height) / (backY - apex.y)) * (apex.x - backEdgeX);
+const cutTopX = edgeXAtHeight(backTop, -OUTPUT_PAIR_OFFSET);
+const cutBottomX = edgeXAtHeight(backBottom, OUTPUT_PAIR_OFFSET);
+if (Math.abs(cutTopX - cutBottomX) > 0.05) {
+  fail("reviewed triangle is not symmetric about its output axis");
+}
+const cutX = round((cutTopX + cutBottomX) / 2);
+const centerlineX = (backEdgeX + apex.x) / 2;
+const reflect = (point) => ({
+  x: round(2 * centerlineX - point.x),
+  y: point.y,
+});
+const reflectLine = ({ from, to }) => ({
+  from: reflect(from),
+  to: reflect(to),
+});
+const outputLead = (y) => ({
+  kind: "line",
+  from: { x: cutX, y },
+  to: { x: geometry.output.to.x, y },
+  style: normal,
+});
+const outputPlusMarks = [
+  line(reflectLine(geometry.plusVertical)),
+  line(reflectLine(geometry.plusHorizontal)),
+];
+const outputMinusMark = line(reflectLine(geometry.minusHorizontal));
+/** Mirror a mark to the opposite output rail. */
+const acrossAxis = (primitive) => ({
+  ...primitive,
+  from: { ...primitive.from, y: -primitive.from.y },
+  to: { ...primitive.to, y: -primitive.to.y },
+});
+const differentialSymbol = (id, name, plusOutputAtBottom) => ({
+  schemaVersion: 1,
+  id,
+  name,
+  viewBox: symbol.viewBox,
+  pins: [
+    symbol.pins[0],
+    symbol.pins[1],
+    {
+      name: "OUT+",
+      role: "output",
+      at: {
+        x: geometry.output.to.x,
+        y: plusOutputAtBottom ? OUTPUT_PAIR_OFFSET : -OUTPUT_PAIR_OFFSET,
+      },
+      direction: "east",
+      presentation: { visibility: "visible", leadLength: 20 },
+    },
+    {
+      name: "OUT-",
+      role: "output",
+      at: {
+        x: geometry.output.to.x,
+        y: plusOutputAtBottom ? -OUTPUT_PAIR_OFFSET : OUTPUT_PAIR_OFFSET,
+      },
+      direction: "east",
+      presentation: { visibility: "visible", leadLength: 20 },
+    },
+  ],
+  primitives: [
+    line(geometry.inputMinus),
+    line(geometry.inputPlus),
+    outputLead(-OUTPUT_PAIR_OFFSET),
+    outputLead(OUTPUT_PAIR_OFFSET),
+    {
+      kind: "path",
+      data: `M ${round(backEdgeX)} ${round(backTop)} L ${round(backEdgeX)} ${round(backBottom)} L ${cutX} ${OUTPUT_PAIR_OFFSET} L ${cutX} ${-OUTPUT_PAIR_OFFSET} Z`,
+      style: {
+        strokeRole: "emphasis",
+        lineCap: "butt",
+        lineJoin: "miter",
+        miterLimit: 4,
+      },
+    },
+    line(geometry.plusVertical),
+    line(geometry.plusHorizontal),
+    line(geometry.minusHorizontal),
+    ...(plusOutputAtBottom
+      ? [...outputPlusMarks, outputMinusMark]
+      : [...outputPlusMarks.map(acrossAxis), acrossAxis(outputMinusMark)]),
+  ],
+  variants: [],
+});
+const differentialSymbols = [
+  differentialSymbol("opamp-differential", "Differential Op Amp", true),
+  differentialSymbol(
+    "opamp-differential-crossed",
+    "Differential Op Amp (crossed outputs)",
+    false,
+  ),
+];
+const differentialSources = new Map(
+  await Promise.all(
+    differentialSymbols.map(async (candidate) => [
+      candidate.id,
+      normalize(
+        await format(JSON.stringify(candidate, null, 2), { parser: "json" }),
+      ),
+    ]),
+  ),
+);
+
+const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
+const generation = {
   kind: "razavi-pdf-vector-reference",
   referenceManifestPath:
     "fixtures/visual-reference/razavi-reference-v1/manifest.json",
   referencePath:
     "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
   converterPath: "scripts/generate-razavi-opamp-asset.mjs",
-  converterVersion: 1,
+  converterVersion: 2,
 };
+for (const [id, source] of [[symbol.id, assetSource], ...differentialSources]) {
+  const entry = catalog.entries.find((candidate) => candidate.symbolId === id);
+  if (!entry) fail(`missing catalog entry ${id}`);
+  entry.assetHash = hash(source);
+  entry.generation = { ...generation };
+}
 const catalogSource = normalize(
   await format(JSON.stringify(catalog, null, 2), { parser: "json" }),
 );
 
+const outputs = [
+  [assetPath, assetSource],
+  ...differentialSymbols.map((candidate) => [
+    differentialAssetPaths[candidate.id],
+    differentialSources.get(candidate.id),
+  ]),
+  [catalogPath, catalogSource],
+];
 if (check) {
-  if (normalize(await readFile(assetPath, "utf8")) !== assetSource) {
-    fail(`${relative(root, assetPath)} is stale`);
-  }
-  if (normalize(await readFile(catalogPath, "utf8")) !== catalogSource) {
-    fail(`${relative(root, catalogPath)} is stale`);
+  for (const [path, source] of outputs) {
+    if (normalize(await readFile(path, "utf8")) !== source) {
+      fail(`${relative(root, path)} is stale`);
+    }
   }
 } else {
-  await writeFile(assetPath, assetSource, "utf8");
-  await writeFile(catalogPath, catalogSource, "utf8");
+  for (const [path, source] of outputs) {
+    await writeFile(path, source, "utf8");
+  }
 }
 
 console.log(
-  `${check ? "Validated" : "Generated"} PDF-derived Razavi op-amp asset`,
+  `${check ? "Validated" : "Generated"} PDF-derived Razavi op-amp assets` +
+    ` (differential body cut at x=${cutX})`,
 );

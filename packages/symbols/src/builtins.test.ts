@@ -23,6 +23,8 @@ const PRODUCT_IDS = [
   "nor-gate",
   "npn",
   "opamp",
+  "opamp-differential",
+  "opamp-differential-crossed",
   "or-gate",
   "pmos",
   "pnp",
