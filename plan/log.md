@@ -4296,3 +4296,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   affected gate (178 unit files / 1105 tests and 124 browser tests),
   test-impact, formatting, documentation, MCP projection, and diff checks.
 - Commit status: completed locally; remote mainline delivery remains gated.
+
+## 2026-08-22 — Capacitor plate facts in Properties
+
+- Target: `plan/2026-08-22-capacitor-plate-properties/plan.md` (completed).
+- Change: selected fixed and variable capacitors now show read-only Top/Bottom
+  plate rows with stable Pin names and current named Net, unnamed Net ID, or
+  unconnected state; no instance override or Project protocol field was added.
+- Validation: focused unit/browser checks, static contracts and typecheck,
+  affected unit gate (179 files / 1108 tests), editor browser gate (91 tests),
+  test-impact, formatting, and diff checks.
+- Commit status: completed locally; remote mainline delivery remains gated.

@@ -302,6 +302,7 @@ import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
 import { InstanceTableDialog } from "../features/properties/instance-table-dialog";
+import { capacitorPlatePropertyRows } from "../features/properties/capacitor-plate-properties";
 import { useEditorPanels } from "../features/editor-shell/use-editor-panels";
 import {
   type InstanceMovePreview,
@@ -900,6 +901,9 @@ export function App({
   const selectedDevice = selectedInstance
     ? deviceDescriptor(selectedInstance.symbolId)
     : undefined;
+  const selectedCapacitorPlateRows = selectedInstance
+    ? capacitorPlatePropertyRows(document, selectedInstance)
+    : null;
   const selectedBinding = selectedInstance?.netlist?.binding;
   const selectedExternalSubcircuit =
     selectedBinding?.kind === "external-subcircuit"
@@ -7967,6 +7971,33 @@ export function App({
                       </div>
                     </dl>
                   </div>
+                  {selectedCapacitorPlateRows ? (
+                    <div
+                      className="property-card property-terminal-card"
+                      role="group"
+                      aria-label="Capacitor plate terminals"
+                    >
+                      <div className="property-section-heading">
+                        Electrical terminals
+                      </div>
+                      <dl className="component-readonly-fields">
+                        {selectedCapacitorPlateRows.map((row) => (
+                          <div key={row.role}>
+                            <dt>{row.label}</dt>
+                            <dd aria-label={`${row.label} terminal`}>
+                              Pin {row.pinName} ·{" "}
+                              {row.netName ?? row.netId ?? "Unconnected"}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                      <small>
+                        Plate roles are defined by the device. Change their Net
+                        connections through wiring or orientation, not by
+                        renaming the roles.
+                      </small>
+                    </div>
+                  ) : null}
                   {selectedInstance.netlist ? (
                     <div
                       className="property-card property-target-card"

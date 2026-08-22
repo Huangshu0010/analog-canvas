@@ -1849,6 +1849,42 @@ test("Properties toggles reference label visibility for one or many components",
   ).toHaveCount(1);
 });
 
+test("shows fixed and variable capacitor plate terminals as read-only Properties", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await placeComponent(page, "capacitor", { x: 280, y: 180 });
+  await placeComponent(page, "variable-capacitor", { x: 480, y: 180 });
+
+  await page.getByTestId("hit-C1").click();
+  await openSelectionShelf(page);
+  const properties = page.getByRole("complementary", { name: "Properties" });
+  let plateCard = properties.getByRole("group", {
+    name: "Capacitor plate terminals",
+  });
+  await expect(
+    plateCard.getByText("Electrical terminals", { exact: true }),
+  ).toBeVisible();
+  await expect(plateCard.getByLabel("Top plate terminal")).toHaveText(
+    "Pin 1 · Unconnected",
+  );
+  await expect(plateCard.getByLabel("Bottom plate terminal")).toHaveText(
+    "Pin 2 · Unconnected",
+  );
+  await expect(plateCard.locator("input, select, button")).toHaveCount(0);
+
+  await page.getByTestId("hit-C2").click();
+  plateCard = properties.getByRole("group", {
+    name: "Capacitor plate terminals",
+  });
+  await expect(plateCard.getByLabel("Top plate terminal")).toHaveText(
+    "Pin P1 · Unconnected",
+  );
+  await expect(plateCard.getByLabel("Bottom plate terminal")).toHaveText(
+    "Pin P2 · Unconnected",
+  );
+});
+
 test("value display projects MOS W/L and passive values beside the reference", async ({
   page,
 }) => {
