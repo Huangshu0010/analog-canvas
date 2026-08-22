@@ -321,8 +321,65 @@ export function executeTransaction(
       case "undo":
       case "redo":
         continue;
-      case "clear_document": {
-        const removedObjects = [
+      case "clear_cell_drawing": {
+        for (const object of [
+          ...draft.routes,
+          ...(draft.drafting?.objects ?? []),
+        ]) {
+          changedObjectIds.add(object.id);
+        }
+        draft.routes = [];
+        draft.drafting = { objects: [] };
+        geometryChanged = true;
+        break;
+      }
+      case "reset_cell_placement": {
+        for (const object of [
+          ...draft.instances.filter((instance) => instance.placement !== null),
+          ...draft.routes,
+          ...draft.layoutGroups,
+          ...draft.constraints,
+        ]) {
+          changedObjectIds.add(object.id);
+        }
+        for (const instance of draft.instances) instance.placement = null;
+        draft.routes = [];
+        draft.layoutGroups = [];
+        draft.constraints = [];
+        geometryChanged = true;
+        break;
+      }
+      case "reset_cell_body": {
+        const interfaceInstanceIds = new Set(
+          draft.netlist?.terminals.flatMap(
+            (terminal) => terminal.interfaceInstanceIds,
+          ) ?? [],
+        );
+        const interfaceNetIds = new Set(
+          draft.netlist?.terminals.map((terminal) => terminal.netId) ?? [],
+        );
+        const retainedInstances = draft.instances.filter((instance) =>
+          interfaceInstanceIds.has(instance.id),
+        );
+        const retainedNets = draft.nets
+          .filter((net) => interfaceNetIds.has(net.id))
+          .map((net) => ({
+            ...net,
+            terminals: net.terminals.filter((terminal) =>
+              interfaceInstanceIds.has(terminal.instanceId),
+            ),
+          }));
+        const retainedAnnotations = draft.annotations.filter(
+          (annotation) =>
+            annotation.anchor.kind === "object" &&
+            interfaceInstanceIds.has(annotation.anchor.objectId),
+        );
+        const retainedIds = new Set([
+          ...retainedInstances.map((instance) => instance.id),
+          ...retainedNets.map((net) => net.id),
+          ...retainedAnnotations.map((annotation) => annotation.id),
+        ]);
+        for (const object of [
           ...draft.instances,
           ...draft.nets,
           ...draft.routes,
@@ -332,18 +389,25 @@ export function executeTransaction(
           ...draft.layoutGroups,
           ...draft.constraints,
           ...(draft.drafting?.objects ?? []),
-        ];
-        for (const object of removedObjects) changedObjectIds.add(object.id);
-        draft.instances = [];
-        draft.nets = [];
+        ]) {
+          if (!retainedIds.has(object.id)) changedObjectIds.add(object.id);
+        }
+        for (const retainedNet of retainedNets) {
+          const sourceNet = draft.nets.find((net) => net.id === retainedNet.id);
+          if (sourceNet?.terminals.length !== retainedNet.terminals.length) {
+            changedObjectIds.add(retainedNet.id);
+          }
+        }
+        draft.instances = retainedInstances;
+        draft.nets = retainedNets;
         draft.routes = [];
         draft.junctions = [];
         draft.noConnects = [];
-        draft.annotations = [];
+        draft.annotations = retainedAnnotations;
         draft.layoutGroups = [];
         draft.constraints = [];
         draft.drafting = { objects: [] };
-        if (draft.netlist) draft.netlist.terminals = [];
+        if (draft.mosBulkDefaults) changedObjectIds.add(draft.id);
         delete draft.mosBulkDefaults;
         connectivityChanged = true;
         geometryChanged = true;

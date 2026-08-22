@@ -4872,3 +4872,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   manual-editor browser scenarios.
 - Commit status: prepared on `codex/project-net-lifecycle`; mainline delivery
   remains gated on canonical local and remote checks.
+
+## 2026-08-23 - Explicit Cell reset lifecycle
+
+- Target: `plan/2026-08-23-cell-reset-lifecycle/plan.md` (completed).
+- Changed areas: pure impact plans and typed edits for Clear Drawing, Reset
+  Cell Placement, and interface-preserving Reset Cell Body; caller-aware Cell
+  deletion; retirement of ambiguous `clear_document`; regenerated API/MCP
+  schema resources.
+- Validation: focused units (61), affected units (1192), hierarchy (12),
+  project-file (10), Agent browser (1), manual-editor (98), artifact freshness,
+  preflight, branch verification, build, production smoke, and diff checks.
+- Commit status: prepared on `codex/project-net-lifecycle`; mainline delivery
+  remains gated on canonical local and remote checks.

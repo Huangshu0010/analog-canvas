@@ -3182,7 +3182,7 @@ test("keeps the production command surface compact and publishes PWA metadata", 
   });
 });
 
-test("clears the active canvas atomically after confirmation and restores it with Undo", async ({
+test("separates drawing, placement, and Cell body resets with impact preview and Undo", async ({
   page,
 }) => {
   await page.goto("/editor");
@@ -3195,22 +3195,24 @@ test("clears the active canvas atomically after confirmation and restores it wit
   await expect(page.getByTestId("revision")).toHaveText("3");
 
   page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain('Clear all content from Cell "Main"');
+    expect(dialog.message()).toContain('Clear Drawing in Cell "Main"');
+    expect(dialog.message()).toContain("Affected objects: 1");
     await dialog.dismiss();
   });
-  await clickCommand(page, "Edit", "Clear canvas");
+  await clickCommand(page, "Edit", "Clear Drawing");
   await expect(page.getByTestId("revision")).toHaveText("3");
-  await expect(page.getByTestId("status")).toHaveText("Clear canvas cancelled");
+  await expect(page.getByTestId("status")).toHaveText(
+    "Clear Drawing cancelled",
+  );
 
   page.once("dialog", (dialog) => dialog.accept());
-  await clickCommand(page, "Edit", "Clear canvas");
-  await expect(page.getByTestId("instance-count")).toHaveText("0");
-  await expect(page.getByTestId("net-count")).toHaveText("0");
+  await clickCommand(page, "Edit", "Clear Drawing");
+  await expect(page.getByTestId("instance-count")).toHaveText("2");
+  await expect(page.getByTestId("net-count")).toHaveText("1");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
-  await expect(page.getByTestId("canvas-empty-state")).toBeVisible();
   await expect(page.getByTestId("revision")).toHaveText("4");
   await expect(page.getByTestId("status")).toHaveText(
-    "Cleared Cell Main · Undo restores it",
+    "Clear Drawing completed in Cell Main · Undo restores it",
   );
 
   await page.keyboard.press("Control+z");
@@ -3218,6 +3220,39 @@ test("clears the active canvas atomically after confirmation and restores it wit
   await expect(page.getByTestId("net-count")).toHaveText("1");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
   await expect(page.getByTestId("revision")).toHaveText("5");
+
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain('Reset Cell Placement in Cell "Main"');
+    expect(dialog.message()).toContain("Affected objects: 3");
+    await dialog.accept();
+  });
+  await clickCommand(page, "Edit", "Reset Cell Placement");
+  await expect(page.getByTestId("instance-count")).toHaveText("2");
+  await expect(page.getByTestId("net-count")).toHaveText("1");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
+  await expect(page.getByTestId("hit-R1")).toHaveCount(0);
+  await expect(page.getByTestId("revision")).toHaveText("6");
+
+  await page.keyboard.press("Control+z");
+  await expect(page.getByTestId("hit-R1")).toHaveCount(1);
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await expect(page.getByTestId("revision")).toHaveText("7");
+
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain('Reset Cell Body in Cell "Main"');
+    await dialog.accept();
+  });
+  await clickCommand(page, "Edit", "Reset Cell Body");
+  await expect(page.getByTestId("instance-count")).toHaveText("0");
+  await expect(page.getByTestId("net-count")).toHaveText("0");
+  await expect(page.getByTestId("canvas-empty-state")).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("8");
+
+  await page.keyboard.press("Control+z");
+  await expect(page.getByTestId("instance-count")).toHaveText("2");
+  await expect(page.getByTestId("net-count")).toHaveText("1");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await expect(page.getByTestId("revision")).toHaveText("9");
 });
 
 test("shows first-party visitor analytics without tracking the dashboard itself", async ({

@@ -7,6 +7,7 @@ import {
   createHierarchyInstance,
   planAttachCellPortMarker,
   planCreateCellPort,
+  planDeleteCell,
   planPlaceCellInstance,
   planReorderCellTerminal,
   planSetMosModelTarget,
@@ -14,6 +15,23 @@ import {
 import { executeProjectTransaction } from "./project-transaction.js";
 
 describe("hierarchy domain planners", () => {
+  it("rejects deleting a referenced Cell before Project commit", () => {
+    const project = createEmptyProject("project", "Project", "top");
+    const child = createEmptyDocument("child", "Child");
+    project.documents.push(child);
+    project.documents[0]!.instances.push(
+      createHierarchyInstance("X1", child, {
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        mirror: "none",
+      }),
+    );
+
+    expect(() => planDeleteCell(project, child.id)).toThrow(
+      "Cell child is still referenced by top.X1",
+    );
+  });
+
   it("constructs one canonical caller from the child interface", () => {
     const child = createEmptyDocument("child", "Stage");
     child.netlist!.terminals.push({

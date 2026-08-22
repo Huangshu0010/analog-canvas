@@ -128,6 +128,27 @@ shell. After a Project has been opened or explicitly saved/downloaded,
 **Revert to Last Saved** restores that exact formal snapshot through the same
 guard and makes the outgoing working copy the Previous Project.
 
+## Cell reset lifecycle
+
+Cell reset commands are Document transactions and therefore use Document Undo,
+not Previous Project. Each command previews an exact affected-object count
+before commit:
+
+- **Clear Drawing** removes authored Route geometry and drafting objects while
+  retaining Instances, Nets, Junction topology, ports, and semantic
+  annotations.
+- **Reset Cell Placement** returns every placed Instance to the Placement Tray,
+  removes Route geometry and placement constraints/groups, and retains the
+  devices, Nets, Junction topology, and formal interface.
+- **Reset Cell Body** removes non-interface electrical and drawing content but
+  retains formal terminals, their interface Port markers, their Nets, and
+  terminal annotations. Existing parent callers therefore keep the same pin
+  contract.
+
+**Delete Cell** remains a Project-structure transaction and is legal only for
+a non-top Cell with no callers. That precondition is checked by the hierarchy
+planner before the transaction is submitted.
+
 ## Interaction states
 
 The canonical reducer owns exactly one exclusive canvas interaction:

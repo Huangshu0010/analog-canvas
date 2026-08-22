@@ -53,7 +53,9 @@ for readability; these groups do not create separate mutation endpoints:
 
 <!-- schematic-edit-kinds:start -->
 
-- control/history: `noop`, `clear_document`, `undo`, `redo`;
+- control/history: `noop`, `undo`, `redo`;
+- Cell lifecycle: `clear_cell_drawing`, `reset_cell_placement`,
+  `reset_cell_body`;
 - Instance: `add_instance`, `remove_instance`, `set_instance_symbol`,
   `place_instance`, `unplace_instance`, `move_instance`, `rotate_instance`,
   `mirror_instance`,
@@ -129,12 +131,14 @@ terminal, mirroring `add_instance` Symbol validation. Locked drafting objects
 reject user replacement or removal, matching the existing lock
 discipline.
 
-`clear_document` is one atomic human/Agent edit. It removes all authored
-electrical, annotation, layout-intent, and drafting records from the targeted
-Document while preserving Document identity, presentation, source binding,
-and transaction history. Because it crosses topology and presentation, it
-advances revision once, marks connectivity modified, and is restored by one
-Undo.
+The old unscoped `clear_document` edit is retired. Cell removal now uses three
+atomic, browser-editor lifecycle edits planned by `cell-reset-planner.ts`:
+`clear_cell_drawing` removes only Route/drafting geometry,
+`reset_cell_placement` returns Instances to the tray and removes placement
+geometry/intent, and `reset_cell_body` removes non-interface content while
+retaining formal terminals and their marker/Net projection. Each advances the
+Document revision once and is restored by one Undo. The retired Agent product
+categorizes these guarded UI lifecycle edits as unsupported.
 
 `hierarchy-planner.ts` is the shared pure orchestration boundary above these
 edits. It constructs canonical subcircuit Instances and plans Cell

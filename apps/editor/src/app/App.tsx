@@ -36,6 +36,7 @@ import {
   planSetCellTerminalPlacement,
   planUpdateCellTerminalDirection,
   planSetMosModelTarget,
+  planCellReset,
   planInstanceUnplacement,
   proposeSetCellFormalParameters,
   proposeUpsertExternalSubcircuitDefinition,
@@ -44,6 +45,7 @@ import {
   type EditTransactionResult,
   type ConnectivityIntent,
   type SchematicEdit,
+  type CellResetPlan,
   type WireSource,
 } from "@icm/edit-engine";
 import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
@@ -3316,34 +3318,39 @@ export function App({
     return transact([...gate.edits], options);
   }
 
-  const clearableObjectCount =
-    document.instances.length +
-    document.nets.length +
-    document.routes.length +
-    document.junctions.length +
-    document.noConnects.length +
-    document.annotations.length +
-    document.layoutGroups.length +
-    document.constraints.length +
-    (document.mosBulkDefaults ? 1 : 0) +
-    (document.drafting?.objects.length ?? 0);
+  const clearDrawingPlan = planCellReset(project, document.id, "clear-drawing");
+  const resetPlacementPlan = planCellReset(
+    project,
+    document.id,
+    "reset-placement",
+  );
+  const resetBodyPlan = planCellReset(project, document.id, "reset-body");
 
-  function clearCanvas(): void {
-    if (clearableObjectCount === 0) {
-      setStatus(`Cell ${document.name} is already clear`);
+  function commitCellReset(plan: CellResetPlan, command: string): void {
+    if (plan.edits.length === 0) {
+      setStatus(command + " has nothing to change in Cell " + document.name);
       return;
     }
     const confirmed = window.confirm(
-      `Clear all content from Cell "${document.name}"? You can undo this action.`,
+      command +
+        ' in Cell "' +
+        document.name +
+        '"?\n\n' +
+        plan.summary +
+        ".\n\nAffected objects: " +
+        plan.affectedObjectIds.length +
+        ". Undo restores this Cell.",
     );
     if (!confirmed) {
-      setStatus("Clear canvas cancelled");
+      setStatus(command + " cancelled");
       return;
     }
-    const result = transact([{ kind: "clear_document" }]);
+    const result = transact([...plan.edits]);
     if (!result.ok) return;
     resetInteractionState();
-    setStatus(`Cleared Cell ${document.name} · Undo restores it`);
+    setStatus(
+      command + " completed in Cell " + document.name + " · Undo restores it",
+    );
   }
 
   function updateMosBulkDefault(
@@ -7419,10 +7426,33 @@ export function App({
                   </button>
                   <button
                     type="button"
-                    onClick={clearCanvas}
-                    disabled={clearableObjectCount === 0}
+                    onClick={() =>
+                      commitCellReset(clearDrawingPlan, "Clear Drawing")
+                    }
+                    disabled={clearDrawingPlan.edits.length === 0}
                   >
-                    Clear canvas
+                    Clear Drawing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      commitCellReset(
+                        resetPlacementPlan,
+                        "Reset Cell Placement",
+                      )
+                    }
+                    disabled={resetPlacementPlan.edits.length === 0}
+                  >
+                    Reset Cell Placement
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      commitCellReset(resetBodyPlan, "Reset Cell Body")
+                    }
+                    disabled={resetBodyPlan.edits.length === 0}
+                  >
+                    Reset Cell Body
                   </button>
                   <button
                     type="button"
