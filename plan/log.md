@@ -4551,3 +4551,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   geometry measured in both views.
 - Commit status: completed on `claude/publish-full-label`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 - One chrome band across both views
+
+- Changed areas: the gallery header adopts the editor's menubar height and
+  padding; every gallery header control (owner badge, account links and
+  buttons, sign-in summary, primary action) sits on the shared control
+  height; the brand block in both views spans that same band, so each
+  header's two sides are equal and the two headers match each other.
+- Validation: typecheck, full unit suite (182 files / 1148 tests), full
+  Playwright suite (186 passed; the recurring component-insert:376 timing
+  flake passed on its isolated re-run), prettier, diff checks; header, brand,
+  and button geometry measured in both views.
+- Commit status: completed on `claude/gallery-header-band`; mainline merge
+  gated on the remote required checks.
