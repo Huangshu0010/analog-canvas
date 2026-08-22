@@ -226,25 +226,51 @@ describe("gallery submissions", () => {
     expect(invalid.status).toBe(400);
   });
 
-  it("rate-limits one submitter per day without touching others", async () => {
+  it("rate-limits ordinary submitters per day; curators are exempt", async () => {
     const env = environment(ADMIN_TOKEN);
-    for (let index = 0; index < GALLERY_DAILY_SUBMISSION_LIMIT; index += 1) {
-      await submitOne(env, `Entry ${index}`);
-    }
-    const overflow = await route(
-      env,
-      submissionRequest({ name: "One more", projectText: projectText() }),
-    );
-    expect(overflow.status).toBe(429);
 
-    const other = await route(
-      env,
-      submissionRequest(
-        { name: "Other submitter", projectText: projectText() },
-        { ip: "198.51.100.2" },
-      ),
-    );
-    expect(other.status).toBe(201);
+    // Ordinary submissions (limit enforced) exhaust the day, without
+    // touching a different submitter.
+    async function submitDirect(hash: string): Promise<number> {
+      const response = await env.GALLERY.getByName("gallery").fetch(
+        "https://gallery/submit",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            day: "2026-08-22",
+            submitterHash: hash,
+            enforceLimit: true,
+            entry: {
+              id: crypto.randomUUID(),
+              name: "Quota",
+              author: "",
+              description: "",
+              created_at: "2026-08-22T00:00:00.000Z",
+              schema_version: 21,
+              status: "pending",
+              project_text: projectText(),
+              svg_text: "<svg/>",
+            },
+          }),
+        },
+      );
+      return response.status;
+    }
+    for (let index = 0; index < GALLERY_DAILY_SUBMISSION_LIMIT; index += 1) {
+      expect(await submitDirect("hash-a")).toBe(200);
+    }
+    expect(await submitDirect("hash-a")).toBe(429);
+    expect(await submitDirect("hash-b")).toBe(200);
+
+    // The bearer (curator) is exempt: more than the limit, all accepted.
+    for (
+      let index = 0;
+      index < GALLERY_DAILY_SUBMISSION_LIMIT + 2;
+      index += 1
+    ) {
+      await submitOne(env, `Curated ${index}`);
+    }
   });
 });
 
