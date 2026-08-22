@@ -334,7 +334,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "inverter.symbol.json",
     assetHash:
-      "0f9507463ea7fbb5395f240322b3e6c8320019f440213f4b4b3505763650e855",
+      "3a2bb65468bc459eacb60bf4ade552fa6f18627b43357963ccd1201a5bf86d4f",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -368,7 +368,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "nand-gate.symbol.json",
     assetHash:
-      "a445e2890404a328bd77d6c4e7ffe7afab606c52ec2faf92b2ab718c6f8c14dc",
+      "c18a6dc17e869e5014e6f173db16c91816d20d6bd807907d541d2f13897ff8e3",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -424,7 +424,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "nor-gate.symbol.json",
     assetHash:
-      "c62c2eeb47d8f3b0112d2792a988a46d3eef8183aeeb5a5e161fc2cfbbe0aca5",
+      "57a76caf0f646e15bd9bec13686db77ed510f343140c9693ae1bcc767c61a4fc",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -839,7 +839,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Behavioral logic gate; structural SPICE realization requires an explicit subcircuit or PDK mapping.",
     assetPath: "xnor-gate.symbol.json",
     assetHash:
-      "e45131e84f43c0617c43b426627eefb94948e7d09bcca0d1aba4eb231d7d1206",
+      "375b1a63d11454dba18c752260a65bdffa06e32096cef27c8a1f7dbedc40e086",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -2033,7 +2033,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         to: {
-          x: -29.023455,
+          x: -14.727526,
           y: 0,
         },
         style: {
@@ -2061,9 +2061,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         radius: 3.750109,
         part: "negation-bubble",
         style: {
-          strokeRole: "normal",
+          strokeRole: "emphasis",
           lineCap: "butt",
           lineJoin: "miter",
+          miterLimit: 4,
         },
       },
       {
@@ -2144,7 +2145,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: -33.749237,
+          x: -23.437963,
           y: -10,
         },
         style: {
@@ -2160,7 +2161,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: -33.827709,
+          x: -23.437963,
           y: 10,
         },
         style: {
@@ -2198,9 +2199,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         radius: 3.375185,
         part: "negation-bubble",
         style: {
-          strokeRole: "normal",
+          strokeRole: "emphasis",
           lineCap: "butt",
           lineJoin: "miter",
+          miterLimit: 4,
         },
       },
       {
@@ -2618,9 +2620,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         radius: 3.374313,
         part: "negation-bubble",
         style: {
-          strokeRole: "normal",
+          strokeRole: "emphasis",
           lineCap: "butt",
           lineJoin: "miter",
+          miterLimit: 4,
         },
       },
       {
@@ -4400,9 +4403,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         radius: 3.374313,
         part: "negation-bubble",
         style: {
-          strokeRole: "normal",
+          strokeRole: "emphasis",
           lineCap: "butt",
           lineJoin: "miter",
+          miterLimit: 4,
         },
       },
       {

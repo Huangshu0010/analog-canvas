@@ -182,7 +182,7 @@
             "y": -10.0
           },
           "to": {
-            "x": -33.749237,
+            "x": -23.437963,
             "y": -10.0
           },
           "style": {
@@ -198,7 +198,7 @@
             "y": 10.0
           },
           "to": {
-            "x": -33.827709,
+            "x": -23.437963,
             "y": 10.0
           },
           "style": {
@@ -236,9 +236,10 @@
           "radius": 3.375185,
           "part": "negation-bubble",
           "style": {
-            "strokeRole": "normal",
+            "strokeRole": "emphasis",
             "lineCap": "butt",
-            "lineJoin": "miter"
+            "lineJoin": "miter",
+            "miterLimit": 4
           }
         },
         {

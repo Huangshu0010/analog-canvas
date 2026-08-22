@@ -4322,3 +4322,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   local port, with release verification and production smoke.
 - Commit status: completed on `codex/razavi-logic-gate-alignment`; remote
   required checks pending.
+
+## 2026-08-22 — Logic-gate continuity and scale follow-up
+
+- Target: `plan/2026-08-22-razavi-logic-gate-continuity-scale/plan.md`
+  (completed).
+- Change: corrected vertical PDF lead endpoint selection for NAND/inverter and
+  restored source-weight negation bubbles, closing visible lead/body and
+  body/bubble gaps; retained the measured family scale after a common-canvas
+  NAND/inverter/MOS/resistor/capacitor comparison.
+- Validation: deterministic 11/11 extraction; direct hard IoU inverter 0.8018,
+  NAND 0.9180, NOR 0.9417; generator drift and focused geometry tests; affected
+  gates; canonical CI passed 1099 unit and 183 browser tests.
+- Commit status: completed on `codex/razavi-logic-gate-alignment`; remote
+  required checks pending.

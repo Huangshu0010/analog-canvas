@@ -82,6 +82,21 @@ const closedSwitchEvidence = JSON.parse(
 };
 const normalize = (value: string) =>
   `${value.replaceAll("\r\n", "\n").trimEnd()}\n`;
+const pathPoints = (data: string) => {
+  const numbers = [...data.matchAll(/-?\d+(?:\.\d+)?/gu)].map((match) =>
+    Number(match[0]),
+  );
+  const points: Array<{ x: number; y: number }> = [];
+  for (let index = 0; index < numbers.length; index += 2) {
+    const x = numbers[index];
+    const y = numbers[index + 1];
+    if (x === undefined || y === undefined) {
+      throw new Error(`Malformed path coordinate list: ${data}`);
+    }
+    points.push({ x, y });
+  }
+  return points;
+};
 const logicalPoint = (
   measurement: (typeof mosGeometry.symbols)["nmos"],
   point: { x: number; y: number },
@@ -989,6 +1004,71 @@ describe("logic-gate and comparator family", () => {
       );
       expect(bubbles).toHaveLength(invertingShapes.has(symbolId) ? 1 : 0);
     }
+  });
+
+  it("keeps source leads and negation bubbles joined to their gate bodies", () => {
+    const inverter = requireRazaviCatalogSymbol("inverter");
+    const inverterLead = inverter.primitives[0];
+    const inverterBody = inverter.primitives[1];
+    if (!inverterLead || inverterLead.kind !== "line") {
+      throw new Error("Inverter input lead is missing");
+    }
+    if (!inverterBody || inverterBody.kind !== "path") {
+      throw new Error("Inverter body path is missing");
+    }
+    const inverterBodyMinX = Math.min(
+      ...pathPoints(inverterBody.data).map((point) => point.x),
+    );
+    expect(inverterLead.to.x).toBeCloseTo(inverterBodyMinX, 5);
+
+    const nand = requireRazaviCatalogSymbol("nand-gate");
+    const nandBody = nand.primitives.find(
+      (primitive) => primitive.kind === "path",
+    );
+    const nandBubble = nand.primitives.find(
+      (primitive) => primitive.part === "negation-bubble",
+    );
+    if (!nandBody || nandBody.kind !== "path") return;
+    const nandBodyMinX = Math.min(
+      ...pathPoints(nandBody.data).map((point) => point.x),
+    );
+    for (const lead of nand.primitives.slice(0, 2)) {
+      expect(lead).toMatchObject({ kind: "line" });
+      if (lead.kind !== "line") continue;
+      expect(lead.to.x).toBeLessThanOrEqual(nandBodyMinX);
+      expect(nandBodyMinX - lead.to.x).toBeLessThan(0.5);
+    }
+    expect(nandBubble).toMatchObject({
+      kind: "circle",
+      style: { strokeRole: "emphasis" },
+    });
+  });
+
+  it("keeps logic gates in the reviewed component-family scale", () => {
+    const nand = requireRazaviCatalogSymbol("nand-gate");
+    const resistor = requireRazaviCatalogSymbol("resistor");
+    const capacitor = requireRazaviCatalogSymbol("capacitor");
+    const nmos = requireRazaviCatalogSymbol("nmos");
+    const inputPitch = Math.abs(
+      (nand.pins.find((pin) => pin.name === "B")?.at.y ?? 0) -
+        (nand.pins.find((pin) => pin.name === "A")?.at.y ?? 0),
+    );
+    const resistorTop = resistor.pins.find((pin) => pin.name === "1");
+    const resistorBottom = resistor.pins.find((pin) => pin.name === "2");
+    const capacitorTop = capacitor.pins.find((pin) => pin.name === "1");
+    const capacitorBottom = capacitor.pins.find((pin) => pin.name === "2");
+    if (!resistorTop || !resistorBottom || !capacitorTop || !capacitorBottom) {
+      throw new Error("Reviewed passive pin geometry is incomplete");
+    }
+    const resistorSpan = Math.abs(resistorBottom.at.y - resistorTop.at.y);
+    const capacitorSpan = Math.abs(capacitorBottom.at.y - capacitorTop.at.y);
+    const mosSpan = Math.abs(
+      (nmos.pins.find((pin) => pin.name === "S")?.at.y ?? 0) -
+        (nmos.pins.find((pin) => pin.name === "D")?.at.y ?? 0),
+    );
+    expect(inputPitch).toBe(20);
+    expect([resistorSpan, capacitorSpan, mosSpan]).toEqual([40, 40, 40]);
+    expect(inputPitch * 2).toBe(resistorSpan);
   });
 
   it("stays manual-only for netlist mapping like the op-amp", () => {

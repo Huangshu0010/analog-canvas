@@ -140,7 +140,7 @@
             "y": 0.0
           },
           "to": {
-            "x": -29.023455,
+            "x": -14.727526,
             "y": 0.0
           },
           "style": {
@@ -168,9 +168,10 @@
           "radius": 3.750109,
           "part": "negation-bubble",
           "style": {
-            "strokeRole": "normal",
+            "strokeRole": "emphasis",
             "lineCap": "butt",
-            "lineJoin": "miter"
+            "lineJoin": "miter",
+            "miterLimit": 4
           }
         },
         {

@@ -189,7 +189,10 @@ def circle_from_object(
         "center": {"x": center[0], "y": center[1]},
         "radius": radius,
         "part": part,
-        "style": NORMAL,
+        # Textbook negation bubbles use the same 1.434 pt stroke as the gate
+        # body, not the 0.717 pt external leads. Keeping that distinction is
+        # also what closes the body/bubble silhouette after normalization.
+        "style": EMPHASIS,
     }
 
 
@@ -286,8 +289,8 @@ def extract_and(page: Any) -> tuple[list[dict[str, Any]], dict[str, Any], tuple[
     origin = ((161.647 + 201.251) / 2, (519.1462 + 530.6142) / 2)
     transform = make_horizontal_transform(*origin, reverse_x=True)
     primitives = [
-        line((-40, -10), transform(float(input_a["x0"]), float(input_a["top"]))),
-        line((-40, 10), transform(float(input_b["x0"]), float(input_b["top"]))),
+        line((-40, -10), transform(float(input_a["x0"]), float(input_a["bottom"]))),
+        line((-40, 10), transform(float(input_b["x0"]), float(input_b["bottom"]))),
         path(body_flat, transform),
         path(body_curve, transform),
         line(transform(float(output["x1"]), float(output["top"])), (40, 0)),
@@ -306,8 +309,8 @@ def extract_nand(page: Any) -> tuple[list[dict[str, Any]], dict[str, Any], tuple
     origin = ((236.327 + 247.796) / 2, (286.1722 + 324.9692) / 2)
     transform = make_down_to_right_transform(*origin)
     primitives = [
-        line((-40, -10), transform(float(input_a["x0"]), float(input_a["top"]))),
-        line((-40, 10), transform(float(input_b["x0"]), float(input_b["top"]))),
+        line((-40, -10), transform(float(input_a["x0"]), float(input_a["bottom"]))),
+        line((-40, 10), transform(float(input_b["x0"]), float(input_b["bottom"]))),
         path(body_flat, transform),
         path(body_curve, transform),
         circle_from_object(bubble, transform),
@@ -325,7 +328,7 @@ def extract_inverter(page: Any) -> tuple[list[dict[str, Any]], dict[str, Any], t
     origin = (242.062, (316.7712 + 350.0582) / 2)
     transform = make_down_to_right_transform(*origin)
     primitives = [
-        line((-40, 0), transform(float(input_lead["x0"]), float(input_lead["top"]))),
+        line((-40, 0), transform(float(input_lead["x0"]), float(input_lead["bottom"]))),
         path(triangle, transform),
         circle_from_object(bubble, transform),
         line(transform(float(output_lead["x0"]), float(output_lead["top"])), (40, 0)),

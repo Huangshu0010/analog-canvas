@@ -203,7 +203,7 @@
         "figure": "16.24(b)"
       },
       "extractPath": "logic-nor-gate-vector-source.json",
-      "extractSha256": "9a1b192a6caf4535b391b5802ed3816736a0192cac00a686b7622eafb140e633",
+      "extractSha256": "99be0b678d21f55eae8f9e94d43cd83a69be464e12bd3272003a9e61fa07dbe6",
       "rasterPath": "logic-nor-gate-reference.png",
       "rasterSha256": "15151d0b3854ec8a068dfb5974cb78551b3df624ffd580a4b4c0587e0d63b0eb",
       "scope": ["direct NOR body, negation bubble, and lead junctions"]
@@ -219,7 +219,7 @@
         "figure": "16.25(a)"
       },
       "extractPath": "logic-nand-gate-vector-source.json",
-      "extractSha256": "3e3ced18aa682ccb313ac5686a6932d4a0dc2731b6e1c37badcc872f89fe491e",
+      "extractSha256": "3bc680cc6fd537605708ad7c14eee8621bacc59c71800935d13ba1b0b225ac1a",
       "rasterPath": "logic-nand-gate-reference.png",
       "rasterSha256": "a63cb3b84e5a409f30da039f00387e6769cad19a38ad7d90cc403d864c4280d0",
       "scope": ["direct NAND body, negation bubble, and lead junctions"]
@@ -235,7 +235,7 @@
         "figure": "16.25(a)"
       },
       "extractPath": "logic-inverter-vector-source.json",
-      "extractSha256": "6f0c4b08e49281f50c8fdc1afabea6c464604f52b57b04907931cda1841879c8",
+      "extractSha256": "32f8386123fcbdc2fba59bb1a82dee9c7ea3c4394cbbbf2fb61fc4335c28c817",
       "rasterPath": "logic-inverter-reference.png",
       "rasterSha256": "4911da6e698c75449502cf3438166cb4ee48b33350b6ad0edf994ce6857b6c4c",
       "scope": ["direct inverter triangle, negation bubble, and lead junctions"]

@@ -111,9 +111,10 @@
       "radius": 3.374313,
       "part": "negation-bubble",
       "style": {
-        "strokeRole": "normal",
+        "strokeRole": "emphasis",
         "lineCap": "butt",
-        "lineJoin": "miter"
+        "lineJoin": "miter",
+        "miterLimit": 4
       }
     },
     {
