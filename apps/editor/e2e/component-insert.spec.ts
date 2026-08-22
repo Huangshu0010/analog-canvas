@@ -759,12 +759,19 @@ test("shows the complete foldable categorized Library, quick-places a device, an
   );
   await expect(transistorChips).toHaveCount(4);
   const transistorGrid = transistorCategory.locator(".shapes-grid");
-  expect(
+  // Tiles keep a fixed square size; a wider panel fits more of them per row
+  // instead of stretching each tile.
+  const tileBox = await transistorChips.first().boundingBox();
+  if (!tileBox) throw new Error("Library tile is not measurable");
+  expect(Math.round(tileBox.width)).toBe(Math.round(tileBox.height));
+  const gridBox = await transistorGrid.boundingBox();
+  if (!gridBox) throw new Error("Library grid is not measurable");
+  const columns = (
     await transistorGrid.evaluate(
-      (element) =>
-        getComputedStyle(element).gridTemplateColumns.split(" ").length,
-    ),
-  ).toBe(4);
+      (element) => getComputedStyle(element).gridTemplateColumns,
+    )
+  ).split(" ").length;
+  expect(columns).toBe(Math.floor((gridBox.width + 4) / (tileBox.width + 4)));
   expect(
     await transistorChips.evaluateAll(
       (elements) =>
@@ -774,7 +781,7 @@ test("shows the complete foldable categorized Library, quick-places a device, an
           ),
         ).size,
     ),
-  ).toBe(1);
+  ).toBe(Math.ceil(4 / columns));
   expect(
     await transistorGrid.evaluate((element) => {
       const gridBounds = element.getBoundingClientRect();
@@ -969,17 +976,40 @@ test("opens named full-width Project examples from the left tool rail", async ({
   await examplesToggle.click();
   await expect(panel).toHaveAttribute("data-open", "true");
 
+  // An example joins the drawing on the placement cursor; it never replaces
+  // the canvas, so work already on it survives.
+  await chooseComponent(page, "resistor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 200, y: 150 } });
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+
+  const placedInstances = page.locator('[data-testid^="hit-"]');
+  await expect(placedInstances).toHaveCount(1);
+
   await panel.getByTestId("shapes-example-common-source-amplifier").click();
-  await expect(page.getByTestId("status")).toHaveText(
-    "Opened example: Common-Source Amplifier",
+  await expect(page.getByTestId("status")).toContainText(
+    "Place Common-Source Amplifier on the canvas",
   );
-  await expect(page.getByTestId("hit-M2")).toBeVisible();
+  await canvas.click({ position: { x: 520, y: 320 } });
+  await expect(page.getByTestId("status")).toContainText(
+    "Copied 12 components",
+  );
+  await page.keyboard.press("Escape");
+  // The example joined the drawing: the resistor that was already there stays.
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  const afterFirstExample = await placedInstances.count();
+  expect(afterFirstExample).toBeGreaterThan(1);
 
   await panel.getByTestId("shapes-example-two-stage-op-amp").click();
-  await expect(page.getByTestId("status")).toHaveText(
-    "Opened example: Two-Stage Op Amp",
+  await expect(page.getByTestId("status")).toContainText(
+    "Place Two-Stage Op Amp on the canvas",
   );
-  await expect(page.getByTestId("hit-X7")).toBeVisible();
+  await canvas.click({ position: { x: 640, y: 180 } });
+  await expect(page.getByTestId("status")).toContainText("Copied 7 components");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  expect(await placedInstances.count()).toBeGreaterThan(afterFirstExample);
 });
 
 test("keeps a usable canvas while toggling Library at the narrow breakpoint", async ({

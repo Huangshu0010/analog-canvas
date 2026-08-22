@@ -125,7 +125,11 @@ import {
   resolvePdkSymbolMapping,
   reviewedSky130MosModelSuggestions,
 } from "@icm/symbols";
-import { clipboardPreviewDocument } from "../features/clipboard/clipboard";
+import {
+  clipboardPlacementAnchor,
+  clipboardPreviewDocument,
+  copySelection,
+} from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import { startCanvasDragSession } from "../canvas/canvas-drag-session";
 import {
@@ -3226,16 +3230,43 @@ export function App({
     );
   }
 
+  /**
+   * Examples join the drawing instead of replacing it: the example's content
+   * is attached to the placement cursor like an ordinary copy, so existing
+   * work is never overwritten. A hierarchical example cannot be flattened
+   * onto one Document, so it still opens as its own Project behind the
+   * ordinary dirty guard.
+   */
   function openLibraryExample(example: LibraryProjectExample): void {
-    void guardDirtyReplacement(`Open ${example.name} example`, () => {
-      const nextProject = createLibraryExampleProject(example.id);
-      if (!nextProject) {
-        setStatus(`Example is unavailable: ${example.name}`);
-        return;
-      }
-      replaceActiveProject(nextProject);
-      setStatus(`Opened example: ${example.name}`);
-    });
+    const exampleProject = createLibraryExampleProject(example.id);
+    if (!exampleProject) {
+      setStatus(`Example is unavailable: ${example.name}`);
+      return;
+    }
+    const exampleDocument = exampleProject.documents.find(
+      (candidate) => candidate.id === exampleProject.topDocumentId,
+    );
+    if (!exampleDocument || exampleProject.documents.length > 1) {
+      void guardDirtyReplacement(`Open ${example.name} example`, () => {
+        replaceActiveProject(exampleProject);
+        setStatus(`Opened example: ${example.name}`);
+      });
+      return;
+    }
+    const clipboard = copySelection(
+      exampleDocument,
+      exampleDocument.instances.map((instance) => instance.id),
+    );
+    const anchor = clipboard ? clipboardPlacementAnchor(clipboard) : null;
+    if (!clipboard || !anchor) {
+      setStatus(`Example has nothing to place: ${example.name}`);
+      return;
+    }
+    cancelAllTransientInteraction();
+    beginCopyPlacementInteraction(clipboard, anchor);
+    setStatus(
+      `Place ${example.name} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
+    );
   }
 
   function rotatePendingCopy(delta: 90 | -90): void {
@@ -7175,9 +7206,11 @@ export function App({
                 data-testid="publish-gallery-button"
                 aria-haspopup="dialog"
                 aria-expanded={publishGalleryOpen}
+                aria-label="Publish to Gallery"
+                title="Publish to Gallery"
                 onClick={() => setPublishGalleryOpen(true)}
               >
-                Publish…
+                Publish
               </button>
             </div>
           </nav>

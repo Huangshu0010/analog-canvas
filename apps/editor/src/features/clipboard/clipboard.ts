@@ -366,27 +366,57 @@ export function proposePaste(
   );
   const referenceIndex = createReferenceIndex(document);
   const reservedReferences = new Set<string>();
-  const instanceReferences = new Map(
-    clipboard.instances.flatMap((instance) =>
-      instance.netlist &&
-      referencePolicyForInstance(instance).kind === "required"
-        ? (() => {
-            const policy = referencePolicyForInstance(instance);
-            if (policy.kind === "none") return [];
-            const sourceSuffix = referenceSuffixForPolicy(
-              instance.netlist.reference,
-              policy,
-            );
-            const reference = nextReference(referenceIndex, policy, {
-              ...(sourceSuffix !== null ? { startAt: sourceSuffix + 1 } : {}),
-              reservedReferences,
-            });
-            if (!reference) return [];
-            reservedReferences.add(reference.toLowerCase());
-            return [[instance.id, reference] as const];
-          })()
-        : [],
+  const occupiedReferences = new Set(
+    document.instances.flatMap((instance) =>
+      instance.netlist ? [instance.netlist.reference.toLowerCase()] : [],
     ),
+  );
+  /**
+   * Schematic-only markers (ground, power ports) carry a netlist reference
+   * without a device reference policy, so the policy-driven allocator above
+   * cannot renumber them. Their references are still unique per Document, so
+   * pasting one has to claim the next free ordinal of its own prefix.
+   */
+  const nextMarkerReference = (current: string): string | undefined => {
+    const parsed = /^(.*?)(\d+)$/u.exec(current);
+    if (!parsed) return undefined;
+    const prefix = parsed[1]!;
+    for (
+      let suffix = Number(parsed[2]);
+      suffix < Number(parsed[2]) + 1000;
+      suffix += 1
+    ) {
+      const candidate = `${prefix}${suffix}`;
+      const folded = candidate.toLowerCase();
+      if (occupiedReferences.has(folded) || reservedReferences.has(folded)) {
+        continue;
+      }
+      return candidate;
+    }
+    return undefined;
+  };
+  const instanceReferences = new Map(
+    clipboard.instances.flatMap((instance) => {
+      if (!instance.netlist) return [];
+      const policy = referencePolicyForInstance(instance);
+      if (policy.kind === "none") {
+        const reference = nextMarkerReference(instance.netlist.reference);
+        if (!reference) return [];
+        reservedReferences.add(reference.toLowerCase());
+        return [[instance.id, reference] as const];
+      }
+      const sourceSuffix = referenceSuffixForPolicy(
+        instance.netlist.reference,
+        policy,
+      );
+      const reference = nextReference(referenceIndex, policy, {
+        ...(sourceSuffix !== null ? { startAt: sourceSuffix + 1 } : {}),
+        reservedReferences,
+      });
+      if (!reference) return [];
+      reservedReferences.add(reference.toLowerCase());
+      return [[instance.id, reference] as const];
+    }),
   );
   const instanceIds = new Map(
     clipboard.instances.map((instance) => [

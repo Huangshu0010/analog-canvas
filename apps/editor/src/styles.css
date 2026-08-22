@@ -58,6 +58,7 @@
   /* Layout columns */
   --icm-rail-width: 56px;
   --icm-shapes-width: 248px;
+  --icm-shapes-tile: 56px;
   --icm-props-collapsed: 40px;
   --icm-props-open: 280px;
   --icm-menubar-h: 44px;
@@ -1153,9 +1154,11 @@ body {
   line-height: 1;
 }
 
+/* Fixed-size tiles rather than fractional columns: dragging the panel wider
+   fits more squares per row instead of stretching each one. */
 .shapes-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, var(--icm-shapes-tile));
   gap: 4px;
 }
 
@@ -1270,7 +1273,8 @@ body {
   justify-items: center;
   align-content: center;
   gap: 2px;
-  min-height: 56px;
+  width: var(--icm-shapes-tile);
+  height: var(--icm-shapes-tile);
   padding: 0;
   border: 1px solid var(--icm-border);
   border-radius: var(--icm-radius-sm);
@@ -4254,14 +4258,9 @@ body {
     display: inline;
   }
 
-  .shapes-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .shapes-chip {
     grid-template-rows: 36px 1.15em;
     gap: 3px;
-    min-height: 64px;
     padding: 0;
     font-size: 10px;
   }
