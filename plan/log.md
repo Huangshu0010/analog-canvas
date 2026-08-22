@@ -4664,6 +4664,36 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Commit status: completed on `claude/gallery-tags` (stacked on
   `claude/gallery-feed-g4`).
 
+## 2026-08-22 - Library category order and Bulk action reach
+
+- Changed areas: `CATEGORY_ORDER` now runs Transistors, Passives, Power and
+  Ports, Sources, Switches, Analog Blocks, Logic Gates — display order only,
+  no category membership change. The MOS bulk section moved to the head of the
+  selection panel and now leads with an accented "Draw bulk connection" button
+  instead of trailing its two default-Net selects.
+- Validation: component-insert unit tests (47), Playwright component-insert +
+  manual-editor specs (117 passed), typecheck, prettier, diff checks; both
+  changes confirmed in a running editor.
+- Commit status: completed on `claude/library-order-and-bulk`; mainline merge
+
+## 2026-08-22 - Repeating a Cell Pin name places another marker
+
+- Changed areas: new `planAttachCellPortMarker` appends a Port Instance to an
+  existing terminal's `interfaceInstanceIds` and merges the marker's Net into
+  the terminal's Net; placement routes through it instead of aborting with
+  `Cell port X already exists`. The model already typed `interfaceInstanceIds`
+  as a plural array, so no schema change was needed.
+- Kept one terminal per name deliberately: `connectivity-index.ts` and
+  `schema/project.ts` resolve a parent Instance's pin to a child terminal by
+  name, so two same-named terminals would resolve ambiguously to the first
+  match. Rename-onto-an-existing-name still rejects (ambiguous between "one
+  pin" and a typo) but now names the working alternative.
+- Validation: full unit suite (1162), edit-engine + component-insert (221),
+  Playwright hierarchy spec (12 passed) including the new placement case,
+  typecheck, prettier, diff checks.
+- Commit status: completed on `claude/duplicate-pin-names`; mainline merge
+  gated on the remote required checks.
+
 ## 2026-08-22 — Examples panel reads the community gallery
 
 - Target: `plan/2026-08-22-examples-from-gallery/plan.md` (completed).
