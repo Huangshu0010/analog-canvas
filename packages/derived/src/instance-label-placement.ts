@@ -50,6 +50,17 @@ export function isBjtSymbol(resolved: ResolvedSymbol): boolean {
   return roles.has("base") && roles.has("collector") && roles.has("emitter");
 }
 
+/**
+ * True when the Symbol draws a polarity-marked differential input pair, so a
+ * caller can offer "swap + / −" as a named action. The swap itself is the
+ * ordinary top/bottom reflection: the marks are artwork, and the terminals
+ * move with them, so the electrical fact and the drawing stay in agreement.
+ */
+export function hasDifferentialInputs(resolved: ResolvedSymbol): boolean {
+  const roles = new Set(resolved.definition.pins.map((pin) => pin.role));
+  return roles.has("non-inverting-input") && roles.has("inverting-input");
+}
+
 function transformedBounds(
   localBounds: Rect,
   instance: SchematicDocument["instances"][number],
