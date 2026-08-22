@@ -373,7 +373,7 @@ test("keeps a tapped VDD rail movable and stretchable as one supply bar", async 
   ).toBeGreaterThan(beforeResizeRight);
 });
 
-test("keeps unresolved PMOS bulk separate from a named VDD rail", async ({
+test("initializes PMOS bulk from the first explicitly drawn VDD rail", async ({
   page,
 }) => {
   await page.goto("/editor");
@@ -388,6 +388,7 @@ test("keeps unresolved PMOS bulk separate from a named VDD rail", async ({
     (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
   ) as {
     documents: Array<{
+      mosBulkDefaults?: { pmosNetId?: string };
       nets: Array<{
         id: string;
         powerDomain?: string;
@@ -401,9 +402,10 @@ test("keeps unresolved PMOS bulk separate from a named VDD rail", async ({
   expect(vddNets).toEqual([
     expect.objectContaining({
       id: "net-power-vdd1",
-      terminals: [],
+      terminals: [{ instanceId: "M1", pinName: "B" }],
     }),
   ]);
+  expect(document.mosBulkDefaults?.pmosNetId).toBe("net-power-vdd1");
   expect(document.routes).toContainEqual(
     expect.objectContaining({
       netId: "net-power-vdd1",
@@ -976,7 +978,7 @@ test("keeps a selected MOS in its fixed Razavi three-terminal view", async ({
   ).toHaveCount(0);
 });
 
-test("leaves unconfigured MOS bulk unresolved until an explicit dashed route connects it", async ({
+test("initializes NMOS bulk from the first explicitly placed Ground", async ({
   page,
 }) => {
   await page.goto("/editor");
@@ -986,16 +988,14 @@ test("leaves unconfigured MOS bulk unresolved until an explicit dashed route con
   await page.getByTestId("hit-M1").click();
   await openSelectionShelf(page);
   await expect(page.getByLabel("MOS bulk connection")).toContainText(
-    "unresolved",
+    "M1.B → 0 · cell-default",
   );
-  await page.getByRole("button", { name: "Draw bulk connection" }).click();
-  await page.getByTestId("terminal-GND1-0").click();
-  await page.keyboard.press("Escape");
 
   const saved = JSON.parse(
     (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
   ) as {
     documents: Array<{
+      mosBulkDefaults?: { nmosNetId?: string };
       instances: Array<{
         id: string;
         mosBulkBinding?: { origin: string; netId: string };
@@ -1011,8 +1011,9 @@ test("leaves unconfigured MOS bulk unresolved until an explicit dashed route con
   const document = saved.documents[0]!;
   expect(
     document.instances.find((instance) => instance.id === "M1")?.mosBulkBinding,
-  ).toBeUndefined();
-  expect(document.routes).toContainEqual(
+  ).toEqual({ origin: "cell-default", netId: "net-power-gnd1" });
+  expect(document.mosBulkDefaults?.nmosNetId).toBe("net-power-gnd1");
+  expect(document.routes).not.toContainEqual(
     expect.objectContaining({ presentation: "bulk-dashed" }),
   );
   expect(document.nets.find((net) => net.name === "0")?.terminals).toEqual(

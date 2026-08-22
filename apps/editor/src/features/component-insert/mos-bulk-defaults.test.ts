@@ -1,0 +1,122 @@
+import { executeTransaction } from "@icm/edit-engine";
+import { createEmptyDocument } from "@icm/model";
+import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
+import { describe, expect, it } from "vitest";
+
+import {
+  planInitialMosBulkDefault,
+  planMosBulkDefaultUpdate,
+} from "./mos-bulk-defaults";
+
+const resolver = new InMemorySymbolResolver(builtInSymbols);
+
+describe("initial MOS bulk defaults", () => {
+  it("uses the explicit first ground Net as the NMOS default", () => {
+    const document = createEmptyDocument("main", "Main");
+    expect(planInitialMosBulkDefault(document, "ground", "net-zero")).toEqual([
+      { kind: "set_mos_bulk_defaults", nmosNetId: "net-zero" },
+      { kind: "reconcile_mos_bulk" },
+    ]);
+  });
+
+  it("uses the explicit first vdd-domain Net even when it is named AVDD", () => {
+    const document = createEmptyDocument("main", "Main");
+    expect(planInitialMosBulkDefault(document, "vdd", "net-avdd")).toEqual([
+      { kind: "set_mos_bulk_defaults", pmosNetId: "net-avdd" },
+      { kind: "reconcile_mos_bulk" },
+    ]);
+  });
+
+  it("does not overwrite an authored default when another rail is placed", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.mosBulkDefaults = { pmosNetId: "net-avdd" };
+    expect(planInitialMosBulkDefault(document, "vdd", "net-vdd")).toEqual([]);
+  });
+
+  it("reconfigures only MOS bodies created from the previous default", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.instances.push(
+      {
+        id: "M1",
+        symbolId: "pmos",
+        mosBulkBinding: { origin: "cell-default", netId: "net-avdd" },
+        placement: null,
+      },
+      {
+        id: "M2",
+        symbolId: "pmos",
+        placement: null,
+      },
+      {
+        id: "M3",
+        symbolId: "nmos",
+        mosBulkBinding: { origin: "cell-default", netId: "net-zero" },
+        placement: null,
+      },
+    );
+    expect(planMosBulkDefaultUpdate(document, "pmos", "net-dvdd")).toEqual([
+      { kind: "clear_mos_bulk_default", instanceId: "M1" },
+      { kind: "set_mos_bulk_defaults", pmosNetId: "net-dvdd" },
+      { kind: "reconcile_mos_bulk" },
+    ]);
+  });
+
+  it("moves a materialized default body without changing an explicit body", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.mosBulkDefaults = { pmosNetId: "net-avdd" };
+    document.instances.push(
+      {
+        id: "M1",
+        symbolId: "pmos",
+        mosBulkBinding: { origin: "cell-default", netId: "net-avdd" },
+        placement: null,
+      },
+      { id: "M2", symbolId: "pmos", placement: null },
+    );
+    document.nets.push(
+      {
+        id: "net-avdd",
+        name: "AVDD",
+        scope: "local",
+        powerDomain: "vdd",
+        terminals: [
+          { instanceId: "M1", pinName: "B" },
+          { instanceId: "M2", pinName: "B" },
+        ],
+      },
+      {
+        id: "net-dvdd",
+        name: "DVDD",
+        scope: "local",
+        powerDomain: "vdd",
+        terminals: [],
+      },
+    );
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "change-pmos-default",
+        documentId: document.id,
+        expectedRevision: document.revision,
+        actor: { kind: "human", id: "test" },
+        edits: [...planMosBulkDefaultUpdate(document, "pmos", "net-dvdd")],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.mosBulkDefaults).toEqual({ pmosNetId: "net-dvdd" });
+    expect(result.document.nets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "net-avdd",
+          terminals: [{ instanceId: "M2", pinName: "B" }],
+        }),
+        expect.objectContaining({
+          id: "net-dvdd",
+          terminals: [{ instanceId: "M1", pinName: "B" }],
+        }),
+      ]),
+    );
+  });
+});

@@ -1,6 +1,8 @@
 import type { SchematicEdit } from "@icm/edit-engine";
 import { foldNetName, type Point, type SchematicDocument } from "@icm/model";
 
+import { planInitialMosBulkDefault } from "./mos-bulk-defaults";
+
 export interface VddRailConstruction {
   instanceId: string;
   start: Point;
@@ -129,6 +131,7 @@ export function planVddRailEdits(
         netName: target?.name ?? netName,
         scope: target?.scope ?? construction.scope ?? "local",
       }),
+      ...planInitialMosBulkDefault(document, "vdd", netId),
     ],
   };
 }
