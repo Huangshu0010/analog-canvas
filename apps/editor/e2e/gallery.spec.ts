@@ -277,7 +277,7 @@ test("an ordinary user sees blocking quality gates on an empty project", async (
   );
 
   await page.goto("/editor");
-  await clickCommand(page, "File", "Publish to Gallery…");
+  await page.getByTestId("publish-gallery-button").click();
   const dialog = page.getByTestId("publish-gallery-dialog");
   await expect(dialog).toBeVisible();
 
