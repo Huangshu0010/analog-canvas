@@ -4384,3 +4384,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   failed tests.
 - Commit status: rebased review branch is ready for required GitHub checks and
   merge to remote `main`.
+
+## 2026-08-22 — Hotfix: auth fetch seam Illegal invocation
+
+- Target: `plan/2026-08-22-auth-fetch-binding/plan.md` (completed).
+- Change: `AuthDO.fetchLike` was the raw global fetch; `this.fetchLike()`
+  rebinds `this` in the Workers runtime ("Illegal invocation"), so every
+  OAuth exchange failed as the generic sign-in error while Node tests
+  passed. Arrow-wrapped the seam, switched the GitHub token exchange to
+  form-encoding, added an identity regression test.
+- Validation: worker suites, typecheck, prettier, test-impact; production
+  GitHub sign-in verified after deploy.
+- Commit status: completed on `claude/auth-fetch-binding`.
