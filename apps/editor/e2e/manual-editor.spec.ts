@@ -3252,7 +3252,8 @@ test("dismisses a command menu on outside click or Escape", async ({
   const fileMenu = await openMenu(page, "File");
   await expect(fileMenu).toHaveAttribute("open", "");
 
-  await page.getByRole("heading", { name: "Analog Canvas" }).click();
+  // The wordmark now navigates to the gallery, so dismiss on a neutral spot.
+  await page.locator(".app-brand-copy p").click();
   await expect(fileMenu).not.toHaveAttribute("open", "");
 
   await openMenu(page, "File");
@@ -3610,7 +3611,7 @@ test("Document style dialog scales fonts document-wide and resets", async ({
   await reset.click();
   await expect(label).toHaveAttribute("font-size", "15.116");
   await expect(reset).toBeDisabled();
-  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await dialog.getByRole("button", { name: "Done", exact: true }).click();
   await expect(dialog).toHaveCount(0);
 });
 

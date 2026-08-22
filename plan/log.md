@@ -4397,6 +4397,23 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   GitHub sign-in verified after deploy.
 - Commit status: completed on `claude/auth-fetch-binding`.
 
+## 2026-08-22 - Editor chrome pass from a live review
+
+- Changed areas: both left panels lose the "QUICK PLACE" title banner (and
+  its dead CSS); Publish to Gallery moves out of the File menu to a menubar
+  button beside Search; the brand mark plus wordmark becomes a two-way
+  editor/gallery switch (the gallery's brand now links to the editor); the
+  Library panel gains a dragged, clamped, persisted width through
+  `useEditorPanels` and a keyboard-operable `col-resize` separator; the
+  Document style dialog is rebuilt on the publish dialog's card with one
+  settings row per knob and a Reset/Done footer.
+- Validation: typecheck, full unit suite (179 files / 1121 tests), full
+  Playwright suite (185; one unrelated current-marker drag flake passed on
+  re-run), prettier, markdown links, diff checks; every surface verified in
+  a running editor including a real 248→368px handle drag.
+- Commit status: completed on `claude/drop-panel-title-banner`; mainline
+  merge gated on the remote required checks.
+
 ## 2026-08-22 — Gallery phase G3: review queue with quality gates
 
 - Target: `plan/2026-08-22-gallery-review-g3/plan.md` (completed).
