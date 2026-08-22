@@ -1,5 +1,9 @@
 import { executeTransaction } from "@icm/edit-engine";
-import { createEmptyDocument, validateNetContract } from "@icm/model";
+import {
+  createEmptyDocument,
+  transformPoint,
+  validateNetContract,
+} from "@icm/model";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
@@ -144,6 +148,72 @@ describe("component placement electrical contacts", () => {
         { instanceId: "GND2", pinName: "0" },
       ]),
     });
+  });
+
+  it("grounds an ordinary contacted signal Net instead of blocking placement", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-tail",
+      name: "TAIL",
+      scope: "local",
+      terminals: [{ instanceId: "R1", pinName: "1" }],
+    });
+    const ground = {
+      id: "GND1",
+      symbolId: "ground",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+    };
+    const groundPin = resolver.resolve("ground")!.definition.pins[0]!;
+    const point = transformPoint(
+      groundPin.at,
+      ground.placement.position,
+      ground.placement,
+    );
+
+    const proposal = proposePlacementContact(document, resolver, ground, [
+      {
+        endpoint: { kind: "terminal", instanceId: "R1", pinName: "1" },
+        netId: "net-tail",
+        point,
+        preludeEdits: [],
+      },
+    ]);
+
+    expect(proposal).toMatchObject({
+      matched: true,
+      ambiguous: false,
+      powerNetId: "net-tail",
+    });
+    const result = executeTransaction(
+      document,
+      transaction(0, [
+        { kind: "add_instance", instance: ground },
+        ...proposal.edits,
+      ]),
+      context,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.nets).toEqual([
+      expect.objectContaining({
+        id: "net-tail",
+        name: "0",
+        powerDomain: "ground",
+        terminals: expect.arrayContaining([
+          { instanceId: "R1", pinName: "1" },
+          { instanceId: "GND1", pinName: "0" },
+        ]),
+      }),
+    ]);
   });
 
   it("creates a standalone local VDD Net from a placed power port", () => {
