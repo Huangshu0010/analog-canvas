@@ -798,6 +798,27 @@ export function App({
   } | null>(null);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
+  /**
+   * Last pointer position seen on the canvas, in document coordinates. A
+   * placement that starts from the keyboard has no pointer event of its own,
+   * so it seeds its preview from here instead of waiting for the next move.
+   */
+  const lastCanvasPointRef = useRef<Point | null>(null);
+
+  /** Show a placement ghost under the cursor without waiting for a move. */
+  function seedComponentPreviewFromPointer(): void {
+    const point = lastCanvasPointRef.current;
+    if (point) setComponentPreviewPoint(point);
+  }
+
+  function seedCopyPreviewFromPointer(): void {
+    const point = lastCanvasPointRef.current;
+    if (!point) return;
+    setCopyPreviewPoint({
+      x: snapCoordinate(point.x, document.presentation.grid),
+      y: snapCoordinate(point.y, document.presentation.grid),
+    });
+  }
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const selectionShelfRef = useRef<HTMLButtonElement>(null);
@@ -1567,7 +1588,10 @@ export function App({
     clearTransientCanvasState,
     paintSnapGuides,
     beginVddRailInteraction,
-    beginComponentPlacement,
+    beginComponentPlacement: (request) => {
+      beginComponentPlacement(request);
+      seedComponentPreviewFromPointer();
+    },
     rotateComponentPlacement,
     mirrorComponentPlacement,
     componentPlacementRotation,
@@ -1636,7 +1660,10 @@ export function App({
     cancelInteraction,
     cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
     paintSnapGuides,
-    beginCopyPlacementInteraction,
+    beginCopyPlacementInteraction: (clipboard, anchor) => {
+      beginCopyPlacementInteraction(clipboard, anchor);
+      seedCopyPreviewFromPointer();
+    },
     setCopyPreviewPoint,
     nextUniqueSuffix: () => {
       uniqueSuffixCounter.current += 1;
@@ -6159,6 +6186,7 @@ export function App({
       event.clientY,
       event.currentTarget,
     );
+    lastCanvasPointRef.current = point;
     if (vddRailMode) {
       const snapped = {
         x: snapCoordinate(point.x, document.presentation.grid),

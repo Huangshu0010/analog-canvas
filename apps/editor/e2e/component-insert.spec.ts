@@ -433,6 +433,23 @@ test("Escape closes the Insert dialog even when focus is outside it", async ({
   await expect(dialog).toHaveCount(0);
 });
 
+test("Copy shows its ghost under the cursor without waiting for a move", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await chooseComponent(page, "resistor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 360, y: 230 } });
+  await page.keyboard.press("Escape");
+  await page.getByTestId("hit-R1").click();
+
+  // The pointer is over the canvas and stays there: the ghost has to appear
+  // from the remembered position rather than from the next pointer move.
+  await canvas.hover({ position: { x: 500, y: 300 } });
+  await page.keyboard.press("c");
+  await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+});
+
 test("publishes placement cancellation synchronously before rapid Copy", async ({
   page,
 }) => {
