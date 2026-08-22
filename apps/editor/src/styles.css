@@ -5285,17 +5285,42 @@ html.light .analytics-map-land path {
   color: var(--icm-text);
 }
 
+/* Both views wear the same chrome band: one header height, one control
+   height, and a brand block that spans the same band as the buttons so the
+   two sides of the row read as equal. */
 .gallery-chrome {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--icm-space-3);
-  padding: 14px 22px;
+  height: var(--icm-menubar-h);
+  min-height: var(--icm-menubar-h);
+  padding: 0 var(--icm-space-3);
   border-bottom: 1px solid var(--icm-border);
   background: var(--icm-surface);
   position: sticky;
   top: 0;
   z-index: 2;
+}
+
+.gallery-chrome .app-brand,
+.app-chrome-main .app-brand,
+.gallery-actions,
+.account-menu {
+  min-height: var(--icm-control-h);
+}
+
+.gallery-actions .account-owner-badge,
+.gallery-actions .account-link,
+.gallery-actions .account-name,
+.gallery-actions .account-signout,
+.gallery-actions .account-signin summary,
+.gallery-open-editor {
+  display: inline-flex;
+  align-items: center;
+  height: var(--icm-control-h);
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .gallery-actions {
@@ -5629,8 +5654,7 @@ html.light .analytics-map-land path {
 }
 
 .gallery-open-editor {
-  display: inline-block;
-  padding: 8px 16px;
+  padding: 0 16px;
   border-radius: var(--icm-radius-sm);
   background: var(--icm-accent);
   color: #fff;
