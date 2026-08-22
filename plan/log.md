@@ -4650,3 +4650,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   16/16, typecheck, prettier, test-impact, diff checks.
 - Commit status: completed on `claude/gallery-feed-g4` (stacked on
   `claude/gallery-owner-editing`).
+
+## 2026-08-22 — Gallery circuit tags
+
+- Target: `plan/2026-08-22-gallery-tags/plan.md` (completed).
+- Change: one tag normalization through submit/update/list/aggregate;
+  `?tags=a,b` OR-union filter; `GET /api/gallery/tags` counts; publish
+  dialog chip editor with presets and update-mode prefill (tags editable
+  any time via the owner-update path); feed multi-select tag menu with
+  clickable tile chips.
+- Validation: worker gallery 15, editor units 54, gallery Playwright
+  17/17, typecheck, prettier, test-impact, diff checks.
+- Commit status: completed on `claude/gallery-tags` (stacked on
+  `claude/gallery-feed-g4`).
