@@ -502,6 +502,7 @@ export function App({
     closeAbout,
     closeSearch,
     showLeftPanel,
+    toggleExamplesPanel: toggleExamplesPanelFromShell,
     toggleLibraryPanel,
   } = useEditorPanels({
     initialCompact: compactLayoutMatches(COMPACT_LAYOUT_MEDIA_QUERY),
@@ -1792,6 +1793,11 @@ export function App({
 
   function showExamplesPanel(): void {
     showLeftPanel("examples");
+    void refreshUserExamples();
+  }
+
+  function toggleExamplesPanel(): void {
+    toggleExamplesPanelFromShell();
     void refreshUserExamples();
   }
 
@@ -7643,7 +7649,11 @@ export function App({
           <button
             type="button"
             className="tool-rail-button examples-toggle"
-            title="Show circuit examples"
+            title={
+              leftPanelMode === "examples" && visibleLibraryPanelOpen
+                ? "Hide circuit examples"
+                : "Show circuit examples"
+            }
             aria-pressed={
               leftPanelMode === "examples" && visibleLibraryPanelOpen
             }
@@ -7652,7 +7662,7 @@ export function App({
               leftPanelMode === "examples" && visibleLibraryPanelOpen
             }
             data-testid="examples-toggle"
-            onClick={showExamplesPanel}
+            onClick={toggleExamplesPanel}
           >
             <ToolIcon name="examples" />
             <span>Examples</span>

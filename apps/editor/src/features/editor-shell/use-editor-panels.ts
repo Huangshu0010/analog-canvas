@@ -103,6 +103,26 @@ export function useEditorPanels(options: UseEditorPanelsOptions) {
     });
   };
 
+  const toggleExamplesPanel = (): void => {
+    if (leftPanelMode !== "examples") {
+      showLeftPanel("examples");
+      return;
+    }
+    if (compactLayout) {
+      setCompactLibraryPanelOpen((current) => {
+        const next = !current;
+        if (next) setSelectionOpen(false);
+        return next;
+      });
+      return;
+    }
+    setLibraryPanelOpen((current) => {
+      const next = !current;
+      persistLibraryOpen(next);
+      return next;
+    });
+  };
+
   const closeHelp = (): void => {
     setHelpOpen(false);
     requestAnimationFrame(() => options.helpButtonRef.current?.focus());
@@ -147,6 +167,7 @@ export function useEditorPanels(options: UseEditorPanelsOptions) {
     setSearchQuery,
     setSelectionOpen,
     showLeftPanel,
+    toggleExamplesPanel,
     toggleLibraryPanel,
   };
 }

@@ -4363,3 +4363,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   #159 before close-out.
 - Commit status: delivered to `codex/sky130-logic-vdd-cap-stack`; PR #159 open
   for review, superseding closed draft PR #141.
+
+## 2026-08-22 — Examples toggle and bundled circuit additions
+
+- Target: `plan/2026-08-22-examples-toggle-and-circuits/plan.md` (completed).
+- Change: Examples now collapses when its active rail button is clicked again;
+  added bundled Current-Mirror-Loaded Differential Pair and Fully Differential
+  Two-Stage Op Amp Project cards.
+- Validation: focused unit/browser checks, preflight, and affected gate
+  (1108 unit tests; 22 component-insert and 91 manual-editor browser tests).
+- Commit status: committed locally on `codex/examples-toggle-and-circuits`.
