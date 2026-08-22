@@ -31,9 +31,12 @@ they must never be rate-limited by their own protection.
 
 ## Test Impact
 
-tests-updated: `worker/gallery.test.ts` ("rate-limits ordinary
-submitters per day; curators are exempt") covers both the enforcement
-and the exemption.
+- Decision: tests-updated
+- Contracts: the daily submission quota applies to ordinary/anonymous
+  submissions only; privileged submissions bypass it.
+- Primary checks: `node_modules/.bin/vitest run worker/gallery.test.ts`
+  ("rate-limits ordinary submitters per day; curators are exempt"
+  covers both the enforcement and the exemption).
 
 ## Validation
 
