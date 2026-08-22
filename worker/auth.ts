@@ -173,8 +173,14 @@ function noStoreJson(payload: unknown, status = 200): Response {
  */
 export class AuthDO {
   private readonly sql: SqlStorage;
-  /** Provider/network seam; tests replace it. */
-  fetchLike: typeof fetch = fetch;
+  /**
+   * Provider/network seam; tests replace it. The arrow wrapper is
+   * load-bearing: assigning the global `fetch` itself and invoking it as
+   * `this.fetchLike(...)` rebinds `this` to the DO instance, which the
+   * Workers runtime rejects with "Illegal invocation" (Node's fetch does
+   * not care, so unit tests cannot catch the unwrapped form).
+   */
+  fetchLike: typeof fetch = (input, init) => fetch(input, init);
   /** Clock seam; tests replace it. */
   now: () => Date = () => new Date();
 
@@ -436,20 +442,22 @@ export class AuthDO {
     const inputs = this.oauthCallbackInputs(request, url);
     if (!inputs) return failedRedirect(url.origin, secure);
     try {
+      // Form-encoded on purpose: it is the exchange format GitHub's OAuth
+      // documentation guarantees.
       const tokenResponse = await this.fetchLike(
         "https://github.com/login/oauth/access_token",
         {
           method: "POST",
           headers: {
             accept: "application/json",
-            "content-type": "application/json",
+            "content-type": "application/x-www-form-urlencoded",
           },
-          body: JSON.stringify({
-            client_id: this.env.GH_OAUTH_CLIENT_ID,
-            client_secret: this.env.GH_OAUTH_CLIENT_SECRET,
+          body: new URLSearchParams({
+            client_id: this.env.GH_OAUTH_CLIENT_ID ?? "",
+            client_secret: this.env.GH_OAUTH_CLIENT_SECRET ?? "",
             code: inputs.code,
             redirect_uri: `${url.origin}/api/auth/github/callback`,
-          }),
+          }).toString(),
         },
       );
       const tokenPayload = (await tokenResponse.json()) as {

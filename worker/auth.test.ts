@@ -135,6 +135,17 @@ async function me(
   return ((await response.json()) as { user: SessionUser | null }).user;
 }
 
+describe("runtime binding", () => {
+  it("never exposes the raw global fetch as the default seam", () => {
+    // `this.fetchLike(...)` on the raw global rebinds `this` to the DO,
+    // which the Workers runtime rejects with "Illegal invocation" (Node
+    // tolerates it, so only this identity check can catch a regression).
+    const durable = new AuthDO(sqliteState(), {} as AuthEnv);
+    expect(durable.fetchLike).not.toBe(fetch);
+    expect(durable.fetchLike).not.toBe(globalThis.fetch);
+  });
+});
+
 describe("providers visibility (dark ship)", () => {
   it("reports exactly the providers whose secrets exist", async () => {
     const dark = harness();
