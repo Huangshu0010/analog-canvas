@@ -4581,3 +4581,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   (419), full Playwright suite (188 passed), prettier, diff checks.
 - Commit status: completed on `claude/fix-copy-mode-flake`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 - Placement ghosts seeded from the last pointer position
+
+- Changed areas: the canvas remembers its last pointer position, and both the
+  copy and component placement paths seed their preview from it, so a
+  placement started from the keyboard shows its ghost at the cursor instead of
+  waiting for the next pointer move.
+- Validation: typecheck, editor unit tests (419), full Playwright suite (189
+  passed), the new test re-run with the fix stashed to prove it fails without
+  it, prettier, diff checks; reproduced and re-verified in a running editor.
+- Commit status: completed on `claude/seed-placement-preview`; mainline merge
+  gated on the remote required checks.
