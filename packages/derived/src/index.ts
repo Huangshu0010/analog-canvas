@@ -27,5 +27,6 @@ export * from "./route-attachment.js";
 export * from "./rich-text-layout.js";
 export * from "./style-profile.js";
 export * from "./segment-geometry.js";
+export * from "./submission-gates.js";
 export * from "./topology-hash.js";
 export * from "./visual.js";

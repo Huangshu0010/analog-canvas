@@ -83,7 +83,7 @@ provider; display-name edits stick; the owner's account sees admin
 affordances; no credential material ever transits or is stored beyond the
 provider contract.
 
-## Phase G3 — Ownership, review, and editing
+## Phase G3 — Ownership, review, and editing (queue + gates live)
 
 - Publishing requires a session; a submission enters a `pending` queue
   instead of going live. The super-admin — or reviewers the super-admin
@@ -96,6 +96,16 @@ provider contract.
 - Editor gains "submit to gallery / update my tile" against the signed-in
   identity; anonymous visitors keep full read-and-local-edit freedom
   without any way to write back.
+
+Shipped 2026-08-22: ordinary signed-in submissions pass deterministic
+quality gates (owner policy: no ERC errors; no floating endpoints —
+wire, name the net, or NoConnect; no near-empty projects) enforced by
+one shared evaluator in the worker and previewed live in the publish
+dialog, then wait in `pending` (publicly invisible) until the
+super-admin or an appointed moderator (`/review`, in-app appointment by
+email) approves or rejects with an optional reason surfaced at `/mine`.
+Remaining in this phase: owner editing/withdrawal of published entries
+re-entering review.
 
 Acceptance: an ordinary submission is invisible publicly until approved;
 rejection stores and surfaces its optional reason; two ordinary accounts

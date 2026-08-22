@@ -43,11 +43,58 @@ serialization, renders the preview, and stores the entry as `public`.
 Submissions count against a per-submitter (hashed IP) limit of 10 per UTC
 day.
 
-Phase G1 gate: publishing additionally requires admin authority —
-the bearer, or (since G2) a signed-in super-admin session — until Phase
-G3 opens a review queue for ordinary signed-in users. Anonymous upload is
-impossible from day one, which is also the end state. Entries persist a
-nullable owner column so G3 ownership requires no migration.
+Publishing authority (since G3): the bearer and admin/moderator sessions
+publish directly as `public`; an ordinary signed-in session submits into
+the review queue as `pending` after passing the quality gates below;
+anonymous upload stays impossible — the day-one rule. A successful
+submission answers 201 `{id, status}`.
+
+## Submission quality gates (Phase G3)
+
+`evaluateSubmissionGates` in `@icm/derived` is the single evaluator; the
+worker enforces it (422 `{error: "quality-gate", failures}`) and the
+publish dialog runs the same function live, so the API can never accept
+what the UI refuses. Gates apply only to ordinary users — the bearer and
+admin/moderator sessions bypass them (failures still shown as
+informational in the dialog). Failure codes:
+
+- `erc-errors` — any ERC diagnostic with `severity: "error"`.
+- `floating-endpoints` — `ERC_UNCONNECTED_PIN`, `ERC_BULK_UNRESOLVED`,
+  and `ERC_FLOATING_GATE`, except a floating gate whose single-member
+  net carries a name (a deliberate port/rail). The sanctioned escapes
+  are therefore: wire the pin, name its net, or mark it NoConnect.
+- `empty-project` — fewer than 2 instances AND no substantial drawing
+  (3+ drafting objects including a text); pure block diagrams pass.
+
+Failures carry `message`, `count`, and up to five example labels.
+
+## Review queue (Phase G3)
+
+Statuses: `public | pending | rejected | recycled`. Pending and rejected
+entries never appear on any public surface (list, detail, preview);
+their detail and preview answer only to reviewers or the owning session.
+
+- `GET /api/gallery/review` — pending entries, oldest first (reviewers:
+  bearer, admin, or moderator session).
+- `POST /api/gallery/<id>/approve` — pending → `public` (reviewers).
+- `POST /api/gallery/<id>/reject` — pending → `rejected` with an
+  optional trimmed reason (≤300) stored alongside reviewer id and
+  timestamp (reviewers). Reviewing a decided entry answers 409.
+- `GET /api/gallery/mine` — the calling session's entries with `status`
+  and `rejectReason`.
+- Moderators: `users.role` (`user`/`moderator`); the super-admin
+  appoints by email via `POST /api/auth/users/role` `{email, role}`,
+  which applies to every account carrying that verified email.
+  Moderators hold exactly review authority; the recycle bin and
+  maintenance stay admin-only.
+
+The editor surfaces the queue at `/review` (approve, reject with reason,
+admin-only moderator appointment) and the submitter's view at `/mine`
+(status chips plus the rejection reason). Owner editing and withdrawal
+of published entries (re-entering review) is a recorded follow-up.
+
+Entries persist a nullable owner column stamped from the submitting
+session.
 
 ## Accounts and sessions (Phase G2, dark-shipped)
 

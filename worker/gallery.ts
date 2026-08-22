@@ -11,6 +11,7 @@
 // independently so browsing survives an entry the current window can no
 // longer open.
 
+import { evaluateSubmissionGates } from "@icm/derived";
 import { parseProject, serializeProject } from "@icm/project-protocol";
 import { renderDocumentSvg } from "@icm/render-svg";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
@@ -75,6 +76,9 @@ interface EntryRow {
   status: string;
   recycled_at: string | null;
   owner_user_id: string | null;
+  reject_reason: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
   project_text: string;
   svg_text: string;
 }
@@ -125,6 +129,18 @@ export class GalleryDO {
         PRIMARY KEY (day, submitter_hash)
       ) WITHOUT ROWID
     `);
+    // Additive review-queue columns (phase G3) for pre-existing databases.
+    for (const alteration of [
+      "ALTER TABLE gallery_entries ADD COLUMN reject_reason TEXT",
+      "ALTER TABLE gallery_entries ADD COLUMN reviewed_at TEXT",
+      "ALTER TABLE gallery_entries ADD COLUMN reviewed_by TEXT",
+    ]) {
+      try {
+        this.sql.exec(alteration);
+      } catch {
+        // Column already present.
+      }
+    }
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -152,6 +168,12 @@ export class GalleryDO {
         return this.delete(String(body.id));
       case "recycled":
         return this.recycled();
+      case "pending":
+        return this.pending();
+      case "review":
+        return this.review(body);
+      case "mine":
+        return this.mine(String(body.ownerUserId));
       case "all-ids":
         return this.allIds();
       case "update-entry":
@@ -189,13 +211,15 @@ export class GalleryDO {
         `INSERT INTO gallery_entries(
           id, name, author, description, created_at, schema_version,
           status, recycled_at, owner_user_id, project_text, svg_text
-        ) VALUES (?, ?, ?, ?, ?, ?, 'public', NULL, NULL, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
         entry.id,
         entry.name,
         entry.author,
         entry.description,
         entry.created_at,
         entry.schema_version,
+        entry.status === "pending" ? "pending" : "public",
+        entry.owner_user_id ?? null,
         entry.project_text,
         entry.svg_text,
       );
@@ -248,8 +272,69 @@ export class GalleryDO {
     return Response.json({
       entry: summaryOf(row),
       status: row.status,
+      ownerUserId: row.owner_user_id,
       projectText: row.project_text,
       svgText: row.svg_text,
+    });
+  }
+
+  private pending(): Response {
+    const rows = this.sql
+      .exec<EntryRow>(
+        `SELECT * FROM gallery_entries WHERE status = 'pending'
+         ORDER BY created_at ASC, id ASC`,
+      )
+      .toArray();
+    return Response.json({
+      entries: rows.map((row) => ({
+        ...summaryOf(row),
+        ownerUserId: row.owner_user_id,
+      })),
+    });
+  }
+
+  private review(body: Record<string, unknown>): Response {
+    const row = this.sql
+      .exec<EntryRow>(
+        "SELECT * FROM gallery_entries WHERE id = ?",
+        String(body.id),
+      )
+      .toArray()[0];
+    if (!row) return Response.json({ error: "not-found" }, { status: 404 });
+    if (row.status !== "pending") {
+      return Response.json({ error: "not-pending" }, { status: 409 });
+    }
+    const approve = body.decision === "approve";
+    this.sql.exec(
+      `UPDATE gallery_entries
+       SET status = ?, reject_reason = ?, reviewed_at = ?, reviewed_by = ?
+       WHERE id = ?`,
+      approve ? "public" : "rejected",
+      approve ? null : ((body.reason as string | null) ?? null),
+      String(body.at),
+      String(body.reviewerId),
+      row.id,
+    );
+    return Response.json({
+      id: row.id,
+      status: approve ? "public" : "rejected",
+    });
+  }
+
+  private mine(ownerUserId: string): Response {
+    const rows = this.sql
+      .exec<EntryRow>(
+        `SELECT * FROM gallery_entries WHERE owner_user_id = ?
+         ORDER BY created_at DESC, id DESC`,
+        ownerUserId,
+      )
+      .toArray();
+    return Response.json({
+      entries: rows.map((row) => ({
+        ...summaryOf(row),
+        status: row.status,
+        rejectReason: row.reject_reason,
+      })),
     });
   }
 
@@ -351,15 +436,25 @@ function sameOrigin(request: Request): boolean {
   return true;
 }
 
-async function isAdmin(request: Request, env: GalleryEnv): Promise<boolean> {
-  if (
+function bearerIsAdmin(request: Request, env: GalleryEnv): boolean {
+  return Boolean(
     env.GALLERY_ADMIN_TOKEN &&
-    request.headers.get("Authorization") === `Bearer ${env.GALLERY_ADMIN_TOKEN}`
-  ) {
-    return true;
-  }
+    request.headers.get("Authorization") ===
+      `Bearer ${env.GALLERY_ADMIN_TOKEN}`,
+  );
+}
+
+async function isAdmin(request: Request, env: GalleryEnv): Promise<boolean> {
+  if (bearerIsAdmin(request, env)) return true;
   const user = await sessionUserOf(request, env);
   return user?.isAdmin === true;
+}
+
+/** Review authority (phase G3): the bearer, an admin, or a moderator. */
+async function canReview(request: Request, env: GalleryEnv): Promise<boolean> {
+  if (bearerIsAdmin(request, env)) return true;
+  const user = await sessionUserOf(request, env);
+  return user?.isAdmin === true || user?.role === "moderator";
 }
 
 async function submitterHash(request: Request): Promise<string> {
@@ -397,10 +492,15 @@ async function handleSubmission(
   if (!sameOrigin(request)) {
     return Response.json({ error: "forbidden" }, { status: 403 });
   }
-  // Phase G1: publishing requires the admin bearer until Phase G2 sign-in
-  // replaces it with session identity. Anonymous upload therefore stays
-  // impossible from day one — which is also the end-state rule.
-  if (!(await isAdmin(request, env))) {
+  // Phase G3: the bearer and admin/moderator sessions publish directly;
+  // ordinary signed-in users pass the quality gates and enter the review
+  // queue as `pending`. Anonymous upload stays impossible — the original
+  // day-one rule.
+  const bearer = bearerIsAdmin(request, env);
+  const user = await sessionUserOf(request, env);
+  const privileged =
+    bearer || user?.isAdmin === true || user?.role === "moderator";
+  if (!bearer && !user) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
   const body = (await request.json().catch(() => null)) as {
@@ -433,8 +533,18 @@ async function handleSubmission(
   } catch {
     return Response.json({ error: "invalid-project" }, { status: 400 });
   }
+  if (!privileged) {
+    const report = evaluateSubmissionGates(project, resolver);
+    if (!report.ok) {
+      return Response.json(
+        { error: "quality-gate", failures: report.failures },
+        { status: 422 },
+      );
+    }
+  }
   project.name = name;
   const now = new Date();
+  const entryStatus = privileged ? "public" : "pending";
   const { status, payload } = await callGallery<{ id?: string }>(
     env,
     "submit",
@@ -448,6 +558,8 @@ async function handleSubmission(
         description,
         created_at: now.toISOString(),
         schema_version: project.schemaVersion,
+        status: entryStatus,
+        owner_user_id: user?.id ?? null,
         project_text: serializeProject(project),
         svg_text: renderPreview(project),
       },
@@ -456,7 +568,10 @@ async function handleSubmission(
   if (status === 429) {
     return Response.json({ error: "rate-limited" }, { status: 429 });
   }
-  return Response.json({ id: payload.id }, { status: 201 });
+  return Response.json(
+    { id: payload.id, status: entryStatus },
+    { status: 201 },
+  );
 }
 
 async function handleReserialize(env: GalleryEnv): Promise<Response> {
@@ -541,19 +656,61 @@ export async function routeGalleryRequest(
     }
     return handleReserialize(env);
   }
+  if (
+    segments.length === 1 &&
+    segments[0] === "review" &&
+    request.method === "GET"
+  ) {
+    if (!(await canReview(request, env))) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const { payload } = await callGallery(env, "pending", {});
+    return Response.json(payload, { headers: { "cache-control": "no-store" } });
+  }
+  if (
+    segments.length === 1 &&
+    segments[0] === "mine" &&
+    request.method === "GET"
+  ) {
+    const user = await sessionUserOf(request, env);
+    if (!user) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const { payload } = await callGallery(env, "mine", {
+      ownerUserId: user.id,
+    });
+    return Response.json(payload, { headers: { "cache-control": "no-store" } });
+  }
   if (segments.length === 2 && segments[1] === "preview.svg") {
-    const { status, payload } = await callGallery<{ svgText?: string }>(
-      env,
-      "entry",
-      { id: segments[0] },
-    );
+    const { status, payload } = await callGallery<{
+      status?: string;
+      ownerUserId?: string | null;
+      svgText?: string;
+    }>(env, "any-entry", { id: segments[0] });
     if (status !== 200 || !payload.svgText) {
+      return Response.json({ error: "not-found" }, { status: 404 });
+    }
+    if (payload.status === "public") {
+      return new Response(payload.svgText, {
+        headers: {
+          "content-type": "image/svg+xml",
+          "cache-control": "public, max-age=300",
+          "content-security-policy":
+            "default-src 'none'; style-src 'unsafe-inline'",
+        },
+      });
+    }
+    const allowed =
+      (await canReview(request, env)) ||
+      (payload.ownerUserId != null &&
+        (await sessionUserOf(request, env))?.id === payload.ownerUserId);
+    if (!allowed) {
       return Response.json({ error: "not-found" }, { status: 404 });
     }
     return new Response(payload.svgText, {
       headers: {
         "content-type": "image/svg+xml",
-        "cache-control": "public, max-age=300",
+        "cache-control": "no-store",
         "content-security-policy":
           "default-src 'none'; style-src 'unsafe-inline'",
       },
@@ -562,18 +719,54 @@ export async function routeGalleryRequest(
   if (segments.length === 1 && request.method === "GET") {
     const { status, payload } = await callGallery<{
       entry?: GalleryEntrySummary;
+      status?: string;
+      ownerUserId?: string | null;
       projectText?: string;
-    }>(env, "entry", { id: segments[0] });
+    }>(env, "any-entry", { id: segments[0] });
     if (status !== 200) {
       return Response.json({ error: "not-found" }, { status: 404 });
     }
+    if (payload.status !== "public") {
+      const allowed =
+        (await canReview(request, env)) ||
+        (payload.ownerUserId != null &&
+          (await sessionUserOf(request, env))?.id === payload.ownerUserId);
+      if (!allowed) {
+        return Response.json({ error: "not-found" }, { status: 404 });
+      }
+    }
     return Response.json(
-      { entry: payload.entry, projectText: payload.projectText },
+      {
+        entry: payload.entry,
+        status: payload.status,
+        projectText: payload.projectText,
+      },
       { headers: { "cache-control": "no-store" } },
     );
   }
   if (segments.length === 2 && request.method === "POST") {
     const [id, action] = segments;
+    if (action === "approve" || action === "reject") {
+      if (!(await canReview(request, env))) {
+        return Response.json({ error: "unauthorized" }, { status: 401 });
+      }
+      const body =
+        action === "reject"
+          ? ((await request.json().catch(() => null)) as {
+              reason?: unknown;
+            } | null)
+          : null;
+      const reason = fieldText(body?.reason, GALLERY_MAX_DESCRIPTION_LENGTH);
+      const reviewer = await sessionUserOf(request, env);
+      const { status, payload } = await callGallery(env, "review", {
+        id,
+        decision: action,
+        reason: action === "reject" && reason ? reason : null,
+        at: new Date().toISOString(),
+        reviewerId: reviewer?.id ?? "bearer",
+      });
+      return Response.json(payload, { status });
+    }
     if (action !== "recycle" && action !== "restore") {
       return Response.json({ error: "not-found" }, { status: 404 });
     }

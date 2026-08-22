@@ -121,6 +121,7 @@ import {
   externalSubcircuitSymbolId,
   findUnsupportedProjectSymbolIds,
   hierarchicalSymbolId,
+  InMemorySymbolResolver,
   resolvePdkSymbolMapping,
   reviewedSky130MosModelSuggestions,
 } from "@icm/symbols";
@@ -215,6 +216,10 @@ import { StyleDialog } from "../features/editor-shell/style-dialog";
 import { PublishGalleryDialog } from "../features/editor-shell/publish-gallery-dialog";
 import { publishProjectToGallery } from "../features/editor-shell/gallery-publish";
 import { fetchSessionUser, type SessionUser } from "../components/account";
+import {
+  evaluateSubmissionGates,
+  type SubmissionGateReport,
+} from "@icm/derived";
 import {
   createUserExamplesStore,
   type UserExampleSummary,
@@ -639,15 +644,26 @@ export function App({
   const [publishSession, setPublishSession] = useState<SessionUser | null>(
     null,
   );
+  const [publishGates, setPublishGates] = useState<SubmissionGateReport | null>(
+    null,
+  );
   useEffect(() => {
     if (!publishGalleryOpen) return;
     let cancelled = false;
     void fetchSessionUser().then((user) => {
       if (!cancelled) setPublishSession(user);
     });
+    // The same evaluator the worker enforces, run live on the open Project.
+    setPublishGates(
+      evaluateSubmissionGates(
+        project,
+        new InMemorySymbolResolver(builtInSymbols),
+      ),
+    );
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- evaluated once per dialog open
   }, [publishGalleryOpen]);
   const userExamplesStore = useRef(createUserExamplesStore());
   const [userExamples, setUserExamples] = useState<UserExampleSummary[]>([]);
@@ -7598,10 +7614,15 @@ export function App({
         <PublishGalleryDialog
           defaultName={project.name}
           session={publishSession}
+          gateReport={publishGates}
           publish={(fields) => publishProjectToGallery(project, fields)}
-          onPublished={({ name }) => {
+          onPublished={({ name, pending }) => {
             setPublishGalleryOpen(false);
-            setStatus(`Published "${name}" to the gallery`);
+            setStatus(
+              pending
+                ? `Submitted "${name}" for review`
+                : `Published "${name}" to the gallery`,
+            );
           }}
           onClose={() => setPublishGalleryOpen(false)}
         />

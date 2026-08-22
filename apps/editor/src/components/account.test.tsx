@@ -49,6 +49,7 @@ describe("AccountMenuView", () => {
         displayName: "Token Zhang",
         email: "owner@example.com",
         provider: "github",
+        role: "user",
         isAdmin: true,
       },
     });

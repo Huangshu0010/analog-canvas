@@ -248,6 +248,284 @@ describe("gallery submissions", () => {
   });
 });
 
+describe("gallery review queue with quality gates (phase G3)", () => {
+  function reviewHarness() {
+    const authDurable = new AuthDO(sqliteState(), {
+      RESEND_API_KEY: "rk",
+      ADMIN_EMAILS: "owner@example.com",
+    } as AuthEnv);
+    const env: GalleryEnv = {
+      ...environment(ADMIN_TOKEN),
+      AUTH: {
+        getByName: () => ({
+          fetch: (input: Request | string, init?: RequestInit) =>
+            authDurable.fetch(
+              typeof input === "string" ? new Request(input, init) : input,
+            ),
+        }),
+      },
+    };
+    return { authDurable, env };
+  }
+
+  async function signIn(authDurable: AuthDO, email: string): Promise<string> {
+    const sent: string[] = [];
+    authDurable.fetchLike = (async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      void input;
+      sent.push((JSON.parse(String(init?.body)) as { text: string }).text);
+      return Response.json({ id: "email-1" });
+    }) as typeof fetch;
+    await authDurable.fetch(
+      new Request(`${ORIGIN}/api/auth/email/start`, {
+        method: "POST",
+        headers: { Origin: ORIGIN, "content-type": "application/json" },
+        body: JSON.stringify({ email }),
+      }),
+    );
+    const link = sent[0]!.match(/https?:\/\/\S+/u)![0];
+    const callback = await authDurable.fetch(new Request(link));
+    return callback.headers
+      .getSetCookie()
+      .find((cookie) => cookie.startsWith("icm_session="))!
+      .split(";")[0]!;
+  }
+
+  function wiredProjectText(name = "Wired"): string {
+    const project = createEmptyProject("g3", name);
+    const document = project.documents[0]!;
+    document.instances = [
+      {
+        id: "R1",
+        symbolId: "resistor",
+        placement: {
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          mirror: "none",
+        },
+        netlist: { reference: "R1", parameters: {} },
+      },
+      {
+        id: "R2",
+        symbolId: "resistor",
+        placement: {
+          position: { x: 200, y: 0 },
+          rotation: 0,
+          mirror: "none",
+        },
+        netlist: { reference: "R2", parameters: {} },
+      },
+    ];
+    document.nets = [
+      {
+        id: "n1",
+        scope: "local",
+        terminals: [
+          { instanceId: "R1", pinName: "1" },
+          { instanceId: "R2", pinName: "1" },
+        ],
+      },
+      {
+        id: "n2",
+        scope: "local",
+        terminals: [
+          { instanceId: "R1", pinName: "2" },
+          { instanceId: "R2", pinName: "2" },
+        ],
+      },
+    ];
+    return serializeProject(project);
+  }
+
+  it("walks submit → pending (invisible) → approve → public", async () => {
+    const { authDurable, env } = reviewHarness();
+    const userCookie = await signIn(authDurable, "maker@example.com");
+    const adminCookie = await signIn(authDurable, "owner@example.com");
+
+    const submitted = await route(
+      env,
+      submissionRequest(
+        { name: "Queued", projectText: wiredProjectText("Queued") },
+        { token: null, cookie: userCookie },
+      ),
+    );
+    expect(submitted.status).toBe(201);
+    const { id, status } = (await submitted.json()) as {
+      id: string;
+      status: string;
+    };
+    expect(status).toBe("pending");
+
+    // Invisible on every public surface.
+    const list = await route(env, new Request(`${ORIGIN}/api/gallery`));
+    expect(((await list.json()) as { entries: unknown[] }).entries).toEqual([]);
+    const anonymousDetail = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}`),
+    );
+    expect(anonymousDetail.status).toBe(404);
+    const anonymousPreview = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}/preview.svg`),
+    );
+    expect(anonymousPreview.status).toBe(404);
+
+    // The owner and reviewers can see it; the queue lists it.
+    const ownerPreview = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}/preview.svg`, {
+        headers: { Cookie: userCookie },
+      }),
+    );
+    expect(ownerPreview.status).toBe(200);
+    const queue = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/review`, {
+        headers: { Cookie: adminCookie },
+      }),
+    );
+    const queued = (await queue.json()) as { entries: { id: string }[] };
+    expect(queued.entries.map((entry) => entry.id)).toEqual([id]);
+    const deniedQueue = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/review`, {
+        headers: { Cookie: userCookie },
+      }),
+    );
+    expect(deniedQueue.status).toBe(401);
+
+    const approved = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}/approve`, {
+        method: "POST",
+        headers: { Origin: ORIGIN, Cookie: adminCookie },
+      }),
+    );
+    expect(approved.status).toBe(200);
+    const publicList = await route(env, new Request(`${ORIGIN}/api/gallery`));
+    expect(
+      ((await publicList.json()) as { entries: { id: string }[] }).entries.map(
+        (entry) => entry.id,
+      ),
+    ).toEqual([id]);
+  });
+
+  it("rejects with a stored reason the owner sees; moderators can review", async () => {
+    const { authDurable, env } = reviewHarness();
+    const userCookie = await signIn(authDurable, "maker@example.com");
+    const modCookie = await signIn(authDurable, "reviewer@example.com");
+    const adminCookie = await signIn(authDurable, "owner@example.com");
+    await authDurable.fetch(
+      new Request(`${ORIGIN}/api/auth/users/role`, {
+        method: "POST",
+        headers: {
+          Origin: ORIGIN,
+          Cookie: adminCookie,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          email: "reviewer@example.com",
+          role: "moderator",
+        }),
+      }),
+    );
+
+    const submitted = await route(
+      env,
+      submissionRequest(
+        { name: "Refused", projectText: wiredProjectText("Refused") },
+        { token: null, cookie: userCookie },
+      ),
+    );
+    const { id } = (await submitted.json()) as { id: string };
+
+    const rejected = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}/reject`, {
+        method: "POST",
+        headers: {
+          Origin: ORIGIN,
+          Cookie: modCookie,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ reason: "Needs net labels" }),
+      }),
+    );
+    expect(rejected.status).toBe(200);
+
+    const mine = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/mine`, {
+        headers: { Cookie: userCookie },
+      }),
+    );
+    const entries = (await mine.json()) as {
+      entries: { id: string; status: string; rejectReason: string | null }[];
+    };
+    expect(entries.entries).toMatchObject([
+      { id, status: "rejected", rejectReason: "Needs net labels" },
+    ]);
+
+    // A decided entry cannot be re-reviewed.
+    const again = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}/approve`, {
+        method: "POST",
+        headers: { Origin: ORIGIN, Cookie: modCookie },
+      }),
+    );
+    expect(again.status).toBe(409);
+  });
+
+  it("blocks gate failures for ordinary users and bypasses them for admins", async () => {
+    const { authDurable, env } = reviewHarness();
+    const userCookie = await signIn(authDurable, "maker@example.com");
+
+    const gated = await route(
+      env,
+      submissionRequest(
+        { name: "Empty", projectText: projectText("Empty") },
+        { token: null, cookie: userCookie },
+      ),
+    );
+    expect(gated.status).toBe(422);
+    const payload = (await gated.json()) as {
+      error: string;
+      failures: { code: string }[];
+    };
+    expect(payload.error).toBe("quality-gate");
+    expect(payload.failures.map((failure) => failure.code)).toContain(
+      "empty-project",
+    );
+
+    // The bearer (owner) publishes the same empty project directly.
+    const viaBearer = await route(
+      env,
+      submissionRequest({ name: "Empty", projectText: projectText("Empty") }),
+    );
+    expect(viaBearer.status).toBe(201);
+    expect(((await viaBearer.json()) as { status: string }).status).toBe(
+      "public",
+    );
+
+    // A moderator submission also publishes directly.
+    const adminCookie = await signIn(authDurable, "owner@example.com");
+    const viaAdmin = await route(
+      env,
+      submissionRequest(
+        { name: "Admin Empty", projectText: projectText("Admin Empty") },
+        { token: null, cookie: adminCookie },
+      ),
+    );
+    expect(viaAdmin.status).toBe(201);
+    expect(((await viaAdmin.json()) as { status: string }).status).toBe(
+      "public",
+    );
+  });
+});
+
 describe("gallery admin sessions (phase G2)", () => {
   async function sessionCookieFor(
     authDurable: AuthDO,
@@ -308,6 +586,9 @@ describe("gallery admin sessions (phase G2)", () => {
     );
     expect(viaSession.status).toBe(201);
 
+    // An ordinary session is no longer refused outright (phase G3): it
+    // goes through the quality gates instead — the empty fixture fails
+    // them — and never publishes directly.
     const ordinaryCookie = await sessionCookieFor(
       authDurable,
       "visitor@example.com",
@@ -315,11 +596,11 @@ describe("gallery admin sessions (phase G2)", () => {
     const viaOrdinary = await route(
       env,
       submissionRequest(
-        { name: "Blocked", projectText: projectText() },
+        { name: "Gated", projectText: projectText() },
         { token: null, cookie: ordinaryCookie },
       ),
     );
-    expect(viaOrdinary.status).toBe(401);
+    expect(viaOrdinary.status).toBe(422);
 
     const recycledList = await route(
       env,
