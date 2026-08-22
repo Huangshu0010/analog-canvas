@@ -4871,3 +4871,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: gallery Playwright 20/20, dialog units 26, typecheck,
   prettier, test-impact, diff checks.
 - Commit status: completed on `claude/update-mode-guard`.
+
+## 2026-08-22 — Gallery entry version history with restore
+
+- Target: `plan/2026-08-22-gallery-version-history/plan.md` (completed).
+- Change: every entry update (and restore) first snapshots the previous
+  state (newest-20 cap); reviewer routes list/preview/restore versions;
+  the publish dialog's update mode links a Version history dialog with
+  per-version Restore that reloads the entry.
+- Validation: worker gallery 17, units 78, gallery Playwright 21/21,
+  typecheck, prettier, test-impact, diff checks.
+- Commit status: completed on `claude/gallery-version-history`.
