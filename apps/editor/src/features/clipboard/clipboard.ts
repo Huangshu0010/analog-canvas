@@ -5,6 +5,7 @@ import {
   referencePolicyForInstance,
   referenceSuffixForPolicy,
 } from "@icm/devices";
+import { executeTransaction } from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
 import type {
   Annotation,
@@ -16,8 +17,10 @@ import type {
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
+import type { SymbolResolver } from "@icm/symbols";
 import {
   flattenRichText,
+  inverseTransformPoint,
   semanticTextDocument,
   transformPoint,
 } from "@icm/model";
@@ -54,6 +57,53 @@ export interface PasteProposal {
 }
 
 /**
+ * Compile the transient copy-placement commands into the same ordered
+ * instance edits used by ordinary canvas rotation and reflection.  Keeping
+ * every intermediate operation matters: a screen-space reflection can change
+ * both the persisted mirror bit and rotation, and that intermediate state is
+ * where the Edit Engine follows labels and connected Routes.
+ */
+export function copyPlacementOrientationEdits(
+  instances: readonly Instance[],
+  pastedInstanceIds: readonly string[],
+  operations: readonly PlacementOrientationOperation[],
+): SchematicEdit[] {
+  return pastedInstanceIds.flatMap((instanceId, index): SchematicEdit[] => {
+    const placement = instances[index]?.placement;
+    if (!placement) return [];
+    let current = { rotation: placement.rotation, mirror: placement.mirror };
+    const edits: SchematicEdit[] = [];
+    for (const operation of operations) {
+      const next = applyOrientationOperations(current, [operation]);
+      if (operation.kind === "reflect") {
+        if (next.mirror !== current.mirror) {
+          edits.push({
+            kind: "mirror_instance",
+            instanceId,
+            mirror: next.mirror,
+          });
+        }
+        if (next.rotation !== current.rotation) {
+          edits.push({
+            kind: "rotate_instance",
+            instanceId,
+            rotation: next.rotation,
+          });
+        }
+      } else if (next.rotation !== current.rotation) {
+        edits.push({
+          kind: "rotate_instance",
+          instanceId,
+          rotation: next.rotation,
+        });
+      }
+      current = next;
+    }
+    return edits;
+  });
+}
+
+/**
  * Returns the stable local origin used to attach a copied subgraph to the
  * pointer. Prefer an instance origin because it is also the point designers
  * intuitively grab when duplicating a component group.
@@ -77,18 +127,16 @@ export function clipboardPlacementAnchor(
   );
 }
 
-/**
- * Builds an isolated, translated formal document for the canvas-only copy
- * ghost. It never enters persistence or the edit engine; the final click still
- * uses proposePaste() below to create stable IDs and typed edits.
- */
-export function clipboardPreviewDocument(
+/** Builds the isolated fallback copy ghost used when dry-run is unavailable. */
+function fallbackClipboardPreviewDocument(
   base: SchematicDocument,
   clipboard: SchematicClipboard,
   offset: Point,
   orientationOperations: readonly PlacementOrientationOperation[] = [],
 ): SchematicDocument {
-  const copiedInstanceIds = new Set(clipboard.instances.map(({ id }) => id));
+  const copiedInstances = new Map(
+    clipboard.instances.map((instance) => [instance.id, instance]),
+  );
   const annotations = clipboard.annotations.map((annotation) => {
     const preview = structuredClone(annotation);
     if (preview.anchor.kind === "free") {
@@ -98,18 +146,37 @@ export function clipboardPreviewDocument(
         preview.anchor.fallbackPosition,
         offset,
       );
-      if (
-        preview.anchor.kind === "object" &&
-        copiedInstanceIds.has(preview.anchor.objectId)
-      ) {
-        preview.anchor.localOffset = transformPoint(
-          preview.anchor.localOffset,
-          { x: 0, y: 0 },
-          applyOrientationOperations(
-            { rotation: 0, mirror: "none" },
+      if (preview.anchor.kind === "object") {
+        const instance = copiedInstances.get(preview.anchor.objectId);
+        if (instance?.placement) {
+          const nextOrientation = applyOrientationOperations(
+            instance.placement,
             orientationOperations,
-          ),
-        );
+          );
+          // This is the same old-local -> new-world calculation performed by
+          // followAttachedAnnotations in the Edit Engine.  Applying the
+          // operation to an identity orientation was wrong for already
+          // rotated/mirrored copied Symbols.
+          preview.anchor.localOffset = transformPoint(
+            inverseTransformPoint(
+              preview.anchor.localOffset,
+              { x: 0, y: 0 },
+              instance.placement,
+            ),
+            { x: 0, y: 0 },
+            nextOrientation,
+          );
+          preview.anchor.fallbackPosition = {
+            x:
+              instance.placement.position.x +
+              offset.x +
+              preview.anchor.localOffset.x,
+            y:
+              instance.placement.position.y +
+              offset.y +
+              preview.anchor.localOffset.y,
+          };
+        }
       }
     }
     return preview;
@@ -142,6 +209,66 @@ export function clipboardPreviewDocument(
     annotations,
     drafting: undefined,
   };
+}
+
+/**
+ * Build the copy ghost from the same dry-run transaction as its eventual
+ * commit.  The fallback keeps rendering resilient while the Symbol resolver
+ * is unavailable during isolated unit callers.
+ */
+export function clipboardPreviewDocument(
+  base: SchematicDocument,
+  clipboard: SchematicClipboard,
+  offset: Point,
+  orientationOperations: readonly PlacementOrientationOperation[] = [],
+  resolver?: SymbolResolver,
+): SchematicDocument {
+  if (resolver) {
+    const proposal = proposePaste(base, clipboard, offset, 0);
+    if (proposal.errors.length === 0) {
+      const result = executeTransaction(
+        base,
+        {
+          transactionId: "copy-placement-preview",
+          documentId: base.id,
+          expectedRevision: base.revision,
+          actor: { kind: "human", id: "copy-placement-preview" },
+          dryRun: true,
+          edits: [
+            ...proposal.edits,
+            ...copyPlacementOrientationEdits(
+              clipboard.instances,
+              proposal.instanceIds,
+              orientationOperations,
+            ),
+          ],
+        },
+        { symbolResolver: resolver },
+      );
+      if (result.ok) {
+        const previewClipboard = copySelection(
+          result.document,
+          proposal.instanceIds,
+        );
+        if (previewClipboard) {
+          return fallbackClipboardPreviewDocument(
+            // A ghost contains only the copied fragment.  Retaining the
+            // full Cell interface here would leave it pointing at omitted
+            // formal Port markers and make the renderer reject the preview.
+            { ...result.document, netlist: undefined },
+            previewClipboard,
+            { x: 0, y: 0 },
+          );
+        }
+      }
+    }
+  }
+  return fallbackClipboardPreviewDocument(
+    base,
+    clipboard,
+    offset,
+    orientationOperations,
+  );
 }
 
 export function copySelection(

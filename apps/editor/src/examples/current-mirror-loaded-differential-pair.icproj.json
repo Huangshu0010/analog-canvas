@@ -339,6 +339,10 @@
       "instances": [
         {
           "id": "M1",
+          "mosBulkBinding": {
+            "netId": "net-power-vdd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M1"
@@ -357,6 +361,10 @@
         },
         {
           "id": "M2",
+          "mosBulkBinding": {
+            "netId": "net-power-vdd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M2"
@@ -375,6 +383,10 @@
         },
         {
           "id": "M3",
+          "mosBulkBinding": {
+            "netId": "net-contact-gnd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M3"
@@ -393,6 +405,10 @@
         },
         {
           "id": "M4",
+          "mosBulkBinding": {
+            "netId": "net-contact-gnd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M4"
@@ -411,6 +427,10 @@
         },
         {
           "id": "M5",
+          "mosBulkBinding": {
+            "netId": "net-contact-gnd1",
+            "origin": "cell-default"
+          },
           "netlist": {
             "parameters": {},
             "reference": "M5"
@@ -565,6 +585,10 @@
       ],
       "layoutGroups": [],
       "name": "Main",
+      "mosBulkDefaults": {
+        "nmosNetId": "net-contact-gnd1",
+        "pmosNetId": "net-power-vdd1"
+      },
       "netlist": {
         "formalParameters": [],
         "name": "Main",
@@ -587,6 +611,14 @@
             {
               "instanceId": "M1",
               "pinName": "S"
+            },
+            {
+              "instanceId": "M1",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "M2",
+              "pinName": "B"
             }
           ]
         },
@@ -734,6 +766,18 @@
             {
               "instanceId": "M5",
               "pinName": "S"
+            },
+            {
+              "instanceId": "M3",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "M4",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "M5",
+              "pinName": "B"
             }
           ]
         }

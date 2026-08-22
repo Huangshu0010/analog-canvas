@@ -1,5 +1,7 @@
+import { buildProjectConnectivityIndex, runErcChecks } from "@icm/derived";
 import { CURRENT_PROJECT_SCHEMA_VERSION } from "@icm/model";
 import { serializeProject } from "@icm/project-protocol";
+import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,6 +10,8 @@ import {
 } from "./library-examples";
 
 describe("bundled Library Project examples", () => {
+  const resolver = new InMemorySymbolResolver(builtInSymbols);
+
   it("ships canonical, schema-current, openable Projects", () => {
     // Bundled examples can grow, so the contract is per-example rather than a
     // frozen count or single-document shape.
@@ -33,6 +37,22 @@ describe("bundled Library Project examples", () => {
           (document) => document.id === example.project.topDocumentId,
         ),
       ).toBe(true);
+    }
+  });
+
+  it("ships no Example with unresolved MOS bulk semantics", () => {
+    for (const example of libraryProjectExamples) {
+      const diagnostics = runErcChecks(
+        example.project,
+        buildProjectConnectivityIndex(example.project, resolver),
+        resolver,
+      );
+      expect(
+        diagnostics.filter(
+          (diagnostic) => diagnostic.code === "ERC_BULK_UNRESOLVED",
+        ),
+        example.id,
+      ).toEqual([]);
     }
   });
 

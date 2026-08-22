@@ -40,6 +40,7 @@ import {
   proposedStandalonePowerConnection,
   type PlacementContactProposal,
 } from "./placement-connectivity";
+import { planInitialMosBulkDefault } from "./mos-bulk-defaults";
 import { constrainedPowerRailEndpoint, planVddRailEdits } from "./vdd-rail";
 import { vddPowerLabelAnnotation } from "./vdd-power-label";
 import {
@@ -201,14 +202,21 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       return;
     }
     const powerNetId = standalonePower.powerNetId ?? contact.powerNetId;
+    const powerConnection = powerConnectionForSymbol(symbolId);
+    const initialBulkDefaultEdits =
+      powerConnection && powerNetId
+        ? planInitialMosBulkDefault(
+            options.document,
+            powerConnection.domain,
+            powerNetId,
+          )
+        : [];
     const resolvedPowerSymbol = options.resolver.resolve(
       instance.symbolId,
       instance.symbolVariantId,
     );
     const vddPowerLabel =
-      powerConnectionForSymbol(symbolId)?.domain === "vdd" &&
-      powerNetId &&
-      resolvedPowerSymbol
+      powerConnection?.domain === "vdd" && powerNetId && resolvedPowerSymbol
         ? vddPowerLabelAnnotation({
             instance,
             resolved: resolvedPowerSymbol,
@@ -246,6 +254,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       { kind: "add_instance", instance },
       ...contact.edits,
       ...standalonePower.edits,
+      ...initialBulkDefaultEdits,
       ...razaviManualBulkConnectionEdits(
         projectedDocument,
         projectedDocument.instances,

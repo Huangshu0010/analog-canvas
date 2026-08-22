@@ -95,9 +95,14 @@ export function planEnsurePowerNet(
       relatedNetIds: [conflictingNameNet.id],
     };
   }
+  const groundingOrdinaryNet =
+    request.domain === "ground" &&
+    candidate !== undefined &&
+    (candidate.powerDomain ?? "none") === "none";
   if (
     candidate?.name &&
-    foldNetName(candidate.name) !== foldNetName(desiredName)
+    foldNetName(candidate.name) !== foldNetName(desiredName) &&
+    !groundingOrdinaryNet
   ) {
     return {
       ok: false,
@@ -141,7 +146,7 @@ export function planEnsurePowerNet(
 
   if (request.candidateState === "existing") {
     const edits: SchematicEdit[] = [];
-    if (!candidate!.name) {
+    if (!candidate!.name || groundingOrdinaryNet) {
       edits.push({
         kind: "set_net_name",
         netId: candidate!.id,

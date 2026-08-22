@@ -1327,6 +1327,89 @@ describe("Edit Transaction envelope", () => {
     );
   });
 
+  it("reuses the canonical upright placement when a free Port rotates", () => {
+    const document = createEmptyDocument("document-main", "Port label");
+    const instance = {
+      id: "P1",
+      symbolId: "port",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+    };
+    document.instances.push(instance);
+    document.nets.push({
+      id: "net-vin",
+      name: "VIN",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    const resolved = resolver.resolve("port");
+    if (!resolved) throw new Error("missing port");
+    const profile = resolveSchematicStyleProfile(
+      document.presentation.styleProfileId,
+    );
+    const initial = defaultInstanceLabelPlacement(
+      instance,
+      resolved,
+      profile,
+      document.presentation.grid,
+      "reference",
+    );
+    if (!initial) throw new Error("missing default Port label placement");
+    document.annotations.push({
+      id: "net-label-p1",
+      kind: "net-label",
+      binding: { kind: "net-name", netId: "net-vin" },
+      netId: "net-vin",
+      anchor: {
+        kind: "object",
+        objectId: "P1",
+        localOffset: {
+          x: initial.position.x - instance.placement.position.x,
+          y: initial.position.y - instance.placement.position.y,
+        },
+        fallbackPosition: initial.position,
+      },
+      alignment: initial.alignment,
+      rotation: 0,
+      locked: false,
+    });
+
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [{ kind: "rotate_instance", instanceId: "P1", rotation: 90 }],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const expected = defaultInstanceLabelPlacement(
+      result.document.instances[0]!,
+      resolved,
+      profile,
+      result.document.presentation.grid,
+      "reference",
+    );
+    const label = result.document.annotations[0]!;
+    expect(expected).not.toBeNull();
+    expect(label).toMatchObject({
+      alignment: expected!.alignment,
+      rotation: 0,
+      anchor: {
+        kind: "object",
+        localOffset: {
+          x: expected!.position.x - 100,
+          y: expected!.position.y - 100,
+        },
+        fallbackPosition: expected!.position,
+      },
+    });
+  });
+
   it("returns a canonical instance label to its initial position after four quarter turns", () => {
     let document = createEmptyDocument("document-main", "Stable label");
     const instance = {

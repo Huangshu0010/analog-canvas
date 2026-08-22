@@ -87,7 +87,37 @@ describe("drawn VDD rail construction", () => {
           kind: "add_power_rail",
           netId: "net-power-vdd1",
         },
+        { kind: "set_mos_bulk_defaults", pmosNetId: "net-power-vdd1" },
+        { kind: "reconcile_mos_bulk" },
       ],
+    });
+  });
+
+  it("records the first explicitly drawn AVDD rail as the PMOS bulk default", () => {
+    const document = createEmptyDocument("main", "Main");
+    const plan = planVddRailEdits(document, {
+      instanceId: "VDD1",
+      netName: "AVDD",
+      start: { x: 40, y: 20 },
+      end: { x: 180, y: 20 },
+    });
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "draw-avdd-rail",
+        documentId: document.id,
+        expectedRevision: document.revision,
+        actor: { kind: "human", id: "test" },
+        edits: [...plan.edits],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.mosBulkDefaults).toEqual({
+      pmosNetId: plan.netId,
     });
   });
 
@@ -291,6 +321,8 @@ describe("drawn VDD rail construction", () => {
           netName: "AVDD",
           scope: "local",
         },
+        { kind: "set_mos_bulk_defaults", pmosNetId: "net-port-avdd" },
+        { kind: "reconcile_mos_bulk" },
       ],
     });
   });
