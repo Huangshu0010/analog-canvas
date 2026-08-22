@@ -6665,6 +6665,14 @@ export function App({
         closeSearch();
         return;
       }
+      if (event.key === "Escape" && insertDialogOpen) {
+        // The dialog focuses its search field a frame after it opens, so an
+        // Escape pressed in that gap never reaches its own handler. Cancel it
+        // from the window instead of leaving the dialog stuck open.
+        event.preventDefault();
+        cancelComponentInsertFromHook();
+        return;
+      }
       if (event.key === "Escape" && dismissOpenCommandMenus()) {
         event.preventDefault();
         return;

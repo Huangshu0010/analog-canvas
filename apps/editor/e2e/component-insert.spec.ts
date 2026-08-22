@@ -388,6 +388,11 @@ test("reopens I and starts Copy from retained selection without stacking modes",
     page.getByRole("dialog", { name: "Insert Component" }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
+  // Closing the dialog is a state update, so a keystroke sent in the same tick
+  // still lands in its search field. Wait for it to leave before typing.
+  await expect(
+    page.getByRole("dialog", { name: "Insert Component" }),
+  ).toHaveCount(0);
   await page.keyboard.press("c");
   await page.keyboard.press("c");
   await canvas.hover({ position: { x: 560, y: 330 } });
@@ -399,6 +404,33 @@ test("reopens I and starts Copy from retained selection without stacking modes",
   await expect(
     page.getByRole("dialog", { name: "Insert Component" }),
   ).toBeVisible();
+});
+
+test("Escape closes the Insert dialog even when focus is outside it", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+
+  await page.keyboard.press("i");
+  await expect(dialog).toBeVisible();
+  // The dialog claims focus a frame after it opens, so an Escape pressed in
+  // that gap is delivered elsewhere. Reproduce that deterministically by
+  // moving focus out, then dismiss: the dialog must not stay stuck open.
+  await page.evaluate(() => {
+    (
+      document.querySelector(
+        '[data-testid="draw-tool-wire"]',
+      ) as HTMLElement | null
+    )?.focus();
+  });
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+
+  await page.keyboard.press("i");
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
 });
 
 test("publishes placement cancellation synchronously before rapid Copy", async ({

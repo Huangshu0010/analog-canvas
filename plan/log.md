@@ -4565,3 +4565,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   and button geometry measured in both views.
 - Commit status: completed on `claude/gallery-header-band`; mainline merge
   gated on the remote required checks.
+
+## 2026-08-22 - Insert dialog dismissal gap behind a recurring "flake"
+
+- Changed areas: Escape now dismisses an open Insert dialog from the window
+  handler. The dialog focuses its search field a frame after opening and its
+  own Escape handler sits on the dialog form, so an Escape pressed in that gap
+  left the dialog open with its backdrop swallowing later pointer actions —
+  the cause of the `component-insert.spec.ts:376` failures that had looked
+  like a timing flake all session. The spec's incidental coverage is replaced
+  by a deterministic test that moves focus out of the dialog before pressing
+  Escape.
+- Validation: typecheck, the spec file three times end to end, the new test
+  re-run with the fix stashed to prove it fails without it, editor unit tests
+  (419), full Playwright suite (188 passed), prettier, diff checks.
+- Commit status: completed on `claude/fix-copy-mode-flake`; mainline merge
+  gated on the remote required checks.
