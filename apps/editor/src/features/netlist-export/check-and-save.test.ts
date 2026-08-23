@@ -12,18 +12,41 @@ function documentWith(options: {
   document.nets = options.nets.map((net) => ({
     id: net.id,
     scope: "local" as const,
-    terminals: [],
+    terminals: options.instances.flatMap((instance) =>
+      instance.bound && net.id === "n-gnd"
+        ? [{ instanceId: instance.id, pinName: "B" }]
+        : [],
+    ),
     ...(net.powerDomain ? { powerDomain: net.powerDomain } : {}),
   }));
+  document.connectivityEvidence = options.nets.flatMap((net) =>
+    net.powerDomain
+      ? [
+          {
+            id: `claim-${net.id}`,
+            kind: "name-claim" as const,
+            netId: net.id,
+            name:
+              net.id === "n-gnd"
+                ? "0"
+                : net.id === "n-vdd"
+                  ? "VDD"
+                  : net.powerDomain === "ground"
+                    ? "AGND"
+                    : "AVDD",
+            scope: "global" as const,
+            powerDomain: net.powerDomain,
+            owner: { kind: "explicit-net-property" as const },
+          },
+        ]
+      : [],
+  );
   document.instances = options.instances.map((instance) => ({
     id: instance.id,
     symbolId: instance.symbolId,
     reference: instance.id,
     parameters: {},
     placement: { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
-    ...(instance.bound
-      ? { mosBulkBinding: { netId: "n-gnd", origin: "explicit" as const } }
-      : {}),
   })) as unknown as typeof document.instances;
   if (options.defaults) document.mosBulkDefaults = options.defaults;
   return document;

@@ -10,6 +10,7 @@ import {
   NoConnectSchema,
   SchematicDocumentSchema,
   deriveStableId,
+  foldNetName,
 } from "@icm/model";
 import { createReferenceIndex, referenceIssuesForInstance } from "@icm/devices";
 import type {
@@ -349,6 +350,110 @@ function pruneUnreachableLocalNet(
   }
   draft.nets = draft.nets.filter((candidate) => candidate.id !== netId);
   changedObjectIds.add(netId);
+}
+
+/**
+ * A Cell bulk default may deliberately point at an ordinary custom body-bias
+ * Net, so a default is not invalid merely because it is not a power Net.
+ * However, when the default was a reviewed supply before this transaction and
+ * the transaction removes its final supply claim, retaining the materialized
+ * B terminals turns deleted presentation into stale electrical truth.
+ *
+ * Compare the transaction boundary rather than guessing from the final shape:
+ * explicit custom defaults remain untouched, while a last VDD/Ground marker
+ * deletion revokes only the bindings that were materialized from that default.
+ */
+function revokeInvalidatedSupplyBulkDefaults(
+  before: SchematicDocument,
+  draft: SchematicDocument,
+  changedObjectIds: Set<string>,
+): boolean {
+  const beforeLogical = resolveDocumentLogicalNets(before);
+  const afterLogical = resolveDocumentLogicalNets(draft);
+  let changed = false;
+
+  for (const [kind, field, expectedDomain] of [
+    ["nmos", "nmosNetId", "ground"],
+    ["pmos", "pmosNetId", "vdd"],
+  ] as const) {
+    const beforeDefaultId = before.mosBulkDefaults?.[field];
+    const afterDefaultId = draft.mosBulkDefaults?.[field];
+    if (!beforeDefaultId || !afterDefaultId) continue;
+    const beforeGroup = beforeLogical.byBaseNetId.get(beforeDefaultId);
+    const wasSupply = beforeGroup?.powerDomain === expectedDomain;
+    const remainsSupply =
+      afterLogical.byBaseNetId.get(afterDefaultId)?.powerDomain ===
+      expectedDomain;
+    if (!wasSupply || remainsSupply) continue;
+
+    const replacementGroups = afterLogical.groups.filter(
+      (group) =>
+        group.powerDomain === expectedDomain &&
+        beforeGroup?.name &&
+        group.name &&
+        foldNetName(group.name) === foldNetName(beforeGroup.name),
+    );
+    const replacementNetId =
+      replacementGroups.length === 1 ? replacementGroups[0]!.id : undefined;
+
+    const affectedNetIds = new Set<string>();
+    for (const instance of draft.instances) {
+      if (
+        instance.symbolId !== kind ||
+        instance.mosBulkBinding?.origin !== "cell-default" ||
+        instance.mosBulkBinding.netId !== afterDefaultId
+      ) {
+        continue;
+      }
+      const net = draft.nets.find(
+        (candidate) => candidate.id === afterDefaultId,
+      );
+      if (net && replacementNetId !== afterDefaultId) {
+        net.terminals = net.terminals.filter(
+          (terminal) =>
+            terminal.instanceId !== instance.id || terminal.pinName !== "B",
+        );
+        affectedNetIds.add(net.id);
+        changedObjectIds.add(net.id);
+      }
+      if (replacementNetId) {
+        const replacement = draft.nets.find(
+          (candidate) => candidate.id === replacementNetId,
+        );
+        if (
+          replacement &&
+          !replacement.terminals.some(
+            (terminal) =>
+              terminal.instanceId === instance.id && terminal.pinName === "B",
+          )
+        ) {
+          replacement.terminals.push({ instanceId: instance.id, pinName: "B" });
+          changedObjectIds.add(replacement.id);
+        }
+        instance.mosBulkBinding.netId = replacementNetId;
+      } else {
+        delete instance.mosBulkBinding;
+      }
+      changedObjectIds.add(instance.id);
+    }
+
+    if (replacementNetId) draft.mosBulkDefaults![field] = replacementNetId;
+    else delete draft.mosBulkDefaults![field];
+    changedObjectIds.add(draft.id);
+    changed = true;
+    for (const netId of affectedNetIds) {
+      pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+    }
+  }
+
+  if (
+    draft.mosBulkDefaults &&
+    !draft.mosBulkDefaults.nmosNetId &&
+    !draft.mosBulkDefaults.pmosNetId
+  ) {
+    delete draft.mosBulkDefaults;
+  }
+  return changed;
 }
 
 export function executeTransaction(
@@ -3160,6 +3265,13 @@ export function executeTransaction(
       changedRouteIds.add(routeId);
     }
   }
+
+  const invalidatedBulkDefault = revokeInvalidatedSupplyBulkDefaults(
+    document,
+    draft,
+    changedObjectIds,
+  );
+  connectivityChanged ||= invalidatedBulkDefault;
 
   const introducedNetContractIssue = validateLogicalNetContract(draft).find(
     (issue) =>
