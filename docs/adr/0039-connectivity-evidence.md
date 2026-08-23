@@ -55,6 +55,18 @@ reachability, and Reset Cell Body retains evidence only when its complete
 owner/Net reference closure survives. These edits remain unsupported by the
 retired Agent product.
 
+The next L4 layer resolves Document-local Logical Nets as a pure derived view.
+Base Nets are unioned by matching scoped name claims, matching SPICE source
+identity, and explicit equivalence. Conflicting name or scope claims are
+reported instead of selecting a winner. Annotation text first reads its own
+owner-addressed claim; connectivity highlight/indexing and design-netlist
+extraction consume the same resolved groups. GUI Net Label and Free Net Port
+authoring writes claims and never merges physical Base Nets or creates a new
+unowned `Net.name` projection. Editing a legacy/imported explicit-property
+name updates that explicit claim deliberately; other visible owners remain
+independent conflict evidence. The retired Agent surface retains its bounded
+legacy raw `set_net_name` operation and cannot author evidence.
+
 Per ADR 0023, schema 22 reads current schema 22 and previous schema 21 only.
 Schema 20 rolls off; persistence writes schema 22.
 
@@ -63,7 +75,9 @@ Schema 20 rolls off; persistence writes schema 22.
 - Name and source ownership become inspectable and independently removable.
 - The migration is deterministic and stable-ID based, but cannot reverse
   information already destroyed by an older merge.
-- The additive transitional fields avoid a flag-day rewrite of authoring,
-  export, ERC, and hierarchy code.
-- Evidence itself does not join Nets until the shared resolved-connectivity
-  consumer migration lands; schema presence is not a second hidden resolver.
+- The additive transitional fields avoid a flag-day rewrite. Migrated
+  consumers use the shared resolver; legacy-only producers remain explicit
+  follow-up work and cannot define a second evidence folding algorithm.
+- Physical Base-Net records and logical electrical identity are intentionally
+  different layers. Same-name authoring is reversible because it preserves
+  every physical record and owner.

@@ -487,7 +487,7 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("Free Net Ports merge by name and release their final Net lifecycle", async ({
+test("Free Net Ports share logical identity and release their Base Net lifecycle", async ({
   page,
 }) => {
   await page.goto("/editor");
@@ -514,20 +514,44 @@ test("Free Net Ports merge by name and release their final Net lifecycle", async
   ) as {
     documents: Array<{
       nets: Array<{
+        id: string;
         name?: string;
         terminals: Array<{ instanceId: string; pinName: string }>;
+      }>;
+      connectivityEvidence: Array<{
+        kind: string;
+        netId?: string;
+        name?: string;
+        owner?: { kind: string; instanceId?: string };
       }>;
     }>;
   };
   expect(saved.documents[0]!.nets).toEqual([
     expect.objectContaining({
-      name: "BUS",
-      terminals: expect.arrayContaining([
-        { instanceId: "P1", pinName: "P" },
-        { instanceId: "P2", pinName: "P" },
-      ]),
+      id: "net-port-p1",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    }),
+    expect.objectContaining({
+      id: "net-port-p2",
+      terminals: [{ instanceId: "P2", pinName: "P" }],
     }),
   ]);
+  expect(saved.documents[0]!.connectivityEvidence).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        kind: "name-claim",
+        netId: "net-port-p1",
+        name: "BUS",
+        owner: expect.objectContaining({ kind: "free-port", instanceId: "P1" }),
+      }),
+      expect.objectContaining({
+        kind: "name-claim",
+        netId: "net-port-p2",
+        name: "bus",
+        owner: expect.objectContaining({ kind: "free-port", instanceId: "P2" }),
+      }),
+    ]),
+  );
 
   await page.getByTestId("hit-P1").click();
   await page.keyboard.press("Delete");
@@ -538,6 +562,7 @@ test("Free Net Ports merge by name and release their final Net lifecycle", async
     (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
   ) as typeof saved;
   expect(saved.documents[0]!.nets).toEqual([]);
+  expect(saved.documents[0]!.connectivityEvidence).toEqual([]);
 
   await placeNamedPort("BUS", { x: 360, y: 260 });
   await expect(page.getByTestId("hit-P1")).toBeVisible();
@@ -1711,7 +1736,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await page
     .getByRole("textbox", { name: "Electrical Net label" })
     .fill("Vref");
-  await expect(page.getByTestId("net-count")).toHaveText("1");
+  await expect(page.getByTestId("net-count")).toHaveText("2");
   await expect(page.getByTestId("status")).toHaveText("Saved Net Label Vref");
 
   await clickDrawTool(page, "text");

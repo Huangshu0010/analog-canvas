@@ -461,6 +461,19 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
         });
       }
       if (!annotation.formatOverride || !binding) continue;
+      const annotationNameClaim = document.connectivityEvidence.find(
+        (evidence) =>
+          evidence.kind === "name-claim" &&
+          evidence.netId ===
+            (binding.kind === "net-name" ? binding.netId : undefined) &&
+          ((evidence.owner.kind === "net-label" &&
+            evidence.owner.annotationId === annotation.id) ||
+            (annotation.anchor.kind === "object" &&
+              ((evidence.owner.kind === "free-port" &&
+                evidence.owner.instanceId === annotation.anchor.objectId) ||
+                (evidence.owner.kind === "power-marker" &&
+                  evidence.owner.objectId === annotation.anchor.objectId)))),
+      );
       const semanticContent =
         binding.kind === "cell-terminal-name"
           ? semanticTextDocument(
@@ -471,7 +484,10 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
             )
           : binding.kind === "net-name"
             ? semanticTextDocument(
-                document.nets.find((net) => net.id === binding.netId)?.name ??
+                (annotationNameClaim?.kind === "name-claim"
+                  ? annotationNameClaim.name
+                  : undefined) ??
+                  document.nets.find((net) => net.id === binding.netId)?.name ??
                   "",
                 annotation.kind === "power-label" ? "power-label" : "net-label",
               )

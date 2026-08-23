@@ -97,8 +97,9 @@ existing netlist record. `set_instance_schematic_reference` changes the visible
 Reference for any non-formal Instance, including a non-emitting Port, without
 changing netlist output; formal Cell Ports use their terminal name and reject
 this edit. `set_instance_schematic_name` instead changes the user-owned
-RichText label shown on an ordinary schematic instance. Port character edits
-rename their bound `Net.name` or `CellTerminal.name`; a formatting-only edit
+RichText label shown on an ordinary schematic instance. Free Net Port and Net
+Label character edits update their owner-addressed name claim; formal Port
+character edits rename `CellTerminal.name`. A formatting-only edit
 upserts the same-text `Annotation.formatOverride`. A Cell-terminal character
 edit uses the structural hierarchy planner so caller pins and the netlist
 interface reconcile atomically. `bulk_patch_instance_netlist` is the bounded,
@@ -215,10 +216,13 @@ Phase 8 topology operations have these preconditions:
   different Net after case-folded comparison is rejected; the caller must
   explicitly `merge_nets`.
 - `planEnsureNamedNet` is the pure high-level companion for an existing
-  candidate Net. It returns only `set_net_name` or `merge_nets` edits: an
-  unused name renames the candidate, while an existing same-folded name selects
-  a deterministic target and explicitly merges compatible Nets. It does not
-  weaken the raw edit's rejection rule or create another mutation endpoint.
+  candidate Base Net, stable evidence ID, and addressable owner. It emits
+  `upsert_connectivity_evidence` only: matching scoped claims remain separate
+  physically and resolve to one Logical Net. It never emits `merge_nets` or a
+  new `Net.name` projection. If the candidate has an explicit legacy/imported
+  property claim, the edit adopts that claim into the requested name so one
+  historical fact does not become a false conflict. It does not weaken the raw
+  edit's rejection rule or create another mutation endpoint.
 - `set_net_power_domain` may classify an unclassified Net or clear a role, but
   cannot change directly between non-`none` roles. Canonical power authoring
   selects by Net name before applying this edit; a power role alone never

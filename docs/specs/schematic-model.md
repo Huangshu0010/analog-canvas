@@ -38,9 +38,11 @@ migration. Invalid coordinates are rejected with their data path.
   `{instanceId, pinName}` and belongs to at most one Net.
 - `ConnectivityEvidence` records why Base Nets carry a name/source assertion
   or participate in explicit logical equivalence. Every claim has a stable
-  owner, so removing one Label or Port cannot erase another owner's fact. In
-  schema 22's transitional L3 state, existing `Net.name`/`Net.origin` behavior
-  remains unchanged until the shared resolver and producer migrations land.
+  owner, so removing one Label or Port cannot erase another owner's fact. A
+  pure Document resolver groups Base Nets by matching scoped claims, SPICE
+  source identity, and explicit equivalence; conflicts remain explicit and
+  produce no resolved name. Existing `Net.name`/`Net.origin` remain bounded
+  compatibility input, not the authority for newly authored Labels or Ports.
 - `Net.origin` records `authored` or `spice-import` membership provenance. It
   is eligibility for derived import routing guidance, not a second electrical
   or visible-connectivity protocol.
@@ -67,9 +69,9 @@ inferred from a marker, label, or fixed ID; authoring selects an explicit Net
 by normalized name in the current Document and then verifies its persisted role.
 
 `powerDomain` is role metadata, not Net identity: `AVDD` and `DVDD` may both
-have role `vdd` while remaining distinct Nets. Net names are unique within one
-Document under trimmed case-folding; all Port/Rail projections with the same
-name therefore share one Net. A named global Net is an explicit semantic
+have role `vdd` while remaining distinct Nets. Base Nets may carry matching
+trimmed, case-folded claims without being destructively coalesced; the derived
+Logical Net is unique within a scope. A named global Net is an explicit semantic
 connection even when its marker geometry is separate. Ground authoring retains
 the explicit global node `0` policy; VDD Port/Rail authoring creates a local
 named Net unless it reuses an existing Net of that name. Neither chooses the
@@ -77,15 +79,16 @@ first Net with a matching role.
 Changing between non-`none` power roles is rejected atomically. The authored
 Net spelling remains persisted; normalized comparison is derived only.
 
-High-level naming starts from an existing candidate Net. An unused name changes
-that Net's authored name; a matching folded name emits an explicit compatible
-Net merge through the Edit Engine, choosing the stable lowest Net ID. Raw
-`set_net_name` remains deliberately strict and rejects an ambiguous rename.
+High-level GUI naming starts from an existing candidate Base Net plus a stable
+Label or Free-Port owner. It writes or updates that owner's `name-claim`; it
+never emits `merge_nets` or creates a new `Net.name` projection. Matching
+claims join only in the derived Logical-Net view. Raw `set_net_name` remains a
+strict compatibility operation and rejects an ambiguous rename.
 
 The editor does not silently normalize a loaded Document from `powerDomain`
-metadata or coalesce duplicate canonical supply Nets. A duplicate folded name
-is invalid input and remains a shared diagnostic for the author to resolve with
-an explicit rename or merge.
+metadata or coalesce Base Nets. Conflicting claims remain diagnostics for the
+author to resolve; compatible same-name claims are ordinary logical identity,
+not invalid duplicate Base-Net input.
 
 Canonical MOS Instances use `nmos`/`pmos` with D/G/S/B electrical pins. The
 default `textbook-3terminal` variant is presentation-only. B membership is

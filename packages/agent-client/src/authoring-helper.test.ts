@@ -365,7 +365,7 @@ describe("authoring helper compilation", () => {
     });
   });
 
-  it("compiles semantic same-folded Net rename into the shared explicit merge", () => {
+  it("keeps retired Agent Net rename as a raw legacy name edit", () => {
     const snapshot = testSnapshot();
     snapshot.document.nets.push({
       id: "net-bias",
@@ -389,11 +389,7 @@ describe("authoring helper compilation", () => {
     );
 
     expect(transaction?.edits).toEqual([
-      {
-        kind: "merge_nets",
-        targetNetId: "net-bias",
-        sourceNetId: "net-vout",
-      },
+      { kind: "set_net_name", netId: "net-vout", name: "bias" },
     ]);
   });
 

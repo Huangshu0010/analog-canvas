@@ -16,6 +16,7 @@ import {
   planPlaceCellInstance,
 } from "@icm/edit-engine";
 import type { SchematicStyleProfile } from "@icm/derived";
+import { resolveDocumentLogicalNets } from "@icm/derived";
 import {
   createReferenceIndex,
   hierarchyReferencePolicy,
@@ -27,6 +28,7 @@ import type {
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
+import { deriveStableId } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { ComponentInsertRequest } from "./component-insert-request";
@@ -62,9 +64,12 @@ import type { PendingComponentPlacement } from "../../interaction/interaction-st
 type TransactionResult = { ok: boolean; revision: number };
 
 function nextFreePortNetName(document: SchematicDocument): string {
+  const logicalNets = resolveDocumentLogicalNets(document);
   const occupiedNames = new Set(
     document.nets.flatMap((net) =>
-      net.name?.trim() ? [net.name.trim().toLowerCase()] : [],
+      logicalNets.byBaseNetId.get(net.id)?.name?.trim()
+        ? [logicalNets.byBaseNetId.get(net.id)!.name!.trim().toLowerCase()]
+        : [],
     ),
   );
   let ordinal = 1;
@@ -622,7 +627,11 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       : undefined;
     const name =
       placementRequest.portName?.trim() ||
-      connectedNet?.name?.trim() ||
+      (connectedNet
+        ? resolveDocumentLogicalNets(options.document)
+            .byBaseNetId.get(connectedNet.id)
+            ?.name?.trim()
+        : undefined) ||
       nextFreePortNetName(options.document);
     const baseNetId = `net-port-${id.toLowerCase()}`;
     let candidateNetId = contact.netId ?? baseNetId;
@@ -651,6 +660,14 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     const namedNetPlan = planEnsureNamedNet(namedNetDocument, {
       candidateNetId,
       name,
+      evidenceId: deriveStableId(
+        "connectivity-evidence",
+        options.document.id,
+        "free-port",
+        candidateNetId,
+        id,
+      ),
+      owner: { kind: "free-port", instanceId: id },
     });
     if (!namedNetPlan.ok) {
       options.setStatus(namedNetPlan.message);
@@ -686,7 +703,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
                 pinName: "P",
               },
               newNetId: candidateNetId,
-              newNetName: name,
             },
           ]),
       ...namedNetPlan.edits,

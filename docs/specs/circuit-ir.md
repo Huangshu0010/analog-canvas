@@ -69,7 +69,9 @@ SourceBundle → lossless syntax + typed projections → elaboration
 
 Circuit IR is transient memory and test-fixture data only. It is not written to
 `project.icproj.json`. The importer persists stable `spice-source` evidence for
-each projected Base Net; re-import reparses the source snapshot.
+each projected Base Net; re-import reparses the source snapshot. Document
+consumers resolve matching source identities together without mutating or
+serializing Circuit-IR-derived Logical Nets.
 
 ## Valid example
 

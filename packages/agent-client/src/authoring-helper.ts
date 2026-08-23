@@ -1,7 +1,6 @@
 import {
   AgentSchematicEditSchema,
   AgentWireIntentSchema,
-  planEnsureNamedNet,
   type AgentSessionSnapshot,
 } from "@icm/agent-adapter";
 import { agentRazaviAuthoringCatalog } from "@icm/agent-adapter/kit";
@@ -476,23 +475,11 @@ export function compileActions(
       case "rename":
         if (action.target.kind === "net") {
           const net = resolveNet(document, index, action.kind, action.target);
-          const plan = planEnsureNamedNet(
-            {
-              nets: document.nets.map((candidate) => ({
-                id: candidate.id,
-                ...(candidate.name ? { name: candidate.name } : {}),
-                powerDomain: candidate.powerDomain as
-                  "none" | "vdd" | "ground" | "conflict",
-              })),
-            },
-            { candidateNetId: net.id, name: action.name },
-          );
-          if (!plan.ok) {
-            throw new ActionCompileError(index, action.kind, plan.message);
-          }
-          for (const edit of plan.edits) {
-            pushEdit(index, action.kind, edit);
-          }
+          pushEdit(index, action.kind, {
+            kind: "set_net_name",
+            netId: net.id,
+            name: action.name,
+          });
         } else {
           const instance = resolveInstance(
             document,

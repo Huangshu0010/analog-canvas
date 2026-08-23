@@ -112,6 +112,61 @@ describe("current formal cell interface", () => {
     });
   });
 
+  it("exports evidence-equivalent Base Nets as one logical node", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: null,
+      netlist: {
+        reference: "R1",
+        binding: { kind: "primitive", deviceClass: "resistor" },
+        parameters: { value: "10k" },
+      },
+    });
+    document.nets.push(
+      {
+        id: "net-a",
+        scope: "local",
+        terminals: [{ instanceId: "R1", pinName: "1" }],
+      },
+      {
+        id: "net-b",
+        scope: "local",
+        terminals: [{ instanceId: "R1", pinName: "2" }],
+      },
+    );
+    document.connectivityEvidence.push(
+      {
+        id: "claim-a",
+        kind: "name-claim",
+        netId: "net-a",
+        name: "BIAS",
+        owner: { kind: "explicit-net-property" },
+        scope: "local",
+      },
+      {
+        id: "claim-b",
+        kind: "name-claim",
+        netId: "net-b",
+        name: "bias",
+        owner: { kind: "explicit-net-property" },
+        scope: "local",
+      },
+    );
+
+    const result = analyzeDesignNetlist(project);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.cells[0]?.nets).toEqual([
+      { id: "net-a", name: "BIAS", scope: "local" },
+    ]);
+    expect(result.ir?.cells[0]?.instances[0]?.nodes).toEqual([
+      { pinName: "1", netName: "BIAS" },
+      { pinName: "2", netName: "BIAS" },
+    ]);
+  });
+
   it("blocks an unconnected Free Net Port", () => {
     const project = createEmptyProject("project", "Project");
     project.documents[0]!.instances.push({

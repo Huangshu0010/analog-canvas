@@ -4924,3 +4924,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   isolated browser run; runtime code was unchanged.
 - Commit status: prepared on `codex/project-net-lifecycle` before rerunning the
   stacked canonical delivery gate.
+
+## 2026-08-23 - Evidence-driven named Logical Nets
+
+- Target: `plan/2026-08-23-evidence-driven-named-nets/plan.md` (completed).
+- Changed areas: one evidence resolver for Base-to-Logical Net identity;
+  owner-addressed Free Port and Net Label authoring; aggregate highlight,
+  hierarchy/global trace, annotation, and design-netlist consumers; explicit
+  conflict diagnostics; no semantic physical merge or new legacy name
+  projection.
+- Validation: focused contracts (381), component-insert (24), hierarchy (12),
+  project-file (10), Agent (1), and manual-editor (98) browser gates, all 1204
+  units, build/production smoke, and canonical `ci:check` with all 207 browser
+  scenarios.
+- Commit status: prepared on `codex/project-net-lifecycle`; remote required
+  checks remain the mainline delivery boundary.

@@ -321,6 +321,46 @@ describe("CircuitProject schema", () => {
     );
     expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
 
+    document.annotations[0]!.formatOverride = {
+      runs: [
+        {
+          kind: "span",
+          style: "italic",
+          children: [{ kind: "text", value: "A" }],
+        },
+      ],
+    };
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
+    document.annotations[0]!.anchor = {
+      kind: "object",
+      objectId: "P1",
+      localOffset: { x: 0, y: 0 },
+      fallbackPosition: { x: 0, y: 0 },
+    };
+    const originalLabelClaim = document.connectivityEvidence[0]!;
+    if (originalLabelClaim.kind !== "name-claim") {
+      throw new Error("Expected claim");
+    }
+    document.connectivityEvidence[0] = {
+      ...originalLabelClaim,
+      owner: { kind: "free-port", instanceId: "P1" },
+    };
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
+    document.annotations[0]!.anchor = {
+      kind: "free",
+      position: { x: 0, y: 0 },
+    };
+    document.connectivityEvidence[0] = {
+      ...originalLabelClaim,
+      owner: { kind: "net-label", annotationId: "label-a" },
+    };
+    document.connectivityEvidence[0] = {
+      ...originalLabelClaim,
+      name: "RENAMED",
+    };
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(false);
+    delete document.annotations[0]!.formatOverride;
+
     document.connectivityEvidence[0] = {
       id: "claim-a",
       kind: "name-claim",

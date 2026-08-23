@@ -77,6 +77,7 @@ import {
   resolveNetLabelBinding,
   resolveMosBulkConnection,
   resolveDocumentStyleProfile,
+  resolveDocumentLogicalNets,
   resolveRouteAttachment,
   resolveRouteTap,
   summarizeProjectCells,
@@ -95,6 +96,7 @@ import {
   createEmptyProject,
   createEmptyDocument,
   createId,
+  deriveStableId,
   defaultDraftTextDocument,
   flattenRichText,
   inverseTransformPoint,
@@ -1185,6 +1187,7 @@ export function App({
     clearSelectionKinds,
     netLabelForRoute,
     netLabelEditsForRoute,
+    netNameEditsForAnnotation,
     instancePropertyEdits,
     referenceLabelVisibilityEdits,
     valueVisibilityEdits,
@@ -2521,15 +2524,32 @@ export function App({
           ),
         )
       : undefined;
+  const selectedPortLogicalName = selectedPortNet
+    ? resolveDocumentLogicalNets(document).byBaseNetId.get(selectedPortNet.id)
+        ?.name
+    : undefined;
   function renameSelectedNetPort(name: string): void {
     if (!selectedPortNet || selectedFormalTerminal) return;
     name = name.trim();
-    if (!name || name === selectedPortNet.name) return;
-    // Naming a Free Net Port joins an existing Net of that name instead of
-    // leaving two same-name Nets behind, exactly as placing a named Port does.
+    if (!name || name === selectedPortLogicalName) return;
     const plan = planEnsureNamedNet(document, {
       candidateNetId: selectedPortNet.id,
       name,
+      evidenceId:
+        document.connectivityEvidence.find(
+          (evidence) =>
+            evidence.kind === "name-claim" &&
+            evidence.owner.kind === "free-port" &&
+            evidence.owner.instanceId === selectedInstance!.id,
+        )?.id ??
+        deriveStableId(
+          "connectivity-evidence",
+          document.id,
+          "free-port",
+          selectedPortNet.id,
+          selectedInstance!.id,
+        ),
+      owner: { kind: "free-port", instanceId: selectedInstance!.id },
     });
     if (!plan.ok) {
       setStatus(plan.message);
@@ -4360,11 +4380,17 @@ export function App({
     )?.name;
     const netPortName =
       instance.symbolId === "port" || instance.symbolId === "port-filled"
-        ? document.nets.find((net) =>
-            net.terminals.some(
-              (terminal) => terminal.instanceId === instance.id,
-            ),
-          )?.name
+        ? (() => {
+            const net = document.nets.find((candidate) =>
+              candidate.terminals.some(
+                (terminal) => terminal.instanceId === instance.id,
+              ),
+            );
+            return net
+              ? resolveDocumentLogicalNets(document).byBaseNetId.get(net.id)
+                  ?.name
+              : undefined;
+          })()
         : undefined;
     const schematicName = flattenRichText(
       instance.schematicName ?? { runs: [] },
@@ -5730,9 +5756,25 @@ export function App({
           ]
         : null;
     }
+    const labelId = existingLabel?.id ?? `net-label-${route.id}`;
     const namedNetPlan = planEnsureNamedNet(document, {
       candidateNetId: net.id,
       name,
+      evidenceId:
+        document.connectivityEvidence.find(
+          (evidence) =>
+            evidence.kind === "name-claim" &&
+            evidence.owner.kind === "net-label" &&
+            evidence.owner.annotationId === labelId,
+        )?.id ??
+        deriveStableId(
+          "connectivity-evidence",
+          document.id,
+          "net-label",
+          net.id,
+          labelId,
+        ),
+      owner: { kind: "net-label", annotationId: labelId },
     });
     if (!namedNetPlan.ok) return null;
     const targetNetId = namedNetPlan.netId;
@@ -5766,7 +5808,7 @@ export function App({
     edits.push({
       kind: "upsert_schematic_annotation",
       annotation: {
-        id: existingLabel?.id ?? `net-label-${route.id}`,
+        id: labelId,
         kind: "net-label",
         binding: { kind: "net-name", netId: targetNetId },
         netId: targetNetId,
@@ -5799,6 +5841,72 @@ export function App({
       },
     });
     return edits;
+  }
+
+  function netNameEditsForAnnotation(
+    annotation: Annotation,
+    rawName: string,
+    presentationAnnotation?: Annotation,
+  ): SchematicEdit[] | null | undefined {
+    const binding = annotation.binding;
+    if (binding?.kind !== "net-name" || annotation.anchor.kind !== "object") {
+      return undefined;
+    }
+    const ownerObjectId = annotation.anchor.objectId;
+    const instance = document.instances.find(
+      (candidate) => candidate.id === ownerObjectId,
+    );
+    if (
+      !instance ||
+      (instance.symbolId !== "port" && instance.symbolId !== "port-filled") ||
+      document.netlist?.terminals.some((terminal) =>
+        terminal.interfaceInstanceIds.includes(instance.id),
+      )
+    ) {
+      return undefined;
+    }
+    const net = document.nets.find(
+      (candidate) => candidate.id === binding.netId,
+    );
+    if (!net) {
+      setStatus(`Net Label references missing Net ${binding.netId}`);
+      return null;
+    }
+    const name = rawName.trim();
+    const namedNetPlan = planEnsureNamedNet(document, {
+      candidateNetId: net.id,
+      name,
+      evidenceId:
+        document.connectivityEvidence.find(
+          (evidence) =>
+            evidence.kind === "name-claim" &&
+            evidence.owner.kind === "free-port" &&
+            evidence.owner.instanceId === instance.id,
+        )?.id ??
+        deriveStableId(
+          "connectivity-evidence",
+          document.id,
+          "free-port",
+          net.id,
+          instance.id,
+        ),
+      owner: { kind: "free-port", instanceId: instance.id },
+    });
+    if (!namedNetPlan.ok) {
+      setStatus(namedNetPlan.message);
+      return null;
+    }
+    return [
+      ...namedNetPlan.edits,
+      ...(presentationAnnotation
+        ? [
+            {
+              kind: "upsert_schematic_annotation" as const,
+              annotation: presentationAnnotation,
+            },
+          ]
+        : []),
+    ];
   }
 
   function referenceLabelVisibilityEdits(
@@ -8549,7 +8657,7 @@ export function App({
                             <input
                               key={`${selectedPortNet.id}-${document.revision}-net-port-name`}
                               aria-label="Net Port name"
-                              defaultValue={selectedPortNet.name ?? ""}
+                              defaultValue={selectedPortLogicalName ?? ""}
                               onBlur={(event) =>
                                 renameSelectedNetPort(event.currentTarget.value)
                               }
