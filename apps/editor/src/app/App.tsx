@@ -19,6 +19,7 @@ import {
   createRouteWireAnchor,
   proposeEndpointRouteAttachment,
   proposeGroupMoveEdits,
+  proposeGroupRotationEdits,
   proposeLooseRouteTranslation,
   proposePowerRailEndpointResize,
   proposePowerRailTranslation,
@@ -47,6 +48,8 @@ import {
   type SchematicEdit,
   type CellResetPlan,
   type WireSource,
+  type WireRoutingMode,
+  type WireCornerOrder,
 } from "@icm/edit-engine";
 import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
 import {
@@ -220,6 +223,10 @@ import {
   differentialOutputSibling,
   planDifferentialOutputSwap,
 } from "../features/editor-shell/differential-output-swap";
+import {
+  differentialInputSibling,
+  planDifferentialInputSwap,
+} from "../features/editor-shell/differential-input-swap";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
@@ -398,6 +405,13 @@ const LIBRARY_WIDTH_STORAGE_KEY = "icm.library-panel-width.v1";
 const REFRESH_RESTORE_STORAGE_KEY = "icm.restore-after-refresh.v1";
 const COMPACT_LAYOUT_MEDIA_QUERY = "(max-width: 860px)";
 const DRAG_START_DISTANCE_PX = 4;
+/**
+ * Middle-press slop before a pan begins. A scroll wheel is stiff enough that
+ * clicking it drags the hand several pixels, and the ordinary 4px threshold
+ * turned those clicks into pans — so the corner cycle they were meant to
+ * trigger did nothing and the middle button felt unresponsive.
+ */
+const PAN_START_DISTANCE_PX = 10;
 const SNAP_CAPTURE_RADIUS_PX = 7;
 
 /** Persisted Junctions are grid points, including on ±45° Route segments. */
@@ -683,6 +697,10 @@ export function App({
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
+  const [pendingCellReset, setPendingCellReset] = useState<{
+    plan: CellResetPlan;
+    command: string;
+  } | null>(null);
   const [netlistPreflightOpen, setNetlistPreflightOpen] = useState(false);
   const [documentSettingsOpen, setDocumentSettingsOpen] = useState(false);
   const [projectNameDraft, setProjectNameDraft] = useState<string | null>(null);
@@ -857,6 +875,15 @@ export function App({
   const [selectedRouteSegmentIndex, setSelectedRouteSegmentIndex] = useState<
     number | null
   >(null);
+  /**
+   * The corner shape is a standing authoring preference, not per-wire state:
+   * picking the wire tool again reset it, so a chosen diagonal had to be
+   * re-selected for every single wire.
+   */
+  const lastWireShapeRef = useRef<{
+    routingMode: WireRoutingMode;
+    cornerOrder: WireCornerOrder;
+  }>({ routingMode: "orthogonal", cornerOrder: "auto" });
   const [selectedEndpoint, setSelectedEndpoint] = useState<WireSource | null>(
     null,
   );
@@ -1540,7 +1567,6 @@ export function App({
     beginRouteStretch,
     drawSelectedMosBulk,
     deleteSelectedRouteConnection,
-    editSelectedRouteJog,
     fixWirePoint,
     finishWireAtPoint,
     handleFlightline,
@@ -3305,26 +3331,25 @@ export function App({
       setStatus(command + " has nothing to change in Cell " + document.name);
       return;
     }
-    const confirmed = window.confirm(
-      command +
-        ' in Cell "' +
-        document.name +
-        '"?\n\n' +
-        plan.summary +
-        ".\n\nAffected objects: " +
-        plan.affectedObjectIds.length +
-        ". Undo restores this Cell.",
-    );
-    if (!confirmed) {
-      setStatus(command + " cancelled");
-      return;
-    }
+    setPendingCellReset({ plan, command });
+  }
+
+  function confirmClearCanvas(): void {
+    if (!pendingCellReset) return;
+    const { plan, command } = pendingCellReset;
     const result = transact([...plan.edits]);
     if (!result.ok) return;
+    setPendingCellReset(null);
     resetInteractionState();
     setStatus(
       command + " completed in Cell " + document.name + " · Undo restores it",
     );
+  }
+
+  function cancelClearCanvas(): void {
+    const command = pendingCellReset?.command ?? "Cell reset";
+    setPendingCellReset(null);
+    setStatus(command + " cancelled");
   }
 
   function updateMosBulkDefault(
@@ -4061,17 +4086,48 @@ export function App({
    * click used to reach only the diagonal, so the two orthogonal elbows were
    * unreachable without the Corner menu.
    */
+  // Re-arm the remembered corner shape on a fresh wire. Activating the wire
+  // tool builds a clean state, which dropped the choice; this restores it
+  // without touching a wire already in progress.
+  useEffect(() => {
+    if (tool !== "wire" || wireSource !== null || wireDraftSteps.length > 0)
+      return;
+    const remembered = lastWireShapeRef.current;
+    if (remembered.routingMode !== wireRoutingMode)
+      setWireRoutingMode(remembered.routingMode);
+    if (remembered.cornerOrder !== wireCornerOrder)
+      setWireCornerOrder(remembered.cornerOrder);
+  }, [
+    tool,
+    wireSource,
+    wireDraftSteps.length,
+    wireRoutingMode,
+    wireCornerOrder,
+    setWireRoutingMode,
+    setWireCornerOrder,
+  ]);
+
   function cycleWireCornerShape(): void {
+    // "auto" is where every wire starts, so it has to be a named stop on the
+    // cycle: leaving it out made findIndex return -1 and the first press land
+    // on entry 0. That press was also invisible, because a first leg drawn by
+    // "auto" already runs horizontal — hence vertical first comes next, so
+    // every press visibly redraws the preview.
     const shapes = [
       {
         routingMode: "orthogonal" as const,
-        cornerOrder: "horizontal-first" as const,
-        label: "horizontal first",
+        cornerOrder: "auto" as const,
+        label: "auto",
       },
       {
         routingMode: "orthogonal" as const,
         cornerOrder: "vertical-first" as const,
         label: "vertical first",
+      },
+      {
+        routingMode: "orthogonal" as const,
+        cornerOrder: "horizontal-first" as const,
+        label: "horizontal first",
       },
       {
         routingMode: "octilinear" as const,
@@ -4090,6 +4146,7 @@ export function App({
         shape.cornerOrder === wireCornerOrder,
     );
     const next = shapes[(index + 1) % shapes.length]!;
+    lastWireShapeRef.current = next;
     if (next.routingMode !== wireRoutingMode)
       setWireRoutingMode(next.routingMode);
     setWireCornerOrder(next.cornerOrder);
@@ -4735,21 +4792,41 @@ export function App({
   }
 
   function rotateSelected(deltaDegrees: 90 | -90 = 90): void {
-    const instanceEdits = selectedIds.flatMap((id): SchematicEdit[] => {
-      const instance = document.instances.find(
-        (candidate) => candidate.id === id,
-      );
-      if (!instance?.placement) return [];
-      const next =
-        (((instance.placement.rotation + deltaDegrees) % 360) + 360) % 360;
-      return [
-        {
-          kind: "rotate_instance",
-          instanceId: instance.id,
-          rotation: next as 0 | 90 | 180 | 270,
-        },
-      ];
-    });
+    const placedSelection = selectedIds.filter((id) =>
+      document.instances.some(
+        (candidate) => candidate.id === id && candidate.placement,
+      ),
+    );
+    // Several parts turn as one body about a shared pivot. Spinning each one
+    // about its own origin leaves the arrangement exactly where it was, which
+    // is not what turning a selection means. A lone part has no arrangement to
+    // preserve, so it keeps the simpler in-place turn.
+    const groupRotation =
+      placedSelection.length > 1
+        ? proposeGroupRotationEdits(
+            document,
+            resolver,
+            placedSelection,
+            deltaDegrees,
+          )
+        : null;
+    const instanceEdits = groupRotation
+      ? groupRotation.edits
+      : selectedIds.flatMap((id): SchematicEdit[] => {
+          const instance = document.instances.find(
+            (candidate) => candidate.id === id,
+          );
+          if (!instance?.placement) return [];
+          const next =
+            (((instance.placement.rotation + deltaDegrees) % 360) + 360) % 360;
+          return [
+            {
+              kind: "rotate_instance",
+              instanceId: instance.id,
+              rotation: next as 0 | 90 | 180 | 270,
+            },
+          ];
+        });
     // Drafting rotation: R now also rotates a selected drafting object. An arrow
     // pivots about its resolved center; a construction line pivots about the
     // center of its bounds. Purely geometric — never changes electrical Nets.
@@ -6545,7 +6622,11 @@ export function App({
         Math.hypot(
           event.clientX - panPreview.clientStart.x,
           event.clientY - panPreview.clientStart.y,
-        ) >= DRAG_START_DISTANCE_PX;
+        ) >= PAN_START_DISTANCE_PX;
+      // A middle press stays a click until it travels far enough to be a pan.
+      // Panning on sub-threshold jitter nudged the canvas under an ordinary
+      // click, so the press is ignored until the gesture commits to a drag.
+      if (!moved && !panPreview.dragged) return;
       if (moved && !panPreview.dragged)
         setPanPreview({ ...panPreview, dragged: true });
       setViewBox({
@@ -8048,6 +8129,50 @@ export function App({
         onApply={(request) => startInsertFromHook({ kind: "quick", request })}
         onCancel={cancelComponentInsertFromHook}
       />
+      {pendingCellReset ? (
+        <div
+          className="insert-dialog-backdrop"
+          onPointerDown={(event) =>
+            event.target === event.currentTarget && cancelClearCanvas()
+          }
+        >
+          <section
+            className="editor-action-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="clear-canvas-dialog-title"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") cancelClearCanvas();
+            }}
+          >
+            <header className="editor-action-dialog-header">
+              <p>Cell contents</p>
+              <h2 id="clear-canvas-dialog-title">
+                {pendingCellReset.command} in {document.name}?
+              </h2>
+            </header>
+            <div className="editor-action-dialog-body">
+              <p>
+                {pendingCellReset.plan.summary}. Affected objects:{" "}
+                {pendingCellReset.plan.affectedObjectIds.length}. You can
+                restore them with Undo.
+              </p>
+            </div>
+            <footer className="editor-action-dialog-actions">
+              <button type="button" autoFocus onClick={cancelClearCanvas}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={confirmClearCanvas}
+              >
+                {pendingCellReset.command}
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
       <CellManagerDialog
         open={cellManagerOpen}
         cells={cellManagerEntries}
@@ -8120,7 +8245,6 @@ export function App({
           updateDefaults={
             galleryEntryContext
               ? {
-                  author: galleryEntryContext.author,
                   description: galleryEntryContext.description,
                   tags: galleryEntryContext.tags,
                 }
@@ -8133,16 +8257,12 @@ export function App({
                   updateGalleryEntry(galleryEntryContext.id, project, fields)
               : undefined
           }
-          onPublished={({ name, pending, updated }) => {
+          onPublished={({ name, updated }) => {
             setPublishGalleryOpen(false);
             setStatus(
               updated
-                ? pending
-                  ? `Submitted the update to "${name}" for review`
-                  : `Updated "${name}" in the gallery`
-                : pending
-                  ? `Submitted "${name}" for review`
-                  : `Published "${name}" to the gallery`,
+                ? `Updated "${name}" in the gallery`
+                : `Published "${name}" to the gallery`,
             );
           }}
           onShowHistory={
@@ -8723,13 +8843,34 @@ export function App({
                         <dd>{selectedInstance.symbolId}</dd>
                       </div>
                       <div>
-                        <dt>Device class</dt>
-                        <dd>{selectedPropertyDevice?.deviceClass ?? "none"}</dd>
-                      </div>
-                      <div>
                         <dt>Cell</dt>
                         <dd>{document.netlist?.name ?? document.name}</dd>
                       </div>
+                      {selectedInstance.netlist &&
+                      !(
+                        selectedInstance.netlist.binding?.kind === "model" ||
+                        selectedDevice?.targetPolicy === "required-model" ||
+                        selectedExternalMosMapping
+                      ) ? (
+                        <div className="property-identity-target">
+                          <dt>Target</dt>
+                          <dd>
+                            {selectedInstance.netlist.binding?.kind ===
+                            "primitive"
+                              ? `Built-in primitive: ${selectedInstance.netlist.binding.deviceClass}`
+                              : selectedInstance.netlist.binding?.kind ===
+                                  "subcircuit"
+                                ? `Internal Cell: ${selectedHierarchyCell?.netlist?.name ?? "unresolved"}`
+                                : selectedInstance.netlist.binding?.kind ===
+                                    "external-subcircuit"
+                                  ? `External subcircuit: ${selectedExternalSubcircuit?.name ?? "unresolved"}`
+                                  : selectedInstance.netlist.binding?.kind ===
+                                      "unresolved-subcircuit"
+                                    ? `Unresolved subcircuit: ${selectedInstance.netlist.binding.name}`
+                                    : "No target is bound yet."}
+                          </dd>
+                        </div>
+                      ) : null}
                     </dl>
                   </div>
                   {selectedCapacitorPlateRows ? (
@@ -8752,14 +8893,12 @@ export function App({
                           </div>
                         ))}
                       </dl>
-                      <small>
-                        Plate roles are defined by the device. Change their Net
-                        connections through wiring or orientation, not by
-                        renaming the roles.
-                      </small>
                     </div>
                   ) : null}
-                  {selectedInstance.netlist ? (
+                  {selectedInstance.netlist &&
+                  (selectedInstance.netlist.binding?.kind === "model" ||
+                    selectedDevice?.targetPolicy === "required-model" ||
+                    selectedExternalMosMapping) ? (
                     <div
                       className="property-card property-target-card"
                       aria-label="Netlist target"
@@ -8767,80 +8906,51 @@ export function App({
                       <div className="property-section-heading">
                         Netlist target
                       </div>
-                      {selectedInstance.netlist.binding?.kind === "model" ||
-                      selectedDevice?.targetPolicy === "required-model" ||
-                      selectedExternalMosMapping ? (
-                        <label>
-                          Model
-                          <input
-                            key={`${selectedInstance.id}-${document.revision}-model-target`}
-                            aria-label="Component model target"
-                            list={
-                              selectedPropertyDevice?.symbolId === "nmos" ||
-                              selectedPropertyDevice?.symbolId === "pmos"
-                                ? `mos-model-options-${selectedPropertyDevice.symbolId}`
-                                : undefined
-                            }
-                            defaultValue={
-                              selectedInstance.netlist.binding?.kind === "model"
-                                ? selectedInstance.netlist.binding.name
-                                : selectedExternalMosMapping
-                                  ? selectedExternalSubcircuit?.name
-                                  : ""
-                            }
-                            placeholder="Model name"
-                            onBlur={(event) =>
-                              updateSelectedModelTarget(
-                                event.currentTarget.value,
-                              )
-                            }
-                          />
-                          {selectedPropertyDevice?.symbolId === "nmos" ||
-                          selectedPropertyDevice?.symbolId === "pmos" ? (
-                            <datalist
-                              id={`mos-model-options-${selectedPropertyDevice.symbolId}`}
-                            >
-                              {reviewedSky130MosModelSuggestions(
-                                selectedPropertyDevice.symbolId,
-                              ).map((model) => (
-                                <option value={model} key={model} />
-                              ))}
-                            </datalist>
-                          ) : null}
-                          {selectedExternalMosMapping ? (
-                            <small>External subcircuit · X reference</small>
-                          ) : null}
-                        </label>
-                      ) : selectedInstance.netlist.binding?.kind ===
-                        "primitive" ? (
-                        <small>
-                          Built-in primitive:{" "}
-                          {selectedInstance.netlist.binding.deviceClass}
-                        </small>
-                      ) : selectedInstance.netlist.binding?.kind ===
-                        "subcircuit" ? (
-                        <small>
-                          Internal Cell:{" "}
-                          {selectedHierarchyCell?.netlist?.name ?? "unresolved"}
-                        </small>
-                      ) : selectedInstance.netlist.binding?.kind ===
-                        "external-subcircuit" ? (
-                        <small>
-                          External subcircuit:{" "}
-                          {selectedExternalSubcircuit?.name ?? "unresolved"}
-                        </small>
-                      ) : selectedInstance.netlist.binding?.kind ===
-                        "unresolved-subcircuit" ? (
-                        <small>
-                          Unresolved subcircuit:{" "}
-                          {selectedInstance.netlist.binding.name}
-                        </small>
-                      ) : (
-                        <small>No target is bound yet.</small>
-                      )}
+                      <label>
+                        Model
+                        <input
+                          key={`${selectedInstance.id}-${document.revision}-model-target`}
+                          aria-label="Component model target"
+                          list={
+                            selectedPropertyDevice?.symbolId === "nmos" ||
+                            selectedPropertyDevice?.symbolId === "pmos"
+                              ? `mos-model-options-${selectedPropertyDevice.symbolId}`
+                              : undefined
+                          }
+                          defaultValue={
+                            selectedInstance.netlist.binding?.kind === "model"
+                              ? selectedInstance.netlist.binding.name
+                              : selectedExternalMosMapping
+                                ? selectedExternalSubcircuit?.name
+                                : ""
+                          }
+                          placeholder="Model name"
+                          onBlur={(event) =>
+                            updateSelectedModelTarget(event.currentTarget.value)
+                          }
+                        />
+                        {selectedPropertyDevice?.symbolId === "nmos" ||
+                        selectedPropertyDevice?.symbolId === "pmos" ? (
+                          <datalist
+                            id={`mos-model-options-${selectedPropertyDevice.symbolId}`}
+                          >
+                            {reviewedSky130MosModelSuggestions(
+                              selectedPropertyDevice.symbolId,
+                            ).map((model) => (
+                              <option value={model} key={model} />
+                            ))}
+                          </datalist>
+                        ) : null}
+                        {selectedExternalMosMapping ? (
+                          <small>External subcircuit · X reference</small>
+                        ) : null}
+                      </label>
                     </div>
                   ) : null}
-                  <div className="property-card property-parameters-card">
+                  <div
+                    className="property-card property-electrical-section"
+                    aria-label="Component parameters and display"
+                  >
                     <div className="property-section-heading">Parameters</div>
                     <div className="component-parameter-grid">
                       {propertyParametersForInstance(selectedInstance).map(
@@ -8895,134 +9005,137 @@ export function App({
                         </p>
                       ) : null;
                     })()}
-                  </div>
-                  <div className="property-card property-display-card">
-                    <div className="property-section-heading">Display</div>
-                    <div
-                      className="display-toggle-row"
-                      aria-label="Component display toggles"
-                    >
-                      <DisplayToggle
-                        label={
-                          selectedInstance.symbolId === "port" ||
-                          selectedInstance.symbolId === "port-filled"
-                            ? "Port label"
-                            : "Reference"
-                        }
-                        checked={
-                          selectedInstanceLabel !== undefined &&
-                          selectedInstanceLabel.visible !== false
-                        }
-                        onChange={(checked) =>
-                          setReferenceLabelsVisible(
-                            [selectedInstance.id],
-                            checked,
-                          )
-                        }
-                      />
-                      <DisplayToggle
-                        label="Value"
-                        checked={
-                          selectedInstanceValue !== null &&
-                          selectedInstanceValue.visible !== false
-                        }
-                        disabled={!selectedInstanceValueAvailable}
-                        help={
-                          selectedInstanceValueAvailable
-                            ? undefined
-                            : "Set the device parameters first"
-                        }
-                        onChange={(checked) => {
-                          if (checked) {
-                            showSelectedInstanceValue();
-                          } else {
-                            setValueLabelsVisible([selectedInstance.id], false);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                  {selectedInstance.netlist ? (
-                    <details className="property-details">
-                      <summary>
-                        <span>Advanced parameters</span>
-                        <small>{additionalParameterDraft.length}</small>
-                      </summary>
+                    <div className="property-display-card">
+                      <div className="property-section-heading">Display</div>
                       <div
-                        className="additional-parameters"
-                        aria-label="Additional parameters"
+                        className="display-toggle-row"
+                        aria-label="Component display toggles"
                       >
-                        <small>
-                          Model- or dialect-specific raw values. Apply commits
-                          all rows as one undoable edit.
-                        </small>
-                        {additionalParameterDraft.map((parameter, index) => (
-                          <div
-                            className="component-geometry-row"
-                            key={parameter.id}
-                          >
-                            <label>
-                              Name
-                              <input
-                                aria-label={`Additional parameter name ${index + 1}`}
-                                value={parameter.name}
-                                onChange={(event) =>
-                                  updateAdditionalParameter(parameter.id, {
-                                    name: event.currentTarget.value,
-                                  })
+                        <DisplayToggle
+                          label={
+                            selectedInstance.symbolId === "port" ||
+                            selectedInstance.symbolId === "port-filled"
+                              ? "Port label"
+                              : "Reference"
+                          }
+                          checked={
+                            selectedInstanceLabel !== undefined &&
+                            selectedInstanceLabel.visible !== false
+                          }
+                          onChange={(checked) =>
+                            setReferenceLabelsVisible(
+                              [selectedInstance.id],
+                              checked,
+                            )
+                          }
+                        />
+                        <DisplayToggle
+                          label="Value"
+                          checked={
+                            selectedInstanceValue !== null &&
+                            selectedInstanceValue.visible !== false
+                          }
+                          disabled={!selectedInstanceValueAvailable}
+                          help={
+                            selectedInstanceValueAvailable
+                              ? undefined
+                              : "Set the device parameters first"
+                          }
+                          onChange={(checked) => {
+                            if (checked) {
+                              showSelectedInstanceValue();
+                            } else {
+                              setValueLabelsVisible(
+                                [selectedInstance.id],
+                                false,
+                              );
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    {selectedInstance.netlist ? (
+                      <details className="property-details property-details-inline">
+                        <summary>
+                          <span>Advanced parameters</span>
+                          <small>{additionalParameterDraft.length}</small>
+                        </summary>
+                        <div
+                          className="additional-parameters"
+                          aria-label="Additional parameters"
+                        >
+                          <small>
+                            Model- or dialect-specific raw values. Apply commits
+                            all rows as one undoable edit.
+                          </small>
+                          {additionalParameterDraft.map((parameter, index) => (
+                            <div
+                              className="component-geometry-row"
+                              key={parameter.id}
+                            >
+                              <label>
+                                Name
+                                <input
+                                  aria-label={`Additional parameter name ${index + 1}`}
+                                  value={parameter.name}
+                                  onChange={(event) =>
+                                    updateAdditionalParameter(parameter.id, {
+                                      name: event.currentTarget.value,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label>
+                                Value
+                                <input
+                                  aria-label={`Additional parameter value ${index + 1}`}
+                                  value={parameter.value}
+                                  onChange={(event) =>
+                                    updateAdditionalParameter(parameter.id, {
+                                      value: event.currentTarget.value,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                aria-label={`Remove additional parameter ${index + 1}`}
+                                onClick={() =>
+                                  removeAdditionalParameter(parameter.id)
                                 }
-                              />
-                            </label>
-                            <label>
-                              Value
-                              <input
-                                aria-label={`Additional parameter value ${index + 1}`}
-                                value={parameter.value}
-                                onChange={(event) =>
-                                  updateAdditionalParameter(parameter.id, {
-                                    value: event.currentTarget.value,
-                                  })
-                                }
-                              />
-                            </label>
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                          <div className="component-mirror-row">
                             <button
                               type="button"
-                              aria-label={`Remove additional parameter ${index + 1}`}
-                              onClick={() =>
-                                removeAdditionalParameter(parameter.id)
-                              }
+                              onClick={addAdditionalParameter}
                             >
-                              Remove
+                              Add parameter
                             </button>
+                            {additionalParameterDraftChanges ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={applyAdditionalParameters}
+                                >
+                                  Apply parameters
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelAdditionalParameters}
+                                >
+                                  Cancel parameter edits
+                                </button>
+                              </>
+                            ) : null}
                           </div>
-                        ))}
-                        <div className="component-mirror-row">
-                          <button
-                            type="button"
-                            onClick={addAdditionalParameter}
-                          >
-                            Add parameter
-                          </button>
-                          {additionalParameterDraftChanges ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={applyAdditionalParameters}
-                              >
-                                Apply parameters
-                              </button>
-                              <button
-                                type="button"
-                                onClick={cancelAdditionalParameters}
-                              >
-                                Cancel parameter edits
-                              </button>
-                            </>
-                          ) : null}
                         </div>
-                      </div>
-                    </details>
-                  ) : null}
+                      </details>
+                    ) : null}
+                  </div>
                   {selectedInstance.importProvenance ? (
                     <div
                       className="property-card"
@@ -9041,7 +9154,7 @@ export function App({
                     <div className="property-card property-placement-card">
                       <div className="property-section-heading">Placement</div>
                       <div
-                        className="component-geometry-row"
+                        className="component-geometry-row property-placement-controls"
                         aria-label="Component geometry"
                       >
                         <label>
@@ -9074,88 +9187,93 @@ export function App({
                             }}
                           />
                         </label>
-                        <label>
-                          Rotate
-                          <select
-                            aria-label="Component rotation"
-                            value={instancePropertyDraft.rotation}
-                            onChange={(event) => {
-                              const rotation = event.currentTarget.value as
-                                "0" | "90" | "180" | "270";
-                              updateInstancePropertyDraft((current) => ({
-                                ...current,
-                                rotation,
-                              }));
-                            }}
-                          >
-                            <option value="0">0°</option>
-                            <option value="90">90°</option>
-                            <option value="180">180°</option>
-                            <option value="270">270°</option>
-                          </select>
-                        </label>
-                      </div>
-                      <div
-                        className="component-mirror-row"
-                        aria-label="Mirror component"
-                      >
                         <button
                           type="button"
+                          className="property-placement-icon-button"
+                          aria-label={`Rotate component clockwise 90 degrees; current rotation ${instancePropertyDraft.rotation} degrees; shortcut R`}
+                          title={`Rotate 90° clockwise · current ${instancePropertyDraft.rotation}° (R)`}
+                          onClick={() => rotateSelected()}
+                        >
+                          <ToolIcon name="rotate" />
+                        </button>
+                        <button
+                          type="button"
+                          className="property-placement-icon-button"
                           aria-label="Mirror component left to right, Shift+R"
                           title="Mirror left/right (Shift+R)"
                           onClick={() => mirrorSelected("left-right")}
                         >
-                          Mirror left/right
+                          <ToolIcon name="mirror-horizontal" />
                         </button>
                         <button
                           type="button"
+                          className="property-placement-icon-button"
                           aria-label="Mirror component top to bottom, Ctrl+R"
                           title="Mirror top/bottom (Ctrl+R)"
                           onClick={() => mirrorSelected("top-bottom")}
                         >
-                          Mirror top/bottom
-                        </button>
-                        {differentialOutputSibling(
-                          selectedInstance.symbolId,
-                        ) ? (
-                          <button
-                            type="button"
-                            data-testid="swap-differential-outputs"
-                            aria-label="Swap the + and - outputs"
-                            title="Swap the + and - outputs"
-                            onClick={() =>
-                              transact(
-                                planDifferentialOutputSwap(
-                                  selectedInstance.id,
-                                  selectedInstance.symbolId,
-                                ),
-                              )
-                            }
-                          >
-                            Swap + / − outputs
-                          </button>
-                        ) : null}
-                        {selectedInstanceHasDifferentialInputs ? (
-                          <button
-                            type="button"
-                            data-testid="swap-differential-inputs"
-                            aria-label="Swap the + and - inputs"
-                            title="Swap + / - inputs (Ctrl+R)"
-                            onClick={() => mirrorSelected("top-bottom")}
-                          >
-                            Swap + / − inputs
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          aria-label="Return component to Placement Tray"
-                          onClick={() =>
-                            returnInstancesToTray([selectedInstance.id])
-                          }
-                        >
-                          Return to tray
+                          <ToolIcon name="mirror-vertical" />
                         </button>
                       </div>
+                      <button
+                        type="button"
+                        className="property-return-to-tray"
+                        aria-label="Return component to Placement Tray"
+                        onClick={() =>
+                          returnInstancesToTray([selectedInstance.id])
+                        }
+                      >
+                        Return to tray
+                      </button>
+                      {differentialOutputSibling(selectedInstance.symbolId) ||
+                      selectedInstanceHasDifferentialInputs ? (
+                        <div
+                          className="component-mirror-row property-amplifier-actions"
+                          aria-label="Amplifier placement actions"
+                        >
+                          {differentialOutputSibling(
+                            selectedInstance.symbolId,
+                          ) ? (
+                            <button
+                              type="button"
+                              data-testid="swap-differential-outputs"
+                              aria-label="Swap the + and - outputs"
+                              title="Swap the + and - outputs"
+                              onClick={() =>
+                                transact(
+                                  planDifferentialOutputSwap(
+                                    selectedInstance.id,
+                                    selectedInstance.symbolId,
+                                  ),
+                                )
+                              }
+                            >
+                              Swap + / − outputs
+                            </button>
+                          ) : null}
+                          {selectedInstanceHasDifferentialInputs &&
+                          differentialInputSibling(
+                            selectedInstance.symbolId,
+                          ) ? (
+                            <button
+                              type="button"
+                              data-testid="swap-differential-inputs"
+                              aria-label="Swap the + and - inputs"
+                              title="Swap + / - inputs (Ctrl+R)"
+                              onClick={() =>
+                                transact(
+                                  planDifferentialInputSwap(
+                                    selectedInstance.id,
+                                    selectedInstance.symbolId,
+                                  ),
+                                )
+                              }
+                            >
+                              Swap + / − inputs
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                   {hasInstancePropertyDraftChanges ? (
@@ -9457,11 +9575,17 @@ export function App({
                 className="context-actions placement-tray"
                 aria-label="Placement Tray"
               >
-                <h2>Placement Tray</h2>
-                <p>
-                  {unplaced.length} retained · drag to the canvas, choose Place,
-                  or arrange every retained Instance in a starter grid.
-                </p>
+                <div className="placement-tray-heading">
+                  <h2>Placement Tray</h2>
+                  <span
+                    className="placement-tray-count"
+                    aria-label={`${unplaced.length} retained ${
+                      unplaced.length === 1 ? "Instance" : "Instances"
+                    }`}
+                  >
+                    {unplaced.length}
+                  </span>
+                </div>
                 <div className="component-mirror-row">
                   <button
                     type="button"
@@ -9484,9 +9608,7 @@ export function App({
                     Return all
                   </button>
                 </div>
-                {unplaced.length === 0 ? (
-                  <small>No retained Instances.</small>
-                ) : (
+                {unplaced.length > 0 ? (
                   <div className="placement-tray-list">
                     {unplaced.map((instance) => (
                       <div
@@ -9525,7 +9647,7 @@ export function App({
                       </div>
                     ))}
                   </div>
-                )}
+                ) : null}
               </section>
               {selectedRouteId ? (
                 <section className="context-actions" aria-label="Route actions">
@@ -9546,18 +9668,6 @@ export function App({
                   </button>
                   <button type="button" onClick={addCurrentArrow}>
                     Add current arrow
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => editSelectedRouteJog("insert")}
-                  >
-                    Add wire jog
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => editSelectedRouteJog("remove")}
-                  >
-                    Straighten selected jog
                   </button>
                   <button type="button" onClick={toggleHighlightedNet}>
                     {selectedHighlightIsActive

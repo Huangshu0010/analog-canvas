@@ -220,6 +220,13 @@ async function onlyRouteId(page: Page): Promise<string> {
   return testId.replace(/^route-hit-/u, "");
 }
 
+async function lastRouteId(page: Page): Promise<string> {
+  const routes = page.locator('[data-testid^="route-hit-"]');
+  const testId = await routes.last().getAttribute("data-testid");
+  if (!testId) throw new Error("Route has no test id");
+  return testId.replace(/^route-hit-/u, "");
+}
+
 async function instanceLabelVector(
   page: Page,
   instanceId: string,
@@ -831,36 +838,6 @@ test("deletes a wire without exposing Unroute", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Unroute (keep electrical connection)" }),
   ).toHaveCount(0);
-});
-
-test("adds and straightens an explicit jog on the selected wire segment", async ({
-  page,
-}) => {
-  await page.goto("/editor");
-  await clickDrawTool(page, "wire");
-  const canvas = page.getByTestId("schematic-canvas");
-  await canvas.click({ position: { x: 300, y: 240 } });
-  await canvas.dblclick({ position: { x: 600, y: 240 } });
-  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
-  await page.keyboard.press("Escape");
-
-  const routeHit = page.locator('[data-testid^="route-hit-"]').first();
-  const routeTestId = await routeHit.getAttribute("data-testid");
-  if (!routeTestId) throw new Error("Drawn route has no hit target");
-  const routeId = routeTestId.slice("route-hit-".length);
-  await clickRoute(page, routeId);
-  const before = await readRoutePoints(page, routeId);
-  await openSelectionShelf(page);
-  await page.getByRole("button", { name: "Add wire jog" }).click();
-  await expect(page.getByTestId("status")).toContainText(
-    "Added orthogonal wire jog",
-  );
-  expect((await readRoutePoints(page, routeId)).length).toBe(before.length + 2);
-  await page.getByRole("button", { name: "Straighten selected jog" }).click();
-  await expect(page.getByTestId("status")).toContainText(
-    "Straightened orthogonal wire jog",
-  );
-  expect(await readRoutePoints(page, routeId)).toEqual(before);
 });
 
 test("keeps Wire active for consecutive independent routes until Escape", async ({
@@ -1891,7 +1868,6 @@ test("Properties toggles reference label visibility for one or many components",
   const properties = page.getByRole("complementary", { name: "Properties" });
   for (const sectionName of [
     "Identity",
-    "Netlist target",
     "Parameters",
     "Display",
     "Advanced parameters",
@@ -1901,6 +1877,18 @@ test("Properties toggles reference label visibility for one or many components",
       properties.getByText(sectionName, { exact: true }),
     ).toBeVisible();
   }
+  const componentProperties = properties.getByRole("region", {
+    name: "Component properties",
+  });
+  await expect(
+    componentProperties.locator(":scope > .property-card"),
+  ).toHaveCount(3);
+  await expect(
+    componentProperties.getByLabel("Component identity"),
+  ).toContainText("TargetBuilt-in primitive: resistor");
+  await expect(
+    componentProperties.getByText("Netlist target", { exact: true }),
+  ).toHaveCount(0);
   const singleToggle = page.getByRole("checkbox", {
     name: "Reference",
     exact: true,
@@ -1976,6 +1964,9 @@ test("shows fixed and variable capacitor plate terminals as read-only Properties
     "Pin 2 · Unconnected",
   );
   await expect(plateCard.locator("input, select, button")).toHaveCount(0);
+  await expect(plateCard).not.toContainText(
+    "Plate roles are defined by the device",
+  );
 
   await page.getByTestId("hit-C2").click();
   plateCard = properties.getByRole("group", {
@@ -3269,19 +3260,23 @@ test("separates drawing, placement, and Cell body resets with impact preview and
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("revision")).toHaveText("3");
 
-  page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain('Clear Drawing in Cell "Main"');
-    expect(dialog.message()).toContain("Affected objects: 1");
-    await dialog.dismiss();
-  });
   await clickCommand(page, "Edit", "Clear Drawing");
+  const clearDialog = page.getByRole("dialog", {
+    name: "Clear Drawing in Main?",
+  });
+  await expect(clearDialog).toContainText("You can restore them with Undo");
+  await expect(clearDialog).toContainText("Affected objects: 1");
+  await clearDialog.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByTestId("revision")).toHaveText("3");
   await expect(page.getByTestId("status")).toHaveText(
     "Clear Drawing cancelled",
   );
 
-  page.once("dialog", (dialog) => dialog.accept());
   await clickCommand(page, "Edit", "Clear Drawing");
+  await page
+    .getByRole("dialog", { name: "Clear Drawing in Main?" })
+    .getByRole("button", { name: "Clear Drawing" })
+    .click();
   await expect(page.getByTestId("instance-count")).toHaveText("2");
   await expect(page.getByTestId("net-count")).toHaveText("1");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
@@ -3296,12 +3291,14 @@ test("separates drawing, placement, and Cell body resets with impact preview and
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
   await expect(page.getByTestId("revision")).toHaveText("5");
 
-  page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain('Reset Cell Placement in Cell "Main"');
-    expect(dialog.message()).toContain("Affected objects: 3");
-    await dialog.accept();
-  });
   await clickCommand(page, "Edit", "Reset Cell Placement");
+  const placementDialog = page.getByRole("dialog", {
+    name: "Reset Cell Placement in Main?",
+  });
+  await expect(placementDialog).toContainText("Affected objects: 3");
+  await placementDialog
+    .getByRole("button", { name: "Reset Cell Placement" })
+    .click();
   await expect(page.getByTestId("instance-count")).toHaveText("2");
   await expect(page.getByTestId("net-count")).toHaveText("1");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
@@ -3313,11 +3310,11 @@ test("separates drawing, placement, and Cell body resets with impact preview and
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
   await expect(page.getByTestId("revision")).toHaveText("7");
 
-  page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain('Reset Cell Body in Cell "Main"');
-    await dialog.accept();
-  });
   await clickCommand(page, "Edit", "Reset Cell Body");
+  await page
+    .getByRole("dialog", { name: "Reset Cell Body in Main?" })
+    .getByRole("button", { name: "Reset Cell Body" })
+    .click();
   await expect(page.getByTestId("instance-count")).toHaveText("0");
   await expect(page.getByTestId("net-count")).toHaveText("0");
   await expect(page.getByTestId("canvas-empty-state")).toBeVisible();
@@ -3815,7 +3812,6 @@ test("middle-click steers which way the wire corner turns", async ({
   await clickDrawTool(page, "wire");
   await canvas.click({ position: { x: 200, y: 200 } });
   await canvas.click({ button: "middle", position: { x: 260, y: 240 } });
-  await canvas.click({ button: "middle", position: { x: 260, y: 240 } });
   await expect(page.getByTestId("status")).toContainText("vertical first");
   await canvas.dblclick({ position: { x: 360, y: 300 } });
 
@@ -3877,6 +3873,162 @@ test("keeps a long right-aligned Port label readable while editing", async ({
   }));
   expect(overflow.hidden).toBeLessThanOrEqual(0);
   expect(overflow.scrollable).toBe("auto");
+});
+
+test("turns a marquee selection as one body, not three parts in place", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  const canvas = page.getByTestId("schematic-canvas");
+
+  await placeComponent(page, "resistor", { x: 220, y: 240 });
+  await placeComponent(page, "capacitor", { x: 340, y: 240 });
+  await placeComponent(page, "resistor", { x: 460, y: 240 });
+
+  const centres = async () =>
+    page
+      .locator('[data-layer="symbols"] [data-object-id]')
+      .evaluateAll((elements) =>
+        elements
+          .map((element) => {
+            const box = (element as SVGGraphicsElement).getBBox();
+            return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+          })
+          .sort((left, right) => left.x - right.x || left.y - right.y),
+      );
+
+  const before = await centres();
+  expect(before).toHaveLength(3);
+  // The three sit in a row, so the row's width dwarfs its height.
+  const spreadX = before[2]!.x - before[0]!.x;
+  expect(spreadX).toBeGreaterThan(100);
+
+  const bounds = (await canvas.boundingBox())!;
+  await page.mouse.move(bounds.x + 160, bounds.y + 180);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + 540, bounds.y + 310, { steps: 12 });
+  await page.mouse.up();
+  await expect(page.getByTestId("status")).toContainText("Selected");
+
+  await page.keyboard.press("r");
+
+  // A quarter turn stands the row up: the arrangement itself rotates rather
+  // than each symbol spinning where it stands.
+  const after = await centres();
+  expect(after).toHaveLength(3);
+  const afterSpreadX = after[2]!.x - after[0]!.x;
+  const afterSpreadY =
+    Math.max(...after.map((point) => point.y)) -
+    Math.min(...after.map((point) => point.y));
+  expect(afterSpreadX).toBeLessThan(20);
+  expect(afterSpreadY).toBeGreaterThan(100);
+});
+
+test("keeps the junction dot while a wire at a tap is dragged", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  const canvas = page.getByTestId("schematic-canvas");
+  const dots = page.locator('[data-layer="junctions"] circle');
+
+  // A horizontal run with a tap rising from its middle: three branches at one
+  // contact, so the contact carries a dot.
+  await clickDrawTool(page, "wire");
+  await canvas.click({ position: { x: 200, y: 300 } });
+  await canvas.dblclick({ position: { x: 400, y: 300 } });
+  await canvas.click({ position: { x: 300, y: 300 } });
+  await canvas.dblclick({ position: { x: 300, y: 200 } });
+  await page.keyboard.press("Escape");
+  await expect(dots).toHaveCount(1);
+
+  const box = (await canvas.boundingBox())!;
+  const dragSegment = async (from: number, to: number) => {
+    await page.mouse.move(box.x + 250, box.y + from);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 250, box.y + to, { steps: 12 });
+    await page.mouse.up();
+  };
+
+  const allRoutePoints = () =>
+    page
+      .locator('[data-layer="routes"] polyline')
+      .evaluateAll((elements) =>
+        elements.map((element) =>
+          Array.from((element as unknown as SVGPolylineElement).points).map(
+            (point) => ({ x: point.x, y: point.y }),
+          ),
+        ),
+      );
+  const tapBefore = (await allRoutePoints()).find(
+    (points) => points.length === 2 && points[0]!.x === points[1]!.x,
+  )!;
+
+  // Down: the tap cannot follow, so the junction stays put and the dragged run
+  // doglegs to reach it. The wire still follows the pointer.
+  await dragSegment(300, 380);
+  await expect(dots).toHaveCount(1);
+  const lowered = await allRoutePoints();
+  expect(lowered.some((points) => points.some((point) => point.y > 380))).toBe(
+    true,
+  );
+  // The tap is untouched, so the contact it makes is still the same contact.
+  expect(
+    lowered.some(
+      (points) =>
+        points.length === 2 &&
+        points[0]!.x === tapBefore[0]!.x &&
+        points[0]!.y === tapBefore[0]!.y &&
+        points[1]!.y === tapBefore[1]!.y,
+    ),
+  ).toBe(true);
+
+  await clickCommand(page, "Edit", "Undo");
+  await expect(dots).toHaveCount(1);
+
+  // Up past the tap's far end: carrying the junction there would turn the tap
+  // around and bury it inside the wire, so the drag holds at the last
+  // position where every branch is still its own line.
+  await dragSegment(300, 160);
+  await expect(dots).toHaveCount(1);
+});
+
+test("swaps a comparator's + and - without turning the body over", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await placeComponent(page, "comparator", { x: 400, y: 300 });
+  await canvas.click({ position: { x: 400, y: 300 } });
+  await openSelectionShelf(page);
+
+  const body = page.locator('[data-layer="symbols"] [data-object-id]').first();
+  const readBody = () =>
+    body.evaluate((element) => ({
+      transform: element.getAttribute("transform") ?? "",
+      paths: Array.from(element.querySelectorAll("path")).map(
+        (path) => path.getAttribute("d") ?? "",
+      ),
+      // The + is the only vertical stroke among the polarity marks.
+      plusMarkY: Array.from(element.querySelectorAll("line"))
+        .filter((line) => line.getAttribute("x1") === line.getAttribute("x2"))
+        .map((line) => Number(line.getAttribute("y1"))),
+    }));
+
+  const before = await readBody();
+  expect(before.plusMarkY).toHaveLength(1);
+  expect(before.plusMarkY[0]!).toBeGreaterThan(0);
+
+  await page.getByTestId("swap-differential-inputs").click();
+
+  const after = await readBody();
+  // The + crossed to the other input.
+  expect(after.plusMarkY[0]!).toBe(-before.plusMarkY[0]!);
+  // Everything that is not a polarity mark held still. A reflection would
+  // have turned the triangle and the transfer-characteristic glyph over with
+  // the marks, and hung a scale() on the body.
+  expect(after.paths).toEqual(before.paths);
+  expect(after.transform).toBe(before.transform);
+  expect(after.transform).not.toContain("scale");
 });
 
 test("drags a marquee selection that holds no instance", async ({ page }) => {
@@ -3973,6 +4125,56 @@ test("draws a wire at an angle the 45-degree grid cannot reach", async ({
   const dx = Math.abs(points[1]!.x - points[0]!.x);
   const dy = Math.abs(points[1]!.y - points[0]!.y);
   // Neither axis-aligned nor 45 degrees: the leg reaches the endpoint direct.
+  expect(dx).toBeGreaterThan(0);
+  expect(dy).toBeGreaterThan(0);
+  expect(dx).not.toBe(dy);
+});
+
+test("cycles the corner from a middle press that drifts under the hand", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await clickDrawTool(page, "wire");
+  await canvas.click({ position: { x: 200, y: 200 } });
+
+  // Clicking a scroll wheel drags the hand a few pixels. That is a click, not
+  // a pan, so the cycle still has to advance.
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + 260, box.y + 240);
+  await page.mouse.down({ button: "middle" });
+  await page.mouse.move(box.x + 266, box.y + 245);
+  await page.mouse.up({ button: "middle" });
+
+  await expect(page.getByTestId("status")).toContainText("vertical first");
+});
+
+test("keeps the chosen corner shape when the wire tool is picked again", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await clickDrawTool(page, "wire");
+  await canvas.click({ position: { x: 200, y: 200 } });
+  for (let step = 0; step < 4; step += 1) {
+    await canvas.click({ button: "middle", position: { x: 260, y: 240 } });
+  }
+  await expect(page.getByTestId("status")).toContainText("any angle");
+  await canvas.dblclick({ position: { x: 430, y: 260 } });
+
+  // Leaving the tool and coming back used to silently drop the choice, so a
+  // diagonal had to be re-selected for every wire.
+  await page.keyboard.press("Escape");
+  await clickDrawTool(page, "wire");
+  await canvas.click({ position: { x: 200, y: 340 } });
+  await canvas.dblclick({ position: { x: 430, y: 400 } });
+
+  const ids = await page.locator('[data-testid^="route-hit-"]').count();
+  expect(ids).toBe(2);
+  const points = await readRoutePoints(page, await lastRouteId(page));
+  expect(points).toHaveLength(2);
+  const dx = Math.abs(points[1]!.x - points[0]!.x);
+  const dy = Math.abs(points[1]!.y - points[0]!.y);
   expect(dx).toBeGreaterThan(0);
   expect(dy).toBeGreaterThan(0);
   expect(dx).not.toBe(dy);

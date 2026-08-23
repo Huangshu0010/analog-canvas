@@ -9,13 +9,11 @@ import {
   createConnectivityProposal,
   createFreeWireAnchor,
   gateConnectivityProposal,
-  insertRouteSegmentJog,
   proposeVisualRouteDeletion,
   proposeLooseRouteTranslation,
   proposePowerRailEndpointResize,
   proposePowerRailTranslation,
   proposeWireSegmentMove,
-  removeRouteSegmentJog,
   proposeWireCommitThroughContacts,
   type SchematicEdit,
   type ConnectivityIntent,
@@ -379,69 +377,6 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     }
   };
 
-  const editSelectedRouteJog = (action: "insert" | "remove"): void => {
-    if (!options.selectedRouteId) return;
-    const route = options.document.routes.find(
-      (candidate) => candidate.id === options.selectedRouteId,
-    );
-    const record = options.routeGeometryRecords.find(
-      (candidate) => candidate.route.id === options.selectedRouteId,
-    );
-    if (!route || !record) return;
-    const segmentIndex = Math.min(
-      options.selectedRouteSegmentIndex ?? 0,
-      route.segmentModes.length - 1,
-    );
-    try {
-      const geometry = {
-        points: record.geometry.centerline,
-        segmentModes: route.segmentModes,
-      };
-      const next =
-        action === "insert"
-          ? insertRouteSegmentJog(
-              geometry,
-              segmentIndex,
-              options.document.presentation.grid,
-            )
-          : removeRouteSegmentJog(geometry, segmentIndex);
-      const result = transactProposal(
-        proposalFor(
-          "edit_route_geometry",
-          [
-            {
-              kind: "set_route_points",
-              routeId: route.id,
-              netId: route.netId,
-              from: route.from,
-              to: route.to,
-              waypoints: next.waypoints,
-              segmentModes: next.segmentModes,
-              ...(route.presentation
-                ? { presentation: route.presentation }
-                : {}),
-            },
-          ],
-          { action, routeId: route.id, segmentIndex },
-        ),
-      );
-      if (result.ok) {
-        options.setSelectedRouteSegmentIndex(
-          action === "insert" ? segmentIndex + 1 : segmentIndex - 1,
-        );
-        options.setStatus(
-          action === "insert"
-            ? "Added orthogonal wire jog"
-            : "Straightened orthogonal wire jog",
-        );
-      }
-    } catch (error) {
-      options.setStatus(
-        error instanceof Error ? error.message : "Route geometry edit failed",
-      );
-    }
-  };
-
   const selectRoute = (routeId: string, segmentIndex = 0): void => {
     options.selectOnly("route", [routeId]);
     options.setSelectedRouteSegmentIndex(segmentIndex);
@@ -530,16 +465,29 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
         if (result.ok)
           options.setStatus(`Resized Power Rail ${record.route.id}`);
       } else {
-        const proposal = proposeWireSegmentMove(
-          options.document,
-          options.resolver,
-          record.route.id,
-          preview.segmentIndex,
-          {
-            x: snapCoordinate(point.x, options.document.presentation.grid),
-            y: snapCoordinate(point.y, options.document.presentation.grid),
-          },
-        );
+        const grid = options.document.presentation.grid;
+        const planAt = (at: Point) =>
+          proposeWireSegmentMove(
+            options.document,
+            options.resolver,
+            record.route.id,
+            preview.segmentIndex,
+            {
+              x: snapCoordinate(at.x, grid),
+              y: snapCoordinate(at.y, grid),
+            },
+          );
+        const proposal = (() => {
+          try {
+            return planAt(point);
+          } catch (error) {
+            // Land on the furthest position the drag actually planned, which
+            // is the geometry the preview was showing when the pointer went
+            // past what the wire could do.
+            if (preview.point === preview.start) throw error;
+            return planAt(preview.point);
+          }
+        })();
         const result = transactProposal(
           proposalFor("edit_route_geometry", proposal.edits, proposal.preview),
         );
@@ -677,13 +625,17 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
             (candidate) => candidate.routeId === routeId,
           );
           if (!proposal) return;
+          // Remember how far the drag actually planned. Releasing past that
+          // point used to plan once more, fail, and snap the wire back to
+          // where it started, discarding everything the preview had shown.
+          preview.point = point;
           dragVisual().setPolyline([
             record.geometry.centerline[0]!,
             ...proposal.waypoints,
             record.geometry.centerline.at(-1)!,
           ]);
         } catch {
-          // Keep the last valid preview; commit reports the geometry error.
+          // Keep the last valid preview; commit lands on it instead.
         }
       },
       onFinish: ({ client, dragged }) => {
@@ -832,7 +784,6 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     commitWire,
     completeRouteStretch,
     deleteSelectedRouteConnection,
-    editSelectedRouteJog,
     drawSelectedMosBulk,
     fixWirePoint,
     finishWireAtPoint,
