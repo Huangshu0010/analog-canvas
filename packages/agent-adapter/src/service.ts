@@ -206,6 +206,8 @@ export function agentEditCategory(
     case "clear_cell_drawing":
     case "reset_cell_placement":
     case "reset_cell_body":
+    case "upsert_connectivity_evidence":
+    case "remove_connectivity_evidence":
       return "unsupported";
   }
 }

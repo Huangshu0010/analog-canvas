@@ -458,6 +458,14 @@ describe("routing Edit Engine", () => {
     );
     expect(routed.ok).toBe(true);
     if (!routed.ok) return;
+    routed.document.connectivityEvidence.push({
+      id: "claim-route-h",
+      kind: "name-claim",
+      netId: "net-h",
+      name: "HORIZONTAL",
+      owner: { kind: "power-marker", objectId: "route-h" },
+      scope: "local",
+    });
     const proposal = proposeEndpointRouteAttachment(
       routed.document,
       terminal("E"),
@@ -480,6 +488,13 @@ describe("routing Edit Engine", () => {
         expect.objectContaining({ id: "route-h-b-e", from: terminal("E") }),
       ]),
     );
+    expect(
+      attached.document.connectivityEvidence.find(
+        (evidence) => evidence.id === "claim-route-h",
+      ),
+    ).toMatchObject({
+      owner: { kind: "power-marker", objectId: "route-h-a-e" },
+    });
     const moved = executeTransaction(
       attached.document,
       transaction(document.id, 2, [
@@ -1850,6 +1865,16 @@ describe("routing Edit Engine", () => {
 
   it("cuts a fully routed electrical branch and partitions its Net", () => {
     const document = documentFixture();
+    for (const instanceId of ["C", "D"] as const) {
+      document.connectivityEvidence.push({
+        id: `claim-${instanceId.toLowerCase()}`,
+        kind: "name-claim",
+        netId: "net-v",
+        name: instanceId,
+        owner: { kind: "free-port", instanceId },
+        scope: "local",
+      });
+    }
     document.routes = [
       {
         id: "route-v",
@@ -1890,6 +1915,16 @@ describe("routing Edit Engine", () => {
       ),
     ).toEqual([]);
     expect(result.document.sourceStatus).toBe("connectivity-modified");
+    for (const instanceId of ["C", "D"] as const) {
+      const ownerNet = result.document.nets.find((net) =>
+        net.terminals.some((terminal) => terminal.instanceId === instanceId),
+      )?.id;
+      expect(
+        result.document.connectivityEvidence.find(
+          (evidence) => evidence.id === `claim-${instanceId.toLowerCase()}`,
+        ),
+      ).toMatchObject({ netId: ownerNet });
+    }
   });
 
   it("removes redundant cycle geometry without splitting the Net", () => {

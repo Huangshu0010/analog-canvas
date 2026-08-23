@@ -46,6 +46,15 @@ Fresh SPICE import writes source assertions directly. Subsequent L4/L5 targets
 move semantic producers and consumers to evidence before retiring legacy
 authority.
 
+The first L4 mutation layer uses two ordinary typed edits only:
+`upsert_connectivity_evidence` and `remove_connectivity_evidence`. They share
+the existing transaction, revision, validation, diff, Undo, and rollback
+contracts. Deleting an addressable owner removes only its claim; non-owner
+assertions remain explicit. Evidence also participates in local-Net
+reachability, and Reset Cell Body retains evidence only when its complete
+owner/Net reference closure survives. These edits remain unsupported by the
+retired Agent product.
+
 Per ADR 0023, schema 22 reads current schema 22 and previous schema 21 only.
 Schema 20 rolls off; persistence writes schema 22.
 

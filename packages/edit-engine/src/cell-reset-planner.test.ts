@@ -42,6 +42,39 @@ function fixture() {
       { instanceId: "R1", pinName: "P" },
     ],
   });
+  child.nets.push({ id: "net-body", scope: "local", terminals: [] });
+  child.connectivityEvidence.push(
+    {
+      id: "claim-interface",
+      kind: "name-claim",
+      netId: "net-in",
+      name: "IN",
+      owner: { kind: "free-port", instanceId: "P1" },
+      scope: "local",
+    },
+    {
+      id: "source-interface",
+      kind: "spice-source",
+      netId: "net-in",
+      sourceNetId: "source-in",
+    },
+    {
+      id: "claim-body",
+      kind: "name-claim",
+      netId: "net-body",
+      name: "BODY",
+      owner: { kind: "explicit-net-property" },
+      scope: "local",
+    },
+    {
+      id: "claim-route",
+      kind: "name-claim",
+      netId: "net-in",
+      name: "IN",
+      owner: { kind: "power-marker", objectId: "route-in" },
+      scope: "local",
+    },
+  );
   child.routes.push({
     id: "route-in",
     netId: "net-in",
@@ -113,7 +146,7 @@ describe("Cell reset lifecycle planner", () => {
     const plan = planCellReset(project, child.id, "clear-drawing");
     expect(plan).toMatchObject({
       preconditionToken: "child:0",
-      affectedObjectIds: ["note-1", "route-in"],
+      affectedObjectIds: ["claim-route", "note-1", "route-in"],
       rollback: { kind: "document-undo" },
       edits: [{ kind: "clear_cell_drawing" }],
     });
@@ -123,6 +156,11 @@ describe("Cell reset lifecycle planner", () => {
     expect(history.document.drafting?.objects).toEqual([]);
     expect(history.document.instances).toHaveLength(2);
     expect(history.document.nets[0]?.terminals).toHaveLength(2);
+    expect(
+      history.document.connectivityEvidence.some(
+        (evidence) => evidence.id === "claim-route",
+      ),
+    ).toBe(false);
 
     const undone = history.transact({
       transactionId: "undo-reset",
@@ -147,6 +185,11 @@ describe("Cell reset lifecycle planner", () => {
     expect(history.document.routes).toEqual([]);
     expect(history.document.nets[0]?.terminals).toHaveLength(2);
     expect(history.document.netlist?.terminals).toHaveLength(1);
+    expect(
+      history.document.connectivityEvidence.some(
+        (evidence) => evidence.id === "claim-route",
+      ),
+    ).toBe(false);
   });
 
   it("resets a referenced Cell body while retaining its formal interface", () => {
@@ -155,6 +198,9 @@ describe("Cell reset lifecycle planner", () => {
     expect(plan.diagnostics).toEqual([
       expect.objectContaining({ code: "CELL_CALLERS_PRESERVED" }),
     ]);
+    expect(plan.affectedObjectIds).toEqual(
+      expect.arrayContaining(["claim-body", "net-body"]),
+    );
 
     const history = applyPlan(child, plan.edits);
     expect(history.document.instances.map((item) => item.id)).toEqual(["P1"]);
@@ -167,5 +213,8 @@ describe("Cell reset lifecycle planner", () => {
     expect(history.document.netlist).toEqual(child.netlist);
     expect(history.document.routes).toEqual([]);
     expect(history.document.drafting?.objects).toEqual([]);
+    expect(
+      history.document.connectivityEvidence.map((item) => item.id),
+    ).toEqual(["claim-interface", "source-interface"]);
   });
 });

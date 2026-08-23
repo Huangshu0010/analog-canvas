@@ -30,6 +30,19 @@ function uniqueIds(ids: readonly string[]): string[] {
   );
 }
 
+function routeOwnedEvidenceIds(
+  document: ReturnType<typeof requireDocument>,
+): readonly string[] {
+  const routeIds = new Set(document.routes.map((route) => route.id));
+  return document.connectivityEvidence.flatMap((evidence) =>
+    evidence.kind === "name-claim" &&
+    evidence.owner.kind === "power-marker" &&
+    routeIds.has(evidence.owner.objectId)
+      ? [evidence.id]
+      : [],
+  );
+}
+
 /**
  * Build the reviewable impact for one Cell-local reset. Execution remains in
  * the ordinary typed edit transaction, so revision checks and Document Undo
@@ -57,6 +70,7 @@ export function planCellReset(
   if (intent === "clear-drawing") {
     affectedObjectIds = uniqueIds([
       ...document.routes.map((route) => route.id),
+      ...routeOwnedEvidenceIds(document),
       ...(document.drafting?.objects.map((object) => object.id) ?? []),
     ]);
     edit = { kind: "clear_cell_drawing" };
@@ -68,6 +82,7 @@ export function planCellReset(
     affectedObjectIds = uniqueIds([
       ...placedInstances.map((instance) => instance.id),
       ...document.routes.map((route) => route.id),
+      ...routeOwnedEvidenceIds(document),
       ...document.layoutGroups.map((group) => group.id),
       ...document.constraints.map((constraint) => constraint.id),
     ]);
@@ -90,6 +105,36 @@ export function planCellReset(
           : [],
       ),
     );
+    const retainedEvidenceIds = new Set(
+      document.connectivityEvidence.flatMap((evidence) => {
+        if (evidence.kind === "explicit-equivalence") {
+          return evidence.memberNetIds.every((netId) =>
+            interfaceNetIds.has(netId),
+          )
+            ? [evidence.id]
+            : [];
+        }
+        if (!interfaceNetIds.has(evidence.netId)) return [];
+        if (evidence.kind !== "name-claim") return [evidence.id];
+        switch (evidence.owner.kind) {
+          case "explicit-net-property":
+            return [evidence.id];
+          case "net-label":
+            return retainedAnnotationIds.has(evidence.owner.annotationId)
+              ? [evidence.id]
+              : [];
+          case "free-port":
+            return interfaceInstanceIds.has(evidence.owner.instanceId)
+              ? [evidence.id]
+              : [];
+          case "power-marker":
+            return interfaceInstanceIds.has(evidence.owner.objectId) ||
+              retainedAnnotationIds.has(evidence.owner.objectId)
+              ? [evidence.id]
+              : [];
+        }
+      }),
+    );
     const allObjects = [
       ...document.instances,
       ...document.nets,
@@ -97,6 +142,7 @@ export function planCellReset(
       ...document.junctions,
       ...document.noConnects,
       ...document.annotations,
+      ...document.connectivityEvidence,
       ...document.layoutGroups,
       ...document.constraints,
       ...(document.drafting?.objects ?? []),
@@ -111,7 +157,9 @@ export function planCellReset(
               interfaceInstanceIds.has(terminal.instanceId),
             )) ||
           retainedAnnotationIds.has(object.id);
-        return retained ? [] : [object.id];
+        const retainedWithEvidence =
+          retained || retainedEvidenceIds.has(object.id);
+        return retainedWithEvidence ? [] : [object.id];
       }),
       ...(document.mosBulkDefaults ? [document.id] : []),
     ]);

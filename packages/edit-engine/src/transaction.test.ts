@@ -958,6 +958,207 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
+  it("upserts and removes explicit Connectivity Evidence with final-Net GC", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({
+      id: "net-evidence",
+      scope: "local",
+      terminals: [],
+    });
+
+    const added = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "upsert_connectivity_evidence",
+          evidence: {
+            id: "claim-evidence",
+            kind: "name-claim",
+            netId: "net-evidence",
+            name: "BIAS",
+            owner: { kind: "explicit-net-property" },
+            scope: "local",
+          },
+        },
+      ],
+    });
+    expect(added).toMatchObject({
+      ok: true,
+      document: {
+        connectivityEvidence: [{ id: "claim-evidence", netId: "net-evidence" }],
+      },
+      diff: { changedObjectIds: ["claim-evidence"] },
+    });
+    if (!added.ok) return;
+
+    const removed = executeTransaction(added.document, {
+      ...transaction(1),
+      edits: [
+        {
+          kind: "remove_connectivity_evidence",
+          evidenceId: "claim-evidence",
+        },
+      ],
+    });
+    expect(removed).toMatchObject({
+      ok: true,
+      document: { nets: [], connectivityEvidence: [] },
+      diff: { changedObjectIds: ["claim-evidence", "net-evidence"] },
+    });
+  });
+
+  it("rejects evidence ID collisions and missing owners atomically", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({ id: "net-a", scope: "local", terminals: [] });
+    const collision = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "upsert_connectivity_evidence",
+          evidence: {
+            id: "net-a",
+            kind: "spice-source",
+            netId: "net-a",
+            sourceNetId: "source-a",
+          },
+        },
+      ],
+    });
+    expect(collision).toMatchObject({
+      ok: false,
+      applied: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+    expect(document.connectivityEvidence).toEqual([]);
+
+    const missingOwner = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "upsert_connectivity_evidence",
+          evidence: {
+            id: "claim-a",
+            kind: "name-claim",
+            netId: "net-a",
+            name: "A",
+            owner: { kind: "net-label", annotationId: "missing" },
+            scope: "local",
+          },
+        },
+      ],
+    });
+    expect(missingOwner).toMatchObject({
+      ok: false,
+      applied: false,
+      error: { code: "INVALID_RESULT" },
+    });
+    expect(document.connectivityEvidence).toEqual([]);
+
+    const missingEvidence = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "remove_connectivity_evidence",
+          evidenceId: "missing-evidence",
+        },
+      ],
+    });
+    expect(missingEvidence).toMatchObject({
+      ok: false,
+      applied: false,
+      error: { code: "OBJECT_NOT_FOUND" },
+    });
+  });
+
+  it("removes free-Port evidence and its unreachable Net with the owner", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({ id: "P1", symbolId: "port", placement: null });
+    document.nets.push({
+      id: "net-port",
+      scope: "local",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    document.connectivityEvidence.push({
+      id: "claim-port",
+      kind: "name-claim",
+      netId: "net-port",
+      name: "PORT",
+      owner: { kind: "free-port", instanceId: "P1" },
+      scope: "local",
+    });
+
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "disconnect_endpoint",
+            endpoint: { kind: "terminal", instanceId: "P1", pinName: "P" },
+          },
+          { kind: "remove_instance", instanceId: "P1" },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      document: { instances: [], nets: [], connectivityEvidence: [] },
+      diff: {
+        changedObjectIds: expect.arrayContaining([
+          "P1",
+          "claim-port",
+          "net-port",
+        ]),
+      },
+    });
+  });
+
+  it("removes only evidence owned by a deleted Net Label", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({ id: "net-a", scope: "local", terminals: [] });
+    document.annotations.push({
+      id: "label-a",
+      kind: "net-label",
+      binding: { kind: "net-name", netId: "net-a" },
+      netId: "net-a",
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    document.connectivityEvidence.push(
+      {
+        id: "claim-label",
+        kind: "name-claim",
+        netId: "net-a",
+        name: "A",
+        owner: { kind: "net-label", annotationId: "label-a" },
+        scope: "local",
+      },
+      {
+        id: "claim-property",
+        kind: "name-claim",
+        netId: "net-a",
+        name: "A",
+        owner: { kind: "explicit-net-property" },
+        scope: "local",
+      },
+    );
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [{ kind: "remove_schematic_annotation", annotationId: "label-a" }],
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        nets: [{ id: "net-a" }],
+        connectivityEvidence: [{ id: "claim-property" }],
+      },
+    });
+  });
+
   it("rejects a stale revision without changing the Document", () => {
     const document = createEmptyDocument("document-main", "Main");
     const before = JSON.stringify(document);

@@ -1,6 +1,7 @@
 import {
   AnnotationSchema,
   CellNetlistTerminalSchema,
+  ConnectivityEvidenceSchema,
   DraftingObjectSchema,
   InstanceSchema,
   JunctionSchema,
@@ -169,6 +170,127 @@ function retargetConnectivityEvidence(
   draft.connectivityEvidence = retainedEvidence;
 }
 
+function connectivityEvidenceNetIds(
+  evidence: SchematicDocument["connectivityEvidence"][number],
+): readonly string[] {
+  return evidence.kind === "explicit-equivalence"
+    ? evidence.memberNetIds
+    : [evidence.netId];
+}
+
+function connectivityEvidenceOwnerId(
+  evidence: SchematicDocument["connectivityEvidence"][number],
+): string | null {
+  if (evidence.kind !== "name-claim") return null;
+  switch (evidence.owner.kind) {
+    case "net-label":
+      return evidence.owner.annotationId;
+    case "free-port":
+      return evidence.owner.instanceId;
+    case "power-marker":
+      return evidence.owner.objectId;
+    case "explicit-net-property":
+      return null;
+  }
+}
+
+function removeConnectivityEvidenceOwnedBy(
+  draft: SchematicDocument,
+  objectIds: ReadonlySet<string>,
+  changedObjectIds: Set<string>,
+): readonly string[] {
+  const affectedNetIds = new Set<string>();
+  draft.connectivityEvidence = draft.connectivityEvidence.filter((evidence) => {
+    const ownerId = connectivityEvidenceOwnerId(evidence);
+    if (!ownerId || !objectIds.has(ownerId)) return true;
+    changedObjectIds.add(evidence.id);
+    for (const netId of connectivityEvidenceNetIds(evidence)) {
+      affectedNetIds.add(netId);
+    }
+    return false;
+  });
+  return [...affectedNetIds];
+}
+
+function retargetConnectivityEvidenceOwner(
+  draft: SchematicDocument,
+  sourceObjectId: string,
+  targetObjectId: string,
+  changedObjectIds: Set<string>,
+): void {
+  for (const evidence of draft.connectivityEvidence) {
+    if (
+      evidence.kind === "name-claim" &&
+      evidence.owner.kind === "power-marker" &&
+      evidence.owner.objectId === sourceObjectId
+    ) {
+      evidence.owner.objectId = targetObjectId;
+      changedObjectIds.add(evidence.id);
+    }
+  }
+}
+
+function retargetOwnerEvidenceAfterSplit(
+  draft: SchematicDocument,
+  originalNetId: string,
+  netIdByEndpoint: ReadonlyMap<string, string>,
+  changedObjectIds: Set<string>,
+): void {
+  const instanceNetId = (instanceId: string): string | undefined =>
+    draft.nets
+      .flatMap((net) =>
+        net.terminals.some((terminal) => terminal.instanceId === instanceId)
+          ? [net.id]
+          : [],
+      )
+      .sort((left, right) => left.localeCompare(right, "en"))[0];
+  const objectNetId = (objectId: string): string | undefined =>
+    draft.routes.find((route) => route.id === objectId)?.netId ??
+    draft.junctions.find((junction) => junction.id === objectId)?.netId ??
+    draft.annotations.find((annotation) => annotation.id === objectId)?.netId ??
+    instanceNetId(objectId);
+
+  for (const evidence of draft.connectivityEvidence) {
+    if (evidence.kind !== "name-claim" || evidence.netId !== originalNetId) {
+      continue;
+    }
+    let targetNetId: string | undefined;
+    if (evidence.owner.kind === "free-port") {
+      targetNetId = netIdByEndpoint.get(
+        endpointKey({
+          kind: "terminal",
+          instanceId: evidence.owner.instanceId,
+          pinName: "P",
+        }),
+      );
+    } else if (evidence.owner.kind === "net-label") {
+      const annotationId = evidence.owner.annotationId;
+      const annotation = draft.annotations.find(
+        (candidate) => candidate.id === annotationId,
+      );
+      if (annotation?.anchor.kind === "route") {
+        const routeId = annotation.anchor.routeId;
+        targetNetId = draft.routes.find((route) => route.id === routeId)?.netId;
+      } else if (annotation?.anchor.kind === "object") {
+        targetNetId = objectNetId(annotation.anchor.objectId);
+      }
+      if (annotation && targetNetId && targetNetId !== annotation.netId) {
+        annotation.netId = targetNetId;
+        if (annotation.binding?.kind === "net-name") {
+          annotation.binding = { kind: "net-name", netId: targetNetId };
+        }
+        changedObjectIds.add(annotation.id);
+      }
+    } else if (evidence.owner.kind === "power-marker") {
+      targetNetId = objectNetId(evidence.owner.objectId);
+    }
+    if (targetNetId && targetNetId !== evidence.netId) {
+      evidence.netId = targetNetId;
+      changedObjectIds.add(evidence.id);
+    }
+  }
+}
+
 /**
  * Ensure the ADR 0010 drafting layer exists on a draft Document. It is
  * optional in the schema so legacy Projects still validate; edits that touch
@@ -223,7 +345,10 @@ function pruneUnreachableLocalNet(
       (instance) => instance.mosBulkBinding?.netId === netId,
     ) ||
     draft.mosBulkDefaults?.nmosNetId === netId ||
-    draft.mosBulkDefaults?.pmosNetId === netId
+    draft.mosBulkDefaults?.pmosNetId === netId ||
+    draft.connectivityEvidence.some((evidence) =>
+      connectivityEvidenceNetIds(evidence).includes(netId),
+    )
   ) {
     return;
   }
@@ -360,6 +485,12 @@ export function executeTransaction(
       case "redo":
         continue;
       case "clear_cell_drawing": {
+        const routeIds = new Set(draft.routes.map((route) => route.id));
+        const ownerNetIds = removeConnectivityEvidenceOwnedBy(
+          draft,
+          routeIds,
+          changedObjectIds,
+        );
         for (const object of [
           ...draft.routes,
           ...(draft.drafting?.objects ?? []),
@@ -368,10 +499,20 @@ export function executeTransaction(
         }
         draft.routes = [];
         draft.drafting = { objects: [] };
+        for (const netId of ownerNetIds) {
+          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+        }
+        if (ownerNetIds.length > 0) connectivityChanged = true;
         geometryChanged = true;
         break;
       }
       case "reset_cell_placement": {
+        const routeIds = new Set(draft.routes.map((route) => route.id));
+        const ownerNetIds = removeConnectivityEvidenceOwnedBy(
+          draft,
+          routeIds,
+          changedObjectIds,
+        );
         for (const object of [
           ...draft.instances.filter((instance) => instance.placement !== null),
           ...draft.routes,
@@ -384,6 +525,10 @@ export function executeTransaction(
         draft.routes = [];
         draft.layoutGroups = [];
         draft.constraints = [];
+        for (const netId of ownerNetIds) {
+          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+        }
+        if (ownerNetIds.length > 0) connectivityChanged = true;
         geometryChanged = true;
         break;
       }
@@ -412,10 +557,38 @@ export function executeTransaction(
             annotation.anchor.kind === "object" &&
             interfaceInstanceIds.has(annotation.anchor.objectId),
         );
+        const retainedAnnotationIds = new Set(
+          retainedAnnotations.map((annotation) => annotation.id),
+        );
+        const retainedEvidence = draft.connectivityEvidence.filter(
+          (evidence) => {
+            if (evidence.kind === "explicit-equivalence") {
+              return evidence.memberNetIds.every((netId) =>
+                interfaceNetIds.has(netId),
+              );
+            }
+            if (!interfaceNetIds.has(evidence.netId)) return false;
+            if (evidence.kind !== "name-claim") return true;
+            switch (evidence.owner.kind) {
+              case "explicit-net-property":
+                return true;
+              case "net-label":
+                return retainedAnnotationIds.has(evidence.owner.annotationId);
+              case "free-port":
+                return interfaceInstanceIds.has(evidence.owner.instanceId);
+              case "power-marker":
+                return (
+                  interfaceInstanceIds.has(evidence.owner.objectId) ||
+                  retainedAnnotationIds.has(evidence.owner.objectId)
+                );
+            }
+          },
+        );
         const retainedIds = new Set([
           ...retainedInstances.map((instance) => instance.id),
           ...retainedNets.map((net) => net.id),
           ...retainedAnnotations.map((annotation) => annotation.id),
+          ...retainedEvidence.map((evidence) => evidence.id),
         ]);
         for (const object of [
           ...draft.instances,
@@ -424,6 +597,7 @@ export function executeTransaction(
           ...draft.junctions,
           ...draft.noConnects,
           ...draft.annotations,
+          ...draft.connectivityEvidence,
           ...draft.layoutGroups,
           ...draft.constraints,
           ...(draft.drafting?.objects ?? []),
@@ -442,6 +616,7 @@ export function executeTransaction(
         draft.junctions = [];
         draft.noConnects = [];
         draft.annotations = retainedAnnotations;
+        draft.connectivityEvidence = retainedEvidence;
         draft.layoutGroups = [];
         draft.constraints = [];
         draft.drafting = { objects: [] };
@@ -525,8 +700,16 @@ export function executeTransaction(
             `Instance is still connected or referenced: ${edit.instanceId}`,
           );
         }
+        const ownerNetIds = removeConnectivityEvidenceOwnedBy(
+          draft,
+          new Set([edit.instanceId]),
+          changedObjectIds,
+        );
         draft.instances.splice(index, 1);
         changedObjectIds.add(edit.instanceId);
+        for (const netId of ownerNetIds) {
+          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+        }
         connectivityChanged = true;
         break;
       }
@@ -1785,6 +1968,12 @@ export function executeTransaction(
         }
         addEndpointToNet(draft, route.netId, edit.endpoint);
         draft.routes.splice(routeIndex, 1, split.first, split.second);
+        retargetConnectivityEvidenceOwner(
+          draft,
+          route.id,
+          split.first.id,
+          changedObjectIds,
+        );
         for (const candidate of [split.first, split.second]) {
           const routeError = validateRoute(draft, candidate, resolver);
           if (routeError) return rejectAt("EDIT_PRECONDITION", routeError);
@@ -1827,8 +2016,17 @@ export function executeTransaction(
             `Junction is still used by a Route: ${edit.junctionId}`,
           );
         }
+        const junction = draft.junctions[junctionIndex]!;
+        const ownerNetIds = removeConnectivityEvidenceOwnedBy(
+          draft,
+          new Set([edit.junctionId]),
+          changedObjectIds,
+        );
         draft.junctions.splice(junctionIndex, 1);
         changedObjectIds.add(edit.junctionId);
+        for (const netId of new Set([junction.netId, ...ownerNetIds])) {
+          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+        }
         connectivityChanged = true;
         break;
       }
@@ -1895,8 +2093,17 @@ export function executeTransaction(
             `Route contains a locked segment: ${route.id}`,
           );
         }
+        const ownerNetIds = removeConnectivityEvidenceOwnedBy(
+          draft,
+          new Set([route.id]),
+          changedObjectIds,
+        );
         draft.routes.splice(routeIndex, 1);
         changedObjectIds.add(edit.routeId);
+        for (const netId of new Set([route.netId, ...ownerNetIds])) {
+          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+        }
+        if (ownerNetIds.length > 0) connectivityChanged = true;
         break;
       }
       case "cut_connection": {
@@ -1934,6 +2141,11 @@ export function executeTransaction(
             endpoint.kind === "junction" ? [endpoint.junctionId] : [],
           ),
         );
+        const ownerNetIds = removeConnectivityEvidenceOwnedBy(
+          draft,
+          new Set([route.id]),
+          changedObjectIds,
+        );
         draft.routes.splice(routeIndex, 1);
         changedObjectIds.add(route.id);
 
@@ -1970,20 +2182,17 @@ export function executeTransaction(
         }
 
         const groups = netEndpointGroups(draft, net.id);
-        if (
-          groups.length === 0 &&
-          net.scope === "local" &&
-          net.origin?.kind !== "spice-import"
-        ) {
-          draft.nets = draft.nets.filter(
-            (candidate) => candidate.id !== net.id,
-          );
-          changedObjectIds.add(net.id);
-          if (draft.mosBulkDefaults?.nmosNetId === net.id) {
-            delete draft.mosBulkDefaults.nmosNetId;
+        if (groups.length === 0) {
+          for (const netId of new Set([net.id, ...ownerNetIds])) {
+            pruneUnreachableLocalNet(draft, netId, changedObjectIds);
           }
-          if (draft.mosBulkDefaults?.pmosNetId === net.id) {
-            delete draft.mosBulkDefaults.pmosNetId;
+          if (!draft.nets.some((candidate) => candidate.id === net.id)) {
+            if (draft.mosBulkDefaults?.nmosNetId === net.id) {
+              delete draft.mosBulkDefaults.nmosNetId;
+            }
+            if (draft.mosBulkDefaults?.pmosNetId === net.id) {
+              delete draft.mosBulkDefaults.pmosNetId;
+            }
           }
           connectivityChanged = true;
           break;
@@ -2079,6 +2288,12 @@ export function executeTransaction(
               changedObjectIds.add(remainingRoute.id);
             }
           }
+          retargetOwnerEvidenceAfterSplit(
+            draft,
+            net.id,
+            netIdByEndpoint,
+            changedObjectIds,
+          );
           connectivityChanged = true;
         }
         break;
@@ -2419,6 +2634,65 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
+      case "upsert_connectivity_evidence": {
+        const existingIndex = draft.connectivityEvidence.findIndex(
+          (evidence) => evidence.id === edit.evidence.id,
+        );
+        const collidingObject = [
+          ...draft.instances,
+          ...draft.nets,
+          ...draft.routes,
+          ...draft.junctions,
+          ...draft.noConnects,
+          ...draft.annotations,
+          ...draft.layoutGroups,
+          ...draft.constraints,
+          ...(draft.drafting?.objects ?? []),
+        ].find((object) => object.id === edit.evidence.id);
+        if (collidingObject) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Connectivity evidence ID collides with another object: ${edit.evidence.id}`,
+          );
+        }
+        const previous = draft.connectivityEvidence[existingIndex];
+        const evidence = ConnectivityEvidenceSchema.parse(edit.evidence);
+        if (existingIndex >= 0) {
+          draft.connectivityEvidence[existingIndex] = evidence;
+        } else {
+          draft.connectivityEvidence.push(evidence);
+        }
+        changedObjectIds.add(evidence.id);
+        for (const netId of previous
+          ? connectivityEvidenceNetIds(previous)
+          : []) {
+          if (!connectivityEvidenceNetIds(evidence).includes(netId)) {
+            pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+          }
+        }
+        connectivityChanged = true;
+        break;
+      }
+      case "remove_connectivity_evidence": {
+        const evidenceIndex = draft.connectivityEvidence.findIndex(
+          (evidence) => evidence.id === edit.evidenceId,
+        );
+        const evidence = draft.connectivityEvidence[evidenceIndex];
+        if (!evidence) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Connectivity evidence does not exist: ${edit.evidenceId}`,
+          );
+        }
+        const affectedNetIds = connectivityEvidenceNetIds(evidence);
+        draft.connectivityEvidence.splice(evidenceIndex, 1);
+        changedObjectIds.add(evidence.id);
+        for (const netId of affectedNetIds) {
+          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+        }
+        connectivityChanged = true;
+        break;
+      }
       case "set_net_power_domain": {
         const net = draft.nets.find((candidate) => candidate.id === edit.netId);
         if (!net) {
@@ -2668,8 +2942,17 @@ export function executeTransaction(
             `Annotation is referenced by layout intent: ${annotation.id}`,
           );
         }
+        const ownerNetIds = removeConnectivityEvidenceOwnedBy(
+          draft,
+          new Set([annotation.id]),
+          changedObjectIds,
+        );
         draft.annotations.splice(index, 1);
         changedObjectIds.add(annotation.id);
+        for (const netId of ownerNetIds) {
+          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+        }
+        if (ownerNetIds.length > 0) connectivityChanged = true;
         break;
       }
       case "upsert_drafting_object": {

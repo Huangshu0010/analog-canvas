@@ -221,6 +221,8 @@ describe("current Agent Circuit API service", () => {
         "redo",
         "unplace_instance",
         "normalize_power_nets",
+        "upsert_connectivity_evidence",
+        "remove_connectivity_evidence",
       ]),
     );
   });

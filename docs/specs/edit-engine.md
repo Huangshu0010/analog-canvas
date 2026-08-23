@@ -71,6 +71,7 @@ for readability; these groups do not create separate mutation endpoints:
   `move_junction`, `remove_route_geometry`, `cut_connection`, `connect_endpoints`,
   `disconnect_endpoint`;
 - Net/power/MOS: `add_power_rail`, `merge_nets`, `set_net_name`,
+  `upsert_connectivity_evidence`, `remove_connectivity_evidence`,
   `set_net_power_domain`, `set_mos_bulk_defaults`,
   `reconcile_mos_bulk`, `clear_mos_bulk_default`;
 - explicit open terminal: `add_no_connect`, `remove_no_connect`;
@@ -140,6 +141,20 @@ retaining formal terminals and their marker/Net projection. Each advances the
 Document revision once and is restored by one Undo. The retired Agent product
 categorizes these guarded UI lifecycle edits as unsupported.
 
+`upsert_connectivity_evidence` and `remove_connectivity_evidence` are the only
+atomic writers for the schema-22 evidence list. Upsert replaces evidence with
+the same ID or inserts a new record after checking the shared Document object
+namespace; final Document validation checks every Net and owner reference.
+Removing an Instance, Net Label, Junction, or Route also removes only
+`name-claim` evidence that names that object as its owner. Explicit Net-property
+claims, SPICE-source assertions, and explicit equivalence remain until an
+explicit evidence edit removes them. Evidence is Net reachability: local-Net
+cleanup cannot remove a referenced Base Net, but re-runs after owner/evidence
+deletion so an actually unreachable final Net disappears in the same Undoable
+transaction. Reset Cell Body previews and removes non-interface evidence while
+retaining assertions whose complete Net and owner closure survives. The
+retired Agent surface classifies both evidence edits as unsupported.
+
 `hierarchy-planner.ts` is the shared pure orchestration boundary above these
 edits. It constructs canonical subcircuit Instances and plans Cell
 creation/placement, rename/delete, formal-Port lifecycle, and terminal visual
@@ -188,7 +203,8 @@ Phase 8 topology operations have these preconditions:
   transaction so caller Symbol geometry and route following reconcile together;
   it creates no endpoint or drawing-object kind.
 - `remove_instance` requires no Net, annotation, group, or constraint
-  reference.
+  reference. Owner-addressed Connectivity Evidence is cleaned atomically and
+  does not make an otherwise removable Instance permanent.
 - `place_instance` and `unplace_instance` require an unlocked Instance.
   `unplace_instance` returns a placed Instance to the Placement
   Tray. It preserves Net membership, NoConnects, bindings, parameters, and

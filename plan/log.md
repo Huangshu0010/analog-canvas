@@ -4899,3 +4899,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   test-impact, and diff checks.
 - Commit status: prepared on `codex/project-net-lifecycle`; mainline delivery
   remains gated on canonical local and remote checks.
+
+## 2026-08-23 - Connectivity Evidence atomic edits
+
+- Target: `plan/2026-08-23-connectivity-evidence-edits/plan.md` (completed).
+- Changed areas: typed evidence upsert/remove, Document-wide ID and final
+  reference validation, owner-addressed deletion, evidence-aware local-Net GC,
+  Route split/delete closure, and Cell reset impact/execution closure; Agent
+  invocation remains unsupported.
+- Validation: focused contracts (98), hierarchy (12), project-file (10), Agent
+  (1), and manual-editor (98) browser tests, all 1198 units, workspace build,
+  production smoke, generated artifact freshness, test-impact, and diff checks.
+- Commit status: prepared on `codex/project-net-lifecycle`; mainline delivery
+  remains gated on canonical local and remote checks.
