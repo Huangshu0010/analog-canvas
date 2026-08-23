@@ -28,6 +28,12 @@ Evidence edits.
 - `cut_connection` always partitions the affected Base Net by explicit Routes
   and confirmed coincident endpoint contacts. Logical name, global, import, or
   explicit-equivalence Evidence never suppresses the physical split.
+- A confirmed coincident endpoint contact is a derived zero-length physical
+  connection, not a persisted object. If a completed move/rotate/mirror
+  transaction separates it, the Edit Engine expands the lost contact into one
+  ordinary Route unless another physical path still connects the endpoints.
+  New coincidence remains explicit `connect_endpoints` intent; raw geometry
+  cannot create or merge Base Nets.
 - The component containing the deleted Route's `from` endpoint (or `to` if the
   former was an orphan Junction removed by the cut) retains the original
   Base-Net ID and non-owner Evidence. Other components receive deterministic
