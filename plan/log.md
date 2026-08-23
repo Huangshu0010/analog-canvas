@@ -5265,4 +5265,5 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: static contracts and typecheck; focused transaction tests (46);
   affected unit tests (187 files / 1215 tests); hierarchy browser tests (13);
   test-impact and diff check.
-- Commit status: completed locally on `codex/project-net-lifecycle`; not yet committed.
+- Commit status: committed and pushed on `codex/project-net-lifecycle` as
+  `d8b9cfa1`.
