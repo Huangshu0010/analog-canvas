@@ -10,11 +10,19 @@ import { initialComponentParameterValues } from "../component-insert/component-p
 import {
   componentCatalog,
   findPaletteSymbol,
+  libraryDescription,
+  libraryDisplayName,
 } from "../component-insert/symbol-catalog";
 
+/**
+ * A tile is 40px wide, so its label is an abbreviation — "Cap", "Res", "NPN".
+ * Interface Pin and Net Label shorten to "Pin" and "Net"; the full name and
+ * the line explaining the difference travel in the tooltip and the Insert
+ * dialog, where there is room to read them.
+ */
 const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   capacitor: "Cap",
-  "cell-pin": "Cell Pin",
+  "cell-pin": "Pin",
   "closed-switch": "Closed",
   "current-source": "I Src",
   "ideal-switch": "Open",
@@ -33,7 +41,8 @@ const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   "xnor-gate": "XNOR",
   "xor-gate": "XOR",
   pnp: "PNP",
-  "port-filled": "Filled",
+  port: "Net",
+  "port-filled": "Net \u2022",
   resistor: "Res",
   "variable-capacitor": "Var Cap",
   "variable-inductor": "Var Ind",
@@ -45,7 +54,9 @@ const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
 };
 
 function libraryLabel(symbolId: string, symbolName: string): string {
-  return COMPACT_LIBRARY_LABELS[symbolId] ?? symbolName;
+  return (
+    COMPACT_LIBRARY_LABELS[symbolId] ?? libraryDisplayName(symbolId, symbolName)
+  );
 }
 
 function categorySlug(category: string): string {
@@ -193,8 +204,14 @@ export function ShapesPanel({
                         className="shapes-chip"
                         data-testid={`shapes-chip-${symbol.id}`}
                         data-vdd-rail={symbol.id === "vdd" ? "true" : undefined}
-                        aria-label={`Place ${symbol.name}`}
-                        title={`Place ${symbol.name}`}
+                        aria-label={`Place ${libraryDisplayName(
+                          symbol.id,
+                          symbol.name,
+                        )}`}
+                        title={
+                          libraryDescription(symbol.id) ??
+                          `Place ${libraryDisplayName(symbol.id, symbol.name)}`
+                        }
                         onClick={() => placeSymbol(symbol.id)}
                       >
                         <SymbolArtwork
