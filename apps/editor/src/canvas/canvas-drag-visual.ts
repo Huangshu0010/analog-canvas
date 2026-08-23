@@ -1,7 +1,13 @@
 import type { Point } from "@icm/model";
+import {
+  canvasTransformAttribute,
+  translationTransform,
+  type CanvasAffineTransform,
+} from "./canvas-affine-transform";
 
 export interface CanvasDragVisual {
   translate(delta: Point): void;
+  transform(transform: CanvasAffineTransform): void;
   setPolyline(points: readonly Point[]): void;
   setObjectPolyline(objectId: string, points: readonly Point[]): void;
   restore(): void;
@@ -47,11 +53,20 @@ export function startCanvasDragVisual(
 
   return {
     translate(delta) {
+      this.transform(translationTransform(delta));
+    },
+    transform(transform) {
       for (const item of saved) {
-        const translation = `translate(${delta.x} ${delta.y})`;
+        const prefix =
+          transform.a === 1 &&
+          transform.b === 0 &&
+          transform.c === 0 &&
+          transform.d === 1
+            ? `translate(${transform.e} ${transform.f})`
+            : canvasTransformAttribute(transform);
         item.element.setAttribute(
           "transform",
-          item.transform ? `${translation} ${item.transform}` : translation,
+          item.transform ? `${prefix} ${item.transform}` : prefix,
         );
       }
     },

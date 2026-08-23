@@ -286,9 +286,14 @@ export function interactionReducer<TClipboard>(
         },
       };
     case "set-copy-preview":
-      return state.kind === "copy-placement"
-        ? { ...state, copy: { ...state.copy, previewPoint: action.point } }
-        : state;
+      if (state.kind !== "copy-placement") return state;
+      if (
+        state.copy.previewPoint?.x === action.point?.x &&
+        state.copy.previewPoint?.y === action.point?.y
+      ) {
+        return state;
+      }
+      return { ...state, copy: { ...state.copy, previewPoint: action.point } };
     case "rotate-copy":
       return state.kind === "copy-placement"
         ? {

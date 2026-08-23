@@ -484,6 +484,92 @@ test("command move follows the pointer and commits on one click", async ({
   expect(after.x).toBeGreaterThan(before.x + 20);
 });
 
+test("command move owns rotate and commits pose plus translation atomically", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await placeComponent(page, "resistor", { x: 340, y: 220 });
+  const resistor = page.getByTestId("hit-R1");
+  await resistor.click();
+  const before = await resistor.boundingBox();
+  if (!before) throw new Error("Placed resistor is not measurable");
+
+  await page.keyboard.press("m");
+  await page.mouse.move(before.x + 100, before.y + 80);
+  await page.keyboard.press("r");
+
+  await expect(page.getByTestId("status")).toContainText(
+    "Move preview rotated",
+  );
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(page.locator('[data-kind="draft-rectangle"]')).toHaveCount(0);
+  await expect(resistor).toHaveAttribute("transform", /^matrix\(0 1 -1 0 /u);
+
+  await page.mouse.click(before.x + 100, before.y + 80);
+  await expect(page.getByTestId("revision")).toHaveText("2");
+  await expect(page.getByTestId("status")).toContainText(
+    "Moved and transformed selection",
+  );
+  await expect(
+    page.locator('[data-object-id="R1"] > g').first(),
+  ).toHaveAttribute("transform", /rotate\(90\)/u);
+});
+
+test("command move restores its exact preview when cancelled after a turn", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await placeComponent(page, "resistor", { x: 340, y: 220 });
+  const resistor = page.getByTestId("hit-R1");
+  await resistor.click();
+  const before = await resistor.boundingBox();
+  if (!before) throw new Error("Placed resistor is not measurable");
+
+  await page.keyboard.press("m");
+  await page.mouse.move(before.x + 120, before.y + 90);
+  await page.keyboard.press("r");
+  await expect(resistor).toHaveAttribute("transform", /^matrix\(/u);
+  await page.keyboard.press("Escape");
+
+  await expect(resistor).not.toHaveAttribute("transform", /^matrix\(/u);
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  const after = await resistor.boundingBox();
+  expect(after).toEqual(before);
+});
+
+test("command move turns a component while locally stretching its boundary wire", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await placeComponent(page, "resistor", { x: 520, y: 220 });
+  await clickDrawTool(page, "wire");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
+
+  const resistor = page.getByTestId("hit-R1");
+  const hit = await resistor.boundingBox();
+  if (!hit) throw new Error("Connected resistor is not measurable");
+  const before = await readRoutePoints(page, "route-ui-1");
+  await resistor.click();
+  await page.keyboard.press("m");
+  await page.mouse.move(hit.x + 100, hit.y + 100);
+  await page.keyboard.press("r");
+
+  await expect
+    .poll(() => readRoutePoints(page, "route-ui-1"))
+    .not.toEqual(before);
+  const preview = await readRoutePoints(page, "route-ui-1");
+  expect(preview[0]).not.toEqual(before[0]);
+  expect(preview.at(-1)).toEqual(before.at(-1));
+  await expect(page.getByTestId("revision")).toHaveText("3");
+
+  await page.mouse.click(hit.x + 100, hit.y + 100);
+  await expect(page.getByTestId("revision")).toHaveText("4");
+  expect(await readRoutePoints(page, "route-ui-1")).toEqual(preview);
+});
+
 test("Port shortcut starts ordinary component placement", async ({ page }) => {
   await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
@@ -2341,6 +2427,45 @@ test("C previews one copy and Escape cancels without a revision", async ({
   await expect(page.getByTestId("status")).toContainText(
     "Copy placement cancelled",
   );
+});
+
+test("copy ghost follows each pointer position and commits over existing geometry", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await placeComponent(page, "resistor", { x: 340, y: 220 });
+  await placeComponent(page, "resistor", { x: 620, y: 360 });
+  await page.getByTestId("hit-R1").click();
+  const canvas = page.getByTestId("schematic-canvas");
+  const canvasBox = await canvas.boundingBox();
+  const target = await page.getByTestId("hit-R2").boundingBox();
+  if (!canvasBox || !target)
+    throw new Error("Canvas objects are not measurable");
+
+  await page.keyboard.press("c");
+  await page.mouse.move(canvasBox.x + 500, canvasBox.y + 180);
+  const ghost = page.getByTestId("copy-placement-preview");
+  await expect(ghost).toBeVisible();
+  const first = await ghost.boundingBox();
+  await page.mouse.move(
+    target.x + target.width / 2,
+    target.y + target.height / 2,
+  );
+  const second = await ghost.boundingBox();
+  expect(first).not.toBeNull();
+  expect(second).not.toBeNull();
+  expect(second!.x).not.toBe(first!.x);
+  expect(second!.y).not.toBe(first!.y);
+
+  // The copy capture plane owns this click even though an existing Instance
+  // is directly under it.
+  await page.mouse.click(
+    target.x + target.width / 2,
+    target.y + target.height / 2,
+  );
+  await expect(page.getByTestId("instance-count")).toHaveText("3");
+  await expect(page.getByTestId("revision")).toHaveText("3");
+  await page.keyboard.press("Escape");
 });
 
 test("R rotates a copy preview before committing the copied component", async ({

@@ -250,6 +250,28 @@ describe("editor interaction state", () => {
     });
   });
 
+  it("does not republish an unchanged snapped copy preview point", () => {
+    const copying = interactionReducer<{ ids: string[] }>(
+      { kind: "idle" },
+      {
+        type: "begin-copy-placement",
+        clipboard: { ids: ["M1"] },
+        anchor: { x: 10, y: 20 },
+      },
+    );
+    const previewing = interactionReducer(copying, {
+      type: "set-copy-preview",
+      point: { x: 40, y: 50 },
+    });
+
+    expect(
+      interactionReducer(previewing, {
+        type: "set-copy-preview",
+        point: { x: 40, y: 50 },
+      }),
+    ).toBe(previewing);
+  });
+
   it("owns the complete VDD rail gesture and exits after commit", () => {
     let state = interactionReducer(
       { kind: "idle" },
