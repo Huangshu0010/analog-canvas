@@ -5254,3 +5254,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   13 hierarchy, 11 project file, 1 Agent, 99 manual editor); branch verification
   (187 unit files / 1214 tests, workspace build, production smoke); diff check.
 - Commit status: implementation ready on `codex/project-net-lifecycle`.
+
+## 2026-08-23 - Reclaim Deleted Power-Marker Nets
+
+- Cleared stale NMOS/PMOS cell bulk-default references when deletion of their
+  final standalone Ground/VDD marker leaves the referenced Base Net otherwise
+  unreachable, allowing generated marker and Net IDs to be reused immediately.
+- Added a transaction regression covering delete and recreate of
+  `GND1` / `net-power-gnd1`.
+- Validation: static contracts and typecheck; focused transaction tests (46);
+  affected unit tests (187 files / 1215 tests); hierarchy browser tests (13);
+  test-impact and diff check.
+- Commit status: completed locally on `codex/project-net-lifecycle`; not yet committed.

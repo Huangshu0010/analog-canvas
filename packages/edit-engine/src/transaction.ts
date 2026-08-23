@@ -289,9 +289,12 @@ function ensureDraftingLayer(draft: SchematicDocument): void {
  * `remove_instance` cannot retain a stale Port designator through its Net.
  *
  * Deliberately retain imported provenance, named labels, geometry, formal
- * interfaces, layout references, global Nets, and MOS-default references.
+ * interfaces, layout references, global Nets, and materialized MOS bindings.
  * Those are all durable authoring intent even when the Net currently has no
- * ordinary terminal.
+ * ordinary terminal. A cell bulk default by itself is not reachability: when
+ * its final power-marker owner disappears, retaining that pointer would keep
+ * an unobservable Net ID alive and block placement from reusing the released
+ * marker ID.
  */
 function pruneUnreachableLocalNet(
   draft: SchematicDocument,
@@ -319,13 +322,29 @@ function pruneUnreachableLocalNet(
     draft.instances.some(
       (instance) => instance.mosBulkBinding?.netId === netId,
     ) ||
-    draft.mosBulkDefaults?.nmosNetId === netId ||
-    draft.mosBulkDefaults?.pmosNetId === netId ||
     draft.connectivityEvidence.some((evidence) =>
       connectivityEvidenceNetIds(evidence).includes(netId),
     )
   ) {
     return;
+  }
+  let clearedBulkDefault = false;
+  if (draft.mosBulkDefaults?.nmosNetId === netId) {
+    delete draft.mosBulkDefaults.nmosNetId;
+    clearedBulkDefault = true;
+  }
+  if (draft.mosBulkDefaults?.pmosNetId === netId) {
+    delete draft.mosBulkDefaults.pmosNetId;
+    clearedBulkDefault = true;
+  }
+  if (clearedBulkDefault) {
+    if (
+      !draft.mosBulkDefaults?.nmosNetId &&
+      !draft.mosBulkDefaults?.pmosNetId
+    ) {
+      delete draft.mosBulkDefaults;
+    }
+    changedObjectIds.add(draft.id);
   }
   draft.nets = draft.nets.filter((candidate) => candidate.id !== netId);
   changedObjectIds.add(netId);

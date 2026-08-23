@@ -1150,6 +1150,96 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
+  it("reclaims a deleted standalone Ground Net held only by the bulk default", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "GND1",
+      symbolId: "ground",
+      placement: null,
+    });
+    document.nets.push({
+      id: "net-power-gnd1",
+      scope: "local",
+      terminals: [{ instanceId: "GND1", pinName: "0" }],
+    });
+    document.connectivityEvidence.push({
+      id: "claim-ground-1",
+      kind: "name-claim",
+      netId: "net-power-gnd1",
+      name: "0",
+      owner: { kind: "power-marker", objectId: "GND1" },
+      scope: "global",
+      powerDomain: "ground",
+    });
+    document.mosBulkDefaults = { nmosNetId: "net-power-gnd1" };
+
+    const removed = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "disconnect_endpoint",
+            endpoint: { kind: "terminal", instanceId: "GND1", pinName: "0" },
+          },
+          { kind: "remove_instance", instanceId: "GND1" },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(removed).toMatchObject({
+      ok: true,
+      document: {
+        instances: [],
+        nets: [],
+        connectivityEvidence: [],
+      },
+    });
+    if (!removed.ok) return;
+    expect(removed.document.mosBulkDefaults).toBeUndefined();
+
+    const replaced = executeTransaction(
+      removed.document,
+      {
+        ...transaction(removed.document.revision),
+        edits: [
+          {
+            kind: "add_instance",
+            instance: { id: "GND1", symbolId: "ground", placement: null },
+          },
+          {
+            kind: "connect_endpoints",
+            from: { kind: "terminal", instanceId: "GND1", pinName: "0" },
+            to: { kind: "terminal", instanceId: "GND1", pinName: "0" },
+            newNetId: "net-power-gnd1",
+          },
+          {
+            kind: "upsert_connectivity_evidence",
+            evidence: {
+              id: "claim-ground-1",
+              kind: "name-claim",
+              netId: "net-power-gnd1",
+              name: "0",
+              owner: { kind: "power-marker", objectId: "GND1" },
+              scope: "global",
+              powerDomain: "ground",
+            },
+          },
+          { kind: "set_mos_bulk_defaults", nmosNetId: "net-power-gnd1" },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(replaced).toMatchObject({
+      ok: true,
+      document: {
+        instances: [{ id: "GND1" }],
+        nets: [{ id: "net-power-gnd1" }],
+        mosBulkDefaults: { nmosNetId: "net-power-gnd1" },
+      },
+    });
+  });
+
   it("removes only evidence owned by a deleted Net Label", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({ id: "net-a", scope: "local", terminals: [] });
