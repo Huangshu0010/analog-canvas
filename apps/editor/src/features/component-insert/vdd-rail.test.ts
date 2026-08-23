@@ -4,6 +4,7 @@ import {
   executeTransaction,
   proposeVisualRouteDeletion,
 } from "@icm/edit-engine";
+import { resolveDocumentLogicalNets } from "@icm/derived";
 import { createEmptyDocument } from "@icm/model";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 
@@ -145,11 +146,15 @@ describe("drawn VDD rail construction", () => {
     expect(result.document.nets).toMatchObject([
       {
         id: "net-power-vdd1",
-        name: "VDD",
         scope: "local",
-        powerDomain: "vdd",
+        powerDomain: "none",
       },
     ]);
+    expect(
+      resolveDocumentLogicalNets(result.document).byBaseNetId.get(
+        "net-power-vdd1",
+      ),
+    ).toMatchObject({ name: "VDD", powerDomain: "vdd", scope: "local" });
     expect(result.document.routes).toMatchObject([
       { presentation: "power-rail", netId: "net-power-vdd1" },
     ]);
@@ -296,7 +301,7 @@ describe("drawn VDD rail construction", () => {
     expect(deleted.document.nets).toEqual([]);
   });
 
-  it("reuses a same-name local AVDD Net already projected by a Port", () => {
+  it("keeps a rail Base Net separate while joining the Port's AVDD Logical Net", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-port-avdd",
@@ -313,15 +318,15 @@ describe("drawn VDD rail construction", () => {
     });
     expect(first).toMatchObject({
       ok: true,
-      netId: "net-port-avdd",
+      netId: "net-power-vdd1",
       edits: [
         {
           kind: "add_power_rail",
-          netId: "net-port-avdd",
+          netId: "net-power-vdd1",
           netName: "AVDD",
           scope: "local",
         },
-        { kind: "set_mos_bulk_defaults", pmosNetId: "net-port-avdd" },
+        { kind: "set_mos_bulk_defaults", pmosNetId: "net-power-vdd1" },
         { kind: "reconcile_mos_bulk" },
       ],
     });

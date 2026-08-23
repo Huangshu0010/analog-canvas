@@ -12,8 +12,6 @@ import {
   SchematicDocumentSchema,
   deriveStableId,
   foldNetName,
-  netContractIssueKey,
-  validateNetContract,
 } from "@icm/model";
 import { createReferenceIndex, referenceIssuesForInstance } from "@icm/devices";
 import type {
@@ -26,9 +24,11 @@ import type {
 import {
   endpointKey,
   isMosBulkRoute,
+  logicalNetContractIssueKey,
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
   resolveMosBulkConnection,
+  validateLogicalNetContract,
 } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
 import { EditTransactionSchema, type EditTransaction } from "./edit-schema.js";
@@ -397,7 +397,7 @@ export function executeTransaction(
   const proposedRevision = document.revision + 1;
   const draft = structuredClone(document);
   const originalNetContractIssueKeys = new Set(
-    validateNetContract(document).map(netContractIssueKey),
+    validateLogicalNetContract(document).map(logicalNetContractIssueKey),
   );
   const explicitlyAuthoredRouteIds = new Set(
     transaction.edits.flatMap((edit) =>
@@ -2380,10 +2380,7 @@ export function executeTransaction(
         );
         if (
           existingSupplyNet &&
-          (existingSupplyNet.scope !== edit.scope ||
-            !existingSupplyNet.name ||
-            foldNetName(existingSupplyNet.name) !== foldNetName(edit.netName) ||
-            (existingSupplyNet.powerDomain ?? "none") !== edit.powerDomain)
+          existingSupplyNet.scope !== edit.scope
         ) {
           return rejectAt(
             "EDIT_PRECONDITION",
@@ -2428,9 +2425,8 @@ export function executeTransaction(
         if (!existingSupplyNet) {
           draft.nets.push({
             id: edit.netId,
-            name: edit.netName,
             scope: edit.scope,
-            powerDomain: edit.powerDomain,
+            powerDomain: "none",
             terminals: [],
             origin: { kind: "authored" },
           });
@@ -2476,6 +2472,23 @@ export function executeTransaction(
             alignment: "start",
             rotation: 0,
             locked: false,
+          }),
+        );
+        draft.connectivityEvidence.push(
+          ConnectivityEvidenceSchema.parse({
+            id: deriveStableId(
+              "connectivity-evidence",
+              draft.id,
+              "power-marker",
+              edit.labelId,
+              edit.netId,
+            ),
+            kind: "name-claim",
+            netId: edit.netId,
+            name: edit.netName,
+            scope: edit.scope,
+            powerDomain: edit.powerDomain,
+            owner: { kind: "power-marker", objectId: edit.labelId },
           }),
         );
         for (const id of ids) changedObjectIds.add(id);
@@ -3164,14 +3177,20 @@ export function executeTransaction(
     geometryChanged = true;
   }
 
-  const introducedNetContractIssue = validateNetContract(draft).find(
-    (issue) => !originalNetContractIssueKeys.has(netContractIssueKey(issue)),
+  const introducedNetContractIssue = validateLogicalNetContract(draft).find(
+    (issue) =>
+      !originalNetContractIssueKeys.has(logicalNetContractIssueKey(issue)),
   );
   if (introducedNetContractIssue) {
     const message =
       introducedNetContractIssue.code === "UNNAMED_GLOBAL_NET"
         ? `Transaction introduces unnamed global Net ${introducedNetContractIssue.netIds[0]}`
-        : `Transaction introduces duplicate Net name ${introducedNetContractIssue.foldedName}; merge explicitly`;
+        : introducedNetContractIssue.code === "CONFLICTING_LOGICAL_NET_SCOPE"
+          ? "Transaction introduces conflicting Logical Net scopes"
+          : introducedNetContractIssue.code ===
+              "CONFLICTING_LOGICAL_NET_POWER_DOMAIN"
+            ? "Transaction connects incompatible power markers"
+            : "Transaction introduces conflicting Logical Net names";
     return rejectTransaction(
       document,
       "INVALID_RESULT",

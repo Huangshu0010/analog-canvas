@@ -99,4 +99,53 @@ describe("resolved logical Nets", () => {
       "name",
     );
   });
+
+  it("normalizes transitional names and owner claims into one logical group", () => {
+    const document = createEmptyDocument("document", "Document");
+    document.nets.push(
+      { id: "legacy", name: "VDD", scope: "local", terminals: [] },
+      { id: "marker", scope: "local", terminals: [] },
+    );
+    document.connectivityEvidence.push({
+      id: "claim-vdd",
+      kind: "name-claim",
+      netId: "marker",
+      name: "vdd",
+      owner: { kind: "explicit-net-property" },
+      scope: "local",
+      powerDomain: "vdd",
+    });
+
+    expect(resolveDocumentLogicalNets(document).groups).toEqual([
+      expect.objectContaining({
+        baseNetIds: ["legacy", "marker"],
+        name: "vdd",
+        powerDomain: "vdd",
+        conflicts: [],
+      }),
+    ]);
+  });
+
+  it("does not hide a transitional name conflict behind a marker claim", () => {
+    const document = createEmptyDocument("document", "Document");
+    document.nets.push({
+      id: "net",
+      name: "VDD",
+      scope: "local",
+      terminals: [],
+    });
+    document.connectivityEvidence.push({
+      id: "claim-bias",
+      kind: "name-claim",
+      netId: "net",
+      name: "BIAS",
+      owner: { kind: "explicit-net-property" },
+      scope: "local",
+    });
+
+    expect(resolveDocumentLogicalNets(document).groups[0]).toMatchObject({
+      conflicts: ["name-conflict"],
+      powerDomain: "none",
+    });
+  });
 });

@@ -628,13 +628,6 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       }
       if (evidence.kind !== "name-claim") continue;
       const claimedNet = netById.get(evidence.netId);
-      if (claimedNet && evidence.scope !== claimedNet.scope) {
-        context.addIssue({
-          code: "custom",
-          message: `Name-claim scope does not match Net ${evidence.netId}`,
-          path: [...evidencePath, "scope"],
-        });
-      }
       const owner = evidence.owner;
       if (owner.kind === "net-label") {
         const annotation = document.annotations.find(

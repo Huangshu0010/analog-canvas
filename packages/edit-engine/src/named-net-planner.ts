@@ -27,6 +27,8 @@ export function planEnsureNamedNet(
     name: string;
     evidenceId: string;
     owner: NameClaim["owner"];
+    scope?: "local" | "global";
+    powerDomain?: "vdd" | "ground";
   },
 ): EnsureNamedNetPlan {
   const candidate = document.nets.find(
@@ -47,11 +49,12 @@ export function planEnsureNamedNet(
       relatedNetIds: [candidate.id],
     };
   }
+  const scope = request.scope ?? candidate.scope;
   const foldedName = foldNetName(name);
   const matchingNetIds = new Set(
     document.connectivityEvidence.flatMap((evidence) =>
       evidence.kind === "name-claim" &&
-      evidence.scope === candidate.scope &&
+      evidence.scope === scope &&
       foldNetName(evidence.name) === foldedName
         ? [evidence.netId]
         : [],
@@ -85,7 +88,8 @@ export function planEnsureNamedNet(
     netId: candidate.id,
     name,
     owner: request.owner,
-    scope: candidate.scope,
+    scope,
+    ...(request.powerDomain ? { powerDomain: request.powerDomain } : {}),
   };
   const existingEvidence = document.connectivityEvidence.find(
     (item) => item.id === evidence.id,

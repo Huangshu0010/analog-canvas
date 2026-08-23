@@ -13,7 +13,7 @@ import type {
   ElectricalContactCandidate,
   ElectricalContactTarget,
 } from "@icm/derived";
-import { transformPoint } from "@icm/model";
+import { deriveStableId, transformPoint } from "@icm/model";
 import type { Instance, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -185,9 +185,7 @@ export function proposePlacementContact(
         from: source.endpoint,
         to: target.endpoint.endpoint,
         ...(createsNet ? { newNetId } : {}),
-        ...(createsNet && power
-          ? { newNetName: power.name, newNetScope: power.scope }
-          : {}),
+        ...(createsNet && power ? { newNetScope: power.scope } : {}),
       });
       if (power && createsNet) powerNetId = newNetId;
       else if (power && target.endpoint.netId) {
@@ -220,6 +218,16 @@ export function proposePlacementContact(
       candidateNetId: powerNetId,
       candidateState: powerCandidateState,
       domain: power.domain,
+      name: power.name,
+      scope: power.scope,
+      evidenceId: deriveStableId(
+        "connectivity-evidence",
+        document.id,
+        "power-marker",
+        instance.id,
+        powerNetId,
+      ),
+      owner: { kind: "power-marker", objectId: instance.id },
     });
     if (!plan.ok) {
       return {
@@ -261,6 +269,16 @@ export function proposedStandalonePowerConnection(
     candidateNetId: netId,
     candidateState: "pending-connection",
     domain: power.domain,
+    name: power.name,
+    scope: power.scope,
+    evidenceId: deriveStableId(
+      "connectivity-evidence",
+      document.id,
+      "power-marker",
+      instance.id,
+      netId,
+    ),
+    owner: { kind: "power-marker", objectId: instance.id },
   });
   if (!plan.ok) {
     return {
@@ -277,7 +295,6 @@ export function proposedStandalonePowerConnection(
         from: endpoint,
         to: endpoint,
         newNetId: netId,
-        newNetName: power.name,
         newNetScope: power.scope,
       },
       ...plan.edits,

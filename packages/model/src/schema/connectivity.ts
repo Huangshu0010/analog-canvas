@@ -58,6 +58,8 @@ export const ConnectivityEvidenceSchema = z.discriminatedUnion("kind", [
     name: z.string().trim().min(1).max(256),
     owner: ConnectivityNameClaimOwnerSchema,
     scope: z.enum(["local", "global"]),
+    /** Electrical classification carried by the marker, never inferred from its symbol. */
+    powerDomain: z.enum(["vdd", "ground"]).optional(),
   }),
   z.strictObject({
     id: StableIdSchema,

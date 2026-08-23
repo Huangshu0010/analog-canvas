@@ -187,6 +187,15 @@ function buildNetContext(
         [...logicalNet.baseNetIds, ...logicalNet.evidenceIds],
       );
     }
+    if (logicalNet.conflicts.includes("power-domain-conflict")) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "CONFLICTING_LOGICAL_NET_POWER_DOMAIN",
+        `Logical Net ${logicalNet.id} connects incompatible power markers`,
+        [...logicalNet.baseNetIds, ...logicalNet.evidenceIds],
+      );
+    }
     if (logicalNet.scope === "global" && !logicalNet.name) {
       diagnostic(
         diagnostics,

@@ -1,7 +1,11 @@
 import { foldNetName } from "@icm/model";
 import type { SchematicDocument } from "@icm/model";
 
-export type LogicalNetConflictCode = "name-conflict" | "scope-conflict";
+export type LogicalNetConflictCode =
+  | "name-conflict"
+  | "scope-conflict"
+  | "power-domain-conflict";
+export type LogicalNetPowerDomain = "none" | "vdd" | "ground" | "conflict";
 
 export interface ResolvedLogicalNet {
   /** Stable canonical Base-Net ID; derived groups are never persisted. */
@@ -9,6 +13,7 @@ export interface ResolvedLogicalNet {
   baseNetIds: readonly string[];
   name?: string;
   scope?: "local" | "global";
+  powerDomain: LogicalNetPowerDomain;
   evidenceIds: readonly string[];
   sourceNetIds: readonly string[];
   conflicts: readonly LogicalNetConflictCode[];
@@ -18,6 +23,22 @@ export interface ResolvedDocumentLogicalNets {
   groups: readonly ResolvedLogicalNet[];
   byId: ReadonlyMap<string, ResolvedLogicalNet>;
   byBaseNetId: ReadonlyMap<string, ResolvedLogicalNet>;
+}
+
+export type LogicalNetContractIssue =
+  | {
+      code:
+        | "CONFLICTING_LOGICAL_NET_NAME"
+        | "CONFLICTING_LOGICAL_NET_SCOPE"
+        | "CONFLICTING_LOGICAL_NET_POWER_DOMAIN";
+      netIds: readonly string[];
+    }
+  | { code: "UNNAMED_GLOBAL_NET"; netIds: readonly string[] };
+
+export function logicalNetContractIssueKey(
+  issue: LogicalNetContractIssue,
+): string {
+  return `${issue.code}:${issue.netIds.join(",")}`;
 }
 
 class DisjointSet {
@@ -77,12 +98,22 @@ export function resolveDocumentLogicalNets(
     ),
   );
 
+  // Normalize transitional Net.name projections and owner-addressed claims
+  // into one comparison space. They must never form two disjoint naming
+  // protocols while schema-21 Projects are still accepted.
   const byScopedName = new Map<string, string[]>();
   for (const evidence of document.connectivityEvidence) {
     if (evidence.kind !== "name-claim") continue;
     const key = `${evidence.scope}\u0000${foldNetName(evidence.name)}`;
     const ids = byScopedName.get(key) ?? [];
     ids.push(evidence.netId);
+    byScopedName.set(key, ids);
+  }
+  for (const net of document.nets) {
+    if (!net.name) continue;
+    const key = `${net.scope}\u0000${foldNetName(net.name)}`;
+    const ids = byScopedName.get(key) ?? [];
+    ids.push(net.id);
     byScopedName.set(key, ids);
   }
   unionGroups(set, byScopedName.values());
@@ -95,23 +126,6 @@ export function resolveDocumentLogicalNets(
     bySource.set(evidence.sourceNetId, ids);
   }
   unionGroups(set, bySource.values());
-
-  // Transitional fallback: a schema-22 producer not yet migrated to evidence
-  // still gets the legacy single-name behavior without overriding real claims.
-  const claimedNetIds = new Set(
-    document.connectivityEvidence.flatMap((evidence) =>
-      evidence.kind === "name-claim" ? [evidence.netId] : [],
-    ),
-  );
-  const byLegacyName = new Map<string, string[]>();
-  for (const net of document.nets) {
-    if (!net.name || claimedNetIds.has(net.id)) continue;
-    const key = `${net.scope}\u0000${foldNetName(net.name)}`;
-    const ids = byLegacyName.get(key) ?? [];
-    ids.push(net.id);
-    byLegacyName.set(key, ids);
-  }
-  unionGroups(set, byLegacyName.values());
 
   const membersByRoot = new Map<string, string[]>();
   for (const netId of baseNetIds) {
@@ -135,11 +149,9 @@ export function resolveDocumentLogicalNets(
       const nameCandidates = evidence.flatMap((item) =>
         item.kind === "name-claim" ? [item.name] : [],
       );
-      if (nameCandidates.length === 0) {
-        for (const netId of members) {
-          const name = document.nets.find((net) => net.id === netId)?.name;
-          if (name) nameCandidates.push(name);
-        }
+      for (const netId of members) {
+        const name = document.nets.find((net) => net.id === netId)?.name;
+        if (name) nameCandidates.push(name);
       }
       const namesByFolded = new Map<string, string>();
       for (const name of nameCandidates) {
@@ -147,13 +159,63 @@ export function resolveDocumentLogicalNets(
         if (!namesByFolded.has(folded)) namesByFolded.set(folded, name.trim());
       }
       const scopes = new Set(
-        members.map(
-          (netId) => document.nets.find((net) => net.id === netId)!.scope,
+        evidence.flatMap((item) =>
+          item.kind === "name-claim" ? [item.scope] : [],
         ),
       );
+      // Net.scope is a schema-21 projection. It participates only when a Base
+      // Net has no owner-addressed name claim; a newly placed Ground marker may
+      // therefore make an ordinary local Base Net globally named without
+      // mutating physical topology.
+      for (const netId of members) {
+        const hasClaim = evidence.some(
+          (item) => item.kind === "name-claim" && item.netId === netId,
+        );
+        const net = document.nets.find((candidate) => candidate.id === netId)!;
+        if (!hasClaim && net.name) scopes.add(net.scope);
+      }
+      if (scopes.size === 0) scopes.add("local");
+      const powerDomains = new Set<"vdd" | "ground">();
+      for (const item of evidence) {
+        if (item.kind === "name-claim" && item.powerDomain) {
+          powerDomains.add(item.powerDomain);
+        }
+      }
+      for (const netId of members) {
+        const domain = document.nets.find((net) => net.id === netId)
+          ?.powerDomain;
+        if (domain === "vdd" || domain === "ground") powerDomains.add(domain);
+        if (domain === "conflict") {
+          powerDomains.add("vdd");
+          powerDomains.add("ground");
+        }
+      }
+      const powerDomain: LogicalNetPowerDomain =
+        powerDomains.size > 1
+          ? "conflict"
+          : powerDomains.values().next().value ?? "none";
+      const preferredPowerNames = new Map<string, string>();
+      for (const item of evidence) {
+        if (item.kind !== "name-claim" || !item.powerDomain) continue;
+        const folded = foldNetName(item.name);
+        if (!preferredPowerNames.has(folded)) {
+          preferredPowerNames.set(folded, item.name.trim());
+        }
+      }
+      const preferredName =
+        preferredPowerNames.size === 1
+          ? [...preferredPowerNames.values()][0]
+          : undefined;
       const conflicts: LogicalNetConflictCode[] = [];
-      if (namesByFolded.size > 1) conflicts.push("name-conflict");
+      // A supply marker intentionally gives an already wired signal its
+      // canonical export name; the previous signal spelling remains an alias.
+      if (namesByFolded.size > 1 && !preferredName) {
+        conflicts.push("name-conflict");
+      }
       if (scopes.size > 1) conflicts.push("scope-conflict");
+      if (powerDomain === "conflict") {
+        conflicts.push("power-domain-conflict");
+      }
       const sourceNetIds = [
         ...new Set(
           evidence.flatMap((item) =>
@@ -164,12 +226,15 @@ export function resolveDocumentLogicalNets(
       return {
         id: members[0]!,
         baseNetIds: members,
-        ...(namesByFolded.size === 1
-          ? { name: [...namesByFolded.values()][0]! }
-          : {}),
+        ...(preferredName
+          ? { name: preferredName }
+          : namesByFolded.size === 1
+            ? { name: [...namesByFolded.values()][0]! }
+            : {}),
         ...(scopes.size === 1
           ? { scope: [...scopes][0] as "local" | "global" }
           : {}),
+        powerDomain,
         evidenceIds: evidence.map((item) => item.id),
         sourceNetIds,
         conflicts,
@@ -183,4 +248,51 @@ export function resolveDocumentLogicalNets(
     ),
   );
   return { groups, byId, byBaseNetId };
+}
+
+/** Electrical naming invariants evaluated on the one resolved semantic view. */
+export function validateLogicalNetContract(
+  document: SchematicDocument,
+): readonly LogicalNetContractIssue[] {
+  return resolveDocumentLogicalNets(document).groups
+    .flatMap((group): LogicalNetContractIssue[] => [
+      ...(group.conflicts.includes("name-conflict")
+        ? [
+            {
+              code: "CONFLICTING_LOGICAL_NET_NAME" as const,
+              netIds: group.baseNetIds,
+            },
+          ]
+        : []),
+      ...(group.conflicts.includes("scope-conflict")
+        ? [
+            {
+              code: "CONFLICTING_LOGICAL_NET_SCOPE" as const,
+              netIds: group.baseNetIds,
+            },
+          ]
+        : []),
+      ...(group.conflicts.includes("power-domain-conflict")
+        ? [
+            {
+              code: "CONFLICTING_LOGICAL_NET_POWER_DOMAIN" as const,
+              netIds: group.baseNetIds,
+            },
+          ]
+        : []),
+      ...(group.scope === "global" && !group.name
+        ? [
+            {
+              code: "UNNAMED_GLOBAL_NET" as const,
+              netIds: group.baseNetIds,
+            },
+          ]
+        : []),
+    ])
+    .sort((left, right) =>
+      logicalNetContractIssueKey(left).localeCompare(
+        logicalNetContractIssueKey(right),
+        "en",
+      ),
+    );
 }
