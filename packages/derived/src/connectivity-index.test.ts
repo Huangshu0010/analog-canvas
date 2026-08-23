@@ -48,7 +48,9 @@ describe("Project Connectivity Index logical aliases", () => {
 
     const index = buildProjectConnectivityIndex(project, resolver);
     for (const netId of ["net-a", "net-b"]) {
-      expect(index.documents.get(document.id)?.nets.get(netId)).toMatchObject({
+      expect(
+        index.documents.get(document.id)?.logicalNetByBaseNetId.get(netId),
+      ).toMatchObject({
         baseNetIds: ["net-a", "net-b"],
         logicalEndpoints: expect.arrayContaining([
           { kind: "terminal", instanceId: "P1", pinName: "P" },

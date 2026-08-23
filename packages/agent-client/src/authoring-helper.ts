@@ -474,12 +474,11 @@ export function compileActions(
       }
       case "rename":
         if (action.target.kind === "net") {
-          const net = resolveNet(document, index, action.kind, action.target);
-          pushEdit(index, action.kind, {
-            kind: "set_net_name",
-            netId: net.id,
-            name: action.name,
-          });
+          throw new ActionCompileError(
+            index,
+            action.kind,
+            "Net naming is marker-owned and is not exposed as a low-level Agent edit",
+          );
         } else {
           const instance = resolveInstance(
             document,
@@ -660,7 +659,7 @@ function compileAddPowerRail(
     endJunctionId: allocateId("junction"),
     labelId: allocateId("label"),
     netName: supplyNet?.name ?? "VDD",
-    scope: supplyNet?.scope ?? "local",
+    scope: supplyNet?.scope ?? "global",
     powerDomain: "vdd",
     start: action.start,
     end: action.end,

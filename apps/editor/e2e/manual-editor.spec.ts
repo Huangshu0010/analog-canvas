@@ -20,7 +20,12 @@ function markRoutingDemoNetsImported(
   project: ReturnType<typeof createRoutingDemoProject>,
 ): void {
   for (const net of project.documents[0]!.nets) {
-    net.origin = { kind: "spice-import", sourceNetIds: [net.id] };
+    project.documents[0]!.connectivityEvidence.push({
+      id: `evidence-spice-${net.id}`,
+      kind: "spice-source",
+      netId: net.id,
+      sourceNetId: net.id,
+    });
   }
 }
 
@@ -389,16 +394,28 @@ test("initializes PMOS bulk from the first explicitly drawn VDD rail", async ({
   ) as {
     documents: Array<{
       mosBulkDefaults?: { pmosNetId?: string };
+      connectivityEvidence: Array<{
+        kind: string;
+        netId?: string;
+        powerDomain?: string;
+      }>;
       nets: Array<{
         id: string;
-        powerDomain?: string;
         terminals: Array<{ instanceId: string; pinName: string }>;
       }>;
       routes: Array<{ netId: string; presentation?: string }>;
     }>;
   };
   const document = saved.documents[0]!;
-  const vddNets = document.nets.filter((net) => net.powerDomain === "vdd");
+  const vddNetIds = new Set(
+    document.connectivityEvidence
+      .filter(
+        (evidence) =>
+          evidence.kind === "name-claim" && evidence.powerDomain === "vdd",
+      )
+      .map((evidence) => evidence.netId),
+  );
+  const vddNets = document.nets.filter((net) => vddNetIds.has(net.id));
   expect(vddNets).toEqual([
     expect.objectContaining({
       id: "net-power-vdd1",
@@ -1075,9 +1092,13 @@ test("initializes NMOS bulk from the first explicitly placed Ground", async ({
         mosBulkBinding?: { origin: string; netId: string };
       }>;
       routes: Array<{ presentation?: string }>;
+      connectivityEvidence: Array<{
+        kind: string;
+        netId?: string;
+        name?: string;
+      }>;
       nets: Array<{
         id: string;
-        name?: string;
         terminals: Array<{ instanceId: string; pinName: string }>;
       }>;
     }>;
@@ -1090,7 +1111,12 @@ test("initializes NMOS bulk from the first explicitly placed Ground", async ({
   expect(document.routes).not.toContainEqual(
     expect.objectContaining({ presentation: "bulk-dashed" }),
   );
-  expect(document.nets.find((net) => net.name === "0")?.terminals).toEqual(
+  const groundNetId = document.connectivityEvidence.find(
+    (evidence) => evidence.kind === "name-claim" && evidence.name === "0",
+  )?.netId;
+  expect(
+    document.nets.find((net) => net.id === groundNetId)?.terminals,
+  ).toEqual(
     expect.arrayContaining([
       { instanceId: "M1", pinName: "B" },
       { instanceId: "GND1", pinName: "0" },
@@ -2576,10 +2602,16 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   page,
 }) => {
   await page.goto("/editor");
+  const project = createRoutingDemoProject();
+  // This case isolates geometric crossing/Junction behavior. The final branch
+  // deliberately captures D.P, so named HORIZONTAL/VERTICAL claims would
+  // correctly turn it into an electrical name conflict instead.
+  project.documents[0]!.connectivityEvidence = [];
+  for (const net of project.documents[0]!.nets) delete net.name;
   await page.getByTestId("project-file").setInputFiles({
     name: "routing-example.icproj.json",
     mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(createRoutingDemoProject())),
+    buffer: Buffer.from(JSON.stringify(project)),
   });
 
   await clickDrawTool(page, "wire");
@@ -2919,9 +2951,16 @@ test("requires warning review before exporting generated NoConnect nodes", async
   });
   document.nets.push({
     id: "net-in",
-    name: "IN",
     scope: "local",
     terminals: [{ instanceId: "R1", pinName: "1" }],
+  });
+  document.connectivityEvidence.push({
+    id: "claim-net-in",
+    kind: "name-claim",
+    netId: "net-in",
+    name: "IN",
+    owner: { kind: "explicit-net-property" },
+    scope: "local",
   });
   document.noConnects.push({
     id: "r1-open",

@@ -85,10 +85,6 @@ export function createConnectivityProposal(
       case "merge_nets":
         netIds.push(edit.targetNetId, edit.sourceNetId);
         break;
-      case "set_net_name":
-      case "set_net_power_domain":
-        netIds.push(edit.netId);
-        break;
       case "upsert_connectivity_evidence":
         affectedObjectIds.push(edit.evidence.id);
         if (edit.evidence.kind === "explicit-equivalence") {

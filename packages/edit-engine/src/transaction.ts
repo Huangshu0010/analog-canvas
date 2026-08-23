@@ -7,11 +7,9 @@ import {
   JunctionSchema,
   LayoutConstraintSchema,
   LayoutGroupSchema,
-  NetPowerDomainSchema,
   NoConnectSchema,
   SchematicDocumentSchema,
   deriveStableId,
-  foldNetName,
 } from "@icm/model";
 import { createReferenceIndex, referenceIssuesForInstance } from "@icm/devices";
 import type {
@@ -25,6 +23,7 @@ import {
   endpointKey,
   isMosBulkRoute,
   logicalNetContractIssueKey,
+  resolveDocumentLogicalNets,
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
   resolveMosBulkConnection,
@@ -110,25 +109,6 @@ function referencePolicyFailure(
       return `Reference ${issue.reference} does not match this component prefix`;
     case "DUPLICATE_REFERENCE":
       return `Reference ${issue.reference} is already used by ${issue.otherInstanceId}`;
-  }
-}
-
-function mergeNetOrigins(
-  target: SchematicDocument["nets"][number],
-  source: SchematicDocument["nets"][number],
-): void {
-  const sourceNetIds = [target, source].flatMap((net) =>
-    net.origin?.kind === "spice-import" ? net.origin.sourceNetIds : [],
-  );
-  if (sourceNetIds.length > 0) {
-    target.origin = {
-      kind: "spice-import",
-      sourceNetIds: [...new Set(sourceNetIds)].sort((left, right) =>
-        left.localeCompare(right, "en"),
-      ),
-    };
-  } else if (!target.origin) {
-    target.origin = { kind: "authored" };
   }
 }
 
@@ -319,12 +299,7 @@ function pruneUnreachableLocalNet(
   changedObjectIds: Set<string>,
 ): void {
   const net = draft.nets.find((candidate) => candidate.id === netId);
-  if (
-    !net ||
-    net.scope !== "local" ||
-    net.terminals.length > 0 ||
-    net.origin?.kind === "spice-import"
-  ) {
+  if (!net || net.terminals.length > 0) {
     return;
   }
   if (
@@ -1803,7 +1778,6 @@ export function executeTransaction(
             scope: "local",
             powerDomain: "none",
             terminals: [],
-            origin: { kind: "authored" },
           });
           changedObjectIds.add(edit.netId);
         }
@@ -2133,8 +2107,12 @@ export function executeTransaction(
           );
         }
         const beforeGroups = netEndpointGroups(draft, net.id);
+        const logicalNetBeforeCut = resolveDocumentLogicalNets(
+          draft,
+        ).byBaseNetId.get(net.id);
         const preserveLogicalNet =
-          beforeGroups.length > 1 || net.origin?.kind === "spice-import";
+          beforeGroups.length > 1 ||
+          (logicalNetBeforeCut?.sourceNetIds.length ?? 0) > 0;
 
         const candidateOrphanJunctionIds = new Set(
           [route.from, route.to].flatMap((endpoint) =>
@@ -2197,7 +2175,11 @@ export function executeTransaction(
           connectivityChanged = true;
           break;
         }
-        if (groups.length > 1 && !preserveLogicalNet && net.scope === "local") {
+        if (
+          groups.length > 1 &&
+          !preserveLogicalNet &&
+          logicalNetBeforeCut?.scope !== "global"
+        ) {
           const netIdByEndpoint = new Map<string, string>();
           const splitNetIds = groups
             .slice(1)
@@ -2251,9 +2233,8 @@ export function executeTransaction(
             draft.nets.push({
               id: groupNetId,
               scope: "local",
-              powerDomain: net.powerDomain ?? "none",
+              powerDomain: "none",
               terminals: terminalsFor(groupNetId),
-              ...(net.origin ? { origin: structuredClone(net.origin) } : {}),
             });
             changedObjectIds.add(groupNetId);
           }
@@ -2337,11 +2318,9 @@ export function executeTransaction(
           netId = edit.newNetId;
           draft.nets.push({
             id: netId,
-            ...(edit.newNetName ? { name: edit.newNetName } : {}),
-            scope: edit.newNetScope ?? "local",
+            scope: "local",
             powerDomain: "none",
             terminals: [],
-            origin: { kind: "authored" },
           });
           changedObjectIds.add(netId);
         }
@@ -2378,17 +2357,6 @@ export function executeTransaction(
         const existingSupplyNet = draft.nets.find(
           (net) => net.id === edit.netId,
         );
-        if (
-          existingSupplyNet &&
-          existingSupplyNet.scope !== edit.scope
-        ) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Power rail Net ${edit.netId} does not match ${edit.scope} ${edit.netName}`,
-            [],
-            [edit.netId],
-          );
-        }
         const existingIds = new Set([
           ...draft.instances.map((instance) => instance.id),
           ...draft.nets
@@ -2425,10 +2393,9 @@ export function executeTransaction(
         if (!existingSupplyNet) {
           draft.nets.push({
             id: edit.netId,
-            scope: edit.scope,
+            scope: "local",
             powerDomain: "none",
             terminals: [],
-            origin: { kind: "authored" },
           });
         }
         draft.junctions.push(
@@ -2513,10 +2480,17 @@ export function executeTransaction(
             `Net merge target/source does not exist: ${edit.targetNetId}, ${edit.sourceNetId}`,
           );
         }
+        const logicalNets = resolveDocumentLogicalNets(draft);
+        const targetLogical = logicalNets.byBaseNetId.get(target.id);
+        const sourceLogical = logicalNets.byBaseNetId.get(source.id);
+        const targetPowerDomain = targetLogical?.powerDomain ?? "none";
+        const sourcePowerDomain = sourceLogical?.powerDomain ?? "none";
         if (
-          (target.powerDomain ?? "none") !== "none" &&
-          (source.powerDomain ?? "none") !== "none" &&
-          target.powerDomain !== source.powerDomain
+          targetPowerDomain === "conflict" ||
+          sourcePowerDomain === "conflict" ||
+          (targetPowerDomain !== "none" &&
+            sourcePowerDomain !== "none" &&
+            targetPowerDomain !== sourcePowerDomain)
         ) {
           return rejectAt(
             "EDIT_PRECONDITION",
@@ -2525,10 +2499,6 @@ export function executeTransaction(
             [target.id, source.id],
           );
         }
-        if ((target.powerDomain ?? "none") === "none") {
-          target.powerDomain = source.powerDomain ?? "none";
-        }
-        mergeNetOrigins(target, source);
         for (const instance of draft.instances) {
           if (instance.mosBulkBinding?.netId === source.id) {
             instance.mosBulkBinding.netId = target.id;
@@ -2612,41 +2582,6 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
-      case "set_net_name": {
-        const net = draft.nets.find((candidate) => candidate.id === edit.netId);
-        if (!net) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Net does not exist: ${edit.netId}`,
-          );
-        }
-        const conflicting = draft.nets.find(
-          (candidate) =>
-            candidate.id !== net.id &&
-            candidate.name !== undefined &&
-            foldNetName(candidate.name) === foldNetName(edit.name),
-        );
-        if (conflicting) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Net name ${edit.name} already belongs to ${conflicting.id}; merge explicitly`,
-          );
-        }
-        net.name = edit.name;
-        changedObjectIds.add(net.id);
-        for (const annotation of draft.annotations) {
-          if (
-            annotation.binding?.kind === "net-name" &&
-            annotation.binding.netId === net.id &&
-            annotation.formatOverride
-          ) {
-            delete annotation.formatOverride;
-            changedObjectIds.add(annotation.id);
-          }
-        }
-        connectivityChanged = true;
-        break;
-      }
       case "upsert_connectivity_evidence": {
         const existingIndex = draft.connectivityEvidence.findIndex(
           (evidence) => evidence.id === edit.evidence.id,
@@ -2674,6 +2609,19 @@ export function executeTransaction(
           draft.connectivityEvidence[existingIndex] = evidence;
         } else {
           draft.connectivityEvidence.push(evidence);
+        }
+        if (
+          evidence.kind === "name-claim" &&
+          evidence.owner.kind === "net-label"
+        ) {
+          const annotationId = evidence.owner.annotationId;
+          const annotation = draft.annotations.find(
+            (candidate) => candidate.id === annotationId,
+          );
+          if (annotation?.formatOverride) {
+            delete annotation.formatOverride;
+            changedObjectIds.add(annotation.id);
+          }
         }
         changedObjectIds.add(evidence.id);
         for (const netId of previous
@@ -2703,38 +2651,6 @@ export function executeTransaction(
         for (const netId of affectedNetIds) {
           pruneUnreachableLocalNet(draft, netId, changedObjectIds);
         }
-        connectivityChanged = true;
-        break;
-      }
-      case "set_net_power_domain": {
-        const net = draft.nets.find((candidate) => candidate.id === edit.netId);
-        if (!net) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Net does not exist: ${edit.netId}`,
-          );
-        }
-        if ((net.powerDomain ?? "none") === edit.powerDomain) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            "Power-domain edit does not change the Net",
-            [],
-            [net.id],
-          );
-        }
-        if (
-          (net.powerDomain ?? "none") !== "none" &&
-          edit.powerDomain !== "none"
-        ) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Cannot reassign Net power role from ${net.powerDomain} to ${edit.powerDomain}; merge or rename explicitly`,
-            [],
-            [net.id],
-          );
-        }
-        net.powerDomain = NetPowerDomainSchema.parse(edit.powerDomain);
-        changedObjectIds.add(net.id);
         connectivityChanged = true;
         break;
       }
@@ -3183,14 +3099,12 @@ export function executeTransaction(
   );
   if (introducedNetContractIssue) {
     const message =
-      introducedNetContractIssue.code === "UNNAMED_GLOBAL_NET"
-        ? `Transaction introduces unnamed global Net ${introducedNetContractIssue.netIds[0]}`
-        : introducedNetContractIssue.code === "CONFLICTING_LOGICAL_NET_SCOPE"
-          ? "Transaction introduces conflicting Logical Net scopes"
-          : introducedNetContractIssue.code ===
-              "CONFLICTING_LOGICAL_NET_POWER_DOMAIN"
-            ? "Transaction connects incompatible power markers"
-            : "Transaction introduces conflicting Logical Net names";
+      introducedNetContractIssue.code === "CONFLICTING_LOGICAL_NET_SCOPE"
+        ? "Transaction introduces conflicting Logical Net scopes"
+        : introducedNetContractIssue.code ===
+            "CONFLICTING_LOGICAL_NET_POWER_DOMAIN"
+          ? "Transaction connects incompatible power markers"
+          : "Transaction introduces conflicting Logical Net names";
     return rejectTransaction(
       document,
       "INVALID_RESULT",

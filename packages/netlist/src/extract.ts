@@ -1,10 +1,13 @@
 import { foldNetName } from "@icm/model";
-import { directObjectLocator, resolveDocumentLogicalNets } from "@icm/derived";
+import {
+  directObjectLocator,
+  resolveDocumentLogicalNets,
+  type ResolvedLogicalNet,
+} from "@icm/derived";
 import type {
   CircuitProject,
   ExternalSubcircuitDefinition,
   Instance,
-  Net,
   SchematicDocument,
   StableId,
 } from "@icm/model";
@@ -147,7 +150,7 @@ function reachableDocuments(
 
 interface CellNetContext {
   nameByNetId: Map<string, string>;
-  netByTerminal: Map<string, Net>;
+  netByTerminal: Map<string, ResolvedLogicalNet>;
   noConnectNameByTerminal: Map<string, string>;
   nets: DesignNetlistCell["nets"];
 }
@@ -194,15 +197,6 @@ function buildNetContext(
         "CONFLICTING_LOGICAL_NET_POWER_DOMAIN",
         `Logical Net ${logicalNet.id} connects incompatible power markers`,
         [...logicalNet.baseNetIds, ...logicalNet.evidenceIds],
-      );
-    }
-    if (logicalNet.scope === "global" && !logicalNet.name) {
-      diagnostic(
-        diagnostics,
-        document.id,
-        "UNNAMED_GLOBAL_NET",
-        "A global logical Net requires an explicit name",
-        [...logicalNet.baseNetIds],
       );
     }
     if (!logicalNet.name) continue;
@@ -276,7 +270,7 @@ function buildNetContext(
       nameByNetId.set(netId, name);
     }
   }
-  const netByTerminal = new Map<string, Net>();
+  const netByTerminal = new Map<string, ResolvedLogicalNet>();
   const instanceById = new Map(
     document.instances.map((instance) => [instance.id, instance]),
   );
@@ -321,7 +315,7 @@ function buildNetContext(
           [prior.id, net.id, terminal.instanceId],
         );
       } else {
-        netByTerminal.set(key, net);
+        netByTerminal.set(key, logicalNets.byBaseNetId.get(net.id)!);
       }
     }
   }

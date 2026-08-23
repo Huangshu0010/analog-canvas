@@ -1,12 +1,10 @@
 import { resolveDocumentLogicalNets } from "@icm/derived";
-import type {
-  ConnectivityEvidence,
-  PowerDomain,
-  SchematicDocument,
-} from "@icm/model";
+import type { ConnectivityEvidence, SchematicDocument } from "@icm/model";
 
 import type { SchematicEdit } from "./edit-schema.js";
 import { planEnsureNamedNet } from "./named-net-planner.js";
+
+type PowerDomain = "vdd" | "ground";
 
 type PowerMarkerOwner = Extract<
   ConnectivityEvidence,
@@ -14,9 +12,7 @@ type PowerMarkerOwner = Extract<
 >["owner"];
 
 export type PowerNetCandidateState =
-  | "existing"
-  | "pending-connection"
-  | "created-power";
+  "existing" | "pending-connection" | "created-power";
 
 export interface EnsurePowerNetRequest {
   /** Caller-owned Base Net, existing now or created earlier in the transaction. */
@@ -53,8 +49,7 @@ export function planEnsurePowerNet(
 ): EnsurePowerNetPlan {
   const requestedName =
     request.name?.trim() || canonicalPowerName(request.domain);
-  const requestedScope =
-    request.scope ?? (request.domain === "ground" ? "global" : "local");
+  const requestedScope = request.scope ?? "global";
   const candidate = document.nets.find(
     (net) => net.id === request.candidateNetId,
   );
@@ -71,7 +66,6 @@ export function planEnsurePowerNet(
       candidate.id,
     );
     if (
-      request.domain !== "ground" &&
       logical?.name &&
       logical.name.toLowerCase() !== requestedName.toLowerCase()
     ) {
@@ -111,7 +105,5 @@ export function planEnsurePowerNet(
     scope: requestedScope,
     powerDomain: request.domain,
   });
-  return plan.ok
-    ? { ok: true, netId: plan.netId, edits: plan.edits }
-    : plan;
+  return plan.ok ? { ok: true, netId: plan.netId, edits: plan.edits } : plan;
 }

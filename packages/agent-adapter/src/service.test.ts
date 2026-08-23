@@ -167,7 +167,6 @@ describe("current Agent Circuit API service", () => {
           "merge_nets",
           "move_junction",
           "route_orthogonal",
-          "set_net_name",
           "disconnect_endpoint",
           "upsert_schematic_annotation",
           "remove_schematic_annotation",

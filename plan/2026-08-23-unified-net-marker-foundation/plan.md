@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -145,16 +145,20 @@ Read-only/shared boundaries:
 
 The advisory path plan selected static contracts, workspace units,
 component-insert, hierarchy, project-file, Agent browser, and the full delivery
-gate.  Regenerate it from the real diff before expensive validation.
+gate.  Regeneration from the real `origin/main` diff selected those same
+surfaces plus full branch verification because generated fixtures require the
+fallback path.  The implementation followed that expanded selection.
 
 ## Test Impact
 
 - Decision: tests-updated
 - Contracts: one named-Net authority; reversible owner lifecycle; identical
   visual geometry and gestures; correct supply/global semantics; consistent
-  ERC/export/highlight/Agent topology.
-- Primary checks: resolver/model/edit-engine unit contracts and the focused
-  browser tests listed above.
+  ERC/export/highlight/Agent topology; Formal Cell Port identity remains
+  separate from internal Logical-Net naming.
+- Primary checks: resolver/model/edit-engine unit contracts, SPICE/netlist
+  round trips, all 187 unit files, and the component-insert, hierarchy,
+  project-file, manual-editor, and Agent browser suites selected by the gate.
 
 ## Commit Intent
 
@@ -166,4 +170,31 @@ refactor(connectivity): unify named net and power marker semantics
 
 ## Outcome
 
-Active.
+Completed the runtime electrical convergence without changing symbol assets,
+Razavi geometry, CSS, or user-facing insertion gestures:
+
+- Base Nets now own physical connectivity only.  VDD, Ground, Free Port, Net
+  Label, and Power Rail all author owner-addressed marker claims; Power Rail
+  and VDD therefore differ only in gesture/presentation.
+- One Logical-Net resolver now supplies ERC, export, search, highlight,
+  routing guidance, clipboard, Agent snapshots, and topology hashes.  Equal
+  names join reversibly in that view; physical contact remains the only reason
+  to merge Base Nets.
+- Removed raw `set_net_name`, `set_net_power_domain`, and named wire inputs,
+  plus the retired parallel Net-contract/power-domain modules.  Agent reads
+  resolved Logical Nets and cannot mutate the Evidence layer.
+- Formal Cell Ports remain hierarchy declarations and may intentionally use a
+  different name from their internal Logical Net.  Repeated markers reuse the
+  formal terminal through its Logical-Net binding rather than creating a
+  second naming protocol.
+- Schema-21 Net semantic fields remain inert rolling-reader projections in
+  schema 22; no runtime consumer treats them as electrical authority.
+
+Validation completed:
+
+- `pnpm gate:preflight -- --base origin/main`
+- affected browser suites: component insert 24/24, hierarchy 13/13, project
+  file 11/11, Agent 1/1, manual editor 99/99
+- `pnpm verify:branch`: static contracts, 187 unit files / 1214 tests, all
+  workspace builds, and editor production smoke
+- `git diff --check`

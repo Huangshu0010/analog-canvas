@@ -108,6 +108,7 @@ import {
 import type {
   Annotation,
   CircuitProject,
+  ConnectivityEvidence,
   DerivedPoint,
   ExternalSubcircuitDefinition,
   DraftingObject,
@@ -1290,8 +1291,9 @@ export function App({
       ? `${selectedIds.length} components`
       : selectedRoute
         ? `Route · ${
-            document.nets.find((net) => net.id === selectedRoute.netId)?.name ??
-            selectedRoute.netId
+            resolveDocumentLogicalNets(document).byBaseNetId.get(
+              selectedRoute.netId,
+            )?.name ?? selectedRoute.netId
           }`
         : selectedAnnotation
           ? `Annotation · ${selectedAnnotation.kind}`
@@ -1366,11 +1368,11 @@ export function App({
   );
   const flightlines = useMemo(
     () =>
-      document.nets.flatMap(
-        (net) =>
-          projectConnectivityIndex.documents.get(document.id)?.nets.get(net.id)
-            ?.routingGuidance ?? [],
-      ),
+      [
+        ...(projectConnectivityIndex.documents
+          .get(document.id)
+          ?.logicalNets.values() ?? []),
+      ].flatMap((net) => net.routingGuidance),
     [document.id, document.nets, projectConnectivityIndex],
   );
   const displayedFlightlines = useMemo(() => {
@@ -1530,7 +1532,7 @@ export function App({
       [
         ...(projectConnectivityIndex.documents
           .get(document.id)
-          ?.nets.values() ?? []),
+          ?.logicalNets.values() ?? []),
       ].flatMap((net) => net.routedComponents),
     [document.id, projectConnectivityIndex],
   );
@@ -2913,7 +2915,9 @@ export function App({
             `Net ${intent.netId} is not present in Document ${targetDocument.id}`,
           );
         }
-        activateDocument(`Agent highlighted Net ${net.name ?? net.id}`);
+        activateDocument(
+          `Agent highlighted Net ${resolveDocumentLogicalNets(targetDocument).byBaseNetId.get(net.id)?.name ?? net.id}`,
+        );
         highlightNet(net.id, targetDocument.id, intent.endpoint);
         return {
           ok: true,
@@ -5851,15 +5855,23 @@ export function App({
     const instance = document.instances.find(
       (candidate) => candidate.id === ownerObjectId,
     );
-    if (
-      !instance ||
-      (instance.symbolId !== "port" && instance.symbolId !== "port-filled") ||
-      document.netlist?.terminals.some((terminal) =>
+    const isFreePort = Boolean(
+      instance &&
+      (instance.symbolId === "port" || instance.symbolId === "port-filled") &&
+      !document.netlist?.terminals.some((terminal) =>
         terminal.interfaceInstanceIds.includes(instance.id),
-      )
-    ) {
-      return undefined;
-    }
+      ),
+    );
+    const powerClaim = document.connectivityEvidence.find(
+      (
+        evidence,
+      ): evidence is Extract<ConnectivityEvidence, { kind: "name-claim" }> =>
+        evidence.kind === "name-claim" &&
+        evidence.owner.kind === "power-marker" &&
+        (evidence.owner.objectId === ownerObjectId ||
+          evidence.owner.objectId === annotation.id),
+    );
+    if (!isFreePort && annotation.kind !== "power-label") return undefined;
     const net = document.nets.find(
       (candidate) => candidate.id === binding.netId,
     );
@@ -5871,21 +5883,45 @@ export function App({
     const namedNetPlan = planEnsureNamedNet(document, {
       candidateNetId: net.id,
       name,
-      evidenceId:
-        document.connectivityEvidence.find(
-          (evidence) =>
-            evidence.kind === "name-claim" &&
-            evidence.owner.kind === "free-port" &&
-            evidence.owner.instanceId === instance.id,
-        )?.id ??
-        deriveStableId(
-          "connectivity-evidence",
-          document.id,
-          "free-port",
-          net.id,
-          instance.id,
-        ),
-      owner: { kind: "free-port", instanceId: instance.id },
+      evidenceId: isFreePort
+        ? (document.connectivityEvidence.find(
+            (evidence) =>
+              evidence.kind === "name-claim" &&
+              evidence.owner.kind === "free-port" &&
+              evidence.owner.instanceId === instance!.id,
+          )?.id ??
+          deriveStableId(
+            "connectivity-evidence",
+            document.id,
+            "free-port",
+            net.id,
+            instance!.id,
+          ))
+        : (powerClaim?.id ??
+          deriveStableId(
+            "connectivity-evidence",
+            document.id,
+            "power-marker",
+            net.id,
+            annotation.id,
+          )),
+      owner: isFreePort
+        ? { kind: "free-port", instanceId: instance!.id }
+        : {
+            kind: "power-marker",
+            objectId:
+              powerClaim?.owner.kind === "power-marker"
+                ? powerClaim.owner.objectId
+                : annotation.id,
+          },
+      ...(powerClaim
+        ? {
+            scope: powerClaim.scope,
+            ...(powerClaim.powerDomain
+              ? { powerDomain: powerClaim.powerDomain }
+              : {}),
+          }
+        : {}),
     });
     if (!namedNetPlan.ok) {
       setStatus(namedNetPlan.message);
@@ -8363,8 +8399,9 @@ export function App({
                   <p>
                     {selectedInstance.id}.B →{" "}
                     {selectedBulkResolution.net
-                      ? (selectedBulkResolution.net.name ??
-                        selectedBulkResolution.net.id)
+                      ? (resolveDocumentLogicalNets(document).byBaseNetId.get(
+                          selectedBulkResolution.net.id,
+                        )?.name ?? selectedBulkResolution.net.id)
                       : "unresolved"}
                     {" · "}
                     {selectedBulkResolution.status}

@@ -708,20 +708,11 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
               )
             : annotationNetEdits !== undefined
               ? annotationNetEdits
-              : [
-                  ...(name !== currentName
-                    ? [
-                        {
-                          kind: "set_net_name" as const,
-                          netId: boundAnnotation.binding.netId,
-                          name,
-                        },
-                      ]
-                    : []),
-                  ...(presentationChanged || formatOverrideChanged
-                    ? [presentationEdit]
-                    : []),
-                ];
+              : name !== currentName
+                ? null
+                : presentationChanged || formatOverrideChanged
+                  ? [presentationEdit]
+                  : [];
           if (netLabelEdits && transactNamedNet(netLabelEdits)) {
             setTextEditing(null);
           }

@@ -95,10 +95,10 @@ Its editor-local VDD artwork is preview-only and is not registered with the
 product Symbol Resolver. Before the first click the artwork follows the
 pointer; after the first click the preview becomes a straight horizontal or
 vertical rail, selected by the pointer's dominant axis. The second click
-creates/reuses the selected named Net in this Document, creates two route-anchor
+  creates a Base Net with the selected global supply claim, creates two route-anchor
 Junctions and one `power-rail` Route, and persists one net-name-bound RichText
-power-label annotation. A new Net is local; a matching explicitly global Net
-keeps its scope. The Route is the only rail geometry: the annotation adds no
+  power-label annotation. Same-name supply claims resolve to one Logical Net
+  without a physical merge. The Route is the only rail geometry: the annotation adds no
 supply bar or terminal stub, and the semantic name uses the shared Razavi
 schematic-math style. It creates no VDD Instance and exits placement after the
 commit. Deleting the rail also deletes its power label and rail-only Junctions;

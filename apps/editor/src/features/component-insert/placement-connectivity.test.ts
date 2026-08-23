@@ -12,6 +12,24 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 const context = { symbolResolver: resolver };
 
+function addSupplyClaim(
+  document: ReturnType<typeof createEmptyDocument>,
+  netId: string,
+  name: string,
+  scope: "local" | "global",
+  powerDomain: "vdd" | "ground",
+): void {
+  document.connectivityEvidence.push({
+    id: `claim-${netId}`,
+    kind: "name-claim",
+    netId,
+    name,
+    scope,
+    powerDomain,
+    owner: { kind: "explicit-net-property" },
+  });
+}
+
 function transaction(expectedRevision: number, edits: unknown[]) {
   return {
     transactionId: "placement-contact-test",
@@ -61,7 +79,6 @@ describe("component placement electrical contacts", () => {
       edits: [
         {
           kind: "connect_endpoints",
-          newNetScope: "global",
           from: { kind: "terminal", instanceId: "GND1", pinName: "0" },
         },
         {
@@ -105,6 +122,7 @@ describe("component placement electrical contacts", () => {
       powerDomain: "ground",
       terminals: [{ instanceId: "M1", pinName: "B" }],
     });
+    addSupplyClaim(document, "net-global-0", "0", "global", "ground");
     document.instances.push({
       id: "M1",
       symbolId: "nmos",
@@ -160,7 +178,7 @@ describe("component placement electrical contacts", () => {
     document.nets.push({
       id: "net-tail",
       name: "TAIL",
-      scope: "local",
+      scope: "global",
       terminals: [{ instanceId: "R1", pinName: "1" }],
     });
     const ground = {
@@ -203,14 +221,16 @@ describe("component placement electrical contacts", () => {
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(resolveDocumentLogicalNets(result.document).groups[0]).toMatchObject({
-      baseNetIds: ["net-tail"],
-      name: "0",
-      powerDomain: "ground",
-    });
+    expect(resolveDocumentLogicalNets(result.document).groups[0]).toMatchObject(
+      {
+        baseNetIds: ["net-tail"],
+        name: "0",
+        powerDomain: "ground",
+      },
+    );
   });
 
-  it("creates a standalone local VDD Net from a placed power port", () => {
+  it("creates a standalone global VDD Logical Net from a placed power port", () => {
     const vddPort = {
       id: "VDD1",
       symbolId: "vdd-port",
@@ -232,7 +252,6 @@ describe("component placement electrical contacts", () => {
       edits: [
         {
           kind: "connect_endpoints",
-          newNetScope: "local",
           from: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
         },
         {
@@ -261,12 +280,12 @@ describe("component placement electrical contacts", () => {
     ).toMatchObject({
       baseNetIds: ["net-power-vdd1"],
       name: "VDD",
-      scope: "local",
+      scope: "global",
       powerDomain: "vdd",
     });
   });
 
-  it("keeps a local VDD marker distinct from an explicitly global VDD", () => {
+  it("joins a new VDD marker to an existing global VDD Logical Net", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-power-vdd1",
@@ -275,6 +294,7 @@ describe("component placement electrical contacts", () => {
       powerDomain: "vdd",
       terminals: [],
     });
+    addSupplyClaim(document, "net-power-vdd1", "VDD", "global", "vdd");
     const vddPort = {
       id: "VDD2",
       symbolId: "vdd-port",
@@ -304,14 +324,9 @@ describe("component placement electrical contacts", () => {
     expect(connected.document.nets).toHaveLength(2);
     expect(resolveDocumentLogicalNets(connected.document).groups).toEqual([
       expect.objectContaining({
-        baseNetIds: ["net-power-vdd1"],
+        baseNetIds: ["net-power-vdd1", "net-power-vdd2"],
         name: "VDD",
         scope: "global",
-      }),
-      expect.objectContaining({
-        baseNetIds: ["net-power-vdd2"],
-        name: "VDD",
-        scope: "local",
       }),
     ]);
   });
@@ -325,6 +340,7 @@ describe("component placement electrical contacts", () => {
       powerDomain: "vdd",
       terminals: [],
     });
+    addSupplyClaim(document, "net-avdd", "AVDD", "global", "vdd");
     const vddPort = {
       id: "VDD2",
       symbolId: "vdd-port",
@@ -342,7 +358,6 @@ describe("component placement electrical contacts", () => {
       edits: [
         {
           kind: "connect_endpoints",
-          newNetScope: "local",
         },
         {
           kind: "upsert_connectivity_evidence",
@@ -416,6 +431,8 @@ describe("component placement electrical contacts", () => {
         terminals: [],
       },
     );
+    addSupplyClaim(document, "net-avdd", "AVDD", "global", "vdd");
+    addSupplyClaim(document, "net-dvdd", "DVDD", "global", "vdd");
     for (const [index, id] of ["VDD1", "VDD2", "VDD3"].entries()) {
       const vdd = {
         id,
@@ -444,13 +461,9 @@ describe("component placement electrical contacts", () => {
     expect(resolveDocumentLogicalNets(document).groups).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          baseNetIds: [
-            "net-power-vdd1",
-            "net-power-vdd2",
-            "net-power-vdd3",
-          ],
+          baseNetIds: ["net-power-vdd1", "net-power-vdd2", "net-power-vdd3"],
           name: "VDD",
-          scope: "local",
+          scope: "global",
           powerDomain: "vdd",
         }),
         expect.objectContaining({ baseNetIds: ["net-avdd"], name: "AVDD" }),

@@ -47,7 +47,7 @@ describe("power Net planner", () => {
             netId: "net-new-ground-marker",
             name: "VDD",
             owner: marker.owner,
-            scope: "local",
+            scope: "global",
             powerDomain: "vdd",
           },
         },
@@ -86,7 +86,7 @@ describe("power Net planner", () => {
     });
   });
 
-  it("treats Ground on an ordinary named Net as an explicit grounding action", () => {
+  it("rejects Ground on an independently named signal Net", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push(
       {
@@ -103,6 +103,14 @@ describe("power Net planner", () => {
         terminals: [],
       },
     );
+    document.connectivityEvidence.push({
+      id: "claim-tail",
+      kind: "name-claim",
+      netId: "net-tail",
+      name: "TAIL",
+      owner: { kind: "explicit-net-property" },
+      scope: "local",
+    });
 
     expect(
       planEnsurePowerNet(document, {
@@ -111,31 +119,16 @@ describe("power Net planner", () => {
         domain: "ground",
         ...marker,
       }),
-    ).toEqual({
-      ok: true,
-      netId: "net-tail",
-      edits: [
-        {
-          kind: "upsert_connectivity_evidence",
-          evidence: expect.objectContaining({
-            netId: "net-tail",
-            name: "0",
-            powerDomain: "ground",
-          }),
-        },
-      ],
-    });
+    ).toMatchObject({ ok: false, relatedNetIds: ["net-tail"] });
   });
 
-  it("adds a Ground marker claim without rewriting a signal Base Net", () => {
+  it("adds a Ground marker claim to an unnamed Base Net", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-tail",
-      name: "TAIL",
       scope: "local",
       terminals: [],
     });
-
     expect(
       planEnsurePowerNet(document, {
         candidateNetId: "net-tail",
@@ -167,6 +160,15 @@ describe("power Net planner", () => {
       scope: "global",
       powerDomain: "vdd",
       terminals: [],
+    });
+    document.connectivityEvidence.push({
+      id: "claim-avdd",
+      kind: "name-claim",
+      netId: "net-avdd",
+      name: "AVDD",
+      owner: { kind: "explicit-net-property" },
+      scope: "global",
+      powerDomain: "vdd",
     });
 
     expect(

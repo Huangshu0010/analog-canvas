@@ -70,9 +70,9 @@ for readability; these groups do not create separate mutation endpoints:
   `add_junction`, `attach_endpoint_to_route`, `remove_junction`,
   `move_junction`, `remove_route_geometry`, `cut_connection`, `connect_endpoints`,
   `disconnect_endpoint`;
-- Net/power/MOS: `add_power_rail`, `merge_nets`, `set_net_name`,
+- Net/power/MOS: `add_power_rail`, `merge_nets`,
   `upsert_connectivity_evidence`, `remove_connectivity_evidence`,
-  `set_net_power_domain`, `set_mos_bulk_defaults`,
+  `set_mos_bulk_defaults`,
   `reconcile_mos_bulk`, `clear_mos_bulk_default`;
 - explicit open terminal: `add_no_connect`, `remove_no_connect`;
 - presentation/layout: `set_presentation_style`, `set_cell_symbol_presentation`,
@@ -212,24 +212,17 @@ Phase 8 topology operations have these preconditions:
   annotations, but rejects while a Route still terminates at the Instance.
 - `connect_endpoints` creates a caller-named local Net when both endpoints are
   unowned, or attaches an unowned endpoint to the other endpoint's Net.
-- `set_net_name` requires a non-empty trimmed name. A name already owned by a
-  different Net after case-folded comparison is rejected; the caller must
-  explicitly `merge_nets`.
 - `planEnsureNamedNet` is the pure high-level companion for an existing
   candidate Base Net, stable evidence ID, and addressable owner. It emits
   `upsert_connectivity_evidence` only: matching scoped claims remain separate
   physically and resolve to one Logical Net. It never emits `merge_nets` or a
-  new `Net.name` projection. If the candidate has an explicit legacy/imported
-  property claim, the edit adopts that claim into the requested name so one
-  historical fact does not become a false conflict. It does not weaken the raw
-  edit's rejection rule or create another mutation endpoint.
-- `set_net_power_domain` may classify an unclassified Net or clear a role, but
-  cannot change directly between non-`none` roles. Canonical power authoring
-  selects by Net name before applying this edit; a power role alone never
-  selects a Net.
-- `add_power_rail` requires an explicit trimmed `netName` and scope, creates or
-  reuses exactly that named compatible Net, and binds its RichText annotation
-  to the Net name. It does not infer identity from `powerDomain`.
+  new `Net.name` projection. If the candidate has an imported name claim, the
+  edit updates that owned fact deliberately; it does not create another
+  mutation endpoint.
+- `add_power_rail` requires an explicit trimmed `netName` and scope, creates a
+  physical Base Net when needed, and authors the same marker claim used by VDD
+  symbols. Its RichText annotation is bound to that claim. It does not infer
+  identity from `powerDomain` or physically merge by name.
 - Power-Net normalization is not an edit operation. Normal production
   authoring uses the name-first power and named-Net planners; a transaction
   cannot silently add a canonical name, change scope, or repair a duplicate

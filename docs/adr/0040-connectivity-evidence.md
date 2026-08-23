@@ -1,83 +1,81 @@
-# ADR 0039: Connectivity Evidence and Schema 22
+# ADR 0040: Base Nets, Net Markers, and Logical Nets
 
 Status: accepted
 
 Date: 2026-08-23
 
-Owners: `packages/model`, `packages/project-protocol`, `packages/spice`,
-`packages/derived`, `packages/edit-engine`, `packages/netlist`, `apps/editor`
+Schema: schema 22
 
 ## Context
 
-One persisted `Net` currently carries structural membership, logical identity,
-display name, and import provenance. Semantic operations such as placing a Net
-Label or Free Port therefore merge Base Nets destructively. Once the last
-visible owner is removed, the system cannot tell whether connectivity remains
-because of another label, an explicit name, a SPICE source assertion, or a
-physical conductor. Export, ERC, highlight, and routing guidance can also drift
-when they reconstruct those meanings independently.
+The editor previously let `Net.name`, power-role fields, marker annotations,
+and SPICE provenance act as independent electrical authorities. Repeated VDD
+or Ground symbols could therefore look equivalent while diagnostics, export,
+highlight, and routing guidance disagreed. Destructive same-name merges also
+made removing one label alter connectivity owned by another label.
 
 ## Decision
 
-Schema 22 adds `Document.connectivityEvidence`, a strict list of stable,
-owner-addressable facts:
+The runtime has one connectivity model with three deliberately different
+layers:
 
-- `name-claim` binds one Base Net and name/scope to a Net Label, Free Port,
-  power marker, or explicit Net property owner;
-- `spice-source` binds one Base Net to one source Net identity and optional
-  source span;
-- `explicit-equivalence` declares a bounded set of two or more Base Nets to be
-  logically equivalent.
+1. A **Base Net** is physical topology only: terminal membership plus Routes
+   and Junctions that reference its stable ID. Physical contact may merge Base
+   Nets; equal text never does.
+2. A **Net Marker claim** is an owner-addressed electrical naming fact. Net
+   Labels, Free Ports, VDD/Ground symbols, and Power Rails all use the same
+   `name-claim` shape. A claim owns `name`, `scope`, and optional `powerDomain`.
+   SPICE source identity and explicit equivalence are additional evidence fed
+   to the same resolver, not alternate naming protocols.
+3. A **Logical Net** is the pure derived equivalence class used by ERC, search,
+   highlight, routing guidance, export, Agent snapshots, and topology hashes.
+   Matching folded names join only within the same scope. Conflicting names,
+   scopes, or power roles are errors; no source silently wins.
 
-Evidence IDs share the Document object namespace. Every referenced Net and
-owner must exist, and repeated equivalence members are invalid. Deleting an
-owner will therefore delete its evidence rather than destroy another owner's
-fact. A later resolver target will derive Logical Nets from Base Nets, physical
-topology, evidence, hierarchy edges, and global scope; all exporter and editor
-consumers will use that one result.
+Power Rail and VDD are not separate electrical objects. Power Rail is a draw
+gesture and Route presentation; VDD and Ground are marker symbol
+presentations. VDD, AVDD, DVDD, and node `0` are ordinary names. Power markers
+default to global scope; ordinary Net Labels and Free Ports default to local
+scope. AVDD and DVDD remain separate because their names differ, even though
+both carry the `vdd` role.
 
-L3 is deliberately transitional: `Net.name` and `Net.origin` remain readable
-projections so current producers and consumers do not change semantics in the
-schema commit. The schema-21 adapter creates deterministic explicit-property
-claims for retained Net names, label-owned claims for existing Net/power
-labels, and source assertions for imported origin membership. It cannot infer
-historical destructive merge lineage and does not invent equivalence evidence.
-Fresh SPICE import writes source assertions directly. Subsequent L4/L5 targets
-move semantic producers and consumers to evidence before retiring legacy
-authority.
+A formal Cell Port remains a hierarchy interface. Its ordered terminal name
+is an export/interface fact and its canvas markers are ordinary Instances. It
+does not become a Free Port or a second Net naming API. A formal terminal name
+may differ from the internal Logical-Net name; repeated markers reuse the
+terminal by its Net binding, not by turning the interface name into a claim.
 
-The first L4 mutation layer uses two ordinary typed edits only:
-`upsert_connectivity_evidence` and `remove_connectivity_evidence`. They share
-the existing transaction, revision, validation, diff, Undo, and rollback
-contracts. Deleting an addressable owner removes only its claim; non-owner
-assertions remain explicit. Evidence also participates in local-Net
-reachability, and Reset Cell Body retains evidence only when its complete
-owner/Net reference closure survives. These edits remain unsupported by the
-retired Agent product.
+`upsert_connectivity_evidence` and `remove_connectivity_evidence` are internal
+typed edits used by reviewed planners. The public Agent surface reads resolved
+Logical Nets but cannot mutate evidence or raw Base-Net naming fields. The old
+`set_net_name`, `set_net_power_domain`, and named `connect_endpoints` inputs are
+removed.
 
-The next L4 layer resolves Document-local Logical Nets as a pure derived view.
-Base Nets are unioned by matching scoped name claims, matching SPICE source
-identity, and explicit equivalence. Conflicting name or scope claims are
-reported instead of selecting a winner. Annotation text first reads its own
-owner-addressed claim; connectivity highlight/indexing and design-netlist
-extraction consume the same resolved groups. GUI Net Label and Free Net Port
-authoring writes claims and never merges physical Base Nets or creates a new
-unowned `Net.name` projection. Editing a legacy/imported explicit-property
-name updates that explicit claim deliberately; other visible owners remain
-independent conflict evidence. The retired Agent surface retains its bounded
-legacy raw `set_net_name` operation and cannot author evidence.
+Schema-21 `Net.name`, `Net.scope`, `Net.powerDomain`, and `Net.origin` members
+remain only as inert schema-22 storage projections for the rolling file reader.
+No runtime resolver, editor planner, diagnostic, exporter, or Agent contract
+uses them as authority. Their physical removal is a schema-format cleanup, not
+another electrical migration.
 
-Per ADR 0023, schema 22 reads current schema 22 and previous schema 21 only.
-Schema 20 rolls off; persistence writes schema 22.
+Device identity stays orthogonal:
+
+- Symbol Definition owns pins and artwork;
+- Instance owns stable object ID, emitted netlist reference/binding, and
+  placement;
+- Presentation owns schematic reference text and RichText annotations.
+
+Changing Net semantics therefore cannot change Razavi geometry, hit areas,
+labels, or insertion gestures.
 
 ## Consequences
 
-- Name and source ownership become inspectable and independently removable.
-- The migration is deterministic and stable-ID based, but cannot reverse
-  information already destroyed by an older merge.
-- The additive transitional fields avoid a flag-day rewrite. Migrated
-  consumers use the shared resolver; legacy-only producers remain explicit
-  follow-up work and cannot define a second evidence folding algorithm.
-- Physical Base-Net records and logical electrical identity are intentionally
-  different layers. Same-name authoring is reversible because it preserves
-  every physical record and owner.
+- Repeated VDD/Ground markers are legal and resolve by name without physically
+  merging their Base Nets.
+- Removing the last marker removes only its claim; unrelated topology and
+  imported source evidence survive according to their own owners.
+- A GND/VDD marker placed on an independently named signal is rejected instead
+  of silently renaming or aliasing the signal.
+- All electrical consumers receive the same canonical Logical-Net ID and
+  conflict set.
+- Visual appearance and established user gestures are unchanged; only the
+  underlying electrical authority is consolidated.

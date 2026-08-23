@@ -26,7 +26,8 @@ sequential migration registry or second in-memory Project shape.
   terminals, raw formal defaults, interface status and optional block
   presentation. It has no internal Document body.
 - `Instance.schematicReference` is the canvas-facing Reference for ordinary
-  Instances. Ports use `Net.name` or `CellTerminal.name` and do not display a
+  Instances. Free Ports use their name claim; Formal Ports use
+  `CellTerminal.name`; neither displays a
   `P#` reference. `Instance.netlist` contains the separate emitted reference,
   binding, and typed parameter values for emitting Instances. Import source
   order and symbol-mapping registry identity live in
@@ -36,21 +37,15 @@ sequential migration registry or second in-memory Project shape.
 - Canvas `port` and `port-filled` objects are ordinary Instances with terminal
   `P`; their connectivity is stored only in `Net.terminals` and ordinary
   terminal Route endpoints.
-- `Net.terminals` is the electrical membership authority.
+- Base `Net.terminals` is the physical membership authority.
 - `Document.connectivityEvidence` records owner-addressable name claims,
-  SPICE-source assertions, and explicit Base-Net equivalence. During the L3
-  transition it is persisted and validated beside legacy `Net.name` and
-  `Net.origin`; resolved logical connectivity becomes authoritative only when
-  the shared L5 resolver migration lands.
-- `Net.origin` records whether the membership came from SPICE import or from
-  authoring. It is the sole persisted eligibility policy for derived routing
-  guidance; it does not itself make a visible connection.
+  SPICE-source assertions, and explicit Base-Net equivalence. The shared
+  Logical-Net resolver is the sole runtime naming/source authority.
 - Route endpoints are terminal or Junction references only.
-- `Net.powerDomain` explicitly records `none`, `vdd`, `ground`, or diagnostic
-  `conflict`; authoring verifies this persisted role after matching an explicit
-  Net by normalized name, never by symbol or fixed ID.
-- A named power rail uses an ordinary Net, Route/Junction geometry, and a
-  net-name-bound RichText annotation. There is no VDD symbol Instance.
+- A marker claim may classify its Logical Net as `vdd` or `ground`; role never
+  substitutes for name identity.
+- A named Power Rail uses an ordinary Base Net, Route/Junction geometry, the
+  same global name claim as a VDD marker, and a bound RichText annotation.
 - Every visible editable label is a RichText annotation. Its binding separates
   `instance-designator`, `instance-schematic-name`, `instance-master-name`,
   `instance-value`, and `cell-terminal-name`. The default ordinary label is

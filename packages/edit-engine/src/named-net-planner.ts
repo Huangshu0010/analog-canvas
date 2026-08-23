@@ -10,12 +10,7 @@ export type EnsureNamedNetPlan =
   | { ok: false; message: string; relatedNetIds: readonly string[] };
 
 export interface NamedNetPlannerDocument {
-  nets: readonly {
-    id: string;
-    name?: string | undefined;
-    scope: "local" | "global";
-    powerDomain?: "none" | "vdd" | "ground" | "conflict" | undefined;
-  }[];
+  nets: readonly { id: string }[];
   connectivityEvidence: readonly ConnectivityEvidence[];
 }
 
@@ -49,7 +44,7 @@ export function planEnsureNamedNet(
       relatedNetIds: [candidate.id],
     };
   }
-  const scope = request.scope ?? candidate.scope;
+  const scope = request.scope ?? "local";
   const foldedName = foldNetName(name);
   const matchingNetIds = new Set(
     document.connectivityEvidence.flatMap((evidence) =>
@@ -60,25 +55,21 @@ export function planEnsureNamedNet(
         : [],
     ),
   );
-  for (const net of document.nets) {
-    if (net.name && foldNetName(net.name) === foldedName) {
-      matchingNetIds.add(net.id);
-    }
-  }
-  const incompatible = [...matchingNetIds]
-    .map((netId) => document.nets.find((net) => net.id === netId))
-    .find(
-      (net) =>
-        net &&
-        (net.powerDomain ?? "none") !== "none" &&
-        (candidate.powerDomain ?? "none") !== "none" &&
-        net.powerDomain !== candidate.powerDomain,
-    );
-  if (incompatible) {
+  const existingDomains = new Set(
+    document.connectivityEvidence.flatMap((evidence) =>
+      evidence.kind === "name-claim" &&
+      matchingNetIds.has(evidence.netId) &&
+      evidence.powerDomain
+        ? [evidence.powerDomain]
+        : [],
+    ),
+  );
+  if (request.powerDomain) existingDomains.add(request.powerDomain);
+  if (existingDomains.size > 1) {
     return {
       ok: false,
-      message: `Cannot join named Nets with incompatible power roles: ${incompatible.powerDomain ?? "none"}, ${candidate.powerDomain ?? "none"}`,
-      relatedNetIds: [incompatible.id, candidate.id],
+      message: "Cannot join named Nets with incompatible power roles",
+      relatedNetIds: [...matchingNetIds, candidate.id],
     };
   }
 
@@ -95,10 +86,9 @@ export function planEnsureNamedNet(
     (item) => item.id === evidence.id,
   );
   const edits: SchematicEdit[] = [];
-  // A legacy/imported Net name is represented by an explicit-property claim.
-  // Editing a visible owner adopts that existing name source; leaving the old
-  // explicit claim untouched would manufacture a conflict from one historical
-  // name. Other label/Port owners remain independent and can still conflict.
+  // An imported explicit-property claim remains owner-addressed evidence.
+  // Editing a visible owner adopts it so one physical Net does not retain two
+  // contradictory names. Other label/Port owners remain independently owned.
   for (const item of document.connectivityEvidence) {
     if (
       item.id !== evidence.id &&

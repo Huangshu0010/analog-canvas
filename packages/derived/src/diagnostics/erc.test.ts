@@ -248,7 +248,7 @@ describe("ERC engine", () => {
     const project = emptyProject();
     const document = project.documents[0]!;
     document.instances = [
-      { id: "VDD1", symbolId: "vdd", placement: null },
+      { id: "VDD1", symbolId: "vdd-port", placement: null },
       { id: "GND1", symbolId: "ground", placement: null },
     ];
     document.nets = [
@@ -260,6 +260,26 @@ describe("ERC engine", () => {
           { instanceId: "VDD1", pinName: "P" },
           { instanceId: "GND1", pinName: "0" },
         ],
+      },
+    ];
+    document.connectivityEvidence = [
+      {
+        id: "claim-vdd-short",
+        kind: "name-claim",
+        netId: "net-short",
+        name: "VDD",
+        scope: "local",
+        powerDomain: "vdd",
+        owner: { kind: "explicit-net-property" },
+      },
+      {
+        id: "claim-ground-short",
+        kind: "name-claim",
+        netId: "net-short",
+        name: "0",
+        scope: "local",
+        powerDomain: "ground",
+        owner: { kind: "explicit-net-property" },
       },
     ];
 

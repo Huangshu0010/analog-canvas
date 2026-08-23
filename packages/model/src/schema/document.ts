@@ -486,9 +486,7 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
             ? semanticTextDocument(
                 (annotationNameClaim?.kind === "name-claim"
                   ? annotationNameClaim.name
-                  : undefined) ??
-                  document.nets.find((net) => net.id === binding.netId)?.name ??
-                  "",
+                  : undefined) ?? "",
                 annotation.kind === "power-label" ? "power-label" : "net-label",
               )
             : null;

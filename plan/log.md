@@ -5238,3 +5238,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   one Cloudflare currently serves, typecheck, prettier, markdown links.
 - Commit status: completed on `claude/retire-pages`; mainline merge gated on
   the remote required checks.
+
+## 2026-08-23 - Unify Base Nets, Net Markers, and Logical Nets
+
+- Replaced parallel raw-Net naming/power paths with one owner-addressed Net
+  Marker evidence contract and one derived Logical-Net resolver. VDD, Ground,
+  Free Port, Net Label, and Power Rail now share that electrical mechanism;
+  physical Base Nets remain topology-only.
+- Migrated ERC, netlist export, search, highlight, guidance, clipboard, Agent
+  snapshots, and topology hashing. Removed raw naming edits and retired model
+  contract modules while preserving the existing visual assets and gestures.
+- Kept Formal Cell Port names distinct from internal Logical-Net names and
+  preserved repeated-marker placement through logical binding reuse.
+- Validation: gate preflight; affected browser suites (24 component insert,
+  13 hierarchy, 11 project file, 1 Agent, 99 manual editor); branch verification
+  (187 unit files / 1214 tests, workspace build, production smoke); diff check.
+- Commit status: implementation ready on `codex/project-net-lifecycle`.

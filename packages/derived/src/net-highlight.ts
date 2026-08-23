@@ -69,7 +69,10 @@ export function computeNetHighlight(
   netId: string,
   origin?: EndpointRef,
 ): NetHighlight | undefined {
-  const record = index.documents.get(documentId)?.nets.get(netId);
+  const documentIndex = index.documents.get(documentId);
+  const record =
+    documentIndex?.logicalNets.get(netId) ??
+    documentIndex?.logicalNetByBaseNetId.get(netId);
   if (!record) return undefined;
   const component =
     origin && record.baseNetIds.length === 1
@@ -111,8 +114,11 @@ export function traceNet(
   const primary = computeNetHighlight(index, documentId, netId);
   if (!primary) return undefined;
 
-  const parentEndpointToNet = index.documents.get(documentId)?.endpointToNet;
-  const logicalRecord = index.documents.get(documentId)?.nets.get(netId);
+  const parentEndpointToNet =
+    index.documents.get(documentId)?.endpointToBaseNetId;
+  const logicalRecord = index.documents
+    .get(documentId)
+    ?.logicalNetByBaseNetId.get(netId);
   const crossCell: CrossCellTraceFrame[] = [];
   for (const edge of index.hierarchy.edges) {
     if (edge.parentDocumentId !== documentId) continue;
@@ -161,8 +167,8 @@ export function traceHierarchyNet(
   const canonicalRef = (ref: HierarchyNetRef): HierarchyNetRef => ({
     documentId: ref.documentId,
     netId:
-      index.documents.get(ref.documentId)?.nets.get(ref.netId)?.netId ??
-      ref.netId,
+      index.documents.get(ref.documentId)?.logicalNetByBaseNetId.get(ref.netId)
+        ?.netId ?? ref.netId,
   });
   const queue: HierarchyNetRef[] = [canonicalRef({ documentId, netId })];
   const visited = new Set<string>();
@@ -181,8 +187,10 @@ export function traceHierarchyNet(
     visited.add(key);
     highlights.push(highlight);
     const currentDocumentIndex = index.documents.get(current.documentId);
-    const endpointToNet = currentDocumentIndex?.endpointToNet;
-    const currentRecord = currentDocumentIndex?.nets.get(current.netId);
+    const endpointToNet = currentDocumentIndex?.endpointToBaseNetId;
+    const currentRecord =
+      currentDocumentIndex?.logicalNets.get(current.netId) ??
+      currentDocumentIndex?.logicalNetByBaseNetId.get(current.netId);
 
     for (const edge of index.hierarchy.edges) {
       if (edge.parentDocumentId === current.documentId) {
@@ -208,7 +216,7 @@ export function traceHierarchyNet(
         if (!currentRecord?.baseNetIds.includes(edge.childNetId)) continue;
         const parentNetId = index.documents
           .get(edge.parentDocumentId)
-          ?.endpointToNet.get(
+          ?.endpointToBaseNetId.get(
             endpointKey({
               kind: "terminal",
               instanceId: edge.instanceId,

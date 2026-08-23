@@ -108,9 +108,6 @@
         {
           "id": "net-h",
           "name": "HORIZONTAL",
-          "origin": {
-            "kind": "authored"
-          },
           "scope": "local",
           "terminals": [
             {
@@ -130,9 +127,6 @@
         {
           "id": "net-v",
           "name": "VERTICAL",
-          "origin": {
-            "kind": "authored"
-          },
           "scope": "local",
           "terminals": [
             {

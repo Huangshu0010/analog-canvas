@@ -245,8 +245,6 @@ export const ConnectEndpointsEditSchema = z.strictObject({
   from: RouteEndpointSchema,
   to: RouteEndpointSchema,
   newNetId: StableIdSchema.optional(),
-  newNetName: z.string().min(1).optional(),
-  newNetScope: z.enum(["local", "global"]).optional(),
 });
 
 /** A power rail edit creates/reuses one explicit named Net and its geometry. */
@@ -263,20 +261,10 @@ export const AddPowerRailEditSchema = z.strictObject({
   start: PointSchema,
   end: PointSchema,
 });
-export const SetNetPowerDomainEditSchema = z.strictObject({
-  kind: z.literal("set_net_power_domain"),
-  netId: StableIdSchema,
-  powerDomain: z.enum(["none", "vdd", "ground"]),
-});
 export const MergeNetsEditSchema = z.strictObject({
   kind: z.literal("merge_nets"),
   targetNetId: StableIdSchema,
   sourceNetId: StableIdSchema,
-});
-export const SetNetNameEditSchema = z.strictObject({
-  kind: z.literal("set_net_name"),
-  netId: StableIdSchema,
-  name: z.string().trim().min(1).max(256),
 });
 export const UpsertConnectivityEvidenceEditSchema = z.strictObject({
   kind: z.literal("upsert_connectivity_evidence"),
@@ -407,10 +395,8 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   ConnectEndpointsEditSchema,
   AddPowerRailEditSchema,
   MergeNetsEditSchema,
-  SetNetNameEditSchema,
   UpsertConnectivityEvidenceEditSchema,
   RemoveConnectivityEvidenceEditSchema,
-  SetNetPowerDomainEditSchema,
   SetMosBulkDefaultsEditSchema,
   ReconcileMosBulkEditSchema,
   ClearMosBulkDefaultEditSchema,

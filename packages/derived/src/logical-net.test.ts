@@ -100,7 +100,7 @@ describe("resolved logical Nets", () => {
     );
   });
 
-  it("normalizes transitional names and owner claims into one logical group", () => {
+  it("ignores inert legacy projections when resolving marker-owned names", () => {
     const document = createEmptyDocument("document", "Document");
     document.nets.push(
       { id: "legacy", name: "VDD", scope: "local", terminals: [] },
@@ -117,16 +117,16 @@ describe("resolved logical Nets", () => {
     });
 
     expect(resolveDocumentLogicalNets(document).groups).toEqual([
+      expect.objectContaining({ baseNetIds: ["legacy"], powerDomain: "none" }),
       expect.objectContaining({
-        baseNetIds: ["legacy", "marker"],
+        baseNetIds: ["marker"],
         name: "vdd",
         powerDomain: "vdd",
-        conflicts: [],
       }),
     ]);
   });
 
-  it("does not hide a transitional name conflict behind a marker claim", () => {
+  it("does not let an inert legacy projection conflict with a marker claim", () => {
     const document = createEmptyDocument("document", "Document");
     document.nets.push({
       id: "net",
@@ -144,8 +144,54 @@ describe("resolved logical Nets", () => {
     });
 
     expect(resolveDocumentLogicalNets(document).groups[0]).toMatchObject({
-      conflicts: ["name-conflict"],
+      name: "BIAS",
+      conflicts: [],
       powerDomain: "none",
     });
+  });
+
+  it("keeps a formal Cell Port name distinct from the connected logical Net name", () => {
+    const document = createEmptyDocument("document", "Document");
+    document.nets.push(
+      { id: "net-port", scope: "local", terminals: [] },
+      { id: "net-label", scope: "local", terminals: [] },
+    );
+    document.netlist = {
+      name: "Document",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-p1",
+          name: "P1",
+          netId: "net-port",
+          direction: "input",
+          interfaceInstanceIds: [],
+        },
+      ],
+    };
+    document.connectivityEvidence.push({
+      id: "claim-p1",
+      kind: "name-claim",
+      netId: "net-label",
+      name: "P1",
+      owner: { kind: "explicit-net-property" },
+      scope: "local",
+    });
+
+    expect(resolveDocumentLogicalNets(document).groups).toEqual([
+      expect.objectContaining({
+        baseNetIds: ["net-label"],
+        name: "P1",
+        conflicts: [],
+      }),
+      expect.objectContaining({
+        baseNetIds: ["net-port"],
+        conflicts: [],
+      }),
+    ]);
+    expect(resolveDocumentLogicalNets(document).groups[1]).not.toHaveProperty(
+      "name",
+    );
+    expect(document.connectivityEvidence).toHaveLength(1);
   });
 });

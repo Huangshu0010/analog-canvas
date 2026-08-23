@@ -36,6 +36,15 @@ describe("Net highlight", () => {
       powerDomain: "vdd",
       terminals: [],
     });
+    project.documents[0]!.connectivityEvidence.push({
+      id: "claim-vdd-top",
+      kind: "name-claim",
+      netId: "net-vdd-top",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      owner: { kind: "explicit-net-property" },
+    });
     const child = createEmptyDocument("child", "Child");
     child.nets.push({
       id: "net-vdd-child",
@@ -43,6 +52,15 @@ describe("Net highlight", () => {
       scope: "global",
       powerDomain: "vdd",
       terminals: [],
+    });
+    child.connectivityEvidence.push({
+      id: "claim-vdd-child",
+      kind: "name-claim",
+      netId: "net-vdd-child",
+      name: "vdd",
+      scope: "global",
+      powerDomain: "vdd",
+      owner: { kind: "explicit-net-property" },
     });
     project.documents.push(child);
 

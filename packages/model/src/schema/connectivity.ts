@@ -10,11 +10,7 @@ export const NetPowerDomainSchema = z.enum([
   "ground",
   "conflict",
 ]);
-/**
- * Identifies the topology authority that may request routing guidance. The
- * absence of this optional field is treated as authored only while opening
- * legacy in-memory Documents; schema-19 writers persist it explicitly.
- */
+/** Legacy schema-21 import lineage. Runtime connectivity never reads it. */
 export const NetOriginSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("authored") }),
   z.strictObject({
@@ -24,12 +20,14 @@ export const NetOriginSchema = z.discriminatedUnion("kind", [
 ]);
 export const NetSchema = z.strictObject({
   id: StableIdSchema,
+  /** @deprecated Inert schema-21 projection; Logical Net evidence is authoritative. */
   name: z.string().min(1).optional(),
+  /** @deprecated Base Nets are physical; marker evidence carries logical scope. */
   scope: z.enum(["local", "global"]),
-  // Runtime treats absence as `none` for in-memory construction and never
-  // infers power identity from a symbol, name, or fixed Net ID.
+  /** @deprecated Base Nets have no power role; retained until schema-23 cleanup. */
   powerDomain: NetPowerDomainSchema.optional(),
   terminals: z.array(TerminalRefSchema),
+  /** @deprecated Import lineage is represented by spice-source evidence. */
   origin: NetOriginSchema.optional(),
 });
 

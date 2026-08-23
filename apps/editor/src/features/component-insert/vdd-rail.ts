@@ -44,7 +44,7 @@ export function constructVddRailEdits({
   end,
   netId,
   netName = "VDD",
-  scope = "local",
+  scope = "global",
 }: VddRailConstruction): SchematicEdit[] {
   const key = instanceId.toLowerCase();
   const targetNetId = netId ?? `net-power-${key}`;
@@ -109,7 +109,7 @@ export function planVddRailEdits(
         ...construction,
         netId,
         netName,
-        scope: requestedLogical?.scope ?? construction.scope ?? "local",
+        scope: requestedLogical?.scope ?? construction.scope ?? "global",
       }),
       ...planInitialMosBulkDefault(document, "vdd", netId),
     ],

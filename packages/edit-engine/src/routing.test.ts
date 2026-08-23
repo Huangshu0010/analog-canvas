@@ -27,6 +27,24 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 const context = { symbolResolver: resolver };
 
+function addNameClaim(
+  document: ReturnType<typeof createEmptyDocument>,
+  netId: string,
+  name: string,
+  scope: "local" | "global",
+  powerDomain?: "vdd" | "ground",
+): void {
+  document.connectivityEvidence.push({
+    id: `claim-${netId}`,
+    kind: "name-claim",
+    netId,
+    name,
+    owner: { kind: "explicit-net-property" },
+    scope,
+    ...(powerDomain ? { powerDomain } : {}),
+  });
+}
+
 function documentFixture() {
   return parseProject(
     readFileSync(
@@ -193,6 +211,7 @@ describe("routing Edit Engine", () => {
       powerDomain: "vdd",
       terminals: [],
     });
+    addNameClaim(document, "VDD", "VDD", "global", "vdd");
     document.junctions.push(
       {
         id: "vdd-start",
@@ -328,6 +347,7 @@ describe("routing Edit Engine", () => {
       powerDomain: "vdd",
       terminals: [],
     });
+    addNameClaim(document, "VDD", "VDD", "global", "vdd");
     document.junctions.push(
       {
         id: "rail-top",
@@ -1567,8 +1587,11 @@ describe("routing Edit Engine", () => {
   it("does not derive flightlines across separately drawn named global Net markers", () => {
     const document = documentFixture();
     const globalNet = document.nets.find((net) => net.id === "net-h")!;
-    globalNet.name = "VDD";
-    globalNet.scope = "global";
+    const nameClaim = document.connectivityEvidence.find(
+      (evidence) =>
+        evidence.kind === "name-claim" && evidence.netId === globalNet.id,
+    );
+    if (nameClaim?.kind === "name-claim") nameClaim.scope = "global";
 
     expect(deriveFlightlines(document, resolver)).not.toContainEqual(
       expect.objectContaining({ netId: "net-h" }),

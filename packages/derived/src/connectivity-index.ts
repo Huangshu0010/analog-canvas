@@ -62,8 +62,12 @@ export interface NetConnectivityRecord {
 
 export interface DocumentConnectivityIndex {
   documentId: string;
-  endpointToNet: ReadonlyMap<string, string>;
-  nets: ReadonlyMap<string, NetConnectivityRecord>;
+  /** Physical membership: endpoint key -> Base Net id. */
+  endpointToBaseNetId: ReadonlyMap<string, string>;
+  /** One canonical record per resolved Logical Net. */
+  logicalNets: ReadonlyMap<string, NetConnectivityRecord>;
+  /** Total lookup from every Base Net id to its Logical Net record. */
+  logicalNetByBaseNetId: ReadonlyMap<string, NetConnectivityRecord>;
   routingGeometry: ResolvedDocumentRoutingGeometry;
 }
 
@@ -166,10 +170,10 @@ function buildDocumentIndex(
   if (cached?.revision === document.revision && cached.resolver === resolver) {
     return cached.index;
   }
-  const endpointToNet = new Map<string, string>();
+  const endpointToBaseNetId = new Map<string, string>();
   for (const net of document.nets) {
     for (const endpoint of netEndpoints(document, net)) {
-      endpointToNet.set(endpointKey(endpoint), net.id);
+      endpointToBaseNetId.set(endpointKey(endpoint), net.id);
     }
   }
 
@@ -192,7 +196,8 @@ function buildDocumentIndex(
       ),
     );
   }
-  const nets = new Map<string, NetConnectivityRecord>();
+  const logicalNets = new Map<string, NetConnectivityRecord>();
+  const logicalNetByBaseNetId = new Map<string, NetConnectivityRecord>();
   for (const group of resolveDocumentLogicalNets(document).groups) {
     const records = group.baseNetIds.map((netId) => baseRecords.get(netId)!);
     const aggregate: NetConnectivityRecord = {
@@ -208,18 +213,20 @@ function buildDocumentIndex(
       routes: uniqueStrings(records.flatMap((record) => record.routes)),
       junctions: uniqueStrings(records.flatMap((record) => record.junctions)),
       virtualEdges: records.flatMap((record) => record.virtualEdges),
-      routingGuidance: records.flatMap((record) => record.routingGuidance),
+      routingGuidance: routingGuidanceByNet.get(group.id) ?? [],
     };
+    logicalNets.set(group.id, aggregate);
     for (const baseNetId of group.baseNetIds) {
-      nets.set(baseNetId, aggregate);
+      logicalNetByBaseNetId.set(baseNetId, aggregate);
     }
   }
 
   const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
   const index = {
     documentId: document.id,
-    endpointToNet,
-    nets,
+    endpointToBaseNetId,
+    logicalNets,
+    logicalNetByBaseNetId,
     routingGeometry,
   };
   documentIndexCache.set(document, {

@@ -170,7 +170,6 @@ describe("hierarchy domain planners", () => {
             from: { kind: "terminal", instanceId: "P1", pinName: "P" },
             to: { kind: "terminal", instanceId: "P1", pinName: "P" },
             newNetId: "net-in",
-            newNetName: "IN",
           },
         ],
         terminal: {
@@ -217,7 +216,7 @@ describe("hierarchy domain planners", () => {
       interfaceInstanceIds: ["P1", "P2"],
     });
     // Both markers share the terminal's Net.
-    expect(document.nets.filter((net) => net.name === "IN")).toHaveLength(1);
+    expect(document.nets.filter((net) => net.id === "net-in")).toHaveLength(1);
     const net = document.nets.find((candidate) => candidate.id === "net-in")!;
     expect(net.terminals.map((terminal) => terminal.instanceId).sort()).toEqual(
       ["P1", "P2"],

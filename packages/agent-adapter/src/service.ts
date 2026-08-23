@@ -177,8 +177,6 @@ export function agentEditCategory(
     case "connect_endpoints":
     case "add_power_rail":
     case "merge_nets":
-    case "set_net_name":
-    case "set_net_power_domain":
     case "set_mos_bulk_defaults":
     case "reconcile_mos_bulk":
     case "clear_mos_bulk_default":

@@ -54,7 +54,7 @@ function endpointHasOnlyInternalMembership(
   instanceId: string,
   pinName: string,
 ): boolean {
-  const net = index?.nets.get(netId);
+  const net = index?.logicalNetByBaseNetId.get(netId);
   return Boolean(
     net &&
     net.logicalEndpoints.length === 1 &&
@@ -76,7 +76,8 @@ export function runErcChecks(
 
   for (const document of documents) {
     const docIndex = index.documents.get(document.id);
-    const endpointToNet = docIndex?.endpointToNet ?? new Map<string, string>();
+    const endpointToNet =
+      docIndex?.endpointToBaseNetId ?? new Map<string, string>();
     const noConnectEndpoints = new Set(
       document.noConnects.map((noConnect) => noConnectKey(noConnect.endpoint)),
     );
@@ -326,19 +327,6 @@ export function runErcChecks(
             directObjectLocator(document.id, "net", netId),
           ),
           parameters: { count: issue.netIds.length },
-        });
-      } else if (issue.code === "UNNAMED_GLOBAL_NET") {
-        diagnostics.push({
-          id: `erc:unnamed-global-net:${document.id}:${primaryId}`,
-          domain: "erc",
-          code: "ERC_UNNAMED_GLOBAL_NET",
-          severity: "error",
-          confidence: "high",
-          gateEligible: true,
-          message: `Global Net ${primaryId} requires an explicit name`,
-          primary: directObjectLocator(document.id, "net", primaryId!),
-          related: [],
-          parameters: { netId: primaryId! },
         });
       }
       // Power-domain conflicts are emitted above with the established

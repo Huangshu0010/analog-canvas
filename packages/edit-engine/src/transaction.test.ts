@@ -8,6 +8,7 @@ import type { RichTextDocument } from "@icm/model";
 import {
   defaultInstanceLabelPlacement,
   displayableInstanceValue,
+  resolveDocumentLogicalNets,
   resolveSchematicStyleProfile,
   visibleSymbolLocalBounds,
 } from "@icm/derived";
@@ -60,7 +61,7 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
-  it("marks a Net created by manual connection as authored", () => {
+  it("creates a manual Base Net without adding naming semantics", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push(
       { id: "A", symbolId: "port", placement: null },
@@ -83,12 +84,19 @@ describe("Edit Transaction envelope", () => {
       { symbolResolver: resolver },
     );
 
-    expect(result).toMatchObject({
-      ok: true,
-      document: {
-        nets: [expect.objectContaining({ origin: { kind: "authored" } })],
-      },
-    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.nets).toEqual([
+      expect.objectContaining({ id: "net-authored" }),
+    ]);
+    expect(result.document.nets[0]?.origin).toBeUndefined();
+    expect(resolveDocumentLogicalNets(result.document).groups).toEqual([
+      expect.objectContaining({
+        id: "net-authored",
+        powerDomain: "none",
+        sourceNetIds: [],
+      }),
+    ]);
   });
 
   it("updates a Port schematic reference without creating a netlist record", () => {
@@ -274,7 +282,19 @@ describe("Edit Transaction envelope", () => {
 
     const result = executeTransaction(document, {
       ...transaction(),
-      edits: [{ kind: "set_net_name", netId: "net-vin", name: "VINP" }],
+      edits: [
+        {
+          kind: "upsert_connectivity_evidence",
+          evidence: {
+            id: "claim-vin",
+            kind: "name-claim",
+            netId: "net-vin",
+            name: "VINP",
+            scope: "local",
+            owner: { kind: "net-label", annotationId: "label-vin" },
+          },
+        },
+      ],
     });
 
     expect(result).toMatchObject({ ok: true });
@@ -557,15 +577,31 @@ describe("Edit Transaction envelope", () => {
       powerDomain: "vdd",
       terminals: [],
     });
+    document.connectivityEvidence.push({
+      id: "claim-vdd",
+      kind: "name-claim",
+      netId: "net-vdd",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      owner: { kind: "explicit-net-property" },
+    });
     const result = executeTransaction(
       document,
       {
         ...transaction(),
         edits: [
           {
-            kind: "set_net_power_domain",
-            netId: "net-vdd",
-            powerDomain: "ground",
+            kind: "upsert_connectivity_evidence",
+            evidence: {
+              id: "claim-ground-conflict",
+              kind: "name-claim",
+              netId: "net-vdd",
+              name: "0",
+              scope: "global",
+              powerDomain: "ground",
+              owner: { kind: "explicit-net-property" },
+            },
           },
         ],
       },
@@ -574,7 +610,7 @@ describe("Edit Transaction envelope", () => {
 
     expect(result).toMatchObject({
       ok: false,
-      error: { code: "EDIT_PRECONDITION" },
+      error: { code: "INVALID_RESULT" },
       document,
     });
   });
@@ -1204,9 +1240,16 @@ describe("Edit Transaction envelope", () => {
             createNet: true,
           },
           {
-            kind: "set_net_power_domain",
-            netId: "net-ui-2",
-            powerDomain: "vdd",
+            kind: "upsert_connectivity_evidence",
+            evidence: {
+              id: "claim-net-ui-2-vdd",
+              kind: "name-claim",
+              netId: "net-ui-2",
+              name: "VDD",
+              scope: "local",
+              powerDomain: "vdd",
+              owner: { kind: "explicit-net-property" },
+            },
           },
         ],
       },
@@ -1220,12 +1263,16 @@ describe("Edit Transaction envelope", () => {
           {
             id: "net-ui-2",
             scope: "local",
-            powerDomain: "vdd",
+            powerDomain: "none",
             terminals: [],
           },
         ],
       },
     });
+    if (!result.ok) return;
+    expect(
+      resolveDocumentLogicalNets(result.document).byBaseNetId.get("net-ui-2"),
+    ).toMatchObject({ name: "VDD", powerDomain: "vdd" });
   });
 
   it("dry-runs without mutating or advancing the current revision", () => {

@@ -53,7 +53,6 @@ export function createRoutingDemoProject(): CircuitProject {
             id: "net-h",
             name: "HORIZONTAL",
             scope: "local",
-            origin: { kind: "authored" },
             terminals: ["A", "B", "E"].map((instanceId) => ({
               instanceId,
               pinName: "P",
@@ -63,7 +62,6 @@ export function createRoutingDemoProject(): CircuitProject {
             id: "net-v",
             name: "VERTICAL",
             scope: "local",
-            origin: { kind: "authored" },
             terminals: ["C", "D"].map((instanceId) => ({
               instanceId,
               pinName: "P",

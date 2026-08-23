@@ -61,9 +61,6 @@ describe("named Net planner", () => {
     expect(
       plan.ok && plan.edits.some((edit) => edit.kind === "merge_nets"),
     ).toBe(false);
-    expect(
-      plan.ok && plan.edits.some((edit) => edit.kind === "set_net_name"),
-    ).toBe(false);
   });
 
   it("rejects same-name evidence across incompatible power roles", () => {
@@ -83,12 +80,22 @@ describe("named Net planner", () => {
         terminals: [],
       },
     );
+    document.connectivityEvidence.push({
+      id: "claim-vdd",
+      kind: "name-claim",
+      netId: "net-vdd",
+      name: "VDD",
+      scope: "local",
+      powerDomain: "vdd",
+      owner: { kind: "explicit-net-property" },
+    });
     expect(
       planEnsureNamedNet(document, {
         candidateNetId: "net-source",
         name: "vdd",
         evidenceId: "claim-source",
         owner,
+        powerDomain: "ground",
       }),
     ).toMatchObject({ ok: false, relatedNetIds: ["net-vdd", "net-source"] });
   });

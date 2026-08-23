@@ -42,7 +42,7 @@ describe("drawn VDD rail construction", () => {
         endJunctionId: "junction-vdd3-end",
         labelId: "label-VDD3",
         netName: "VDD",
-        scope: "local",
+        scope: "global",
         powerDomain: "vdd",
         start: { x: 80, y: 40 },
         end: { x: 260, y: 40 },
@@ -154,7 +154,7 @@ describe("drawn VDD rail construction", () => {
       resolveDocumentLogicalNets(result.document).byBaseNetId.get(
         "net-power-vdd1",
       ),
-    ).toMatchObject({ name: "VDD", powerDomain: "vdd", scope: "local" });
+    ).toMatchObject({ name: "VDD", powerDomain: "vdd", scope: "global" });
     expect(result.document.routes).toMatchObject([
       { presentation: "power-rail", netId: "net-power-vdd1" },
     ]);
@@ -310,6 +310,15 @@ describe("drawn VDD rail construction", () => {
       powerDomain: "vdd",
       terminals: [],
     });
+    document.connectivityEvidence.push({
+      id: "claim-port-avdd",
+      kind: "name-claim",
+      netId: "net-port-avdd",
+      name: "AVDD",
+      owner: { kind: "explicit-net-property" },
+      scope: "global",
+      powerDomain: "vdd",
+    });
     const first = planVddRailEdits(document, {
       instanceId: "VDD1",
       netName: "AVDD",
@@ -324,7 +333,7 @@ describe("drawn VDD rail construction", () => {
           kind: "add_power_rail",
           netId: "net-power-vdd1",
           netName: "AVDD",
-          scope: "local",
+          scope: "global",
         },
         { kind: "set_mos_bulk_defaults", pmosNetId: "net-power-vdd1" },
         { kind: "reconcile_mos_bulk" },

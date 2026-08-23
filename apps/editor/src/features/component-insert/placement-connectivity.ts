@@ -28,7 +28,7 @@ const POWER_CONNECTION_BY_SYMBOL = {
     name: "VDD",
     pinName: "P",
     domain: "vdd",
-    scope: "local",
+    scope: "global",
   },
 } as const;
 
@@ -185,7 +185,6 @@ export function proposePlacementContact(
         from: source.endpoint,
         to: target.endpoint.endpoint,
         ...(createsNet ? { newNetId } : {}),
-        ...(createsNet && power ? { newNetScope: power.scope } : {}),
       });
       if (power && createsNet) powerNetId = newNetId;
       else if (power && target.endpoint.netId) {
@@ -295,7 +294,6 @@ export function proposedStandalonePowerConnection(
         from: endpoint,
         to: endpoint,
         newNetId: netId,
-        newNetScope: power.scope,
       },
       ...plan.edits,
     ],

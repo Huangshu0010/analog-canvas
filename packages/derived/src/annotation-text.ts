@@ -70,9 +70,6 @@ export function resolveAnnotationText(
       return display.kind === "displayable" ? display.content : EMPTY_TEXT;
     }
     case "net-name": {
-      const net = document.nets.find(
-        (candidate) => candidate.id === binding.netId,
-      );
       const ownerClaim = document.connectivityEvidence.find(
         (evidence) =>
           evidence.kind === "name-claim" &&
@@ -91,7 +88,7 @@ export function resolveAnnotationText(
       const ownerClaimName =
         ownerClaim?.kind === "name-claim" ? ownerClaim.name : undefined;
       return semanticTextDocument(
-        ownerClaimName ?? logicalName ?? net?.name ?? "",
+        ownerClaimName ?? logicalName ?? "",
         annotation.kind === "power-label" ? "power-label" : "net-label",
       );
     }
