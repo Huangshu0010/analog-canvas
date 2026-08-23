@@ -4939,3 +4939,302 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   scenarios.
 - Commit status: prepared on `codex/project-net-lifecycle`; remote required
   checks remain the mainline delivery boundary.
+## 2026-08-22 — Hotfix: retire the stale gallery update offer
+
+- Target: `plan/2026-08-22-update-mode-guard/plan.md` (completed).
+- Change: the opened-entry context records its Project id and clears
+  the moment any other Project becomes active, so publishing can no
+  longer silently overwrite a stale entry (user-reported data loss);
+  the update option now names exactly what it replaces.
+- Validation: gallery Playwright 20/20, dialog units 26, typecheck,
+  prettier, test-impact, diff checks.
+- Commit status: completed on `claude/update-mode-guard`.
+
+## 2026-08-22 — Gallery entry version history with restore
+
+- Target: `plan/2026-08-22-gallery-version-history/plan.md` (completed).
+- Change: every entry update (and restore) first snapshots the previous
+  state (newest-20 cap); reviewer routes list/preview/restore versions;
+  the publish dialog's update mode links a Version history dialog with
+  per-version Restore that reloads the entry.
+- Validation: worker gallery 17, units 78, gallery Playwright 21/21,
+  typecheck, prettier, test-impact, diff checks.
+- Commit status: completed on `claude/gallery-version-history`.
+
+## 2026-08-22 — Exempt privileged submitters from the daily gallery quota
+
+- Plan: `plan/2026-08-22-exempt-admin-quota/plan.md` (complete)
+- The owner's session hit the 10-per-day hashed-IP submission quota.
+  `GalleryDO.submit` now takes `enforceLimit`; `handleSubmission` sends
+  `enforceLimit: !privileged`, so bearer/admin/moderator submissions and
+  updates are never rate-limited while ordinary and anonymous paths keep
+  the quota. Spec updated; rate-limit test reworked to cover both sides
+  (`worker/gallery.test.ts`, 17 passed). Typecheck clean.
+
+## 2026-08-22 - Double-click finishes a wire anywhere; Net Port defaults to Vin
+
+- Reported: finishing a wire onto another wire kept drafting. Two causes:
+  the canvas `onDoubleClick` only handled background targets, so a press
+  landing on a Junction or Route never reached the finishing path; and landing
+  on an endpoint or Route commits on the first press, after which the second
+  press opened a fresh wire at that spot. Diagnosed by logging the handler's
+  actual target and state rather than reasoning from the source.
+- Fix: handle the wire tool before the background-only guard, and end the
+  session when the wire source has no authored step — the discriminator
+  between a stray re-start and a real wire being finished there.
+- A new Net Port is now named `Vin` (then `Vin2`, ...), which the house text
+  style renders as a capital V with a lowercase `in` subscript.
+- One hierarchy case renamed a Port to `VIN`, a case variant of the new
+  default; Net names fold case-insensitively, so it kept `Vin`. The case moved
+  to `VBIAS` to test the same behavior without colliding with the default.
+- Validation: full unit suite (1185), full Playwright suite (207 → 2 intended
+  failures updated, then green), typecheck, prettier, diff checks.
+- Commit status: completed on `claude/port-defaults`; mainline merge gated on
+  the remote required checks.
+
+## 2026-08-22 — Owner withdrawal and owner-visible version history
+
+- Plan: `plan/2026-08-22-owner-withdraw-history/plan.md` (complete)
+- The owning session can now withdraw its entry (`POST /:id/recycle`),
+  bring it back through review (`/restore` → `pending` for ordinary
+  owners, `public` for admins), and read/restore its version history
+  (restore re-enters review via the new `pending` flag on the
+  `restore-version` op). `/mine` gained two-step Withdraw, Restore, and
+  a Version history dialog (moved to `components/` for reuse); the
+  publish dialog's history link now shows for owners too. Spec updated.
+  Worker vitest 19 passed; e2e mine/history specs 3 passed; typecheck
+  clean.
+
+## 2026-08-22 - A usable editor on a half-screen window
+
+- Three defects, each reproduced at 760px before fixing: File/Edit would not
+  open because `.app-command-surface` scrolls below 900px and clipped its own
+  414px dropdown; the Library could not be opened because a compact-layout
+  effect closed it whenever Properties was open; and it could not be widened
+  because the compact grid pinned the column to `min(8rem, 34vw)`, overriding
+  the dragged width.
+- Fixes: stop clipping while a menu is open (the pattern a toolbar row already
+  uses), let whichever panel the user just opened win, and keep
+  `--icm-shapes-width` authoritative under a `60vw` ceiling. Drag verified
+  248px → 328px with a real pointer.
+- Structure: Examples and Library moved from the vertical rail into the head of
+  the horizontal toolbar and the rail was deleted, returning its column to the
+  canvas. About folded into Help as a section. The toolbar's "← Gallery" link
+  removed, since the brand mark already goes there.
+- Two manual-editor cases needed re-aiming, not relaxing: widening the canvas
+  shifts pixel-to-logical mapping, and in one case the branch wire landed 10
+  units off, leaving two arms pointing the same way so no Junction dot was
+  drawn — the assertion was right and the geometry had moved.
+- Validation: full unit suite (1187), full Playwright suite (208 passed),
+  typecheck, prettier, diff checks.
+- Commit status: completed on `claude/chrome-half-screen`; mainline merge gated
+  on the remote required checks.
+
+## 2026-08-22 - Document settings dock beside the canvas
+
+- The style knobs rescale what the canvas draws but lived in a modal covering
+  it, so a change could not be judged while it was made. They now dock as a
+  "Document" section in the Properties sidebar, toggled by the Style button.
+- The Default NMOS/PMOS bulk Net selects moved out of a transistor's own Bulk
+  section into that same Document section: one Net answers for every NMOS or
+  PMOS in the Document, so they were never per-instance settings.
+- Removed the now unrendered modal, kept its pure knob helpers, and renamed the
+  module to `style-knobs.ts`. Its four component tests were replaced rather
+  than dropped — direct helper coverage, a rendering test for the new section,
+  and a Playwright case that asserts the canvas stays visible while a knob moves.
+- The background-dot toggle now reports in the status bar; it was the one
+  canvas control that changed the view silently.
+- Validation: full unit suite (1189), full Playwright suite (209 passed);
+  verified live that Font size 1× → 2× moved the rendered label from 15.116 to
+  30.232 with the canvas visible throughout.
+- Commit status: completed on `claude/properties-cleanup`; mainline merge gated
+  on the remote required checks.
+
+## 2026-08-22 - MOS geometry: total width, fingers, and usable defaults
+
+- Owner decision: W is the total width, finger width is per finger, and
+  `W = FW x NF` must hold. Finger width is therefore derived in the panel as
+  `W / NF` and never stored, so a second value cannot drift out of agreement.
+- Added `defaultValue` to the device parameter contract and seeded it at
+  placement: a MOS with no geometry could not display a value at all, so its
+  Value toggle stayed disabled until every field was typed. Defaults are
+  written into the typed netlist like any authored value, so the schematic and
+  the exported netlist still agree.
+- `nf` became an ordinary MOS parameter, which also removed a latent duplicate:
+  `externalMosComponentParameters` appended a synthetic NF and would now have
+  produced two.
+- The parallel multiplier now shows in the MOS value when it is not 1.
+- Finger width is derived in `apps/editor`, not `@icm/derived`, because the
+  SPICE number parser lives in `@icm/spice`, which sits above `derived`.
+- Validation: full unit suite (1193), full Playwright suite (209 passed),
+  visual golden check clean, typecheck, prettier, diff checks. Two Playwright
+  cases asserted the Value toggle stays disabled until W and L are typed —
+  that was the reported defect, so both now assert the opposite.
+- Commit status: completed on `claude/port-behavior`; mainline merge gated on
+  the remote required checks.
+
+## 2026-08-22 - One gallery, previewed, and menus that earn their space
+
+- Gallery panel cards now carry a rendering of the circuit rather than only a
+  name and a sentence, with a 1-4 column slider persisted per browser.
+- "My examples" and "Save as Example" are gone with their browser store: the
+  gallery is the single place circuits are stored.
+- Panel cards insert into the current canvas instead of replacing it, so part
+  of a circuit can be borrowed. `beginProjectImportPlacement` is shared by
+  bundled examples and gallery entries; a hierarchical Project cannot be pasted
+  as one fragment, so it falls back to opening the circuit.
+- Search moved into Edit, Manage Cells… joined it, and the hierarchy row now
+  appears only once there is a hierarchy to navigate.
+- Gallery header: account actions collapse behind one disclosure, since at
+  half-screen width the badge, Review, My submissions, and Sign out each
+  wrapped onto two lines. The redundant Gallery link left the subpages.
+- Fixed both panel toggles lighting at once: the Library toggle was pressed
+  whenever either panel was open rather than when Library was the active mode.
+- Validation: full unit suite (1188), full Playwright suite (208 passed),
+  typecheck, prettier, diff checks; thumbnails, the three-column slider, and
+  the toggle states verified live.
+- Commit status: completed on `claude/gallery-consolidation`; mainline merge
+  gated on the remote required checks.
+
+## 2026-08-22 - Imports keep their Power Rails, and Enter finishes text
+
+- Reported: inserting a circuit from the gallery lost its VDD line. Traced by
+  probing the copy rather than the UI. `copySelection` is instance-driven, so
+  it keeps only Nets whose every terminal is inside the selection and requires
+  at least one terminal; a Net with no instance terminals — a Power Rail drawn
+  but not yet wired to a device — never qualified, and its routes, junctions,
+  and label were dropped. Bundled examples hid this because their rails are
+  wired to transistors.
+- `copyWholeDocument` is the honest primitive for importing a circuit, and the
+  import path now uses it. A new clipboard case proves both halves: the rail is
+  absent from `copySelection` and present in `copyWholeDocument`.
+- A Port's label is now constrained to a horizontal side, so it swaps between
+  left and right and never sits above or below a rotated Port.
+- Enter finishes text in every canvas editor; Shift+Enter starts a line.
+- The gallery column slider is gone: columns follow the panel's dragged width,
+  the same way the Library tiles do.
+- Measured rather than changed: a rectangle label is already centred (text box
+  centre and rectangle centre both 400), and schematic and drafting text already
+  share one family at one size — the visual difference is weight and slope,
+  which is the intended split.
+- Validation: full unit suite (1189), full Playwright suite (208 passed),
+  typecheck, prettier, diff checks.
+- Commit status: completed on `claude/instance-behavior`; mainline merge gated
+  on the remote required checks.
+
+## 2026-08-22 - Renaming one Net Port leaves its same-named twin alone
+
+- Several Net Ports naming the same node share one Net, so renaming through
+  `planEnsureNamedNet` renamed the shared Net and both Ports changed at once.
+- When the Port's Net carries another Net Port, the renamed Port now leaves
+  that node: its pin is disconnected and reconnected to a Net of the new name,
+  joining an existing one when the name is taken. Its bound label is
+  re-pointed at the new Net in the same transaction — without that the label
+  kept reading the old name, which is what the first attempt did.
+- A Port that is alone on its Net still renames the Net in place, the ordinary
+  net-label behavior.
+- Validation: full unit suite (1189), full Playwright suite (209 passed) with
+  a new case that places two `Vshared` Ports, renames one, and asserts the
+  canvas carries both `Vshared` and `Vbias`.
+- Commit status: completed on `claude/port-rename-and-labels`; mainline merge
+  gated on the remote required checks.
+
+## 2026-08-22 - Any-angle Route authoring
+
+- The owner asked for arbitrary-angle wires and said the octilinear check
+  should not exist. ADR 0028 had anticipated exactly this: it records that the
+  geometry kernel "is generic enough for a future explicitly approved
+  arbitrary-angle policy" and that such authoring was "intentionally not
+  exposed yet". ADR 0039 is that approval; ADR 0028's authoring clause is
+  marked superseded and the three specs plus the ADR index follow.
+- Write validation now rejects only degenerate geometry. `free` joins the wire
+  routing modes, compiling an authored click to the straight line that reaches
+  it, and ends the middle-click corner cycle.
+- Direct manipulation follows: segment drag and endpoint move reject only
+  degenerate geometry, and the tidying elbow stays limited to legs that were
+  already octilinear so a diagonal is stretched rather than given a corner.
+- Unchanged by design: `power-rail` stays one straight axis-aligned run, and
+  `@icm/agent-routing` keeps the stricter octilinear contract ADR 0008 gives
+  that Agent-side helper.
+- The geometry kernel needed no change — projection, containment,
+  intersection, collinearity, and unit direction were already angle-agnostic.
+- Validation: full unit suite (1189), full Playwright suite (209 passed) with a
+  new case drawing a leg that is neither axis-aligned nor 45 degrees, visual
+  golden check clean, markdown link check clean.
+- Commit status: completed on `claude/any-angle-routes`; mainline merge gated
+  on the remote required checks.
+
+## 2026-08-22 - The circuit name is editable where it is read
+
+- Publishing, export, and the saved file already derived from the Project's
+  name; the missing half was being able to change it, since the header
+  rendered it as static text.
+- Added a `rename_project` structure edit so the name changes through the same
+  transaction path as everything else rather than by rewriting the Project
+  object and discarding its history. It has to count as a structural change,
+  or the transaction reports that it made none.
+- The header now carries a borderless field: Enter commits, Escape reverts,
+  blur commits.
+- Verified rather than changed: a deleted label can be restored from its
+  Display checkbox for both an instance reference and a Port label —
+  `referenceLabelVisibilityEdits` already recreates a missing label. Probed
+  both cases from delete through restore.
+- Validation: full unit suite (1191), full Playwright suite (211 passed) with
+  a new case that renames the circuit and asserts the saved Project file
+  carries the new name, visual golden check clean.
+- Commit status: completed on `claude/label-restore-and-name`; mainline merge
+  gated on the remote required checks.
+
+## 2026-08-22 - Any-angle follow-ups and dead code from the corner cycle
+
+- `transaction-route-follow` skipped any Route that was not octilinear, so a
+  free-angle Route silently stopped following the instance it was drawn from
+  when that instance moved. It now skips only geometry that would be
+  degenerate.
+- Removed `toggle-wire-routing-mode`: the corner cycle names the mode it wants,
+  because a two-way toggle cannot reach the third shape, which left the action
+  reachable from nothing.
+- Validation: full unit suite (1191), full Playwright suite (211 passed),
+  typecheck, prettier, diff checks.
+- Commit status: completed on `claude/cleanup`; mainline merge gated on the
+  remote required checks.
+
+## 2026-08-23 - Follow the repository move to cascode-ai/analog-canvas
+
+- The repository moved to `cascode-ai/analog-canvas`. No re-clone was needed:
+  GitHub redirects the old path, which is why pushes kept working while
+  printing "This repository moved". Updating the remote URL is enough, and a
+  worktree shares its git directory, so one update covered the primary
+  checkout too.
+- What did need changing is every place the old URL was written down — a
+  redirect is a courtesy, not an address to publish: the repository link the
+  editor shows in Help, its two tests, and the GitHub Pages URL in the
+  getting-started guide.
+- Validation: `git fetch` with no redirect notice, `gh repo view` resolving to
+  the new path, push access confirmed with `--dry-run`, typecheck, prettier,
+  markdown links, component tests (14) and `chrome-isolation.spec.ts` (3).
+- Commit status: completed on `claude/repo-move`; mainline merge gated on the
+  remote required checks.
+
+## 2026-08-23 - Retire the GitHub Pages deployment
+
+- Diagnosis: the Pages workflow had been `disabled_manually` since about
+  13 August, well before the repository move, so no build had run since
+  9 August. That last build baked the repository name into every asset path
+  through `ICM_PAGE_BASE_PATH`, and the rename changed the serving path but not
+  the baked prefix — the site returned 200 and then loaded nothing, asking for
+  `/interactive-circuit-maker/assets/…` (404) while the files sat at
+  `/analog-canvas/assets/…` (200). The old Pages URL 404s outright; Pages does
+  not redirect the way a repository path does.
+- Owner chose to retire it rather than repair it: Cloudflare already carries
+  every public duty, and two deployments blur which one is real.
+- Removed `pages.yml`, dropped `pageBasePath` from the Vite config (the Worker
+  serves from a domain root, so `base` is `/`), and replaced the guide's Pages
+  section. The old text claimed the deployment has "no public Agent API,
+  account system, or backend endpoint" — true of a static Pages build, false of
+  the Worker.
+- Validation: full unit suite (1192), full Playwright suite (211 passed),
+  production build emitting root-relative assets whose bundle hash matches the
+  one Cloudflare currently serves, typecheck, prettier, markdown links.
+- Commit status: completed on `claude/retire-pages`; mainline merge gated on
+  the remote required checks.

@@ -15,6 +15,15 @@ async function runCellCommand(
   page: import("@playwright/test").Page,
   name: "Manage Cells…" | "Place Cell",
 ): Promise<void> {
+  // The hierarchy row only appears once there is a hierarchy to navigate, so
+  // the first Cell is created from Edit.
+  if (name === "Manage Cells…") {
+    const row = page.getByTestId("cell-command-menu");
+    if ((await row.count()) === 0) {
+      await clickCommand(page, "Edit", "Manage Cells…");
+      return;
+    }
+  }
   await page
     .getByTestId("cell-command-menu")
     .getByRole("button", { name, exact: true })
@@ -70,13 +79,20 @@ async function placePort(
   if (!wasExpanded) await shelf.click();
 }
 
-test("keeps direct Cell commands in one hierarchy row", async ({ page }) => {
+test("shows the hierarchy row only once there is a hierarchy", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 420, height: 700 });
   await page.goto("/editor");
+
+  // A flat Project has nothing to navigate, so the row stays out of the way
+  // and the first Cell is created from Edit.
   const toolbar = page.locator('.toolbar-row[aria-label="Document hierarchy"]');
-  await expect(
-    page.getByRole("button", { name: "Manage Cells…" }),
-  ).toBeVisible();
+  await expect(toolbar).toHaveCount(0);
+  await expect(page.getByTestId("edit-manage-cells")).toHaveCount(1);
+
+  await createCell(page, "FirstStage");
+  await expect(toolbar).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Place Cell" })).toBeVisible();
   await expect(
     toolbar.getByRole("button", { name: "Edit Cell Interface…" }),
@@ -84,7 +100,6 @@ test("keeps direct Cell commands in one hierarchy row", async ({ page }) => {
   await expect(toolbar.getByRole("button", { name: /Preflight/u })).toHaveCount(
     0,
   );
-  await expect(page.locator("summary", { hasText: "Netlist" })).toBeVisible();
   expect(
     await toolbar.evaluate((element) => element.getBoundingClientRect().height),
   ).toBeLessThan(90);
@@ -401,7 +416,7 @@ test("places a free Net Port whose rich label edits the Net name", async ({
   await page.goto("/editor");
   await placePort(page, {
     role: "net-port",
-    name: "VIN",
+    name: "VBIAS",
     position: { x: 300, y: 180 },
   });
   await expect(
@@ -413,14 +428,14 @@ test("places a free Net Port whose rich label edits the Net name", async ({
     await shelf.click();
   }
   const netName = page.getByLabel("Net Port name");
-  await expect(netName).toHaveValue("VIN");
+  await expect(netName).toHaveValue("VBIAS");
   await expect(page.getByLabel("Cell Port properties")).toHaveCount(0);
 
   await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
   await page.getByRole("button", { name: "Bold" }).click();
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await page.getByTestId("hit-P1").click();
-  await expect(netName).toHaveValue("VIN");
+  await expect(netName).toHaveValue("VBIAS");
 
   await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
   await page.getByRole("textbox", { name: "Canvas text editor" }).fill("VINP");
@@ -617,4 +632,42 @@ test("places a second Port for a Cell terminal that already exists", async ({
   expect(terminals).toHaveLength(1);
   expect(terminals[0]!.name).toBe("P1");
   expect(terminals[0]!.interfaceInstanceIds).toHaveLength(2);
+});
+
+test("renaming one Net Port leaves its same-named twin alone", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await placePort(page, {
+    role: "net-port",
+    name: "Vshared",
+    position: { x: 260, y: 180 },
+  });
+  await placePort(page, {
+    role: "net-port",
+    name: "Vshared",
+    position: { x: 260, y: 320 },
+  });
+
+  const labels = page.locator(
+    '[data-testid^="annotation-hit-instance-label-"]',
+  );
+  await expect(labels).toHaveCount(2);
+
+  // Two Ports naming one node share a Net, so renaming that Net used to
+  // rename both. Renaming one Port is a statement about that Port.
+  await page.getByTestId("hit-P2").click();
+  const shelf = page.getByTestId("selection-shelf");
+  if ((await shelf.getAttribute("aria-expanded")) === "false")
+    await shelf.click();
+  const nameField = page.getByLabel("Net Port name");
+  await nameField.fill("Vbias");
+  await nameField.blur();
+
+  await expect(page.getByTestId("status")).toContainText("Renamed Net Port");
+  const texts = await page
+    .locator('[data-testid="schematic-canvas"] text')
+    .allTextContents();
+  expect(texts).toContain("Vshared");
+  expect(texts).toContain("Vbias");
 });

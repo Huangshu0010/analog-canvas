@@ -287,6 +287,13 @@ body {
     scrollbar-width: none;
   }
 
+  /* Scrolling the menubar clips its own dropdowns, which left File and Edit
+     unopenable on a half-screen window. Stop clipping while a menu is open,
+     the same way a toolbar row does. */
+  .app-command-surface:has(.command-menu[open]) {
+    overflow: visible;
+  }
+
   .app-command-surface::-webkit-scrollbar {
     display: none;
   }
@@ -839,10 +846,8 @@ body {
 
 .app-workspace {
   display: grid;
-  grid-template-columns:
-    var(--icm-rail-width) var(--icm-shapes-width) minmax(0, 1fr)
-    auto;
-  grid-template-areas: "tools shapes canvas props";
+  grid-template-columns: var(--icm-shapes-width) minmax(0, 1fr) auto;
+  grid-template-areas: "shapes canvas props";
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -850,7 +855,7 @@ body {
 }
 
 .app-workspace.library-collapsed {
-  grid-template-columns: var(--icm-rail-width) 0 minmax(0, 1fr) auto;
+  grid-template-columns: 0 minmax(0, 1fr) auto;
 }
 
 /* Sits on the Library's right edge, overlapping the canvas by a few pixels so
@@ -4250,8 +4255,8 @@ body {
 
   .app-workspace {
     grid-template-columns:
-      var(--icm-rail-width) min(220px, var(--icm-shapes-width))
-      minmax(0, 1fr) auto;
+      min(220px, var(--icm-shapes-width)) minmax(0, 1fr)
+      auto;
   }
 
   .app-brand {
@@ -4269,12 +4274,15 @@ body {
   .app-workspace.library-collapsed {
     position: relative;
     grid-template-rows: minmax(0, 1fr);
-    grid-template-columns: var(--icm-rail-width) min(8rem, 34vw) minmax(0, 1fr);
-    grid-template-areas: "tools shapes canvas";
+    /* The dragged width stays authoritative here too; only the ceiling
+       narrows, so the Library can still be pulled open on a half-screen
+       window. */
+    grid-template-columns: min(var(--icm-shapes-width), 60vw) minmax(0, 1fr);
+    grid-template-areas: "shapes canvas";
   }
 
   .app-workspace.library-collapsed {
-    grid-template-columns: var(--icm-rail-width) 0 minmax(0, 1fr);
+    grid-template-columns: 0 minmax(0, 1fr);
   }
 
   .app-workspace.library-collapsed .shapes-panel {
@@ -5563,6 +5571,46 @@ html.light .analytics-map-land path {
   margin-top: 4px;
 }
 
+.mine-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.mine-card-actions .account-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mine-withdraw {
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, #c0392b 45%, var(--icm-border));
+  border-radius: 999px;
+  color: #c0392b;
+  background: var(--icm-surface);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mine-withdraw:hover {
+  background: color-mix(in srgb, #c0392b 8%, var(--icm-surface));
+}
+
+.mine-withdraw-confirm {
+  color: #fff;
+  background: #c0392b;
+  border-color: #c0392b;
+}
+
+.mine-withdraw-confirm:hover {
+  background: #a93226;
+}
+
 .gallery-filter {
   display: flex;
   align-items: center;
@@ -5643,6 +5691,73 @@ html.light .analytics-map-land path {
 .gallery-tile-tag:hover {
   border-color: var(--icm-accent);
   color: var(--icm-accent);
+}
+
+.publish-gallery-history-link {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  color: var(--icm-accent);
+  background: none;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.version-history-dialog {
+  width: min(36rem, 100%);
+}
+
+.version-list {
+  display: flex;
+  max-height: 22rem;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border: 1px solid var(--icm-border);
+  border-radius: 10px;
+}
+
+.version-row img {
+  width: 110px;
+  height: 74px;
+  object-fit: contain;
+  border: 1px solid var(--icm-border);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.version-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.version-copy b {
+  font-size: 0.9rem;
+}
+
+.version-copy small {
+  color: var(--icm-text-muted);
+}
+
+.version-row .publish-gallery-primary {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--icm-accent);
+  border-radius: 8px;
+  color: #fff;
+  background: var(--icm-accent);
+  font-size: 0.8rem;
+  cursor: pointer;
 }
 
 .publish-gallery-tags {
@@ -6001,4 +6116,101 @@ html.light .analytics-map-land path {
 
 .gallery-home-link:hover h1 {
   color: var(--icm-accent);
+}
+
+/* The panel toggles lead the drawing toolbar; a hairline separates them from
+   the drawing tools so the row still reads as two groups. */
+.draw-toolbar-divider {
+  width: 1px;
+  height: 1.1rem;
+  margin: 0 var(--icm-space-1);
+  background: var(--icm-border);
+}
+
+/* Derived, never stored: the panel states the identity it was computed from
+   so the number cannot be mistaken for a second editable field. */
+.property-derived-note {
+  margin: var(--icm-space-1) 0 0;
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+}
+
+/* The gallery panel shows circuits, not just their names, and the reader
+   chooses how many fit per row. */
+.shapes-example-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--icm-space-2);
+  padding: var(--icm-space-2);
+}
+
+.shapes-example-preview {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 1;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  background: var(--icm-surface);
+}
+
+.shapes-example-preview svg,
+.shapes-example-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Account actions collapse behind one disclosure: at half-screen width a row
+   of links wrapped onto two lines each and the header stopped being readable. */
+.account-more {
+  position: relative;
+}
+
+.account-more > summary {
+  display: inline-flex;
+  gap: var(--icm-space-1);
+  align-items: center;
+  height: var(--icm-control-h);
+  padding: 0 var(--icm-space-2);
+  border-radius: var(--icm-radius-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.account-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.account-more > summary:hover {
+  background: var(--icm-surface-hover, rgb(0 0 0 / 4%));
+}
+
+.account-popover {
+  position: absolute;
+  right: 0;
+  z-index: 20;
+  min-width: 11rem;
+}
+
+/* The circuit name is edited where it is read, so the field carries no chrome
+   until it is hovered or focused. */
+.app-project-name {
+  min-width: 4rem;
+  max-width: 14rem;
+  padding: 0 0.15rem;
+  border: 1px solid transparent;
+  border-radius: var(--icm-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.app-project-name:hover {
+  border-color: var(--icm-border);
+}
+
+.app-project-name:focus {
+  border-color: var(--icm-accent);
+  outline: 0;
 }

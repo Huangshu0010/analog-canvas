@@ -126,3 +126,54 @@ describe("orthogonal corner order", () => {
     ]);
   });
 });
+
+describe("free-angle authoring", () => {
+  it("draws the straight line that reaches the click", () => {
+    // ADR 0039: no elbow is inserted, so the wire lands at whatever angle
+    // reaches the endpoint.
+    expect(
+      compileWireDraft(
+        { point: { x: 0, y: 0 } },
+        { point: { x: 130, y: 40 } },
+        [],
+        "free",
+      ).points,
+    ).toEqual([
+      { x: 0, y: 0 },
+      { x: 130, y: 40 },
+    ]);
+  });
+
+  it("keeps a free leg free while earlier legs stay as authored", () => {
+    const steps = [
+      { point: { x: 60, y: 0 }, routingMode: "orthogonal" as const },
+    ];
+    expect(
+      compileWireDraft(
+        { point: { x: 0, y: 0 } },
+        { point: { x: 130, y: 40 } },
+        steps,
+        "free",
+      ).points,
+    ).toEqual([
+      { x: 0, y: 0 },
+      { x: 60, y: 0 },
+      { x: 130, y: 40 },
+    ]);
+  });
+});
+
+describe("free-angle routes follow their instances", () => {
+  it("does not skip a leg that is neither axis-aligned nor 45 degrees", () => {
+    // The follow-stretch used to require octilinear geometry, so a free-angle
+    // Route silently stopped following the instance it was drawn from.
+    expect(
+      compileWireDraft(
+        { point: { x: 0, y: 0 } },
+        { point: { x: 90, y: 25 } },
+        [],
+        "free",
+      ).segmentModes,
+    ).toEqual(["manual"]);
+  });
+});

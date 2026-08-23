@@ -81,7 +81,9 @@ The document style-overrides and schema-21 decision is
 [`0038-document-style-overrides.md`](0038-document-style-overrides.md).
 The owner-addressable Connectivity Evidence layer and schema-22 rolling
 migration decision is
-[`0039-connectivity-evidence.md`](0039-connectivity-evidence.md).
+[`0040-connectivity-evidence.md`](0040-connectivity-evidence.md).
+The arbitrary-angle Route authoring decision is
+[`0039-any-angle-route-authoring.md`](0039-any-angle-route-authoring.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

@@ -22,7 +22,7 @@ export interface PublishGalleryDialogProps {
   gateReport?: SubmissionGateReport | null;
   /** Present when the open circuit came from a gallery entry the signed-in
    * user may update (owner, admin, or moderator). */
-  updateTarget?: { id: string } | null;
+  updateTarget?: { id: string; name: string } | null;
   /** The opened entry's stored fields, prefilled once in update mode. */
   updateDefaults?: {
     author: string;
@@ -39,6 +39,9 @@ export interface PublishGalleryDialogProps {
     pending: boolean;
     updated: boolean;
   }) => void;
+  /** Reviewers and the entry's owner: open the version history instead.
+   * Rendered only alongside an update target. */
+  onShowHistory?: (() => void) | undefined;
   onClose: () => void;
 }
 
@@ -59,6 +62,7 @@ export function PublishGalleryDialog({
   publish,
   publishUpdate,
   onPublished,
+  onShowHistory,
   onClose,
 }: PublishGalleryDialogProps) {
   const privileged = session?.isAdmin === true || session?.role === "moderator";
@@ -178,7 +182,7 @@ export function PublishGalleryDialog({
                   setModeTouched(true);
                 }}
               />
-              Update the opened gallery entry
+              Update “{updateTarget?.name}” (replaces that entry)
             </label>
             <label>
               <input
@@ -192,6 +196,16 @@ export function PublishGalleryDialog({
               />
               Publish as a new entry
             </label>
+            {onShowHistory ? (
+              <button
+                type="button"
+                className="publish-gallery-history-link"
+                data-testid="publish-history"
+                onClick={onShowHistory}
+              >
+                Version history…
+              </button>
+            ) : null}
           </div>
         ) : null}
         <div className="publish-gallery-fields">

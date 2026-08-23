@@ -98,6 +98,7 @@ import {
   createId,
   deriveStableId,
   defaultDraftTextDocument,
+  foldNetName,
   flattenRichText,
   inverseTransformPoint,
   snapGridPoint,
@@ -135,6 +136,7 @@ import {
   clipboardPlacementAnchor,
   clipboardPreviewDocument,
   copySelection,
+  copyWholeDocument,
 } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import { startCanvasDragSession } from "../canvas/canvas-drag-session";
@@ -222,21 +224,19 @@ import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
 import { NetlistPreflightDialog } from "../features/netlist-export/netlist-preflight-dialog";
 import { parseProject } from "@icm/project-protocol";
-import { StyleDialog } from "../features/editor-shell/style-dialog";
+import { DocumentSettingsSection } from "../features/editor-shell/document-settings-section";
+import { derivedFingerWidth } from "../features/properties/finger-width";
 import { PublishGalleryDialog } from "../features/editor-shell/publish-gallery-dialog";
 import {
   publishProjectToGallery,
   updateGalleryEntry,
 } from "../features/editor-shell/gallery-publish";
+import { VersionHistoryDialog } from "../components/version-history-dialog";
 import { fetchSessionUser, type SessionUser } from "../components/account";
 import {
   evaluateSubmissionGates,
   type SubmissionGateReport,
 } from "@icm/derived";
-import {
-  createUserExamplesStore,
-  type UserExampleSummary,
-} from "../document/user-examples-store";
 import {
   proposeConnectedInstanceDeletion,
   proposeVisualSelectionDeletion,
@@ -284,7 +284,6 @@ import {
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
 import { EditorHelpDialog } from "../components/editor-help-dialog";
-import { EditorAboutDialog } from "../components/editor-about-dialog";
 import { ReplaceGuardDialog } from "../components/replace-guard-dialog";
 import { RecentRecoveryDialog } from "../components/recent-recovery-dialog";
 import {
@@ -506,8 +505,6 @@ export function App({
   const [status, setStatus] = useState("Ready");
   const helpButtonRef = useRef<HTMLButtonElement>(null);
   const helpCloseRef = useRef<HTMLButtonElement>(null);
-  const aboutButtonRef = useRef<HTMLButtonElement>(null);
-  const aboutCloseRef = useRef<HTMLButtonElement>(null);
   const libraryResizeOriginRef = useRef<{
     pointerX: number;
     width: number;
@@ -527,8 +524,6 @@ export function App({
     setSelectionOpen,
     helpOpen,
     setHelpOpen,
-    aboutOpen,
-    setAboutOpen,
     searchOpen,
     setSearchOpen,
     searchQuery,
@@ -540,7 +535,6 @@ export function App({
     agentStatusDismissed,
     setAgentStatusDismissed,
     closeHelp,
-    closeAbout,
     closeSearch,
     showLeftPanel,
     toggleExamplesPanel: toggleExamplesPanelFromShell,
@@ -552,8 +546,6 @@ export function App({
     libraryWidthStorageKey: LIBRARY_WIDTH_STORAGE_KEY,
     helpButtonRef,
     helpCloseRef,
-    aboutButtonRef,
-    aboutCloseRef,
   });
   const [restoreAfterRefresh] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -691,18 +683,33 @@ export function App({
   const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
   const [netlistPreflightOpen, setNetlistPreflightOpen] = useState(false);
-  const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const [documentSettingsOpen, setDocumentSettingsOpen] = useState(false);
+  const [projectNameDraft, setProjectNameDraft] = useState<string | null>(null);
   const [publishGalleryOpen, setPublishGalleryOpen] = useState(false);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [publishSession, setPublishSession] = useState<SessionUser | null>(
     null,
   );
   const [galleryEntryContext, setGalleryEntryContext] = useState<{
     id: string;
+    name: string;
+    /** The opened Project's id: the context is only valid while that
+     * exact Project is still the active one. */
+    projectId: string;
     ownerUserId: string | null;
     author: string;
     description: string;
     tags: readonly string[];
   } | null>(null);
+  // The moment any OTHER Project replaces the opened gallery entry (new
+  // circuit, bundled example, import, …), the update offer must vanish —
+  // otherwise a later publish silently overwrites the stale entry.
+  const activeProjectId = project.id;
+  useEffect(() => {
+    setGalleryEntryContext((previous) =>
+      previous && previous.projectId !== activeProjectId ? null : previous,
+    );
+  }, [activeProjectId]);
   // The Examples panel reads the same community gallery as the landing
   // feed; null means unreachable, so the bundled list stands in.
   const [galleryExamples, setGalleryExamples] = useState<
@@ -735,8 +742,6 @@ export function App({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- evaluated once per dialog open
   }, [publishGalleryOpen]);
-  const userExamplesStore = useRef(createUserExamplesStore());
-  const [userExamples, setUserExamples] = useState<UserExampleSummary[]>([]);
   const [instanceTableOpen, setInstanceTableOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
     useState<AgentFileCandidateSummary | null>(null);
@@ -826,7 +831,6 @@ export function App({
     setWirePreviewPoint,
     setWireDraftSteps,
     setWireRoutingMode,
-    toggleWireRoutingMode,
     setWireCornerOrder,
     completeWire,
     setDraftingSource,
@@ -1931,12 +1935,10 @@ export function App({
 
   function showExamplesPanel(): void {
     showLeftPanel("examples");
-    void refreshUserExamples();
   }
 
   function toggleExamplesPanel(): void {
     toggleExamplesPanelFromShell();
-    void refreshUserExamples();
   }
 
   // The same loader serves a fresh `/g/<id>` boot and the live Examples panel.
@@ -1975,6 +1977,8 @@ export function App({
         });
         setGalleryEntryContext({
           id: entryId,
+          name: payload.entry?.name ?? galleryProject.name,
+          projectId: galleryProject.id,
           ownerUserId: payload.ownerUserId ?? null,
           author: payload.entry?.author ?? "",
           description: payload.entry?.description ?? "",
@@ -2022,74 +2026,6 @@ export function App({
       }
     }
   }, [initialGalleryEntryId]);
-
-  async function refreshUserExamples(): Promise<void> {
-    const outcome = await userExamplesStore.current.list();
-    if (outcome.status === "ready") setUserExamples(outcome.examples);
-  }
-
-  async function saveCurrentProjectAsExample(): Promise<void> {
-    const outcome = await userExamplesStore.current.save(project, {
-      id: crypto.randomUUID(),
-      name: project.name,
-      savedAt: new Date().toISOString(),
-    });
-    if (outcome.status === "stored") {
-      await refreshUserExamples();
-      setStatus(`Saved "${outcome.record.name}" to My examples`);
-      showExamplesPanel();
-      return;
-    }
-    setStatus(
-      outcome.status === "rejected-too-large"
-        ? "Cannot save example: the Project snapshot is too large"
-        : `Cannot save example: ${outcome.message}`,
-    );
-  }
-
-  async function openUserExample(id: string): Promise<void> {
-    const outcome = await userExamplesStore.current.read(id);
-    if (outcome.status !== "ready") {
-      setStatus(
-        outcome.status === "missing"
-          ? "This saved example no longer exists"
-          : `Cannot open saved example: ${
-              outcome.status === "invalid" ? outcome.message : outcome.message
-            }`,
-      );
-      void refreshUserExamples();
-      return;
-    }
-    void guardDirtyReplacement(`Open ${outcome.record.name} example`, () => {
-      replaceActiveProject(outcome.project);
-      setStatus(`Opened my example: ${outcome.record.name}`);
-    });
-  }
-
-  async function exportUserExample(id: string): Promise<void> {
-    const outcome = await userExamplesStore.current.read(id);
-    if (outcome.status !== "ready") {
-      setStatus("Cannot export: this saved example is unavailable");
-      return;
-    }
-    download(
-      outcome.record.projectText,
-      "application/json",
-      "icproj.json",
-      outcome.record.name,
-    );
-    setStatus(`Exported my example: ${outcome.record.name}`);
-  }
-
-  async function deleteUserExample(id: string): Promise<void> {
-    const outcome = await userExamplesStore.current.remove(id);
-    setStatus(
-      outcome.status === "deleted"
-        ? "Deleted saved example"
-        : `Cannot delete saved example: ${outcome.message}`,
-    );
-    await refreshUserExamples();
-  }
 
   function resetInteractionState(): void {
     exitCellSymbolLayout();
@@ -2528,8 +2464,22 @@ export function App({
     ? resolveDocumentLogicalNets(document).byBaseNetId.get(selectedPortNet.id)
         ?.name
     : undefined;
+
+  function commitProjectName(): void {
+    const next = (projectNameDraft ?? "").trim();
+    setProjectNameDraft(null);
+    if (!next || next === project.name) return;
+    if (
+      commitStructure("rename-project", [
+        { kind: "rename_project", name: next },
+      ])
+    ) {
+      setStatus(`Renamed circuit to ${next}`);
+    }
+  }
+
   function renameSelectedNetPort(name: string): void {
-    if (!selectedPortNet || selectedFormalTerminal) return;
+    if (!selectedPortNet || !selectedInstance || selectedFormalTerminal) return;
     name = name.trim();
     if (!name || name === selectedPortLogicalName) return;
     const plan = planEnsureNamedNet(document, {
@@ -3432,36 +3382,70 @@ export function App({
    * onto one Document, so it still opens as its own Project behind the
    * ordinary dirty guard.
    */
+  /**
+   * Start placing another Project's single document on the current canvas.
+   * Borrowing part of a circuit is the common reason to open one from the
+   * panel, and replacing the canvas throws away whatever is already drawn.
+   * A hierarchical Project cannot be pasted as one fragment, so it reports
+   * false and the caller falls back to opening it.
+   */
+  function beginProjectImportPlacement(
+    imported: CircuitProject,
+    label: string,
+  ): boolean {
+    const importedDocument = imported.documents.find(
+      (candidate) => candidate.id === imported.topDocumentId,
+    );
+    if (!importedDocument || imported.documents.length > 1) return false;
+    const clipboard = copyWholeDocument(importedDocument);
+    const anchor = clipboard ? clipboardPlacementAnchor(clipboard) : null;
+    if (!clipboard || !anchor) return false;
+    cancelAllTransientInteraction();
+    beginCopyPlacementInteraction(clipboard, anchor);
+    setStatus(
+      `Place ${label} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
+    );
+    return true;
+  }
+
   function openLibraryExample(example: LibraryProjectExample): void {
     const exampleProject = createLibraryExampleProject(example.id);
     if (!exampleProject) {
       setStatus(`Example is unavailable: ${example.name}`);
       return;
     }
-    const exampleDocument = exampleProject.documents.find(
-      (candidate) => candidate.id === exampleProject.topDocumentId,
-    );
-    if (!exampleDocument || exampleProject.documents.length > 1) {
-      void guardDirtyReplacement(`Open ${example.name} example`, () => {
-        replaceActiveProject(exampleProject);
-        setStatus(`Opened example: ${example.name}`);
+    if (beginProjectImportPlacement(exampleProject, example.name)) return;
+    void guardDirtyReplacement(`Open ${example.name} example`, () => {
+      replaceActiveProject(exampleProject);
+      setStatus(`Opened example: ${example.name}`);
+    });
+  }
+
+  /** Panel cards insert; the `/g/<id>` deep link still opens the circuit. */
+  async function insertGalleryEntryById(entryId: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/gallery/${entryId}`, {
+        credentials: "same-origin",
       });
-      return;
+      const payload = response.ok
+        ? ((await response.json()) as {
+            entry?: { name?: string };
+            projectText?: string;
+          })
+        : null;
+      if (!payload?.projectText) {
+        setStatus("This gallery entry is unavailable");
+        return;
+      }
+      const imported = parseProject(payload.projectText);
+      const label = payload.entry?.name ?? imported.name;
+      if (beginProjectImportPlacement(imported, label)) return;
+      // A hierarchical circuit cannot be pasted as one fragment, so opening it
+      // is the useful answer rather than refusing with a message.
+      await openGalleryEntryById(entryId);
+    } catch {
+      setStatus("This gallery entry is unavailable");
     }
-    const clipboard = copySelection(
-      exampleDocument,
-      exampleDocument.instances.map((instance) => instance.id),
-    );
-    const anchor = clipboard ? clipboardPlacementAnchor(clipboard) : null;
-    if (!clipboard || !anchor) {
-      setStatus(`Example has nothing to place: ${example.name}`);
-      return;
-    }
-    cancelAllTransientInteraction();
-    beginCopyPlacementInteraction(clipboard, anchor);
-    setStatus(
-      `Place ${example.name} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
-    );
   }
 
   function rotatePendingCopy(delta: 90 | -90): void {
@@ -4090,6 +4074,11 @@ export function App({
         cornerOrder: "diagonal-first" as const,
         label: "45° diagonal",
       },
+      {
+        routingMode: "free" as const,
+        cornerOrder: "auto" as const,
+        label: "any angle",
+      },
     ];
     const index = shapes.findIndex(
       (shape) =>
@@ -4097,7 +4086,8 @@ export function App({
         shape.cornerOrder === wireCornerOrder,
     );
     const next = shapes[(index + 1) % shapes.length]!;
-    if (next.routingMode !== wireRoutingMode) toggleWireRoutingMode();
+    if (next.routingMode !== wireRoutingMode)
+      setWireRoutingMode(next.routingMode);
     setWireCornerOrder(next.cornerOrder);
     setStatus(`Wire corner: ${next.label}`);
   }
@@ -4110,6 +4100,11 @@ export function App({
   ): void {
     const resolved = resolveWireCanvasSnap(rawPoint, svg, suppressSnap);
     paintSnapGuides([]);
+    // A double-click ends the wire and never begins one. Landing on an
+    // endpoint or an existing Route already commits on the first click, so
+    // without this the finishing gesture started a fresh wire at that point
+    // and drawing appeared to continue.
+    if (finish && !wireSource) return;
     if (resolved.ambiguous) {
       setStatus(
         "Ambiguous connection: choose one endpoint or conductor away from the overlap",
@@ -7085,7 +7080,7 @@ export function App({
             tool === "construction-line" ||
             tool === "rectangle") &&
           draftingSource !== null,
-        helpOpen: helpOpen || aboutOpen,
+        helpOpen,
         canvasDragActive: canvasDragSessionRef.current !== null,
         hasClearableDraftingSelection:
           selectedDrafting?.kind === "arrow" ||
@@ -7261,8 +7256,7 @@ export function App({
           finishDraftingCreate();
           return;
         case "close-help":
-          if (helpOpen) closeHelp();
-          else closeAbout();
+          closeHelp();
           return;
         case "cancel-canvas-drag":
           canvasDragSessionRef.current?.cancel();
@@ -7381,7 +7375,24 @@ export function App({
             </a>
             <div className="app-brand-copy">
               <p title={`${project.name} / ${document.name}`}>
-                {project.name} /{" "}
+                {/* The circuit's name is what a published entry and a saved
+                    file are called, so it is edited where it is read. */}
+                <input
+                  className="app-project-name"
+                  aria-label="Circuit name"
+                  data-testid="project-name-input"
+                  value={projectNameDraft ?? project.name}
+                  size={Math.max((projectNameDraft ?? project.name).length, 6)}
+                  onChange={(event) =>
+                    setProjectNameDraft(event.currentTarget.value)
+                  }
+                  onBlur={() => commitProjectName()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur();
+                    if (event.key === "Escape") setProjectNameDraft(null);
+                  }}
+                />{" "}
+                /{" "}
                 <span data-testid="active-document-name">{document.name}</span>
               </p>
             </div>
@@ -7438,12 +7449,6 @@ export function App({
                       }
                     />
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => void saveCurrentProjectAsExample()}
-                  >
-                    Save as Example
-                  </button>
                   <span className="command-group-label">Export</span>
                   <button
                     type="button"
@@ -7509,6 +7514,22 @@ export function App({
               <details className="command-menu" name="editor-command-menu">
                 <summary>Edit</summary>
                 <div className="command-popover">
+                  <button
+                    type="button"
+                    data-testid="edit-manage-cells"
+                    onClick={() => setCellManagerOpen(true)}
+                  >
+                    Manage Cells…
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="project-search-button"
+                    aria-haspopup="dialog"
+                    aria-expanded={searchOpen}
+                    onClick={() => setSearchOpen(true)}
+                  >
+                    Search…
+                  </button>
                   <button
                     type="button"
                     onClick={() => transact([{ kind: "undo" }])}
@@ -7638,15 +7659,6 @@ export function App({
               ) : null}
               <button
                 type="button"
-                data-testid="project-search-button"
-                aria-haspopup="dialog"
-                aria-expanded={searchOpen}
-                onClick={() => setSearchOpen(true)}
-              >
-                Search
-              </button>
-              <button
-                type="button"
                 data-testid="publish-gallery-button"
                 aria-haspopup="dialog"
                 aria-expanded={publishGalleryOpen}
@@ -7676,17 +7688,6 @@ export function App({
             <button
               type="button"
               className="menubar-help"
-              ref={aboutButtonRef}
-              aria-haspopup="dialog"
-              aria-expanded={aboutOpen}
-              aria-controls="editor-about-dialog"
-              onClick={() => setAboutOpen(true)}
-            >
-              About
-            </button>
-            <button
-              type="button"
-              className="menubar-help"
               ref={helpButtonRef}
               aria-haspopup="dialog"
               aria-expanded={helpOpen}
@@ -7702,6 +7703,49 @@ export function App({
           aria-label="Drawing tools"
           data-testid="draw-toolbar"
         >
+          <button
+            type="button"
+            className="draw-tool examples-toggle"
+            title={
+              leftPanelMode === "examples" && visibleLibraryPanelOpen
+                ? "Hide the circuit gallery"
+                : "Show the circuit gallery"
+            }
+            aria-pressed={
+              leftPanelMode === "examples" && visibleLibraryPanelOpen
+            }
+            aria-controls="examples-panel"
+            aria-expanded={
+              leftPanelMode === "examples" && visibleLibraryPanelOpen
+            }
+            data-testid="examples-toggle"
+            onClick={toggleExamplesPanel}
+          >
+            <ToolIcon name="examples" />
+            <span>Gallery</span>
+          </button>
+          <button
+            type="button"
+            className="draw-tool"
+            title={
+              visibleLibraryPanelOpen
+                ? "Hide component library"
+                : "Show component library"
+            }
+            aria-pressed={
+              leftPanelMode === "library" && visibleLibraryPanelOpen
+            }
+            aria-controls="shapes-library-panel"
+            aria-expanded={
+              leftPanelMode === "library" && visibleLibraryPanelOpen
+            }
+            data-testid="library-toggle"
+            onClick={toggleLibraryPanel}
+          >
+            <ToolIcon name="library" />
+            <span>Library</span>
+          </button>
+          <span className="draw-toolbar-divider" aria-hidden="true" />
           <button
             type="button"
             className="draw-tool"
@@ -7773,96 +7817,93 @@ export function App({
             type="button"
             className="draw-tool"
             data-testid="draw-tool-document-style"
-            aria-haspopup="dialog"
-            aria-expanded={styleDialogOpen}
-            title="Document style"
-            onClick={() => setStyleDialogOpen(true)}
+            aria-pressed={documentSettingsOpen}
+            title="Document settings"
+            onClick={() => {
+              setDocumentSettingsOpen((open) => !open);
+              setSelectionOpen(true);
+            }}
           >
             <ToolIcon name="style" />
             <span>Style</span>
           </button>
         </div>
-        <div className="toolbar-row" aria-label="Document hierarchy">
-          <div
-            className="document-nav"
-            aria-label="Cell navigation"
-            data-testid="cell-navigation"
-          >
-            <a
-              className="toolbar-gallery-link"
-              href="/"
-              title="Back to the gallery"
-              aria-label="Back to the gallery feed"
-              data-testid="toolbar-gallery-link"
+        {project.documents.length > 1 ||
+        documentStack.length > 0 ||
+        hasHierarchyEnterSelection ? (
+          <div className="toolbar-row" aria-label="Document hierarchy">
+            <div
+              className="document-nav"
+              aria-label="Cell navigation"
+              data-testid="cell-navigation"
             >
-              ← Gallery
-            </a>
-            <button
-              type="button"
-              onClick={returnToParentDocument}
-              disabled={documentStack.length === 0}
-              title="Return to the parent Cell (Shift+E)"
-            >
-              Up
-            </button>
-            <button
-              type="button"
-              onClick={returnToTopDocument}
-              disabled={document.id === project.topDocumentId}
-              title="Return to the top Cell"
-            >
-              Top
-            </button>
-            <select
-              aria-label="Cells"
-              data-testid="document-selector"
-              value={document.id}
-              onChange={(event) => {
-                const nextDocumentId = event.currentTarget.value;
-                const paths = findHierarchyPaths(
-                  projectConnectivityIndex,
-                  project.topDocumentId,
-                  nextDocumentId,
-                );
-                setDocumentStack(paths?.length === 1 ? [...paths[0]!] : []);
-                switchDocument(nextDocumentId);
-                if (paths && paths.length > 1) {
-                  setStatus(
-                    `Opened shared Cell without caller context (${paths.length} instance paths)`,
-                  );
-                }
-              }}
-            >
-              {project.documents.map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>
-                  {candidate.id === project.topDocumentId
-                    ? `${candidate.name} (top)`
-                    : candidate.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={enterSelectedHierarchy}
-              disabled={!hasHierarchyEnterSelection}
-              title="Enter the selected Cell, or create one from a rectangle (E)"
-            >
-              Enter Cell
-            </button>
-            <div className="cell-command-row" data-testid="cell-command-menu">
-              <button type="button" onClick={() => setCellManagerOpen(true)}>
-                Manage Cells…
+              <button
+                type="button"
+                onClick={returnToParentDocument}
+                disabled={documentStack.length === 0}
+                title="Return to the parent Cell (Shift+E)"
+              >
+                Up
               </button>
               <button
                 type="button"
-                onClick={placeCellInstance}
-                disabled={project.documents.length < 2}
+                onClick={returnToTopDocument}
+                disabled={document.id === project.topDocumentId}
+                title="Return to the top Cell"
               >
-                Place Cell
+                Top
               </button>
+              <select
+                aria-label="Cells"
+                data-testid="document-selector"
+                value={document.id}
+                onChange={(event) => {
+                  const nextDocumentId = event.currentTarget.value;
+                  const paths = findHierarchyPaths(
+                    projectConnectivityIndex,
+                    project.topDocumentId,
+                    nextDocumentId,
+                  );
+                  setDocumentStack(paths?.length === 1 ? [...paths[0]!] : []);
+                  switchDocument(nextDocumentId);
+                  if (paths && paths.length > 1) {
+                    setStatus(
+                      `Opened shared Cell without caller context (${paths.length} instance paths)`,
+                    );
+                  }
+                }}
+              >
+                {project.documents.map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {candidate.id === project.topDocumentId
+                      ? `${candidate.name} (top)`
+                      : candidate.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={enterSelectedHierarchy}
+                disabled={!hasHierarchyEnterSelection}
+                title="Enter the selected Cell, or create one from a rectangle (E)"
+              >
+                Enter Cell
+              </button>
+              <div className="cell-command-row" data-testid="cell-command-menu">
+                <button type="button" onClick={() => setCellManagerOpen(true)}>
+                  Manage Cells…
+                </button>
+                <button
+                  type="button"
+                  onClick={placeCellInstance}
+                  disabled={project.documents.length < 2}
+                >
+                  Place Cell
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
         <div data-testid="editor-test-telemetry" hidden>
           <output data-testid="selected-internal-route-count">
             {internalSelection.routeIds.length}
@@ -7900,12 +7941,6 @@ export function App({
       </header>
       {helpOpen ? (
         <EditorHelpDialog closeButtonRef={helpCloseRef} onClose={closeHelp} />
-      ) : null}
-      {aboutOpen ? (
-        <EditorAboutDialog
-          closeButtonRef={aboutCloseRef}
-          onClose={closeAbout}
-        />
       ) : null}
       {(recoveryState === "quota-exceeded" ||
         recoveryState === "unavailable" ||
@@ -8031,28 +8066,6 @@ export function App({
         onNavigate={navigateToNetlistDiagnostic}
         onExport={(format) => exportDesignNetlist(format, true)}
       />
-      {styleDialogOpen ? (
-        <StyleDialog
-          overrides={document.presentation.styleOverrides}
-          onApply={(styleOverrides) => {
-            const result = transact([
-              {
-                kind: "set_presentation_style",
-                styleProfileId: document.presentation.styleProfileId,
-                styleOverrides,
-              },
-            ]);
-            if (result.ok) {
-              setStatus(
-                styleOverrides
-                  ? "Updated document style"
-                  : "Reset document style to profile defaults",
-              );
-            }
-          }}
-          onClose={() => setStyleDialogOpen(false)}
-        />
-      ) : null}
       {publishGalleryOpen ? (
         <PublishGalleryDialog
           defaultName={project.name}
@@ -8065,7 +8078,7 @@ export function App({
               publishSession.role === "moderator" ||
               (galleryEntryContext.ownerUserId !== null &&
                 publishSession.id === galleryEntryContext.ownerUserId))
-              ? { id: galleryEntryContext.id }
+              ? { id: galleryEntryContext.id, name: galleryEntryContext.name }
               : null
           }
           updateDefaults={
@@ -8096,7 +8109,27 @@ export function App({
                   : `Published "${name}" to the gallery`,
             );
           }}
+          onShowHistory={
+            galleryEntryContext
+              ? () => {
+                  setPublishGalleryOpen(false);
+                  setVersionHistoryOpen(true);
+                }
+              : undefined
+          }
           onClose={() => setPublishGalleryOpen(false)}
+        />
+      ) : null}
+      {versionHistoryOpen && galleryEntryContext ? (
+        <VersionHistoryDialog
+          entryId={galleryEntryContext.id}
+          entryName={galleryEntryContext.name}
+          onRestored={() => {
+            setVersionHistoryOpen(false);
+            setStatus("Version restored — reloading the entry");
+            void openGalleryEntryById(galleryEntryContext.id);
+          }}
+          onClose={() => setVersionHistoryOpen(false)}
         />
       ) : null}
       {publicAgentUiEnabled ? (
@@ -8186,46 +8219,6 @@ export function App({
         }
         style={{ "--icm-shapes-width": `${libraryWidth}px` } as CSSProperties}
       >
-        <aside className="tool-rail" aria-label="Tool rail">
-          <button
-            type="button"
-            className="tool-rail-button examples-toggle"
-            title={
-              leftPanelMode === "examples" && visibleLibraryPanelOpen
-                ? "Hide circuit examples"
-                : "Show circuit examples"
-            }
-            aria-pressed={
-              leftPanelMode === "examples" && visibleLibraryPanelOpen
-            }
-            aria-controls="examples-panel"
-            aria-expanded={
-              leftPanelMode === "examples" && visibleLibraryPanelOpen
-            }
-            data-testid="examples-toggle"
-            onClick={toggleExamplesPanel}
-          >
-            <ToolIcon name="examples" />
-            <span>Examples</span>
-          </button>
-          <button
-            type="button"
-            className="tool-rail-button"
-            title={
-              visibleLibraryPanelOpen
-                ? "Hide component library"
-                : "Show component library"
-            }
-            aria-pressed={visibleLibraryPanelOpen}
-            aria-controls="shapes-library-panel"
-            aria-expanded={visibleLibraryPanelOpen}
-            data-testid="library-toggle"
-            onClick={toggleLibraryPanel}
-          >
-            <ToolIcon name="library" />
-            <span>Library</span>
-          </button>
-        </aside>
         {leftPanelMode === "library" ? (
           <ShapesPanel
             styleProfileId={document.presentation.styleProfileId}
@@ -8236,12 +8229,8 @@ export function App({
           <ExamplesPanel
             open={visibleLibraryPanelOpen}
             galleryExamples={galleryExamples}
-            onOpenGalleryExample={(id) => void openGalleryEntryById(id)}
+            onOpenGalleryExample={(id) => void insertGalleryEntryById(id)}
             onOpenExample={openLibraryExample}
-            userExamples={userExamples}
-            onOpenUserExample={(id) => void openUserExample(id)}
-            onExportUserExample={(id) => void exportUserExample(id)}
-            onDeleteUserExample={(id) => void deleteUserExample(id)}
           />
         )}
         {visibleLibraryPanelOpen ? (
@@ -8298,6 +8287,10 @@ export function App({
               aria-expanded={selectionOpen}
               onClick={() => {
                 if (selectionOpen) exitCellSymbolLayout();
+                // Narrow layouts have room for one side panel. Whichever the
+                // user just asked for wins, rather than one of them always
+                // outranking the other and appearing not to open at all.
+                else if (compactLayout) setCompactLibraryPanelOpen(false);
                 setSelectionOpen((current) => !current);
                 if (selectionOpen) setImportReviewOpen(false);
               }}
@@ -8331,6 +8324,28 @@ export function App({
               </span>
             </button>
             <div className="selection-panel" hidden={!selectionOpen}>
+              {documentSettingsOpen ? (
+                <DocumentSettingsSection
+                  document={document}
+                  onApplyStyle={(styleOverrides) => {
+                    const result = transact([
+                      {
+                        kind: "set_presentation_style",
+                        styleProfileId: document.presentation.styleProfileId,
+                        styleOverrides,
+                      },
+                    ]);
+                    if (result.ok) {
+                      setStatus(
+                        styleOverrides
+                          ? "Updated document style"
+                          : "Reset document style to profile defaults",
+                      );
+                    }
+                  }}
+                  onChangeBulkDefault={updateMosBulkDefault}
+                />
+              ) : null}
               {selectedInstance && selectedBulkResolution ? (
                 <section
                   className="context-actions"
@@ -8357,46 +8372,6 @@ export function App({
                   {selectedHiddenBulkNet ? (
                     <p>Explicit bulk is shown with a Razavi dashed route.</p>
                   ) : null}
-                  <label>
-                    Default NMOS bulk Net
-                    <select
-                      aria-label="Default NMOS bulk Net"
-                      value={document.mosBulkDefaults?.nmosNetId ?? ""}
-                      onChange={(event) =>
-                        updateMosBulkDefault(
-                          "nmos",
-                          event.currentTarget.value || null,
-                        )
-                      }
-                    >
-                      <option value="">None</option>
-                      {document.nets.map((net) => (
-                        <option key={net.id} value={net.id}>
-                          {net.name ?? net.id}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Default PMOS bulk Net
-                    <select
-                      aria-label="Default PMOS bulk Net"
-                      value={document.mosBulkDefaults?.pmosNetId ?? ""}
-                      onChange={(event) =>
-                        updateMosBulkDefault(
-                          "pmos",
-                          event.currentTarget.value || null,
-                        )
-                      }
-                    >
-                      <option value="">None</option>
-                      {document.nets.map((net) => (
-                        <option key={net.id} value={net.id}>
-                          {net.name ?? net.id}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
                 </section>
               ) : null}
               {flightlines.length > 0 ? (
@@ -8866,6 +8841,23 @@ export function App({
                         ),
                       )}
                     </div>
+                    {(() => {
+                      // Finger width is shown, never stored: deriving it from
+                      // the authored W and NF keeps W = FW x NF true by
+                      // construction instead of by keeping two values agreed.
+                      const fingerWidth = derivedFingerWidth(
+                        instancePropertyDraft.parameters.w,
+                        instancePropertyDraft.parameters.nf,
+                      );
+                      return fingerWidth ? (
+                        <p
+                          className="property-derived-note"
+                          data-testid="derived-finger-width"
+                        >
+                          Finger width {fingerWidth} · W = FW × NF
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   <div className="property-card property-display-card">
                     <div className="property-section-heading">Display</div>
@@ -9943,10 +9935,32 @@ export function App({
                 finishDraftingCreate();
                 return;
               }
-              if (
-                tool !== "wire" ||
-                (target !== event.currentTarget && target.tagName !== "rect")
-              )
+              if (tool === "wire") {
+                console.log(
+                  "DBLWIRE",
+                  JSON.stringify({
+                    target: target.tagName,
+                    testid: (target as HTMLElement).dataset?.testid,
+                    isCanvas: target === event.currentTarget,
+                    hasSource: Boolean(wireSource),
+                    steps: wireDraftSteps.length,
+                  }),
+                );
+              }
+              if (tool !== "wire") return;
+              // A double-click ends the wire wherever it lands. The guard
+              // below only lets background presses through, so finishing on a
+              // Junction or an existing Route never reached this handler and
+              // drafting appeared to continue.
+              if (wireSource && wireDraftSteps.length === 0) {
+                // Landing on an endpoint or Route commits on the first press;
+                // the second press then opens a fresh wire at that same spot.
+                // No authored step is what separates it from a real wire.
+                completeWire();
+                setStatus("Wire finished · Esc exits");
+                return;
+              }
+              if (target !== event.currentTarget && target.tagName !== "rect")
                 return;
               const point = pointFromClient(
                 event.clientX,
@@ -9959,6 +9973,22 @@ export function App({
                 event.currentTarget,
                 event.altKey,
               );
+              // Landing on an endpoint or an existing Route commits on the
+              // first press of the double-click, and the second press then
+              // opens a fresh wire at that same spot. Such a source has no
+              // authored step yet, which is what separates it from a real
+              // wire being finished here — so end the session instead of
+              // drawing on from it.
+              if (
+                wireSource &&
+                wireDraftSteps.length === 0 &&
+                wireSource.point.x === resolved.point.x &&
+                wireSource.point.y === resolved.point.y
+              ) {
+                completeWire();
+                setStatus("Wire finished · Esc exits");
+                return;
+              }
               if (
                 wireSource?.endpoint.kind === "junction" &&
                 wireSource.preludeEdits.some(
@@ -9967,7 +9997,8 @@ export function App({
                 wireSource.point.x === resolved.point.x &&
                 wireSource.point.y === resolved.point.y
               ) {
-                setStatus("Choose a different point to finish the wire");
+                setStatus("Wire finished · Esc exits");
+                completeWire();
                 return;
               }
               applyWireCanvasPoint(
@@ -11130,6 +11161,7 @@ export function App({
                 >
                   <option value="orthogonal">Orthogonal</option>
                   <option value="octilinear">45° octilinear</option>
+                  <option value="free">Any angle</option>
                 </select>
               </label>
               <label>
@@ -11171,7 +11203,16 @@ export function App({
             title={
               gridDotsVisible ? "Hide background dots" : "Show background dots"
             }
-            onClick={() => setGridDotsVisible((visible) => !visible)}
+            onClick={() =>
+              setGridDotsVisible((visible) => {
+                // Every other canvas control reports what it did; this one
+                // changed the canvas silently.
+                setStatus(
+                  visible ? "Background dots hidden" : "Background dots shown",
+                );
+                return !visible;
+              })
+            }
           >
             <ToolIcon name="grid" />
           </button>

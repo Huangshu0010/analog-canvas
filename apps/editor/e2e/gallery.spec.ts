@@ -370,20 +370,18 @@ test("a gallery tile opens its circuit in the editor", async ({ page }) => {
   await expect(page.getByTestId("status")).toContainText(
     `Opened gallery circuit: ${ENTRY.name}`,
   );
-  await expect(page.locator(".app-brand-copy p")).toContainText(ENTRY.name);
+  // The circuit name is an editable field now, so it is read as a value.
+  await expect(page.getByTestId("project-name-input")).toHaveValue(ENTRY.name);
 
-  // The brand mark and the explicit toolbar button both lead back to the
-  // gallery, and the product name is one name everywhere.
-  await expect(
-    page.getByRole("link", { name: "Back to the gallery", exact: true }),
-  ).toHaveAttribute("href", "/");
-  // The wordmark is part of the gallery link now, so the switch works both ways.
+  // The brand mark is the single way back; a second toolbar link said the
+  // same thing twice.
+  await expect(page.getByTestId("toolbar-gallery-link")).toHaveCount(0);
   await expect(page.locator(".gallery-home-link h1")).toHaveText(
     "Analog Canvas",
   );
-  const backLink = page.getByTestId("toolbar-gallery-link");
-  await expect(backLink).toBeVisible();
-  await backLink.click();
+  const brandLink = page.locator(".gallery-home-link");
+  await expect(brandLink).toHaveAttribute("href", "/");
+  await brandLink.click();
   await expect(page.getByTestId("gallery-feed")).toBeVisible();
 });
 
@@ -455,6 +453,7 @@ test("a signed-in owner renames the display name and signs out", async ({
   await expect(page.getByTestId("account-name")).toHaveText("Token Zhang");
   expect(renames).toEqual(["Token Zhang"]);
 
+  await page.locator(".account-more > summary").click();
   await page.getByTestId("account-signout").click();
   await expect(page.getByTestId("account-signin")).toBeVisible();
   expect(loggedOut).toBe(1);
@@ -722,6 +721,90 @@ test("/mine wears the site chrome and links every entry back to the editor", asy
   await expect(page.getByTestId("mine-status-mine-2")).toHaveText("Published");
 });
 
+test("/mine offers owner withdrawal, restore, and version history", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u7",
+          displayName: "Maker",
+          email: "maker@example.com",
+          provider: "email",
+          role: "user",
+          isAdmin: false,
+        },
+      },
+    }),
+  );
+  let withdrawn = false;
+  await page.route("**/api/gallery/mine", (route) =>
+    route.fulfill({
+      json: {
+        entries: [
+          {
+            id: "mine-2",
+            name: "Live Amp",
+            createdAt: "2026-08-22T08:00:00.000Z",
+            status: withdrawn ? "recycled" : "public",
+            rejectReason: null,
+          },
+        ],
+      },
+    }),
+  );
+  await page.route("**/api/gallery/mine-2/recycle", (route) => {
+    withdrawn = true;
+    return route.fulfill({ json: { id: "mine-2" } });
+  });
+  await page.route("**/api/gallery/mine-2/restore", (route) => {
+    withdrawn = false;
+    return route.fulfill({ json: { id: "mine-2" } });
+  });
+  await page.route("**/api/gallery/mine-2/versions", (route) =>
+    route.fulfill({
+      json: {
+        versions: [
+          {
+            versionId: "v-1",
+            versionNo: 1,
+            name: "Live Amp v1",
+            author: "Maker",
+            tags: [],
+            createdAt: "2026-08-21T08:00:00.000Z",
+          },
+        ],
+      },
+    }),
+  );
+  const svg = {
+    contentType: "image/svg+xml",
+    body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6"><rect width="10" height="6" fill="#fff"/></svg>',
+  };
+  await page.route("**/api/gallery/*/preview.svg", (route) =>
+    route.fulfill(svg),
+  );
+  await page.route("**/api/gallery/*/versions/*/preview.svg", (route) =>
+    route.fulfill(svg),
+  );
+
+  await page.goto("/mine");
+  // Withdrawal asks for a second, explicit click.
+  await page.getByTestId("mine-withdraw-mine-2").click();
+  await page.getByTestId("mine-withdraw-confirm-mine-2").click();
+  await expect(page.getByTestId("mine-status-mine-2")).toHaveText("Withdrawn");
+  await expect(page.getByTestId("mine-notice")).toContainText("Withdrew");
+  // Restore (the worker re-enters review for ordinary owners; the mock
+  // simply flips the entry back).
+  await page.getByTestId("mine-restore-mine-2").click();
+  await expect(page.getByTestId("mine-status-mine-2")).toHaveText("Published");
+  // The version history dialog lists the snapshot with its preview.
+  await page.getByTestId("mine-history-mine-2").click();
+  await expect(page.getByTestId("version-history-dialog")).toBeVisible();
+  await expect(page.getByTestId("version-1")).toContainText("Live Amp v1");
+});
+
 test("an opened gallery entry offers updating in place", async ({ page }) => {
   await mockGallery(page, [ENTRY]);
   await page.route("**/api/auth/me", (route) =>
@@ -756,6 +839,8 @@ test("an opened gallery entry offers updating in place", async ({ page }) => {
   const dialog = page.getByTestId("publish-gallery-dialog");
   await expect(dialog).toBeVisible();
   await expect(page.getByTestId("publish-mode")).toBeVisible();
+  // The update option names exactly what it will replace.
+  await expect(page.getByTestId("publish-mode")).toContainText(ENTRY.name);
   await expect(dialog.getByText("updates the entry in place")).toBeVisible();
 
   await dialog.getByRole("button", { name: "Update entry" }).click();
@@ -764,6 +849,133 @@ test("an opened gallery entry offers updating in place", async ({ page }) => {
   );
   expect(updates).toHaveLength(1);
   expect(updates[0]!.body.name).toBe(ENTRY.name);
+});
+
+test("a reviewer browses version history and restores a version", async ({
+  page,
+}) => {
+  await mockGallery(page, [ENTRY]);
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u1",
+          displayName: "Token Zhang",
+          email: "owner@example.com",
+          provider: "github",
+          role: "user",
+          isAdmin: true,
+        },
+      },
+    }),
+  );
+  await page.route(`**/api/gallery/${ENTRY.id}/versions`, (route) =>
+    route.fulfill({
+      json: {
+        versions: [
+          {
+            versionId: "v-2",
+            versionNo: 2,
+            name: "Ring Oscillator (older)",
+            author: "tz",
+            tags: ["oscillator"],
+            createdAt: "2026-08-22T10:00:00.000Z",
+          },
+        ],
+      },
+    }),
+  );
+  await page.route(
+    `**/api/gallery/${ENTRY.id}/versions/v-2/preview.svg`,
+    (route) =>
+      route.fulfill({
+        contentType: "image/svg+xml",
+        body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6"><rect width="10" height="6" fill="#fff"/></svg>',
+      }),
+  );
+  let restores = 0;
+  await page.route(
+    `**/api/gallery/${ENTRY.id}/versions/v-2/restore`,
+    (route) => {
+      restores += 1;
+      return route.fulfill({ json: { id: ENTRY.id, restored: true } });
+    },
+  );
+
+  await page.goto(`/g/${ENTRY.id}`);
+  await expect(page.getByTestId("status")).toContainText(
+    `Opened gallery circuit: ${ENTRY.name}`,
+  );
+  await page.getByTestId("publish-gallery-button").click();
+  await page.getByTestId("publish-history").click();
+
+  const history = page.getByTestId("version-history-dialog");
+  await expect(history).toBeVisible();
+  await expect(page.getByTestId("version-2")).toContainText(
+    "Ring Oscillator (older)",
+  );
+  await page.getByTestId("version-restore-2").click();
+  await expect(page.getByTestId("status")).toContainText(
+    `Opened gallery circuit: ${ENTRY.name}`,
+  );
+  expect(restores).toBe(1);
+});
+
+test("replacing the project retires the stale update offer", async ({
+  page,
+}) => {
+  await mockGallery(page, [ENTRY]);
+  await page.route("**/api/gallery?limit=60", (route) =>
+    // The panel sees an empty gallery, so it offers the bundled examples
+    // — opening one replaces the Project with a non-gallery one.
+    route.fulfill({ json: { entries: [], nextCursor: null } }),
+  );
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u1",
+          displayName: "Token Zhang",
+          email: "owner@example.com",
+          provider: "github",
+          role: "user",
+          isAdmin: true,
+        },
+      },
+    }),
+  );
+
+  await page.goto(`/g/${ENTRY.id}`);
+  await expect(page.getByTestId("status")).toContainText(
+    `Opened gallery circuit: ${ENTRY.name}`,
+  );
+
+  // Sanity: while the entry is the active Project, updating is offered.
+  await page.getByTestId("publish-gallery-button").click();
+  await expect(page.getByTestId("publish-mode")).toBeVisible();
+  await page
+    .getByTestId("publish-gallery-dialog")
+    .getByRole("button", { name: "Cancel" })
+    .click();
+
+  // Import a different Project over it: the gallery entry is no longer
+  // active, so publishing must NOT offer updating it any more.
+  await page.getByTestId("project-file").setInputFiles({
+    name: "fresh.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      serializeProject(createEmptyProject("fresh-project", "Fresh Start")),
+    ),
+  });
+  await expect(page.getByTestId("status")).toContainText(
+    "Opened fresh.icproj.json",
+  );
+
+  await page.getByTestId("publish-gallery-button").click();
+  const dialog = page.getByTestId("publish-gallery-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(page.getByTestId("publish-mode")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Publish" })).toBeVisible();
 });
 
 test("the Examples panel guards dirty work before opening an entry", async ({

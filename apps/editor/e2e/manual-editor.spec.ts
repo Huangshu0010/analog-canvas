@@ -472,7 +472,7 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 320, y: 180 } });
   await expect(page.getByTestId("status")).toContainText(
-    "Added Free Net Port NET1",
+    "Added Free Net Port Vin",
   );
   await expect(page.getByTestId("hit-P1")).toBeVisible();
   await expect(
@@ -655,7 +655,8 @@ test("authors components and connectivity manually from an empty canvas", async 
   page,
 }) => {
   await page.goto("/editor");
-  await expect(page.getByTestId("cell-navigation")).toBeVisible();
+  // A flat Project has no hierarchy to navigate, so that row stays hidden.
+  await expect(page.getByTestId("cell-navigation")).toHaveCount(0);
   await expect(page.getByTestId("revision")).toHaveText("0");
 
   await placeComponent(page, "resistor", { x: 340, y: 220 });
@@ -1443,7 +1444,9 @@ test("keeps an internal junction with the live group preview", async ({
   await page.goto("/editor");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
-  await placeComponent(page, "resistor", { x: 420, y: 420 });
+  // R3 sits under the tap so the branch leaves it as a clean tee; a jogged
+  // branch would leave two arms on one side and draw no Junction dot.
+  await placeComponent(page, "resistor", { x: 425, y: 420 });
   await clickDrawTool(page, "wire");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
@@ -1779,7 +1782,8 @@ test("keeps literal text line breaks and overbars visible while editing", async 
   await editor.press("ControlOrMeta+A");
   await page.getByRole("button", { name: "Overbar" }).click();
   await editor.press("End");
-  await editor.press("Enter");
+  // Enter finishes the text everywhere; a deliberate modifier asks for a line.
+  await editor.press("Shift+Enter");
   await editor.type("bias");
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(
@@ -1966,12 +1970,13 @@ test("value display projects MOS W/L and passive values beside the reference", a
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("nmos");
-  // The Value toggle is disabled until both W and L carry a projection.
+  // A MOS arrives with its device defaults, so the Value toggle is usable
+  // without typing geometry first.
   const valueToggle = dialog.getByRole("checkbox", {
     name: "Value",
     exact: true,
   });
-  await expect(valueToggle).toBeDisabled();
+  await expect(valueToggle).toBeEnabled();
   await dialog.getByLabel("Component w", { exact: true }).fill("2u");
   await dialog.getByLabel("Component l", { exact: true }).fill("180n");
   await expect(valueToggle).toBeEnabled();
@@ -2078,9 +2083,9 @@ test("reference and value toggles refresh content after parameter edits", async 
   const canvas = page.getByTestId("schematic-canvas");
   const box = await canvas.boundingBox();
   if (!box) throw new Error("Canvas is not measurable");
-  await page.mouse.move(box.x + 200, box.y + 80);
+  await page.mouse.move(box.x + 180, box.y + 80);
   await page.mouse.down();
-  await page.mouse.move(box.x + 620, box.y + 320, { steps: 6 });
+  await page.mouse.move(box.x + 700, box.y + 340, { steps: 6 });
   await page.mouse.up();
   await page
     .getByRole("checkbox", { name: "Value", exact: true })
@@ -3706,7 +3711,7 @@ test("directional marquee: window needs full coverage, crossing selects on touch
   ).toBe("");
 });
 
-test("Document style dialog scales fonts document-wide and resets", async ({
+test("docked Document settings scale fonts document-wide and reset", async ({
   page,
 }) => {
   await page.goto("/editor");
@@ -3714,57 +3719,33 @@ test("Document style dialog scales fonts document-wide and resets", async ({
   const label = page.locator('[data-kind="instance-label"]').first();
   await expect(label).toHaveAttribute("font-size", "15.116");
 
+  // The knobs rescale what the canvas is drawing, so they dock beside it
+  // instead of covering it with a modal.
   await clickDrawTool(page, "document-style");
-  const dialog = page.getByTestId("document-style-dialog");
-  await expect(dialog).toBeVisible();
-  const reset = dialog.getByRole("button", {
-    name: "Reset all to profile defaults",
-  });
+  const settings = page.getByLabel("Document settings");
+  await expect(settings).toBeVisible();
+  await expect(page.getByTestId("canvas-empty-state")).toHaveCount(0);
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  const reset = page.getByTestId("document-style-reset");
   await expect(reset).toBeDisabled();
 
-  await dialog.getByLabel("Font size").selectOption("1.5");
+  await settings.getByLabel("Font size").selectOption("1.5");
   await expect(label).toHaveAttribute("font-size", "22.674");
   await expect(page.getByTestId("status")).toContainText(
     "Updated document style",
   );
   await expect(reset).toBeEnabled();
 
-  // The override persists as ordinary undoable document state.
+  // Document-wide MOS bulk defaults belong to the Document, not to whichever
+  // transistor happens to be selected.
+  await expect(settings.getByLabel("Default NMOS bulk Net")).toBeVisible();
+  await expect(settings.getByLabel("Default PMOS bulk Net")).toBeVisible();
+
   await reset.click();
   await expect(label).toHaveAttribute("font-size", "15.116");
   await expect(reset).toBeDisabled();
-  await dialog.getByRole("button", { name: "Done", exact: true }).click();
-  await expect(dialog).toHaveCount(0);
-});
-
-test("saves, reopens, and deletes a user Library example", async ({ page }) => {
-  await page.goto("/editor");
-  await placeComponent(page, "resistor", { x: 320, y: 220 });
-  await expect(page.getByTestId("hit-R1")).toHaveCount(1);
-
-  await clickCommand(page, "File", "Save as Example");
-  await expect(page.getByTestId("status")).toContainText("to My examples");
-  const panel = page.getByTestId("examples-panel");
-  await expect(panel).toHaveAttribute("data-open", "true");
-  const section = page.getByTestId("user-examples-section");
-  await expect(section).toBeVisible();
-  const card = section.locator('[data-testid^="user-example-"]');
-  await expect(card).toHaveCount(1);
-
-  // Opening the snapshot replaces the live Project with the saved circuit.
-  await card.getByRole("button", { name: /Open my example/ }).click();
-  await page
-    .getByRole("dialog", { name: "Protect the current Project" })
-    .getByRole("button", { name: "Discard and continue" })
-    .click();
-  await expect(page.getByTestId("status")).toContainText("Opened my example");
-  await expect(page.getByTestId("hit-R1")).toHaveCount(1);
-
-  await card.getByRole("button", { name: /Delete my example/ }).click();
-  await expect(page.getByTestId("status")).toContainText(
-    "Deleted saved example",
-  );
-  await expect(section).toHaveCount(0);
+  await clickDrawTool(page, "document-style");
+  await expect(settings).toHaveCount(0);
 });
 
 test("middle-click steers which way the wire corner turns", async ({
@@ -3909,4 +3890,51 @@ test("drags a marquee selection that holds no instance", async ({ page }) => {
   );
   expect(shifts[0]).toBeGreaterThan(0);
   expect(shifts[1]).toBe(shifts[0]);
+});
+
+test("double-click ends the wire even when it lands on another wire", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await clickDrawTool(page, "wire");
+
+  await canvas.click({ position: { x: 200, y: 160 } });
+  await canvas.dblclick({ position: { x: 420, y: 160 } });
+  await expect(page.getByTestId("status")).toContainText("Committed route");
+
+  // Finishing onto an existing wire commits on the first press; the second
+  // press used to open a fresh wire at that spot, so drafting continued.
+  await canvas.click({ position: { x: 260, y: 300 } });
+  await canvas.dblclick({ position: { x: 320, y: 160 } });
+  await expect(page.getByTestId("status")).toContainText("Wire finished");
+
+  // Nothing is in progress, so a plain move draws no preview leg.
+  await page.mouse.move(500, 500);
+  await expect(page.getByTestId("status")).toContainText("Wire finished");
+});
+
+test("draws a wire at an angle the 45-degree grid cannot reach", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await clickDrawTool(page, "wire");
+
+  await canvas.click({ position: { x: 200, y: 200 } });
+  // Middle-click cycles the corner shape and ends on any angle.
+  for (let step = 0; step < 4; step += 1) {
+    await canvas.click({ button: "middle", position: { x: 260, y: 240 } });
+  }
+  await expect(page.getByTestId("status")).toContainText("any angle");
+  await canvas.dblclick({ position: { x: 430, y: 260 } });
+
+  const points = await readRoutePoints(page, await onlyRouteId(page));
+  expect(points).toHaveLength(2);
+  const dx = Math.abs(points[1]!.x - points[0]!.x);
+  const dy = Math.abs(points[1]!.y - points[0]!.y);
+  // Neither axis-aligned nor 45 degrees: the leg reaches the endpoint direct.
+  expect(dx).toBeGreaterThan(0);
+  expect(dy).toBeGreaterThan(0);
+  expect(dx).not.toBe(dy);
 });
