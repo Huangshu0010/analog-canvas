@@ -1,0 +1,113 @@
+import { createEmptyDocument } from "@icm/model";
+import { describe, expect, it } from "vitest";
+
+import { planDirectEndpointConnection } from "./direct-contact-planner.js";
+
+const endpoint = (instanceId: string) => ({
+  kind: "terminal" as const,
+  instanceId,
+  pinName: "P",
+});
+
+function fixture() {
+  const document = createEmptyDocument("main", "Main");
+  document.instances.push(
+    { id: "A", symbolId: "port", placement: null },
+    { id: "B", symbolId: "port", placement: null },
+  );
+  return document;
+}
+
+describe("direct endpoint connection planner", () => {
+  it("creates a Base Net when both endpoints are unbound", () => {
+    expect(
+      planDirectEndpointConnection(fixture(), {
+        from: endpoint("A"),
+        to: endpoint("B"),
+        newNetId: "net-contact",
+      }),
+    ).toMatchObject({
+      ok: true,
+      netId: "net-contact",
+      edits: [{ kind: "connect_endpoints", newNetId: "net-contact" }],
+    });
+  });
+
+  it("merges two compatible Base Nets before confirming contact", () => {
+    const document = fixture();
+    document.nets.push(
+      {
+        id: "net-a",
+        scope: "local",
+        terminals: [{ instanceId: "A", pinName: "P" }],
+      },
+      {
+        id: "net-b",
+        scope: "local",
+        terminals: [{ instanceId: "B", pinName: "P" }],
+      },
+    );
+
+    expect(
+      planDirectEndpointConnection(document, {
+        from: endpoint("A"),
+        to: endpoint("B"),
+        newNetId: "unused",
+      }),
+    ).toMatchObject({
+      ok: true,
+      netId: "net-a",
+      edits: [
+        { kind: "merge_nets", targetNetId: "net-a", sourceNetId: "net-b" },
+        { kind: "connect_endpoints" },
+      ],
+    });
+  });
+
+  it("rejects direct contact between differently named Nets", () => {
+    const document = fixture();
+    document.nets.push(
+      {
+        id: "net-a",
+        scope: "local",
+        terminals: [{ instanceId: "A", pinName: "P" }],
+      },
+      {
+        id: "net-b",
+        scope: "local",
+        terminals: [{ instanceId: "B", pinName: "P" }],
+      },
+    );
+    document.connectivityEvidence.push(
+      {
+        id: "claim-a",
+        kind: "name-claim",
+        netId: "net-a",
+        name: "AVDD",
+        scope: "global",
+        powerDomain: "vdd",
+        owner: { kind: "explicit-net-property" },
+      },
+      {
+        id: "claim-b",
+        kind: "name-claim",
+        netId: "net-b",
+        name: "DVDD",
+        scope: "global",
+        powerDomain: "vdd",
+        owner: { kind: "explicit-net-property" },
+      },
+    );
+
+    expect(
+      planDirectEndpointConnection(document, {
+        from: endpoint("A"),
+        to: endpoint("B"),
+        newNetId: "unused",
+      }),
+    ).toMatchObject({
+      ok: false,
+      relatedNetIds: ["net-a", "net-b"],
+    });
+  });
+});

@@ -173,11 +173,11 @@ function compatibleElectrical(left: SnapAnchor, right: SnapAnchor): boolean {
   ) {
     return false;
   }
-  return !(
-    left.electrical.netId &&
-    right.electrical.netId &&
-    left.electrical.netId !== right.electrical.netId
-  );
+  // Different Base Nets are still eligible for an exact visual snap. The
+  // high-level direct-contact planner decides whether they may be merged and
+  // atomically rejects incompatible names or power domains; snap geometry
+  // must not make that decision from raw Net IDs.
+  return true;
 }
 
 function compatibleAxisKinds(moving: SnapAnchor, target: SnapAnchor): boolean {

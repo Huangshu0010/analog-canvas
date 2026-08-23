@@ -1,4 +1,5 @@
 import {
+  planDirectEndpointConnection,
   planEnsurePowerNet,
   proposeEndpointRouteAttachment,
   type SchematicEdit,
@@ -180,12 +181,20 @@ export function proposePlacementContact(
                 : "pin"
             }`;
       const createsNet = target.endpoint.netId === null;
-      edits.push({
-        kind: "connect_endpoints",
+      const directContact = planDirectEndpointConnection(document, {
         from: source.endpoint,
         to: target.endpoint.endpoint,
-        ...(createsNet ? { newNetId } : {}),
+        newNetId,
       });
+      if (!directContact.ok) {
+        return {
+          edits: [],
+          matched: false,
+          ambiguous: false,
+          rejected: directContact.message,
+        };
+      }
+      edits.push(...directContact.edits);
       if (power && createsNet) powerNetId = newNetId;
       else if (power && target.endpoint.netId) {
         powerNetId = target.endpoint.netId;
