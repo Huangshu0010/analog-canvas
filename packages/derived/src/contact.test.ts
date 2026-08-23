@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   contactRequiresJunctionDot,
+  deriveDirectContactDelta,
   deriveDocumentContactEvidence,
 } from "./contact.js";
 
@@ -366,5 +367,33 @@ describe("contactRequiresJunctionDot", () => {
       [{ id: "M1", symbolId: "pmos", position: { x: 0, y: 0 }, pins: ["G"] }],
     );
     expect(dotAt(document, { x: -20, y: 0 })).toBe(true);
+  });
+});
+
+describe("deriveDirectContactDelta", () => {
+  it("identifies endpoint pairs rather than treating page position as identity", () => {
+    const before = documentWith(
+      [],
+      [
+        { id: "M1", symbolId: "nmos", position: { x: 0, y: 0 }, pins: ["G"] },
+        { id: "M2", symbolId: "nmos", position: { x: 0, y: 0 }, pins: ["G"] },
+      ],
+    );
+    const movedTogether = structuredClone(before);
+    for (const instance of movedTogether.instances) {
+      instance.placement!.position.x += 20;
+    }
+    const retained = deriveDirectContactDelta(before, movedTogether, resolver);
+    const gatePairId = "terminal:M1:G|terminal:M2:G";
+    expect(retained.retained.map((pair) => pair.id)).toContain(gatePairId);
+    expect(retained.gained).toEqual([]);
+    expect(retained.lost).toEqual([]);
+
+    const movedApart = structuredClone(before);
+    movedApart.instances.find(
+      (instance) => instance.id === "M1",
+    )!.placement!.position.x += 20;
+    const lost = deriveDirectContactDelta(before, movedApart, resolver);
+    expect(lost.lost.map((pair) => pair.id)).toContain(gatePairId);
   });
 });

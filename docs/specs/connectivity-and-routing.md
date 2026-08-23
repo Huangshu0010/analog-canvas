@@ -25,6 +25,15 @@ Route transaction.
 
 - Starting and ending a wire on terminals or explicit Junctions creates or
   joins real Net membership through one atomic Edit Engine transaction.
+- Exact visible endpoint coincidence is a derived zero-length physical contact
+  only for endpoints already in the same Base Net. New contact intent is still
+  authored explicitly by the snap/placement planner through
+  `connect_endpoints`; raw coordinate overlap never merges or creates a Net.
+- If a move, rotation, or mirror separates a confirmed direct contact, the
+  transaction materializes one ordinary manual Route after all transforms have
+  reached their final positions. Jointly transformed endpoints remain a
+  route-free direct contact, and an existing alternate physical path prevents
+  duplicate Route creation.
 - A Route-segment tap splits geometry at an explicit Junction. A mere crossing
   remains disconnected.
 - Moving a connected Instance stretches the attached Route while preserving
