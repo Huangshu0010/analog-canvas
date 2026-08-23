@@ -5160,3 +5160,40 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   one Cloudflare currently serves, typecheck, prettier, markdown links.
 - Commit status: completed on `claude/retire-pages`; mainline merge gated on
   the remote required checks.
+
+## 2026-08-23 - Properties Identity and Placement polish
+
+- Kept the Identity card but removed Device class; compacted X/Y, rotation, and
+  two mirror actions into one row using editor-native icon buttons.
+- Kept Return to tray on its own row and preserved differential-amplifier input
+  and output swaps in a dedicated row.
+- Removed the capacitor role explanation and replaced the verbose Placement
+  Tray introduction and empty-state duplication with a compact retained-count
+  badge.
+- Added browser contracts for the five-column placement layout, amplifier
+  actions, Identity contents, tray copy removal, and capacitor copy removal.
+- Validation: preflight passed; affected gate passed 1192 unit tests, 25
+  component-insert browser tests, and 99 manual-editor browser tests; focused
+  browser inspection covered ordinary and differential-amplifier Properties.
+- Commit status: committed and pushed on
+  `codex/properties-identity-placement-polish`; mainline merge remains gated on
+  canonical CI and remote required checks.
+- Follow-up: collapsed Display from a heading-plus-two-tiles stack into one
+  32px inline row, preserving both checkboxes while removing their nested
+  backgrounds and excess padding. Added a browser layout contract; preflight,
+  1192 unit tests, and 25 component-insert browser tests passed. The follow-up
+  is committed and pushed on the same branch.
+- Final follow-up: combined Parameters, Display, and Advanced into one card and
+  moved the primitive target fact into Identity, leaving three primary cards
+  for an ordinary component. Removed the standalone Wire Jog commands and
+  their command-specific engine helpers while preserving direct segment drag.
+- Replaced browser-owned Clear canvas confirmation with an undo-aware native
+  dialog. Reworked Cell Manager create, rename, and delete prompts into the
+  same compact native dialog hierarchy with stable accessible names.
+- Validation: preflight and affected gates passed (1191 unit tests;
+  component-insert 25/25, hierarchy 13/13, manual-editor 98/98). Frozen install
+  and canonical `pnpm ci:check` passed, including production/release checks and
+  the full 211-test browser suite.
+- Commit status: final follow-up ready to commit and push on
+  `codex/properties-identity-placement-polish`; PR and remote required checks
+  remain before mainline merge.
