@@ -3,7 +3,8 @@ import type { Page } from "@playwright/test";
 
 import { createEmptyProject } from "@icm/model";
 import { serializeProject } from "@icm/project-protocol";
-import { chooseComponent } from "./editor-fixtures.js";
+
+import { chooseComponent, clickCommand } from "./editor-fixtures.js";
 
 const ENTRY = {
   id: "g-ring",
@@ -549,6 +550,125 @@ test("a signed-in member publishes directly, bylined by the account", async ({
       schemaVersion: createEmptyProject("current", "Current").schemaVersion,
     },
   ]);
+});
+
+test("a mistaken click beside the publish form keeps what was written", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u1",
+          displayName: "Token Zhang",
+          email: "owner@example.com",
+          provider: "github",
+          isAdmin: true,
+        },
+      },
+    }),
+  );
+
+  await page.goto("/editor");
+  await page.getByTestId("publish-gallery-button").click();
+  const dialog = page.getByTestId("publish-gallery-dialog");
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByLabel("Circuit name").fill("Folded Cascode");
+  await dialog
+    .getByLabel("Description")
+    .fill("Gain boosted, 1.2 V supply, trimmed offset.");
+  await dialog.getByLabel("Add tag").fill("Cascode");
+  await dialog.getByLabel("Add tag").press("Enter");
+  await expect(dialog.getByTestId("publish-tag-cascode")).toBeVisible();
+
+  // A stray press on the backdrop beside a form being written in is a miss,
+  // not a decision to throw the writing away.
+  const viewport = page.viewportSize()!;
+  await page.mouse.click(8, viewport.height - 8);
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Circuit name")).toHaveValue("Folded Cascode");
+
+  // Cancelling is a decision, and it still closes — but reopening comes back
+  // to the draft rather than to an empty form.
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByTestId("publish-gallery-button").click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Circuit name")).toHaveValue("Folded Cascode");
+  await expect(dialog.getByLabel("Description")).toHaveValue(
+    "Gain boosted, 1.2 V supply, trimmed offset.",
+  );
+  await expect(dialog.getByTestId("publish-tag-cascode")).toBeVisible();
+});
+
+test("Check and Save shelves the circuit and the shelf reopens it", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u1",
+          displayName: "Token Zhang",
+          email: "owner@example.com",
+          provider: "github",
+          isAdmin: false,
+        },
+      },
+    }),
+  );
+  const shelf: { id: string; name: string; projectText: string }[] = [];
+  await page.route("**/api/workspace/recent", (route) => {
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as {
+        name: string;
+        projectText: string;
+      };
+      // The server keeps the newest three; the client only has to send.
+      shelf.unshift({ id: `slot-${shelf.length}`, ...body });
+      return route.fulfill({
+        json: {
+          slots: shelf.slice(0, 3).map((slot) => ({
+            id: slot.id,
+            name: slot.name,
+            savedAt: "2026-08-23T00:00:00.000Z",
+            schemaVersion: ENTRY.schemaVersion,
+          })),
+        },
+      });
+    }
+    return route.fulfill({ json: { slots: [] } });
+  });
+  await page.route("**/api/workspace/recent/*", (route) => {
+    const id = new URL(route.request().url()).pathname.split("/").pop();
+    const slot = shelf.find((candidate) => candidate.id === id);
+    return slot
+      ? route.fulfill({
+          json: { name: slot.name, projectText: slot.projectText },
+        })
+      : route.fulfill({ status: 404, json: { error: "not-found" } });
+  });
+
+  await page.goto("/editor");
+  await chooseComponent(page, "nmos");
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 360, y: 280 } });
+  await page.keyboard.press("Escape");
+  await page.getByTestId("check-and-save-button").click();
+
+  // A lone transistor is not a netlistable circuit, so the check reports it —
+  // and shelves it anyway. Unfinished work is the work worth keeping.
+  await expect(page.getByTestId("status")).toContainText("problems to resolve");
+  await expect(page.getByTestId("status")).toContainText("saved to your shelf");
+  expect(shelf).toHaveLength(1);
+  expect(shelf[0]!.projectText).toContain("nmos");
+
+  // And it comes back: the shelved circuit is listed under File and reopens.
+  await page.getByTestId("check-report-close").click();
+  await clickCommand(page, "File", shelf[0]!.name);
+  await expect(page.getByTestId("status")).toContainText("Opened");
 });
 
 test("an ordinary user sees blocking quality gates on an empty project", async ({
