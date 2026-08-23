@@ -83,6 +83,15 @@ Q2 collector base emitter QPREF
         }),
       ]),
     );
+    expect(imported.project?.documents[0]?.connectivityEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "name-claim",
+          owner: { kind: "explicit-net-property" },
+        }),
+        expect.objectContaining({ kind: "spice-source" }),
+      ]),
+    );
     expect(
       imported.project?.documents[0]?.instances.map((instance) => [
         instance.netlist?.reference,

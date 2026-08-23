@@ -2026,6 +2026,11 @@ describe("routing Edit Engine", () => {
     const document = documentFixture();
     const net = document.nets.find((candidate) => candidate.id === "net-v")!;
     net.scope = "global";
+    for (const evidence of document.connectivityEvidence) {
+      if (evidence.kind === "name-claim" && evidence.netId === net.id) {
+        evidence.scope = "global";
+      }
+    }
     const beforeNet = structuredClone(net);
     document.routes = [
       {

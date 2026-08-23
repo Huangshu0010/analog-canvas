@@ -2,19 +2,18 @@
 
 Status: `accepted`
 
-Current Project schema: `21`
+Current Project schema: `22`
 
 Primary owners: `packages/model` (current shape) and
 `packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`@icm/project-protocol` exposes `parseProject` and accepts Project schema 20
-and schema 20. Schema 20 advances directly to 21 by stamping the current
-version; the optional bounded `presentation.styleOverrides` object is new in 21
-terminal's singular marker ID into a one-element marker-ID array. Every reader
-returns the sole schema-21 in-memory Project shape; schema 19 and older and all future versions are
-rejected. There is no sequential migration registry or second in-memory Project
-shape.
+`@icm/project-protocol` exposes `parseProject` and accepts Project schemas 21
+and 22. Schema 21 advances directly to 22 by adding deterministic Connectivity
+Evidence for existing explicit Net names, Net/power Labels, and imported Net
+source membership. Every reader returns the sole schema-22 in-memory Project
+shape; schema 20 and older and all future versions are rejected. There is no
+sequential migration registry or second in-memory Project shape.
 
 ## Current authorities
 
@@ -38,6 +37,11 @@ shape.
   `P`; their connectivity is stored only in `Net.terminals` and ordinary
   terminal Route endpoints.
 - `Net.terminals` is the electrical membership authority.
+- `Document.connectivityEvidence` records owner-addressable name claims,
+  SPICE-source assertions, and explicit Base-Net equivalence. During the L3
+  transition it is persisted and validated beside legacy `Net.name` and
+  `Net.origin`; resolved logical connectivity becomes authoritative only when
+  the shared L5 resolver migration lands.
 - `Net.origin` records whether the membership came from SPICE import or from
   authoring. It is the sole persisted eligibility policy for derived routing
   guidance; it does not itself make a visible connection.
@@ -65,8 +69,8 @@ shape.
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 20 or 21
--> direct v20-to-v21 upgrade when needed -> strict schema-21 validation -> open
+read text -> parse JSON -> require Project schema 21 or 22
+-> direct v21-to-v22 upgrade when needed -> strict schema-22 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```
 
@@ -76,7 +80,7 @@ after explicit human approval in the editor.
 
 A migrated formal file is marked as needing save. The editor does not silently
 overwrite the source selected through the browser file input. Browser recovery
-records may be canonicalized to v20 only after a successful validated write.
+records may be canonicalized to v22 only after a successful validated write.
 
 Project entry does not repair duplicate canonical supply Nets (`0` or `VDD`).
 Duplicate folded Net names are invalid input and remain a blocking diagnostic
@@ -85,7 +89,7 @@ until the author explicitly renames or merges the Nets.
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in
 `fixtures/projects/compatibility-corpus.json`; its accepted entries must all be
-already canonical Project schema 20. The rejected corpus names expected
+already canonical Project schema 22. The rejected corpus names expected
 validation failures.
 
 Viewport, selection, undo history, canvas overlays, Agent credentials,

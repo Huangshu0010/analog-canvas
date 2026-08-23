@@ -898,6 +898,66 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
+  it("retargets every connectivity evidence reference when Nets merge", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push(
+      { id: "net-target", scope: "local", terminals: [] },
+      { id: "net-source", scope: "local", terminals: [] },
+      { id: "net-peer", scope: "local", terminals: [] },
+    );
+    document.connectivityEvidence.push(
+      {
+        id: "claim-source",
+        kind: "name-claim",
+        netId: "net-source",
+        name: "SOURCE",
+        owner: { kind: "explicit-net-property" },
+        scope: "local",
+      },
+      {
+        id: "source-origin",
+        kind: "spice-source",
+        netId: "net-source",
+        sourceNetId: "spice-source",
+      },
+      {
+        id: "equivalence-retained",
+        kind: "explicit-equivalence",
+        memberNetIds: ["net-source", "net-peer"],
+      },
+      {
+        id: "equivalence-collapsed",
+        kind: "explicit-equivalence",
+        memberNetIds: ["net-target", "net-source"],
+      },
+    );
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "merge_nets",
+          targetNetId: "net-target",
+          sourceNetId: "net-source",
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        connectivityEvidence: [
+          { id: "claim-source", netId: "net-target" },
+          { id: "source-origin", netId: "net-target" },
+          {
+            id: "equivalence-retained",
+            memberNetIds: ["net-target", "net-peer"],
+          },
+        ],
+      },
+    });
+  });
+
   it("rejects a stale revision without changing the Document", () => {
     const document = createEmptyDocument("document-main", "Main");
     const before = JSON.stringify(document);

@@ -4885,3 +4885,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   preflight, branch verification, build, production smoke, and diff checks.
 - Commit status: prepared on `codex/project-net-lifecycle`; mainline delivery
   remains gated on canonical local and remote checks.
+
+## 2026-08-23 - Connectivity Evidence schema
+
+- Target: `plan/2026-08-23-connectivity-evidence-schema/plan.md` (completed).
+- Changed areas: schema-22 owner-addressable name, SPICE-source, and explicit
+  equivalence evidence; deterministic schema-21 migration; direct importer and
+  fixture production; strict reference validation; and `merge_nets` evidence
+  reference closure while legacy Net projections remain transitional.
+- Validation: focused model/protocol/import/transaction tests, hierarchy (12),
+  project-file (10), Agent (1), and manual-editor (98) browser contracts, all
+  1194 units, workspace build, production smoke, generated artifact freshness,
+  test-impact, and diff checks.
+- Commit status: prepared on `codex/project-net-lifecycle`; mainline delivery
+  remains gated on canonical local and remote checks.

@@ -131,6 +131,44 @@ function mergeNetOrigins(
   }
 }
 
+function retargetConnectivityEvidence(
+  draft: SchematicDocument,
+  sourceNetId: string,
+  targetNetId: string,
+  changedObjectIds: Set<string>,
+): void {
+  const retainedEvidence: typeof draft.connectivityEvidence = [];
+  for (const evidence of draft.connectivityEvidence) {
+    if (evidence.kind === "explicit-equivalence") {
+      const memberNetIds = [
+        ...new Set(
+          evidence.memberNetIds.map((netId) =>
+            netId === sourceNetId ? targetNetId : netId,
+          ),
+        ),
+      ];
+      if (memberNetIds.length < 2) {
+        changedObjectIds.add(evidence.id);
+        continue;
+      }
+      if (
+        memberNetIds.length !== evidence.memberNetIds.length ||
+        memberNetIds.some(
+          (netId, index) => netId !== evidence.memberNetIds[index],
+        )
+      ) {
+        evidence.memberNetIds = memberNetIds;
+        changedObjectIds.add(evidence.id);
+      }
+    } else if (evidence.netId === sourceNetId) {
+      evidence.netId = targetNetId;
+      changedObjectIds.add(evidence.id);
+    }
+    retainedEvidence.push(evidence);
+  }
+  draft.connectivityEvidence = retainedEvidence;
+}
+
 /**
  * Ensure the ADR 0010 drafting layer exists on a draft Document. It is
  * optional in the schema so legacy Projects still validate; edits that touch
@@ -2334,6 +2372,12 @@ export function executeTransaction(
           );
           if (replaced) changedObjectIds.add(constraint.id);
         }
+        retargetConnectivityEvidence(
+          draft,
+          source.id,
+          target.id,
+          changedObjectIds,
+        );
         draft.nets.splice(sourceIndex, 1);
         changedObjectIds.add(target.id);
         changedObjectIds.add(source.id);

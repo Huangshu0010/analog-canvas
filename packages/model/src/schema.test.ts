@@ -263,6 +263,93 @@ describe("CircuitProject schema", () => {
     );
   });
 
+  it("validates owner-addressable Connectivity Evidence", () => {
+    const project = createEmptyProject("project-evidence", "Evidence");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "P1",
+      symbolId: "port",
+      placement: null,
+    });
+    document.nets.push(
+      {
+        id: "net-a",
+        name: "A",
+        scope: "local",
+        terminals: [{ instanceId: "P1", pinName: "P" }],
+      },
+      { id: "net-b", scope: "local", terminals: [] },
+    );
+    document.annotations.push({
+      id: "label-a",
+      kind: "net-label",
+      binding: { kind: "net-name", netId: "net-a" },
+      netId: "net-a",
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    document.connectivityEvidence.push(
+      {
+        id: "claim-a",
+        kind: "name-claim",
+        netId: "net-a",
+        name: "A",
+        owner: { kind: "net-label", annotationId: "label-a" },
+        scope: "local",
+      },
+      {
+        id: "source-a",
+        kind: "spice-source",
+        netId: "net-a",
+        sourceNetId: "source-a",
+      },
+      {
+        id: "claim-a-conflict",
+        kind: "name-claim",
+        netId: "net-a",
+        name: "ALIAS",
+        owner: { kind: "explicit-net-property" },
+        scope: "local",
+      },
+      {
+        id: "equivalence-ab",
+        kind: "explicit-equivalence",
+        memberNetIds: ["net-a", "net-b"],
+      },
+    );
+    expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
+
+    document.connectivityEvidence[0] = {
+      id: "claim-a",
+      kind: "name-claim",
+      netId: "net-a",
+      name: "A",
+      owner: { kind: "net-label", annotationId: "missing-label" },
+      scope: "local",
+    };
+    expect(() => SchematicDocumentSchema.parse(document)).toThrow(
+      /not a matching Net Label/,
+    );
+    document.connectivityEvidence[0] = {
+      id: "claim-a",
+      kind: "name-claim",
+      netId: "net-a",
+      name: "A",
+      owner: { kind: "explicit-net-property" },
+      scope: "local",
+    };
+    document.connectivityEvidence[3] = {
+      id: "equivalence-ab",
+      kind: "explicit-equivalence",
+      memberNetIds: ["net-a", "net-a"],
+    };
+    expect(() => SchematicDocumentSchema.parse(document)).toThrow(
+      /Duplicate explicit-equivalence member/,
+    );
+  });
+
   it("rejects every removed first-class Port shape", () => {
     const project = createEmptyProject("project-port", "Port contract");
     const document = project.documents[0]!;

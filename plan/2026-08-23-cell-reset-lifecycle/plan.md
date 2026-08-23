@@ -83,7 +83,7 @@ they are not hand-edited.
 
 ## Gate Review
 
-- Decision: full-fallback
+- Decision: full
 - Early gates: gate-review, static contracts, and test-impact.
 - Affected gates: workspace unit tests plus hierarchy and manual-editor browser
   contracts.

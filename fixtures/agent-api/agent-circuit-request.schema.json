@@ -11227,32 +11227,35 @@
                 "nets": {
                   "$ref": "#/$defs/__schema257"
                 },
-                "routes": {
+                "connectivityEvidence": {
                   "$ref": "#/$defs/__schema258"
                 },
-                "junctions": {
-                  "$ref": "#/$defs/__schema262"
+                "routes": {
+                  "$ref": "#/$defs/__schema259"
                 },
-                "annotations": {
+                "junctions": {
                   "$ref": "#/$defs/__schema263"
                 },
-                "presentation": {
+                "annotations": {
                   "$ref": "#/$defs/__schema264"
                 },
-                "mosBulkDefaults": {
+                "presentation": {
                   "$ref": "#/$defs/__schema265"
                 },
-                "layoutGroups": {
+                "mosBulkDefaults": {
                   "$ref": "#/$defs/__schema266"
                 },
-                "constraints": {
+                "layoutGroups": {
                   "$ref": "#/$defs/__schema267"
                 },
-                "noConnects": {
+                "constraints": {
                   "$ref": "#/$defs/__schema268"
                 },
-                "drafting": {
+                "noConnects": {
                   "$ref": "#/$defs/__schema269"
+                },
+                "drafting": {
+                  "$ref": "#/$defs/__schema270"
                 }
               },
               "required": [
@@ -11262,6 +11265,7 @@
                 "sourceStatus",
                 "instances",
                 "nets",
+                "connectivityEvidence",
                 "routes",
                 "junctions",
                 "annotations",
@@ -11343,14 +11347,14 @@
                   "maxItems": 128,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema270"
+                    "$ref": "#/$defs/__schema271"
                   }
                 },
                 "formalParameters": {
                   "maxItems": 128,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema271"
+                    "$ref": "#/$defs/__schema272"
                   }
                 },
                 "interfaceStatus": {
@@ -11615,6 +11619,171 @@
     "__schema258": {
       "type": "array",
       "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "kind": {
+                "type": "string",
+                "const": "name-claim"
+              },
+              "netId": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "owner": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "net-label"
+                      },
+                      "annotationId": {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "annotationId"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "free-port"
+                      },
+                      "instanceId": {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "instanceId"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "power-marker"
+                      },
+                      "objectId": {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "objectId"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "explicit-net-property"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "local",
+                  "global"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "netId",
+              "name",
+              "owner",
+              "scope"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "kind": {
+                "type": "string",
+                "const": "spice-source"
+              },
+              "netId": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "sourceNetId": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "sourceRef": {
+                "$ref": "#/$defs/__schema15"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "netId",
+              "sourceNetId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "kind": {
+                "type": "string",
+                "const": "explicit-equivalence"
+              },
+              "memberNetIds": {
+                "minItems": 2,
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "memberNetIds"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "__schema259": {
+      "type": "array",
+      "items": {
         "type": "object",
         "properties": {
           "id": {
@@ -11630,13 +11799,13 @@
             "$ref": "#/$defs/__schema184"
           },
           "waypoints": {
-            "$ref": "#/$defs/__schema259"
-          },
-          "segmentModes": {
             "$ref": "#/$defs/__schema260"
           },
-          "presentation": {
+          "segmentModes": {
             "$ref": "#/$defs/__schema261"
+          },
+          "presentation": {
+            "$ref": "#/$defs/__schema262"
           }
         },
         "required": [
@@ -11650,22 +11819,22 @@
         "additionalProperties": false
       }
     },
-    "__schema259": {
+    "__schema260": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema22"
       }
     },
-    "__schema260": {
+    "__schema261": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema185"
       }
     },
-    "__schema261": {
+    "__schema262": {
       "$ref": "#/$defs/__schema186"
     },
-    "__schema262": {
+    "__schema263": {
       "type": "array",
       "items": {
         "type": "object",
@@ -11691,13 +11860,13 @@
         "additionalProperties": false
       }
     },
-    "__schema263": {
+    "__schema264": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema214"
       }
     },
-    "__schema264": {
+    "__schema265": {
       "type": "object",
       "properties": {
         "styleProfileId": {
@@ -11752,7 +11921,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema265": {
+    "__schema266": {
       "type": "object",
       "properties": {
         "nmosNetId": {
@@ -11764,26 +11933,26 @@
       },
       "additionalProperties": false
     },
-    "__schema266": {
+    "__schema267": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema234"
       }
     },
-    "__schema267": {
+    "__schema268": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema237"
       }
     },
-    "__schema268": {
+    "__schema269": {
       "default": [],
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema205"
       }
     },
-    "__schema269": {
+    "__schema270": {
       "type": "object",
       "properties": {
         "objects": {
@@ -11798,7 +11967,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema270": {
+    "__schema271": {
       "type": "object",
       "properties": {
         "id": {
@@ -11826,7 +11995,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema271": {
+    "__schema272": {
       "type": "object",
       "properties": {
         "name": {

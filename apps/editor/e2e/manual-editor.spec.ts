@@ -2610,6 +2610,12 @@ test("places a Ground pin onto a canonical Route and keeps real split topology",
     scope: "global" as const,
     powerDomain: "ground" as const,
   });
+  for (const evidence of document.connectivityEvidence) {
+    if (evidence.kind === "name-claim" && evidence.netId === horizontalNet.id) {
+      evidence.name = "0";
+      evidence.scope = "global";
+    }
+  }
   document.routes.push({
     id: "route-base",
     netId: "net-h",
