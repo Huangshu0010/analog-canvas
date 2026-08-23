@@ -503,7 +503,9 @@ test("the Publish button posts the live Project with the passphrase", async ({
   };
   expect(body.name).toBe("Publish Demo");
   expect(body.author).toBe("Vivian");
-  expect(JSON.parse(body.projectText).schemaVersion).toBe(ENTRY.schemaVersion);
+  expect(JSON.parse(body.projectText).schemaVersion).toBe(
+    createEmptyProject("current", "Current").schemaVersion,
+  );
 
   // The passphrase is remembered for the session and offered on reopen.
   await page.getByTestId("publish-gallery-button").click();

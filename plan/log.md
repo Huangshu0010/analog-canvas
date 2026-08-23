@@ -4912,3 +4912,15 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   production smoke, generated artifact freshness, test-impact, and diff checks.
 - Commit status: prepared on `codex/project-net-lifecycle`; mainline delivery
   remains gated on canonical local and remote checks.
+
+## 2026-08-23 - Canonical lifecycle browser contracts
+
+- Target: `plan/2026-08-23-canonical-lifecycle-test-contracts/plan.md`
+  (completed).
+- Changed areas: stale drafting and recovery file-open scenarios now confirm
+  the dirty Project replacement guard; gallery publication asserts current
+  schema serialization rather than an older entry's metadata version.
+- Validation: the three previously failing Playwright scenarios pass in one
+  isolated browser run; runtime code was unchanged.
+- Commit status: prepared on `codex/project-net-lifecycle` before rerunning the
+  stacked canonical delivery gate.
