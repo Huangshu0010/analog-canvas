@@ -984,3 +984,40 @@ test("bundled starter tiles open their example in the editor", async ({
     "Opened example: Common-Source Amplifier",
   );
 });
+
+test("bundled VDD rails keep their current presentation in the Gallery and editor", async ({
+  page,
+}) => {
+  await mockGallery(page, []);
+  await page.goto("/");
+  const tile = page.getByTestId(
+    "gallery-bundled-current-mirror-loaded-differential-pair",
+  );
+  const tileRails = tile.locator('[data-route-presentation="power-rail"]');
+  await expect(tileRails).toHaveCount(3);
+  for (const rail of await tileRails.all()) {
+    await expect(rail).toHaveAttribute("stroke-width", "3.24");
+  }
+  await expect(
+    tile.locator(
+      '[data-layer="junctions"] circle[cx="380"][cy="160"], [data-layer="junctions"] circle[cx="500"][cy="160"]',
+    ),
+  ).toHaveCount(0);
+
+  await tile.click();
+  await expect(page).toHaveURL(
+    /\/editor\?example=current-mirror-loaded-differential-pair$/,
+  );
+  const canvasRails = page.locator(
+    '[data-testid="schematic-canvas"] [data-route-presentation="power-rail"]',
+  );
+  await expect(canvasRails).toHaveCount(3);
+  for (const rail of await canvasRails.all()) {
+    await expect(rail).toHaveAttribute("stroke-width", "3.24");
+  }
+  await expect(
+    page.locator(
+      '[data-testid="schematic-canvas"] [data-layer="junctions"] circle[cx="380"][cy="160"], [data-testid="schematic-canvas"] [data-layer="junctions"] circle[cx="500"][cy="160"]',
+    ),
+  ).toHaveCount(0);
+});

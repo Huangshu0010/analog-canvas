@@ -41,6 +41,7 @@ export function upgradePreviousProject(
       for (const net of nets) {
         if (typeof net.id !== "string") continue;
         if (typeof net.name === "string" && net.name.trim()) {
+          const powerDomain = legacyPowerDomain(net);
           evidence.push({
             id: evidenceId(
               documentId,
@@ -53,6 +54,7 @@ export function upgradePreviousProject(
             name: net.name,
             owner: { kind: "explicit-net-property" },
             scope: net.scope === "global" ? "global" : "local",
+            ...(powerDomain ? { powerDomain } : {}),
           });
         }
         const origin = isRecord(net.origin) ? net.origin : null;
@@ -93,18 +95,25 @@ export function upgradePreviousProject(
               ? flattenRichText(content.data).trim()
               : "";
         if (!name) continue;
+        const powerDomain = legacyPowerDomain(net);
+        const ownerKind =
+          annotation.kind === "power-label" ? "power-marker" : "net-label";
         evidence.push({
           id: evidenceId(
             documentId,
-            "net-label",
+            ownerKind,
             annotation.netId,
             annotation.id,
           ),
           kind: "name-claim",
           netId: annotation.netId,
           name,
-          owner: { kind: "net-label", annotationId: annotation.id },
+          owner:
+            ownerKind === "power-marker"
+              ? { kind: "power-marker", objectId: annotation.id }
+              : { kind: "net-label", annotationId: annotation.id },
           scope: net.scope === "global" ? "global" : "local",
+          ...(powerDomain ? { powerDomain } : {}),
         });
       }
       rawDocument.connectivityEvidence = evidence;
@@ -112,6 +121,76 @@ export function upgradePreviousProject(
   }
   project.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;
   return project;
+}
+
+/**
+ * Repair the narrow schema-22 shape emitted before power roles were copied
+ * into Connectivity Evidence. Runtime code still reads Evidence only; this
+ * load-boundary normalization merely restores information that the same file
+ * already carries in its inert schema-21 Net projection.
+ */
+export function repairCurrentProjectEvidence(
+  raw: Record<string, unknown>,
+): Record<string, unknown> {
+  const project = structuredClone(raw);
+  if (!Array.isArray(project.documents)) return project;
+  for (const rawDocument of project.documents) {
+    if (!isRecord(rawDocument)) continue;
+    const nets = Array.isArray(rawDocument.nets)
+      ? rawDocument.nets.filter(isRecord)
+      : [];
+    const netById = new Map(
+      nets.flatMap((net) =>
+        typeof net.id === "string" ? [[net.id, net] as const] : [],
+      ),
+    );
+    const powerLabelIds = new Set(
+      (Array.isArray(rawDocument.annotations)
+        ? rawDocument.annotations.filter(isRecord)
+        : []
+      ).flatMap((annotation) =>
+        annotation.kind === "power-label" && typeof annotation.id === "string"
+          ? [annotation.id]
+          : [],
+      ),
+    );
+    const evidence = Array.isArray(rawDocument.connectivityEvidence)
+      ? rawDocument.connectivityEvidence.filter(isRecord)
+      : [];
+    for (const claim of evidence) {
+      if (claim.kind !== "name-claim" || typeof claim.netId !== "string") {
+        continue;
+      }
+      const net = netById.get(claim.netId);
+      const powerDomain = net ? legacyPowerDomain(net) : undefined;
+      if (
+        powerDomain &&
+        claim.powerDomain === undefined &&
+        typeof claim.name === "string" &&
+        typeof net?.name === "string" &&
+        claim.name.trim() === net.name.trim()
+      ) {
+        claim.powerDomain = powerDomain;
+      }
+      const owner = isRecord(claim.owner) ? claim.owner : null;
+      if (
+        owner?.kind === "net-label" &&
+        typeof owner.annotationId === "string" &&
+        powerLabelIds.has(owner.annotationId)
+      ) {
+        claim.owner = { kind: "power-marker", objectId: owner.annotationId };
+      }
+    }
+  }
+  return project;
+}
+
+function legacyPowerDomain(
+  net: Record<string, unknown>,
+): "vdd" | "ground" | undefined {
+  return net.powerDomain === "vdd" || net.powerDomain === "ground"
+    ? net.powerDomain
+    : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

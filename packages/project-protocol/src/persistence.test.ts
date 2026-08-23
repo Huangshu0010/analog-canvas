@@ -106,6 +106,13 @@ describe("Project persistence", () => {
       origin: { kind: "spice-import", sourceNetIds: ["source-vout"] },
       terminals: [{ instanceId: "P-object", pinName: "P" }],
     });
+    source.documents[0].nets.push({
+      id: "net-vdd",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+    });
     source.documents[0].annotations.push(
       {
         id: "reference-R7",
@@ -141,6 +148,16 @@ describe("Project persistence", () => {
         rotation: 0,
         locked: false,
       },
+      {
+        id: "label-vdd",
+        kind: "power-label",
+        binding: { kind: "net-name", netId: "net-vdd" },
+        netId: "net-vdd",
+        anchor: { kind: "free", position: { x: 80, y: 0 } },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
+      },
     );
     const previousText = JSON.stringify(source);
     const migrated = parseProjectWithMetadata(previousText);
@@ -157,6 +174,7 @@ describe("Project persistence", () => {
       { kind: "instance-designator", instanceId: "opaque-resistor-id" },
       { kind: "cell-terminal-name", terminalId: "terminal-vout" },
       { kind: "net-name", netId: "net-vout" },
+      { kind: "net-name", netId: "net-vdd" },
     ]);
     expect(migrated.project.documents[0]!.connectivityEvidence).toEqual([
       expect.objectContaining({
@@ -172,9 +190,25 @@ describe("Project persistence", () => {
       }),
       expect.objectContaining({
         kind: "name-claim",
+        netId: "net-vdd",
+        name: "VDD",
+        scope: "global",
+        powerDomain: "vdd",
+        owner: { kind: "explicit-net-property" },
+      }),
+      expect.objectContaining({
+        kind: "name-claim",
         netId: "net-vout",
         name: "Vout",
         owner: { kind: "net-label", annotationId: "label-vout" },
+      }),
+      expect.objectContaining({
+        kind: "name-claim",
+        netId: "net-vdd",
+        name: "VDD",
+        scope: "global",
+        powerDomain: "vdd",
+        owner: { kind: "power-marker", objectId: "label-vdd" },
       }),
     ]);
     expect(
@@ -220,6 +254,61 @@ describe("Project persistence", () => {
     expect(
       reopened.documents[0]!.annotations[0]?.content!.runs[0],
     ).toMatchObject({ kind: "fraction" });
+  });
+
+  it("repairs incomplete power evidence emitted by an earlier schema-22 loader", () => {
+    const source = JSON.parse(
+      serializeProject(createEmptyProject("project-test", "Test Project")),
+    );
+    source.documents[0].nets.push({
+      id: "net-vdd",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+    });
+    source.documents[0].annotations.push({
+      id: "label-vdd",
+      kind: "power-label",
+      binding: { kind: "net-name", netId: "net-vdd" },
+      netId: "net-vdd",
+      anchor: { kind: "free", position: { x: 80, y: 0 } },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    source.documents[0].connectivityEvidence.push(
+      {
+        id: "legacy-explicit-vdd",
+        kind: "name-claim",
+        netId: "net-vdd",
+        name: "VDD",
+        owner: { kind: "explicit-net-property" },
+        scope: "global",
+      },
+      {
+        id: "legacy-label-vdd",
+        kind: "name-claim",
+        netId: "net-vdd",
+        name: "VDD",
+        owner: { kind: "net-label", annotationId: "label-vdd" },
+        scope: "global",
+      },
+    );
+
+    const repaired = parseProject(JSON.stringify(source));
+    expect(repaired.documents[0]!.connectivityEvidence).toEqual([
+      expect.objectContaining({
+        id: "legacy-explicit-vdd",
+        powerDomain: "vdd",
+        owner: { kind: "explicit-net-property" },
+      }),
+      expect.objectContaining({
+        id: "legacy-label-vdd",
+        powerDomain: "vdd",
+        owner: { kind: "power-marker", objectId: "label-vdd" },
+      }),
+    ]);
   });
 
   it("rejects schemas outside the rolling current-and-previous window", () => {
