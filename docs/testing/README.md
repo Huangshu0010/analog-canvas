@@ -43,37 +43,34 @@ advisory phase, the plan does not skip `pnpm gate:full` or any required GitHub
 check; it makes the expected validation surface visible before those checks
 consume minutes.
 
-`gate:preflight` verifies the plan's Gate Review and runs cheap structural
-contracts. `gate:affected` runs the catalog's bounded unit, focused browser,
-release, or branch checks. Review the printed reasons before execution; update
-the target plan if the real diff materially changes the selection.
+`gate:preflight` runs cheap static contracts and cross-checks the commit's test
+impact declaration. `gate:affected` runs the catalog's bounded unit, focused
+browser, release, or branch checks. Review the printed reasons before
+execution; revisit the chosen validation surface if the real diff materially
+changes the selection.
 
 ## Change discipline
 
-Every target that changes implementation code must add `## Test Impact` to its
-target plan before the implementation is completed:
+Every commit that changes implementation code must carry one test-impact
+trailer:
 
-```md
-## Test Impact
-
-- Decision: tests-updated
-- Contracts: persisted grid normalization; project import
-- Primary checks: packages/model/src/coordinate-domain.test.ts
+```text
+Test-Impact: tests-updated
 ```
 
-For behavior-neutral work, use `no-test-change` and state the evidence:
+For behavior-neutral work, use `no-test-change` and state the evidence on the
+same line:
 
-```md
-## Test Impact
-
-- Decision: no-test-change
-- Reason: formatting-only change; no emitted code or behavior changed
+```text
+Test-Impact: no-test-change — formatting-only change; no emitted code or behavior changed
 ```
 
 `pnpm test:impact -- --base <base-ref>` checks the changed range. It accepts a
 test update with `tests-updated`, or a testless implementation change with an
 explicit evidence-based `no-test-change` decision. It deliberately does not
-force meaningless test-file edits.
+force meaningless test-file edits. The trailer lives with the diff in Git; a
+local untracked plan may still be used as scratch work, but it is not a gate
+input.
 
 ## Removing or simplifying a test
 

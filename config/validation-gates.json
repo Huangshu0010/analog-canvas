@@ -65,7 +65,6 @@
       "config/validation-gates.json",
       "docs/testing/**",
       "scripts/gate-*.mjs",
-      "scripts/check-gate-review.mjs",
       "scripts/check-test-impact.mjs",
       "scripts/lib/test-impact*.mjs",
       "scripts/lib/validation-gates*.mjs"
@@ -78,13 +77,6 @@
       "when": "docs-only",
       "description": "Validate links for documentation-only changes.",
       "command": ["pnpm", "docs:check"]
-    },
-    {
-      "id": "gate-review",
-      "stage": "preflight",
-      "when": "non-doc",
-      "description": "Require the target plan to review early, affected, and final gates.",
-      "command": ["pnpm", "gate:review:check", "--", "--base", "{base}"]
     },
     {
       "id": "static-contracts",
@@ -183,7 +175,7 @@
   ],
   "fullFallback": {
     "gateContractGroups": ["gateContract"],
-    "preflightGate": "gate-review",
+    "preflightGate": "static-contracts",
     "affectedGate": "branch-verification",
     "finalGate": "full-delivery"
   }
