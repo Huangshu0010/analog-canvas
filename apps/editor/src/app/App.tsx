@@ -192,7 +192,6 @@ import {
   powerConnectionForSymbol,
   proposePlacementContact,
   proposedStandalonePowerConnection,
-  proposedSupplyPortRename,
 } from "../features/component-insert/placement-connectivity";
 import {
   componentParameters,
@@ -296,6 +295,7 @@ import {
   resolveEditorShortcut,
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
+import { createEditorCommandRouter } from "../commands/editor-command";
 import { EditorHelpDialog } from "../components/editor-help-dialog";
 import { ReplaceGuardDialog } from "../components/replace-guard-dialog";
 import { RecentRecoveryDialog } from "../components/recent-recovery-dialog";
@@ -1219,6 +1219,7 @@ export function App({
     beginDraftingTextEditing,
     beginNetLabelEditing,
     commitInstancePropertyDraft,
+    commitElectricalMarkerName,
     commitNetLabelEditing,
     commitPendingNetLabelDraft,
     commitTextEditing,
@@ -1344,6 +1345,11 @@ export function App({
         object?.kind === "rectangle"
       );
     });
+  const hasMirrorableSelection = selectedIds.some((id) =>
+    document.instances.some(
+      (instance) => instance.id === id && instance.placement !== null,
+    ),
+  );
   const hasInspectableSelection = Boolean(
     selectedIds.length > 0 ||
     selectedRoute ||
@@ -1992,6 +1998,34 @@ export function App({
     });
   }
 
+  function closeProperties(): void {
+    exitCellSymbolLayout();
+    setSelectionOpen(false);
+    setImportReviewOpen(false);
+  }
+
+  function selectAllObjects(): void {
+    replaceSelection({
+      instanceIds: document.instances
+        .filter((instance) => instance.placement)
+        .map((instance) => instance.id),
+      routeIds: document.routes.map((route) => route.id),
+      junctionIds: document.junctions.map((junction) => junction.id),
+      annotationIds: document.annotations.map((annotation) => annotation.id),
+      draftingIds: (document.drafting?.objects ?? []).map(
+        (object) => object.id,
+      ),
+    });
+    setSelectedEndpoint(null);
+  }
+
+  function clearEditorSelection(): void {
+    resetSelection();
+    setSelectedEndpoint(null);
+    setSelectedRouteSegmentIndex(null);
+    setStatus("Selection cleared");
+  }
+
   function inspectInstance(instanceId: string): void {
     setSelectedEndpoint(null);
     updateInstanceSelection(instanceId, false);
@@ -2241,7 +2275,10 @@ export function App({
       setStatus("Create another Cell before placing a hierarchical Instance");
       return;
     }
-    startInsertFromHook(cellInsertLaunch());
+    editorCommands.execute({
+      id: "insert.start",
+      launch: cellInsertLaunch(),
+    });
     setStatus("Choose a Cell, then place it on the canvas");
   }
 
@@ -2558,52 +2595,6 @@ export function App({
     }
   }
 
-  function renameSelectedNetPort(name: string): void {
-    if (!selectedPortNet || !selectedInstance || selectedFormalTerminal) return;
-    name = name.trim();
-    if (!name || name === selectedPortLogicalName) return;
-    if (selectedSupplyMarker) {
-      // Naming a supply detaches it onto a rail of its own rather than
-      // renaming the shared one under every other marker using it.
-      const plan = proposedSupplyPortRename(
-        document,
-        selectedSupplyMarker,
-        name,
-      );
-      if (plan.rejected) {
-        setStatus(plan.rejected);
-        return;
-      }
-      if (transact(plan.edits).ok) setStatus(`Supply named ${name}`);
-      return;
-    }
-    const plan = planEnsureNamedNet(document, {
-      candidateNetId: selectedPortNet.id,
-      name,
-      evidenceId:
-        document.connectivityEvidence.find(
-          (evidence) =>
-            evidence.kind === "name-claim" &&
-            evidence.owner.kind === "free-port" &&
-            evidence.owner.instanceId === selectedInstance!.id,
-        )?.id ??
-        deriveStableId(
-          "connectivity-evidence",
-          document.id,
-          "free-port",
-          selectedPortNet.id,
-          selectedInstance!.id,
-        ),
-      owner: { kind: "free-port", instanceId: selectedInstance!.id },
-    });
-    if (!plan.ok) {
-      setStatus(plan.message);
-      return;
-    }
-    if (plan.edits.length === 0 || transact([...plan.edits]).ok) {
-      setStatus(`Renamed Net Port to ${plan.name}`);
-    }
-  }
   function renameSelectedFormalPort(name: string): void {
     if (!selectedFormalTerminal) return;
     name = name.trim();
@@ -4992,6 +4983,90 @@ export function App({
       );
     }
   }
+
+  const editorCommands = createEditorCommandRouter({
+    getContext: () => ({
+      interactionMode: getCurrentInteractionState().kind,
+      activeTool: tool,
+      hasDeletableSelection:
+        hasVisualSelection(visualSelection) || selectedEndpoint !== null,
+      hasMoveSelection: hasVisualSelection(visualSelection),
+      hasRotatableSelection,
+      hasMirrorableSelection,
+      hasInspectableSelection,
+      propertiesOpen: selectionOpen,
+      canUndo,
+      canRedo,
+      helpOpen,
+      canvasDragActive: canvasDragSessionRef.current !== null,
+      hasClearableDraftingSelection:
+        selectedDrafting?.kind === "arrow" ||
+        selectedDrafting?.kind === "construction-line" ||
+        selectedDrafting?.kind === "rectangle",
+    }),
+    operations: {
+      closeHelp,
+      cancelCanvasDrag: () => {
+        canvasDragSessionRef.current?.cancel();
+        setStatus("Cancelled canvas drag");
+      },
+      cancelInteraction: (interactionMode) => {
+        cancelAllTransientInteraction();
+        setStatus(
+          interactionMode === "copy-placement"
+            ? "Copy placement cancelled"
+            : interactionMode === "placing-vdd-rail"
+              ? "Power Rail cancelled"
+              : interactionMode === "placing-component"
+                ? "Component placement cancelled"
+                : interactionMode === "drawing"
+                  ? "Drawing cancelled"
+                  : "Cancelled active tool",
+        );
+      },
+      clearDraftingSelection: () => {
+        replaceSelectionKind("drafting", []);
+        setStatus("Cleared drawing selection");
+      },
+      cancelPassive: () => {
+        setBoxPreview(null);
+        paintSnapGuides([]);
+        setStatus("Cancelled");
+      },
+      undo: () => {
+        transact([{ kind: "undo" }]);
+      },
+      redo: () => {
+        transact([{ kind: "redo" }]);
+      },
+      selectAll: selectAllObjects,
+      clearSelection: clearEditorSelection,
+      deleteSelection: deleteCurrentSelection,
+      beginCopy: beginCopyPlacementFromSelection,
+      beginMove: beginKeyboardSelectionMoveFromSelection,
+      rotatePlacement: rotatePendingComponentFromHook,
+      rotateCopy: rotatePendingCopy,
+      rotateSelection: rotateSelected,
+      mirrorPlacement: mirrorPendingComponentFromHook,
+      mirrorCopy: mirrorPendingCopy,
+      mirrorSelection: mirrorSelected,
+      startInsert: startInsertFromHook,
+      openInsert: () => startInsertFromHook(fullInsertLaunch()),
+      placeFreeNetPort: () => {
+        const request = quickPlaceRequest(
+          document.presentation.styleProfileId,
+          "port",
+        );
+        if (request) startInsertFromHook({ kind: "quick", request });
+      },
+      activateTool,
+      addText: addPlainText,
+      openProperties,
+      closeProperties,
+      fitView,
+      report: setStatus,
+    },
+  });
 
   function download(
     bytes: BlobPart,
@@ -7433,10 +7508,13 @@ export function App({
         hasRoutedMarkerSelection: Boolean(
           selectedAnnotation && isRoutedMarker(selectedAnnotation),
         ),
-        hasRotatableSelection,
+        canRotate: editorCommands.state({ id: "transform.rotate" }).enabled,
+        canMirror: editorCommands.state({
+          id: "transform.mirror",
+          direction: "left-right",
+        }).enabled,
         hasDraftingSelection: Boolean(selectedDrafting),
         hasInspectableSelection,
-        hasMoveSelection: hasVisualSelection(visualSelection),
         hasRouteSelection: Boolean(selectedRoute),
         hasHighlightableNet: selectedHighlightNetId !== null,
         wireReadyToFinish: Boolean(wireSource && wirePreviewPoint),
@@ -7445,12 +7523,6 @@ export function App({
             tool === "construction-line" ||
             tool === "rectangle") &&
           draftingSource !== null,
-        helpOpen,
-        canvasDragActive: canvasDragSessionRef.current !== null,
-        hasClearableDraftingSelection:
-          selectedDrafting?.kind === "arrow" ||
-          selectedDrafting?.kind === "construction-line" ||
-          selectedDrafting?.kind === "rectangle",
         hasRemovableWireWaypoint: Boolean(
           wireSource && wireDraftSteps.length > 0,
         ),
@@ -7461,32 +7533,19 @@ export function App({
       if (!shortcut) return;
 
       const escapeIntent =
-        shortcut.kind === "close-help" ||
-        shortcut.kind === "cancel-canvas-drag" ||
-        shortcut.kind === "cancel-interaction" ||
-        shortcut.kind === "clear-drafting-selection" ||
-        shortcut.kind === "cancel-passive";
+        shortcut.kind === "run-command" &&
+        shortcut.command.id === "editor.cancel";
       if (!escapeIntent) event.preventDefault();
 
       switch (shortcut.kind) {
+        case "run-command":
+          editorCommands.execute(shortcut.command);
+          return;
         case "block-browser-refresh":
           setStatus("Refresh blocked to protect the current circuit");
           return;
         case "block-browser-bookmark":
           setStatus("Browser bookmark shortcut blocked while editing");
-          return;
-        case "undo":
-        case "redo":
-          transact([{ kind: shortcut.kind }]);
-          return;
-        case "copy":
-          beginCopyPlacementFromSelection();
-          return;
-        case "begin-selection-move":
-          beginKeyboardSelectionMoveFromSelection();
-          return;
-        case "move-selection-required":
-          setStatus("Select objects before moving them");
           return;
         case "save":
           void saveProjectFile();
@@ -7494,76 +7553,8 @@ export function App({
         case "open":
           projectInputRef.current?.click();
           return;
-        case "select-all":
-          replaceSelection({
-            instanceIds: document.instances
-              .filter((instance) => instance.placement)
-              .map((instance) => instance.id),
-            routeIds: document.routes.map((route) => route.id),
-            junctionIds: document.junctions.map((junction) => junction.id),
-            annotationIds: document.annotations.map(
-              (annotation) => annotation.id,
-            ),
-            draftingIds: (document.drafting?.objects ?? []).map(
-              (object) => object.id,
-            ),
-          });
-          setSelectedEndpoint(null);
-          return;
-        case "clear-selection":
-          resetSelection();
-          setSelectedEndpoint(null);
-          setSelectedRouteSegmentIndex(null);
-          setStatus("Selection cleared");
-          return;
         case "reverse-current-marker":
           reverseSelectedCurrentArrow();
-          return;
-        case "open-component-insert":
-          startInsertFromHook(fullInsertLaunch());
-          return;
-        case "place-port": {
-          const request = quickPlaceRequest(
-            document.presentation.styleProfileId,
-            "port",
-          );
-          if (request) startInsertFromHook({ kind: "quick", request });
-          return;
-        }
-        case "rotate-placement":
-          rotatePendingComponentFromHook(shortcut.deltaDegrees);
-          return;
-        case "rotate-copy-placement":
-          rotatePendingCopy(shortcut.deltaDegrees);
-          return;
-        case "mirror-placement":
-          mirrorPendingComponentFromHook(shortcut.direction);
-          return;
-        case "mirror-copy-placement":
-          mirrorPendingCopy(shortcut.direction);
-          return;
-        case "rotate":
-          rotateSelected(shortcut.deltaDegrees);
-          return;
-        case "mirror":
-          mirrorSelected(shortcut.direction);
-          return;
-        case "activate-tool":
-          activateTool(shortcut.tool);
-          return;
-        case "add-text":
-          addPlainText();
-          return;
-        case "open-properties":
-          openProperties();
-          return;
-        case "close-properties":
-          exitCellSymbolLayout();
-          setSelectionOpen(false);
-          setImportReviewOpen(false);
-          return;
-        case "property-selection-required":
-          setStatus("Select an object before opening Properties");
           return;
         case "edit-net-label":
           beginNetLabelEditing();
@@ -7584,9 +7575,6 @@ export function App({
           setStatus(
             "Select a rectangle or hierarchical block before entering a Cell",
           );
-          return;
-        case "fit-view":
-          fitView();
           return;
         case "step-drafting-style": {
           if (!selectedDrafting) return;
@@ -7620,38 +7608,6 @@ export function App({
         case "finish-drafting":
           finishDraftingCreate();
           return;
-        case "close-help":
-          closeHelp();
-          return;
-        case "cancel-canvas-drag":
-          canvasDragSessionRef.current?.cancel();
-          setStatus("Cancelled canvas drag");
-          return;
-        case "cancel-interaction": {
-          const cancelledKind = getCurrentInteractionState().kind;
-          cancelAllTransientInteraction();
-          setStatus(
-            cancelledKind === "copy-placement"
-              ? "Copy placement cancelled"
-              : cancelledKind === "placing-vdd-rail"
-                ? "Power Rail cancelled"
-                : cancelledKind === "placing-component"
-                  ? "Component placement cancelled"
-                  : cancelledKind === "drawing"
-                    ? "Drawing cancelled"
-                    : "Cancelled active tool",
-          );
-          return;
-        }
-        case "clear-drafting-selection":
-          replaceSelectionKind("drafting", []);
-          setStatus("Cleared drawing selection");
-          return;
-        case "cancel-passive":
-          setBoxPreview(null);
-          paintSnapGuides([]);
-          setStatus("Cancelled");
-          return;
         case "remove-wire-waypoint":
           setWireDraftSteps(wireDraftSteps.slice(0, -1));
           setStatus("Removed last authored wire step");
@@ -7660,9 +7616,6 @@ export function App({
           setStatus(
             `${shortcut.command} is unavailable while an active tool owns the canvas · Esc cancels`,
           );
-          return;
-        case "delete-selection":
-          deleteCurrentSelection();
           return;
       }
     }
@@ -7930,21 +7883,31 @@ export function App({
                   </button>
                   <button
                     type="button"
-                    onClick={() => transact([{ kind: "undo" }])}
-                    disabled={!canUndo}
+                    onClick={() =>
+                      editorCommands.execute({ id: "history.undo" })
+                    }
+                    disabled={
+                      !editorCommands.state({ id: "history.undo" }).enabled
+                    }
                   >
                     Undo
                   </button>
                   <button
                     type="button"
-                    onClick={() => transact([{ kind: "redo" }])}
-                    disabled={!canRedo}
+                    onClick={() =>
+                      editorCommands.execute({ id: "history.redo" })
+                    }
+                    disabled={
+                      !editorCommands.state({ id: "history.redo" }).enabled
+                    }
                   >
                     Redo
                   </button>
                   <button
                     type="button"
-                    onClick={deleteCurrentSelection}
+                    onClick={() =>
+                      editorCommands.execute({ id: "selection.delete" })
+                    }
                     disabled={
                       !hasVisualSelection(visualSelection) && !selectedEndpoint
                     }
@@ -7983,23 +7946,47 @@ export function App({
                   </button>
                   <button
                     type="button"
-                    onClick={() => rotateSelected()}
-                    disabled={selectedIds.length === 0}
+                    onClick={() =>
+                      editorCommands.execute({ id: "transform.rotate" })
+                    }
+                    disabled={
+                      !editorCommands.state({ id: "transform.rotate" }).enabled
+                    }
                   >
                     <ToolIcon name="rotate" />
                     Rotate
                   </button>
                   <button
                     type="button"
-                    onClick={() => mirrorSelected("left-right")}
-                    disabled={selectedIds.length === 0}
+                    onClick={() =>
+                      editorCommands.execute({
+                        id: "transform.mirror",
+                        direction: "left-right",
+                      })
+                    }
+                    disabled={
+                      !editorCommands.state({
+                        id: "transform.mirror",
+                        direction: "left-right",
+                      }).enabled
+                    }
                   >
                     Mirror left/right (Shift+R)
                   </button>
                   <button
                     type="button"
-                    onClick={() => mirrorSelected("top-bottom")}
-                    disabled={selectedIds.length === 0}
+                    onClick={() =>
+                      editorCommands.execute({
+                        id: "transform.mirror",
+                        direction: "top-bottom",
+                      })
+                    }
+                    disabled={
+                      !editorCommands.state({
+                        id: "transform.mirror",
+                        direction: "top-bottom",
+                      }).enabled
+                    }
                   >
                     Mirror top/bottom (Ctrl+R)
                   </button>
@@ -8159,7 +8146,12 @@ export function App({
             className="draw-tool"
             data-testid="draw-tool-insert"
             title="Insert component (I)"
-            onClick={() => startInsertFromHook(fullInsertLaunch())}
+            onClick={() =>
+              editorCommands.execute({
+                id: "insert.start",
+                launch: fullInsertLaunch(),
+              })
+            }
           >
             <ToolIcon name="insert" />
             <span>Insert</span>
@@ -8170,7 +8162,9 @@ export function App({
             data-testid="draw-tool-wire"
             aria-pressed={tool === "wire"}
             title="Wire (W)"
-            onClick={() => activateTool("wire")}
+            onClick={() =>
+              editorCommands.execute({ id: "tool.activate", tool: "wire" })
+            }
           >
             <ToolIcon name="wire" />
             <span>Wire</span>
@@ -8181,7 +8175,7 @@ export function App({
             data-testid="draw-tool-text"
             aria-label="Text"
             title="Text (T)"
-            onClick={addPlainText}
+            onClick={() => editorCommands.execute({ id: "drafting.add-text" })}
           >
             <ToolIcon name="text" />
             <span>Text</span>
@@ -8193,7 +8187,9 @@ export function App({
             data-testid="draw-tool-arrow"
             aria-pressed={tool === "arrow"}
             title="Arrow (A)"
-            onClick={() => activateTool("arrow")}
+            onClick={() =>
+              editorCommands.execute({ id: "tool.activate", tool: "arrow" })
+            }
           >
             <ToolIcon name="arrow" />
             <span>Arrow</span>
@@ -8204,7 +8200,12 @@ export function App({
             data-testid="draw-tool-line"
             aria-pressed={tool === "construction-line"}
             title="Construction line (K)"
-            onClick={() => activateTool("construction-line")}
+            onClick={() =>
+              editorCommands.execute({
+                id: "tool.activate",
+                tool: "construction-line",
+              })
+            }
           >
             <ToolIcon name="line" />
             <span>Line</span>
@@ -8215,7 +8216,12 @@ export function App({
             data-testid="draw-tool-rectangle"
             aria-pressed={tool === "rectangle"}
             title="Rectangle (R)"
-            onClick={() => activateTool("rectangle")}
+            onClick={() =>
+              editorCommands.execute({
+                id: "tool.activate",
+                tool: "rectangle",
+              })
+            }
           >
             <ToolIcon name="rectangle" />
             <span>Rect</span>
@@ -8417,7 +8423,12 @@ export function App({
         externalDefinitions={externalSubcircuitInsertCandidates}
         scope={insertScope}
         initialSelectionId={insertInitialSelectionId}
-        onApply={(request) => startInsertFromHook({ kind: "quick", request })}
+        onApply={(request) =>
+          editorCommands.execute({
+            id: "insert.start",
+            launch: { kind: "quick", request },
+          })
+        }
         onCancel={cancelComponentInsertFromHook}
       />
       {pendingCellReset ? (
@@ -8675,7 +8686,9 @@ export function App({
           <ShapesPanel
             styleProfileId={document.presentation.styleProfileId}
             open={visibleLibraryPanelOpen}
-            onStartInsert={startInsertFromHook}
+            onStartInsert={(launch) =>
+              editorCommands.execute({ id: "insert.start", launch })
+            }
           />
         ) : (
           <ExamplesPanel
@@ -9093,7 +9106,10 @@ export function App({
                               }
                               defaultValue={selectedPortLogicalName ?? ""}
                               onBlur={(event) =>
-                                renameSelectedNetPort(event.currentTarget.value)
+                                commitElectricalMarkerName(
+                                  selectedInstance.id,
+                                  event.currentTarget.value,
+                                )
                               }
                             />
                           </dd>
@@ -9494,7 +9510,9 @@ export function App({
                           className="property-placement-icon-button"
                           aria-label={`Rotate component clockwise 90 degrees; current rotation ${instancePropertyDraft.rotation} degrees; shortcut R`}
                           title={`Rotate 90° clockwise · current ${instancePropertyDraft.rotation}° (R)`}
-                          onClick={() => rotateSelected()}
+                          onClick={() =>
+                            editorCommands.execute({ id: "transform.rotate" })
+                          }
                         >
                           <ToolIcon name="rotate" />
                         </button>
@@ -9503,7 +9521,12 @@ export function App({
                           className="property-placement-icon-button"
                           aria-label="Mirror component left to right, Shift+R"
                           title="Mirror left/right (Shift+R)"
-                          onClick={() => mirrorSelected("left-right")}
+                          onClick={() =>
+                            editorCommands.execute({
+                              id: "transform.mirror",
+                              direction: "left-right",
+                            })
+                          }
                         >
                           <ToolIcon name="mirror-horizontal" />
                         </button>
@@ -9512,7 +9535,12 @@ export function App({
                           className="property-placement-icon-button"
                           aria-label="Mirror component top to bottom, Ctrl+R"
                           title="Mirror top/bottom (Ctrl+R)"
-                          onClick={() => mirrorSelected("top-bottom")}
+                          onClick={() =>
+                            editorCommands.execute({
+                              id: "transform.mirror",
+                              direction: "top-bottom",
+                            })
+                          }
                         >
                           <ToolIcon name="mirror-vertical" />
                         </button>
@@ -9857,7 +9885,9 @@ export function App({
                         <button
                           type="button"
                           disabled={selectedDrafting.locked}
-                          onClick={() => rotateSelected()}
+                          onClick={() =>
+                            editorCommands.execute({ id: "transform.rotate" })
+                          }
                         >
                           <ToolIcon name="rotate" />
                           Rotate
@@ -11674,7 +11704,7 @@ export function App({
             type="button"
             aria-label="Fit view"
             title="Fit view (Home)"
-            onClick={fitView}
+            onClick={() => editorCommands.execute({ id: "view.fit" })}
           >
             <ToolIcon name="fit" />
           </button>
