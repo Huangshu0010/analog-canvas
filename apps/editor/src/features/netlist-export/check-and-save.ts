@@ -1,4 +1,8 @@
 import type { SchematicEdit } from "@icm/edit-engine";
+import {
+  resolveDocumentLogicalNets,
+  resolveMosBulkConnection,
+} from "@icm/derived";
 import type { SchematicDocument } from "@icm/model";
 
 /**
@@ -25,7 +29,9 @@ function soleNetOfDomain(
   document: SchematicDocument,
   domain: "vdd" | "ground",
 ): string | null {
-  const matches = document.nets.filter((net) => net.powerDomain === domain);
+  const matches = resolveDocumentLogicalNets(document).groups.filter(
+    (net) => net.powerDomain === domain,
+  );
   return matches.length === 1 ? matches[0]!.id : null;
 }
 
@@ -37,8 +43,25 @@ function unboundCount(
     (instance) =>
       instance.symbolId === symbolId &&
       instance.placement !== null &&
-      !instance.mosBulkBinding,
+      resolveMosBulkConnection(document, instance)?.status === "unresolved",
   ).length;
+}
+
+function pendingDefaultCount(
+  document: SchematicDocument,
+  symbolId: "nmos" | "pmos",
+): number {
+  return document.instances.filter((instance) => {
+    if (instance.symbolId !== symbolId || instance.placement === null)
+      return false;
+    const resolution = resolveMosBulkConnection(document, instance);
+    return Boolean(
+      resolution &&
+      !resolution.materialized &&
+      (resolution.status === "cell-default" ||
+        resolution.status === "supply-default"),
+    );
+  }).length;
 }
 
 export function planCheckBulkDefaults(
@@ -69,10 +92,8 @@ export function planCheckBulkDefaults(
   // a default already named before this check ran.
   const reconcilable =
     edits.length > 0 ||
-    (document.mosBulkDefaults?.nmosNetId != null &&
-      unboundCount(document, "nmos") > 0) ||
-    (document.mosBulkDefaults?.pmosNetId != null &&
-      unboundCount(document, "pmos") > 0);
+    pendingDefaultCount(document, "nmos") > 0 ||
+    pendingDefaultCount(document, "pmos") > 0;
   if (reconcilable) edits.push({ kind: "reconcile_mos_bulk" });
   return { edits, ambiguous };
 }

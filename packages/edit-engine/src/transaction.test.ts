@@ -1240,6 +1240,171 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
+  it("revokes a materialized PMOS default when the last VDD claim is deleted", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push(
+      { id: "M1", symbolId: "pmos", placement: null },
+      { id: "VDD1", symbolId: "vdd-port", placement: null },
+    );
+    document.nets.push({
+      id: "net-power-vdd1",
+      scope: "local",
+      terminals: [
+        { instanceId: "M1", pinName: "B" },
+        { instanceId: "VDD1", pinName: "P" },
+      ],
+    });
+    document.connectivityEvidence.push({
+      id: "claim-vdd-1",
+      kind: "name-claim",
+      netId: "net-power-vdd1",
+      name: "VDD",
+      owner: { kind: "power-marker", objectId: "VDD1" },
+      scope: "global",
+      powerDomain: "vdd",
+    });
+    document.mosBulkDefaults = { pmosNetId: "net-power-vdd1" };
+    document.instances[0]!.mosBulkBinding = {
+      origin: "cell-default",
+      netId: "net-power-vdd1",
+    };
+
+    const removed = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "disconnect_endpoint",
+            endpoint: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+          },
+          { kind: "remove_instance", instanceId: "VDD1" },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(removed.ok).toBe(true);
+    if (!removed.ok) return;
+    expect(removed.document.mosBulkDefaults).toBeUndefined();
+    expect(removed.document.instances[0]?.mosBulkBinding).toBeUndefined();
+    expect(removed.document.nets).toEqual([]);
+  });
+
+  it("keeps an explicit custom PMOS body default without a power marker", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "M1",
+      symbolId: "pmos",
+      placement: null,
+      mosBulkBinding: { origin: "cell-default", netId: "net-body" },
+    });
+    document.nets.push({
+      id: "net-body",
+      scope: "local",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+    document.mosBulkDefaults = { pmosNetId: "net-body" };
+
+    const edited = executeTransaction(
+      document,
+      { ...transaction(), edits: [{ kind: "noop", reason: "unrelated edit" }] },
+      { symbolResolver: resolver },
+    );
+
+    expect(edited.ok).toBe(true);
+    if (!edited.ok) return;
+    expect(edited.document.mosBulkDefaults).toEqual({ pmosNetId: "net-body" });
+    expect(edited.document.instances[0]?.mosBulkBinding).toEqual({
+      origin: "cell-default",
+      netId: "net-body",
+    });
+  });
+
+  it("migrates a PMOS default to another marker of the same supply", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push(
+      {
+        id: "M1",
+        symbolId: "pmos",
+        placement: null,
+        mosBulkBinding: { origin: "cell-default", netId: "net-vdd-1" },
+      },
+      { id: "VDD1", symbolId: "vdd-port", placement: null },
+      { id: "VDD2", symbolId: "vdd-port", placement: null },
+    );
+    document.nets.push(
+      {
+        id: "net-vdd-1",
+        scope: "local",
+        terminals: [
+          { instanceId: "M1", pinName: "B" },
+          { instanceId: "VDD1", pinName: "P" },
+        ],
+      },
+      {
+        id: "net-vdd-2",
+        scope: "local",
+        terminals: [{ instanceId: "VDD2", pinName: "P" }],
+      },
+    );
+    document.connectivityEvidence.push(
+      {
+        id: "claim-vdd-1",
+        kind: "name-claim",
+        netId: "net-vdd-1",
+        name: "VDD",
+        owner: { kind: "power-marker", objectId: "VDD1" },
+        scope: "global",
+        powerDomain: "vdd",
+      },
+      {
+        id: "claim-vdd-2",
+        kind: "name-claim",
+        netId: "net-vdd-2",
+        name: "VDD",
+        owner: { kind: "power-marker", objectId: "VDD2" },
+        scope: "global",
+        powerDomain: "vdd",
+      },
+    );
+    document.mosBulkDefaults = { pmosNetId: "net-vdd-1" };
+
+    const removed = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "disconnect_endpoint",
+            endpoint: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+          },
+          { kind: "remove_instance", instanceId: "VDD1" },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(removed.ok).toBe(true);
+    if (!removed.ok) return;
+    expect(removed.document.mosBulkDefaults).toEqual({
+      pmosNetId: "net-vdd-2",
+    });
+    expect(
+      removed.document.instances.find((instance) => instance.id === "M1")
+        ?.mosBulkBinding,
+    ).toEqual({
+      origin: "cell-default",
+      netId: "net-vdd-2",
+    });
+    expect(
+      removed.document.nets.find((net) => net.id === "net-vdd-2")?.terminals,
+    ).toContainEqual({
+      instanceId: "M1",
+      pinName: "B",
+    });
+  });
+
   it("removes only evidence owned by a deleted Net Label", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({ id: "net-a", scope: "local", terminals: [] });

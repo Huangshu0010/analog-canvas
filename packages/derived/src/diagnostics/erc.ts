@@ -392,11 +392,14 @@ export function runErcChecks(
 
         if (role === "bulk") {
           const resolution = resolveMosBulkConnection(document, instance);
+          const bulkAssessment = endpointConnectivity.assessMosBulk(
+            instance.id,
+          );
           const configuredDefault =
             resolution?.status === "cell-default" ||
             resolution?.status === "supply-default";
           if (
-            !assessment.electricallySatisfied &&
+            !bulkAssessment.electricallySatisfied &&
             !configuredDefault &&
             pin.presentation.visibility !== "implicit"
           ) {

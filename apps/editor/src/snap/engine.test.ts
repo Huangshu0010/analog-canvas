@@ -272,6 +272,43 @@ describe("unified Snap Engine", () => {
     });
   });
 
+  it("offers exact endpoint snap across Base Nets for the contact planner", () => {
+    const result = resolveTranslationSnap({
+      rawDelta: { x: 9, y: 10 },
+      movingAnchors: [
+        {
+          id: "moving-pin",
+          point: { x: 0, y: 0 },
+          kind: "pin",
+          electrical: {
+            kind: "endpoint",
+            endpoint: { kind: "terminal", instanceId: "A", pinName: "P" },
+            netId: "net-a",
+          },
+        },
+      ],
+      targetAnchors: [
+        {
+          id: "target-pin",
+          point: { x: 10, y: 10 },
+          kind: "pin",
+          electrical: {
+            kind: "endpoint",
+            endpoint: { kind: "terminal", instanceId: "B", pinName: "P" },
+            netId: "net-b",
+          },
+        },
+      ],
+      primaryAnchorId: "moving-pin",
+      grid: 10,
+      tolerance: 3,
+      profile: SNAP_PROFILES.instanceMove,
+    });
+
+    expect(result.delta).toEqual({ x: 10, y: 10 });
+    expect(result.electricalMatch?.target.id).toBe("target-pin");
+  });
+
   it("prefers an explicit endpoint over its coincident Route projection", () => {
     const moving = {
       id: "moving-pin",

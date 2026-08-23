@@ -27,6 +27,7 @@ import {
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
   planEnsureNamedNet,
+  planDirectEndpointConnection,
   planCreateCell,
   planDeleteCell,
   planRenameCell,
@@ -4810,7 +4811,20 @@ export function App({
           );
           if (instance?.placement) instance.placement.position = move.position;
         }
-        const contactEdits: SchematicEdit[] =
+        const directContactPlan =
+          movingElectrical?.kind === "endpoint" &&
+          targetElectrical?.kind === "endpoint"
+            ? planDirectEndpointConnection(projected, {
+                from: movingElectrical.endpoint,
+                to: targetElectrical.endpoint,
+                newNetId: `net-ui-${nextRoutingSuffix()}`,
+              })
+            : null;
+        if (directContactPlan && !directContactPlan.ok) {
+          setStatus(directContactPlan.message);
+          return;
+        }
+        const contactEdits: readonly SchematicEdit[] =
           movingElectrical?.kind === "endpoint" &&
           targetElectrical?.kind === "route"
             ? proposeEndpointRouteAttachment(
@@ -4824,16 +4838,7 @@ export function App({
               ).edits
             : movingElectrical?.kind === "endpoint" &&
                 targetElectrical?.kind === "endpoint"
-              ? [
-                  {
-                    kind: "connect_endpoints" as const,
-                    from: movingElectrical.endpoint,
-                    to: targetElectrical.endpoint,
-                    ...(!movingElectrical.netId && !targetElectrical.netId
-                      ? { newNetId: `net-ui-${nextRoutingSuffix()}` }
-                      : {}),
-                  },
-                ]
+              ? (directContactPlan?.edits ?? [])
               : [];
         const result = transactConnectivity(
           targetElectrical?.kind === "route"

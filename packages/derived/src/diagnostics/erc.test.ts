@@ -311,6 +311,29 @@ describe("ERC engine", () => {
     expect(roleRun(project)).toEqual([]);
   });
 
+  it("does not treat MOS bulk pins alone as an external body reference", () => {
+    const project = emptyProject();
+    const document = project.documents[0]!;
+    document.instances = [
+      roleInstance("three-terminal"),
+      { ...roleInstance("three-terminal"), id: "M2" },
+    ];
+    document.nets.push({
+      id: "net-bulk-only",
+      scope: "local",
+      terminals: [
+        { instanceId: "M1", pinName: "B" },
+        { instanceId: "M2", pinName: "B" },
+      ],
+    });
+
+    expect(
+      roleRun(project).filter(
+        (diagnostic) => diagnostic.code === "ERC_BULK_UNRESOLVED",
+      ),
+    ).toHaveLength(2);
+  });
+
   it("flags two instances sharing a normalized netlist reference", () => {
     const project = emptyProject();
     project.documents[0]!.instances = [
