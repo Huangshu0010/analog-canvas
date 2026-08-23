@@ -1,5 +1,5 @@
-import type { EditorTool, InteractionMode } from "./interaction-state";
-import type { ScreenFlip } from "./shortcut-orientation";
+import type { InteractionMode } from "./interaction-state";
+import type { EditorCommandRequest } from "../commands/editor-command";
 
 export interface EditorShortcutKey {
   key: string;
@@ -13,17 +13,14 @@ export interface EditorShortcutContext {
   isTyping: boolean;
   interactionMode: InteractionMode;
   hasRoutedMarkerSelection: boolean;
-  hasRotatableSelection: boolean;
+  canRotate: boolean;
+  canMirror: boolean;
   hasDraftingSelection: boolean;
   hasInspectableSelection: boolean;
-  hasMoveSelection: boolean;
   hasRouteSelection: boolean;
   hasHighlightableNet: boolean;
   wireReadyToFinish: boolean;
   draftingReadyToFinish: boolean;
-  helpOpen: boolean;
-  canvasDragActive: boolean;
-  hasClearableDraftingSelection: boolean;
   hasRemovableWireWaypoint: boolean;
   propertiesOpen: boolean;
   hasHierarchyEnterSelection: boolean;
@@ -31,33 +28,17 @@ export interface EditorShortcutContext {
 }
 
 export type EditorShortcutIntent =
+  | { kind: "run-command"; command: EditorCommandRequest }
   | { kind: "block-browser-refresh" }
   | { kind: "block-browser-bookmark" }
-  | { kind: "undo" | "redo" }
-  | { kind: "copy" | "save" | "open" | "select-all" | "clear-selection" }
-  | { kind: "begin-selection-move" | "move-selection-required" }
+  | { kind: "save" | "open" }
   | { kind: "reverse-current-marker" }
-  | { kind: "open-component-insert" }
-  | { kind: "place-port" }
-  | { kind: "rotate-placement"; deltaDegrees: 90 | -90 }
-  | { kind: "rotate-copy-placement"; deltaDegrees: 90 | -90 }
-  | { kind: "mirror-placement"; direction: ScreenFlip }
-  | { kind: "mirror-copy-placement"; direction: ScreenFlip }
-  | { kind: "rotate"; deltaDegrees: 90 | -90 }
-  | { kind: "activate-tool"; tool: EditorTool }
-  | { kind: "add-text" }
-  | {
-      kind:
-        "open-properties" | "close-properties" | "property-selection-required";
-    }
   | { kind: "edit-net-label" | "net-label-selection-required" }
   | { kind: "toggle-net-highlight" }
   | {
       kind:
         "enter-hierarchy" | "return-to-parent" | "hierarchy-selection-required";
     }
-  | { kind: "mirror"; direction: ScreenFlip }
-  | { kind: "fit-view" }
   | {
       kind: "step-drafting-style";
       target: "stroke" | "arrow-head";
@@ -65,15 +46,7 @@ export type EditorShortcutIntent =
     }
   | { kind: "finish-wire" | "finish-drafting" }
   | { kind: "toggle-wire-options" }
-  | {
-      kind:
-        | "close-help"
-        | "cancel-canvas-drag"
-        | "cancel-interaction"
-        | "clear-drafting-selection"
-        | "cancel-passive";
-    }
-  | { kind: "remove-wire-waypoint" | "delete-selection" }
+  | { kind: "remove-wire-waypoint" }
   | { kind: "blocked-interaction-command"; command: string };
 
 export function stepBoundedScale<T extends number>(
@@ -103,25 +76,20 @@ export function resolveEditorShortcut(
   if (event.key === "F5") return { kind: "block-browser-refresh" };
   if (commandModifier && key === "r") {
     if (context.isTyping) return { kind: "block-browser-refresh" };
-    if (
-      context.interactionMode === "placing-component" ||
-      context.interactionMode === "copy-placement"
-    ) {
-      return context.interactionMode === "placing-component"
-        ? { kind: "mirror-placement", direction: "top-bottom" }
-        : { kind: "mirror-copy-placement", direction: "top-bottom" };
-    }
+    if (context.canMirror)
+      return {
+        kind: "run-command",
+        command: { id: "transform.mirror", direction: "top-bottom" },
+      };
     if (context.interactionMode !== "idle") {
       return { kind: "block-browser-refresh" };
     }
-    return context.hasRotatableSelection
-      ? { kind: "mirror", direction: "top-bottom" }
-      : { kind: "block-browser-refresh" };
+    return { kind: "block-browser-refresh" };
   }
   if (commandModifier && key === "d") {
     if (context.isTyping) return { kind: "block-browser-bookmark" };
     return context.interactionMode === "idle"
-      ? { kind: "clear-selection" }
+      ? { kind: "run-command", command: { id: "selection.clear" } }
       : { kind: "block-browser-bookmark" };
   }
 
@@ -131,23 +99,25 @@ export function resolveEditorShortcut(
   const interactionActive = context.interactionMode !== "idle";
 
   if (plain && key === "u") {
-    return { kind: event.shiftKey ? "redo" : "undo" };
+    return {
+      kind: "run-command",
+      command: { id: event.shiftKey ? "history.redo" : "history.undo" },
+    };
   }
   if (event.ctrlKey && key === "z") {
-    return { kind: event.shiftKey ? "redo" : "undo" };
+    return {
+      kind: "run-command",
+      command: { id: event.shiftKey ? "history.redo" : "history.undo" },
+    };
   }
-  if (event.ctrlKey && key === "y") return { kind: "redo" };
+  if (event.ctrlKey && key === "y") {
+    return { kind: "run-command", command: { id: "history.redo" } };
+  }
   if (event.ctrlKey && key === "s") return { kind: "save" };
   if (event.ctrlKey && key === "o") return { kind: "open" };
 
   if (event.key === "Escape") {
-    if (context.helpOpen) return { kind: "close-help" };
-    if (context.canvasDragActive) return { kind: "cancel-canvas-drag" };
-    if (interactionActive) return { kind: "cancel-interaction" };
-    if (context.hasClearableDraftingSelection) {
-      return { kind: "clear-drafting-selection" };
-    }
-    return { kind: "cancel-passive" };
+    return { kind: "run-command", command: { id: "editor.cancel" } };
   }
 
   if (interactionActive) {
@@ -156,23 +126,34 @@ export function resolveEditorShortcut(
     }
     if (plain && key === "c") {
       return context.interactionMode === "copy-placement"
-        ? { kind: "copy" }
+        ? { kind: "run-command", command: { id: "selection.copy" } }
         : { kind: "blocked-interaction-command", command: "Copy" };
     }
     if (plain && key === "m") {
       return context.interactionMode === "moving-selection"
-        ? { kind: "begin-selection-move" }
+        ? { kind: "run-command", command: { id: "selection.move" } }
         : { kind: "blocked-interaction-command", command: "Move" };
     }
-    if (plain && key === "i") return { kind: "open-component-insert" };
+    if (plain && key === "i") {
+      return { kind: "run-command", command: { id: "insert.open" } };
+    }
     if (plain && key === "w") {
-      return { kind: "activate-tool", tool: "wire" };
+      return {
+        kind: "run-command",
+        command: { id: "tool.activate", tool: "wire" },
+      };
     }
     if (plain && key === "a") {
-      return { kind: "activate-tool", tool: "arrow" };
+      return {
+        kind: "run-command",
+        command: { id: "tool.activate", tool: "arrow" },
+      };
     }
     if (plain && key === "k") {
-      return { kind: "activate-tool", tool: "construction-line" };
+      return {
+        kind: "run-command",
+        command: { id: "tool.activate", tool: "construction-line" },
+      };
     }
     if (
       plain &&
@@ -181,23 +162,36 @@ export function resolveEditorShortcut(
       (context.interactionMode === "placing-component" ||
         context.interactionMode === "copy-placement")
     ) {
-      return context.interactionMode === "placing-component"
-        ? { kind: "mirror-placement", direction: "left-right" }
-        : { kind: "mirror-copy-placement", direction: "left-right" };
+      return {
+        kind: "run-command",
+        command: { id: "transform.mirror", direction: "left-right" },
+      };
     }
     if (plain && key === "r") {
       if (context.interactionMode === "placing-component") {
-        return { kind: "rotate-placement", deltaDegrees: 90 };
+        return {
+          kind: "run-command",
+          command: { id: "transform.rotate", deltaDegrees: 90 },
+        };
       }
       if (context.interactionMode === "copy-placement") {
-        return { kind: "rotate-copy-placement", deltaDegrees: 90 };
+        return {
+          kind: "run-command",
+          command: { id: "transform.rotate", deltaDegrees: 90 },
+        };
       }
-      if (!event.shiftKey) return { kind: "activate-tool", tool: "rectangle" };
+      if (!event.shiftKey)
+        return {
+          kind: "run-command",
+          command: { id: "tool.activate", tool: "rectangle" },
+        };
     }
     if (plain && key === "f" && !event.shiftKey) {
-      return { kind: "fit-view" };
+      return { kind: "run-command", command: { id: "view.fit" } };
     }
-    if (plain && key === "home") return { kind: "fit-view" };
+    if (plain && key === "home") {
+      return { kind: "run-command", command: { id: "view.fit" } };
+    }
     if (event.key === "Enter" && context.wireReadyToFinish) {
       return { kind: "finish-wire" };
     }
@@ -215,7 +209,7 @@ export function resolveEditorShortcut(
       context.interactionMode === "wire" &&
       context.hasInspectableSelection
     ) {
-      return { kind: "delete-selection" };
+      return { kind: "run-command", command: { id: "selection.delete" } };
     }
     const blockedCommands: Record<string, string> = {
       c: "Copy",
@@ -236,7 +230,9 @@ export function resolveEditorShortcut(
     return command ? { kind: "blocked-interaction-command", command } : null;
   }
 
-  if (event.ctrlKey && key === "a") return { kind: "select-all" };
+  if (event.ctrlKey && key === "a") {
+    return { kind: "run-command", command: { id: "selection.select-all" } };
+  }
 
   if (plain && key === "e") {
     if (event.shiftKey) {
@@ -250,36 +246,51 @@ export function resolveEditorShortcut(
   if (plain && key === "x" && context.hasRoutedMarkerSelection) {
     return { kind: "reverse-current-marker" };
   }
-  if (plain && key === "c") return { kind: "copy" };
-  if (plain && key === "m") {
-    return context.hasMoveSelection
-      ? { kind: "begin-selection-move" }
-      : { kind: "move-selection-required" };
+  if (plain && key === "c") {
+    return { kind: "run-command", command: { id: "selection.copy" } };
   }
-  if (plain && key === "i") return { kind: "open-component-insert" };
-  if (plain && key === "p") return { kind: "place-port" };
+  if (plain && key === "m") {
+    return { kind: "run-command", command: { id: "selection.move" } };
+  }
+  if (plain && key === "i") {
+    return { kind: "run-command", command: { id: "insert.open" } };
+  }
+  if (plain && key === "p") {
+    return { kind: "run-command", command: { id: "insert.free-net-port" } };
+  }
   if (plain && key === "r") {
-    if (context.interactionMode === "placing-component") {
-      return {
-        kind: "rotate-placement",
-        deltaDegrees: 90,
-      };
-    }
     if (event.shiftKey) {
-      return context.hasRotatableSelection
-        ? { kind: "mirror", direction: "left-right" }
+      return context.canMirror
+        ? {
+            kind: "run-command",
+            command: { id: "transform.mirror", direction: "left-right" },
+          }
         : null;
     }
-    return context.hasRotatableSelection
-      ? { kind: "rotate", deltaDegrees: 90 }
-      : { kind: "activate-tool", tool: "rectangle" };
+    return context.canRotate
+      ? {
+          kind: "run-command",
+          command: { id: "transform.rotate", deltaDegrees: 90 },
+        }
+      : {
+          kind: "run-command",
+          command: { id: "tool.activate", tool: "rectangle" },
+        };
   }
   if (plain && key === "w") {
-    return { kind: "activate-tool", tool: "wire" };
+    return {
+      kind: "run-command",
+      command: { id: "tool.activate", tool: "wire" },
+    };
   }
-  if (plain && key === "t") return { kind: "add-text" };
+  if (plain && key === "t") {
+    return { kind: "run-command", command: { id: "drafting.add-text" } };
+  }
   if (plain && key === "a") {
-    return { kind: "activate-tool", tool: "arrow" };
+    return {
+      kind: "run-command",
+      command: { id: "tool.activate", tool: "arrow" },
+    };
   }
   if (plain && key === "l" && context.interactionMode !== "wire") {
     return context.hasRouteSelection
@@ -290,16 +301,25 @@ export function resolveEditorShortcut(
     return { kind: "toggle-net-highlight" };
   }
   if (plain && key === "k") {
-    return { kind: "activate-tool", tool: "construction-line" };
+    return {
+      kind: "run-command",
+      command: { id: "tool.activate", tool: "construction-line" },
+    };
   }
   if (plain && key === "q") {
-    if (context.propertiesOpen) return { kind: "close-properties" };
-    return context.hasInspectableSelection
-      ? { kind: "open-properties" }
-      : { kind: "property-selection-required" };
+    return {
+      kind: "run-command",
+      command: {
+        id: context.propertiesOpen ? "properties.close" : "properties.open",
+      },
+    };
   }
-  if (plain && key === "f" && !event.shiftKey) return { kind: "fit-view" };
-  if (plain && key === "home") return { kind: "fit-view" };
+  if (plain && key === "f" && !event.shiftKey) {
+    return { kind: "run-command", command: { id: "view.fit" } };
+  }
+  if (plain && key === "home") {
+    return { kind: "run-command", command: { id: "view.fit" } };
+  }
   if (
     plain &&
     (event.key === "[" || event.key === "]") &&
@@ -320,7 +340,7 @@ export function resolveEditorShortcut(
   if (event.key === "Delete" || event.key === "Backspace") {
     return context.hasRemovableWireWaypoint
       ? { kind: "remove-wire-waypoint" }
-      : { kind: "delete-selection" };
+      : { kind: "run-command", command: { id: "selection.delete" } };
   }
   return null;
 }

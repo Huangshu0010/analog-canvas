@@ -10,17 +10,14 @@ const baseContext: EditorShortcutContext = {
   isTyping: false,
   interactionMode: "idle",
   hasRoutedMarkerSelection: false,
-  hasRotatableSelection: false,
+  canRotate: false,
+  canMirror: false,
   hasDraftingSelection: false,
   hasInspectableSelection: false,
-  hasMoveSelection: false,
   hasRouteSelection: false,
   hasHighlightableNet: false,
   wireReadyToFinish: false,
   draftingReadyToFinish: false,
-  helpOpen: false,
-  canvasDragActive: false,
-  hasClearableDraftingSelection: false,
   hasRemovableWireWaypoint: false,
   propertiesOpen: false,
   hasHierarchyEnterSelection: false,
@@ -52,14 +49,20 @@ function resolve(
   });
 }
 
+const command = (value: object) => ({ kind: "run-command", command: value });
+
 describe("editor shortcut contract", () => {
   it("maps history and file chord shortcuts without stealing copy/paste chords", () => {
-    expect(resolve("u")).toEqual({ kind: "undo" });
-    expect(resolve("u", {}, { shiftKey: true })).toEqual({ kind: "redo" });
-    expect(resolve("z", {}, { ctrlKey: true })).toEqual({ kind: "undo" });
-    expect(resolve("z", {}, { ctrlKey: true, shiftKey: true })).toEqual({
-      kind: "redo",
-    });
+    expect(resolve("u")).toEqual(command({ id: "history.undo" }));
+    expect(resolve("u", {}, { shiftKey: true })).toEqual(
+      command({ id: "history.redo" }),
+    );
+    expect(resolve("z", {}, { ctrlKey: true })).toEqual(
+      command({ id: "history.undo" }),
+    );
+    expect(resolve("z", {}, { ctrlKey: true, shiftKey: true })).toEqual(
+      command({ id: "history.redo" }),
+    );
     expect(resolve("s", {}, { ctrlKey: true })).toEqual({ kind: "save" });
     expect(resolve("s", {}, { metaKey: true })).toBeNull();
     expect(resolve("c", {}, { ctrlKey: true })).toBeNull();
@@ -79,18 +82,22 @@ describe("editor shortcut contract", () => {
     expect(resolve("F5", { isTyping: true })).toEqual({
       kind: "block-browser-refresh",
     });
+    expect(resolve("r", { canMirror: true }, { ctrlKey: true })).toEqual(
+      command({ id: "transform.mirror", direction: "top-bottom" }),
+    );
     expect(
-      resolve("r", { hasRotatableSelection: true }, { ctrlKey: true }),
-    ).toEqual({ kind: "mirror", direction: "top-bottom" });
-    expect(
-      resolve("r", { interactionMode: "placing-component" }, { ctrlKey: true }),
-    ).toEqual({ kind: "mirror-placement", direction: "top-bottom" });
+      resolve(
+        "r",
+        { interactionMode: "placing-component", canMirror: true },
+        { ctrlKey: true },
+      ),
+    ).toEqual(command({ id: "transform.mirror", direction: "top-bottom" }));
   });
 
   it("maps Ctrl+D to idle deselection while always blocking browser bookmarking", () => {
-    expect(resolve("d", {}, { ctrlKey: true })).toEqual({
-      kind: "clear-selection",
-    });
+    expect(resolve("d", {}, { ctrlKey: true })).toEqual(
+      command({ id: "selection.clear" }),
+    );
     expect(
       resolve("d", { interactionMode: "wire" }, { ctrlKey: true }),
     ).toEqual({
@@ -102,64 +109,56 @@ describe("editor shortcut contract", () => {
   });
 
   it("resolves R rotation and the two agreed mirror shortcuts", () => {
-    expect(resolve("r")).toEqual({
-      kind: "activate-tool",
-      tool: "rectangle",
-    });
-    expect(resolve("r", { hasRotatableSelection: true })).toEqual({
-      kind: "rotate",
-      deltaDegrees: 90,
-    });
-    expect(
-      resolve("r", { hasRotatableSelection: true }, { shiftKey: true }),
-    ).toEqual({
-      kind: "mirror",
-      direction: "left-right",
-    });
-    expect(
-      resolve("v", { hasRotatableSelection: true }, { shiftKey: true }),
-    ).toBeNull();
+    expect(resolve("r")).toEqual(
+      command({ id: "tool.activate", tool: "rectangle" }),
+    );
+    expect(resolve("r", { canRotate: true })).toEqual(
+      command({ id: "transform.rotate", deltaDegrees: 90 }),
+    );
+    expect(resolve("r", { canMirror: true }, { shiftKey: true })).toEqual(
+      command({ id: "transform.mirror", direction: "left-right" }),
+    );
+    expect(resolve("v", { canRotate: true }, { shiftKey: true })).toBeNull();
   });
 
   it("opens insertion with I and gives placement rotation priority", () => {
-    expect(resolve("i")).toEqual({ kind: "open-component-insert" });
+    expect(resolve("i")).toEqual(command({ id: "insert.open" }));
     expect(
       resolve("r", {
         interactionMode: "placing-component",
-        hasRotatableSelection: true,
+        canRotate: true,
       }),
-    ).toEqual({ kind: "rotate-placement", deltaDegrees: 90 });
-    expect(resolve("r", { interactionMode: "copy-placement" })).toEqual({
-      kind: "rotate-copy-placement",
-      deltaDegrees: 90,
-    });
+    ).toEqual(command({ id: "transform.rotate", deltaDegrees: 90 }));
+    expect(resolve("r", { interactionMode: "copy-placement" })).toEqual(
+      command({ id: "transform.rotate", deltaDegrees: 90 }),
+    );
     expect(
       resolve(
         "r",
         { interactionMode: "placing-component" },
         { shiftKey: true },
       ),
-    ).toEqual({ kind: "mirror-placement", direction: "left-right" });
+    ).toEqual(command({ id: "transform.mirror", direction: "left-right" }));
     expect(
       resolve("r", { interactionMode: "copy-placement" }, { shiftKey: true }),
-    ).toEqual({ kind: "mirror-copy-placement", direction: "left-right" });
+    ).toEqual(command({ id: "transform.mirror", direction: "left-right" }));
     expect(
       resolve("v", { interactionMode: "copy-placement" }, { shiftKey: true }),
     ).toBeNull();
   });
 
   it("maps creation, fit, and marker commands", () => {
-    expect(resolve("w")).toEqual({ kind: "activate-tool", tool: "wire" });
-    expect(resolve("a")).toEqual({ kind: "activate-tool", tool: "arrow" });
-    expect(resolve("k")).toEqual({
-      kind: "activate-tool",
-      tool: "construction-line",
-    });
-    expect(resolve("p")).toEqual({ kind: "place-port" });
-    expect(resolve("m")).toEqual({ kind: "move-selection-required" });
-    expect(resolve("m", { hasMoveSelection: true })).toEqual({
-      kind: "begin-selection-move",
-    });
+    expect(resolve("w")).toEqual(
+      command({ id: "tool.activate", tool: "wire" }),
+    );
+    expect(resolve("a")).toEqual(
+      command({ id: "tool.activate", tool: "arrow" }),
+    );
+    expect(resolve("k")).toEqual(
+      command({ id: "tool.activate", tool: "construction-line" }),
+    );
+    expect(resolve("p")).toEqual(command({ id: "insert.free-net-port" }));
+    expect(resolve("m")).toEqual(command({ id: "selection.move" }));
     expect(resolve("l")).toEqual({ kind: "net-label-selection-required" });
     expect(resolve("l", { hasRouteSelection: true })).toEqual({
       kind: "edit-net-label",
@@ -174,21 +173,21 @@ describe("editor shortcut contract", () => {
     expect(resolve("h", { hasHighlightableNet: true })).toEqual({
       kind: "toggle-net-highlight",
     });
-    expect(resolve("q")).toEqual({ kind: "property-selection-required" });
-    expect(resolve("q", { hasInspectableSelection: true })).toEqual({
-      kind: "open-properties",
-    });
+    expect(resolve("q")).toEqual(command({ id: "properties.open" }));
+    expect(resolve("q", { hasInspectableSelection: true })).toEqual(
+      command({ id: "properties.open" }),
+    );
     expect(
       resolve("q", { propertiesOpen: true, hasInspectableSelection: true }),
-    ).toEqual({ kind: "close-properties" });
-    expect(resolve("q", { propertiesOpen: true })).toEqual({
-      kind: "close-properties",
-    });
+    ).toEqual(command({ id: "properties.close" }));
+    expect(resolve("q", { propertiesOpen: true })).toEqual(
+      command({ id: "properties.close" }),
+    );
     expect(resolve("g")).toBeNull();
-    expect(resolve("t")).toEqual({ kind: "add-text" });
-    expect(resolve("f")).toEqual({ kind: "fit-view" });
+    expect(resolve("t")).toEqual(command({ id: "drafting.add-text" }));
+    expect(resolve("f")).toEqual(command({ id: "view.fit" }));
     expect(resolve("f", {}, { shiftKey: true })).toBeNull();
-    expect(resolve("Home")).toEqual({ kind: "fit-view" });
+    expect(resolve("Home")).toEqual(command({ id: "view.fit" }));
     expect(resolve("x", { hasRoutedMarkerSelection: true })).toEqual({
       kind: "reverse-current-marker",
     });
@@ -217,9 +216,9 @@ describe("editor shortcut contract", () => {
   });
 
   it("gives Ctrl+A selection precedence over the plain Arrow shortcut", () => {
-    expect(resolve("a", {}, { ctrlKey: true })).toEqual({
-      kind: "select-all",
-    });
+    expect(resolve("a", {}, { ctrlKey: true })).toEqual(
+      command({ id: "selection.select-all" }),
+    );
   });
 
   it("resolves style steps only for a drafting selection", () => {
@@ -252,35 +251,18 @@ describe("editor shortcut contract", () => {
     });
   });
 
-  it("encodes contextual Escape priority in one place", () => {
-    expect(
-      resolve("Escape", {
-        helpOpen: true,
-        canvasDragActive: true,
-        interactionMode: "wire",
-        hasClearableDraftingSelection: true,
-      }),
-    ).toEqual({ kind: "close-help" });
-    expect(
-      resolve("Escape", {
-        canvasDragActive: true,
-        interactionMode: "wire",
-      }),
-    ).toEqual({ kind: "cancel-canvas-drag" });
-    expect(resolve("Escape", { interactionMode: "wire" })).toEqual({
-      kind: "cancel-interaction",
-    });
-    expect(resolve("Escape", { hasClearableDraftingSelection: true })).toEqual({
-      kind: "clear-drafting-selection",
-    });
-    expect(resolve("Escape")).toEqual({ kind: "cancel-passive" });
+  it("maps Escape to the one contextual cancel command", () => {
+    expect(resolve("Escape", { interactionMode: "wire" })).toEqual(
+      command({ id: "editor.cancel" }),
+    );
+    expect(resolve("Escape")).toEqual(command({ id: "editor.cancel" }));
   });
 
   it("removes a pending wire bend before deleting selection", () => {
     expect(resolve("Delete", { hasRemovableWireWaypoint: true })).toEqual({
       kind: "remove-wire-waypoint",
     });
-    expect(resolve("Backspace")).toEqual({ kind: "delete-selection" });
+    expect(resolve("Backspace")).toEqual(command({ id: "selection.delete" }));
   });
 
   it("arbitrates competing commands while one interaction owns the canvas", () => {
@@ -289,16 +271,16 @@ describe("editor shortcut contract", () => {
       kind: "blocked-interaction-command",
       command: "Copy",
     });
-    expect(resolve("c", { interactionMode: "copy-placement" })).toEqual({
-      kind: "copy",
-    });
+    expect(resolve("c", { interactionMode: "copy-placement" })).toEqual(
+      command({ id: "selection.copy" }),
+    );
     expect(resolve("m", active)).toEqual({
       kind: "blocked-interaction-command",
       command: "Move",
     });
-    expect(resolve("m", { interactionMode: "moving-selection" })).toEqual({
-      kind: "begin-selection-move",
-    });
+    expect(resolve("m", { interactionMode: "moving-selection" })).toEqual(
+      command({ id: "selection.move" }),
+    );
     expect(resolve("q", active)).toEqual({
       kind: "blocked-interaction-command",
       command: "Properties",
@@ -316,28 +298,27 @@ describe("editor shortcut contract", () => {
         interactionMode: "wire",
         hasInspectableSelection: true,
       }),
-    ).toEqual({ kind: "delete-selection" });
-    expect(resolve("i", active)).toEqual({ kind: "open-component-insert" });
-    expect(resolve("w", active)).toEqual({
-      kind: "activate-tool",
-      tool: "wire",
-    });
-    expect(resolve("f", active)).toEqual({ kind: "fit-view" });
+    ).toEqual(command({ id: "selection.delete" }));
+    expect(resolve("i", active)).toEqual(command({ id: "insert.open" }));
+    expect(resolve("w", active)).toEqual(
+      command({ id: "tool.activate", tool: "wire" }),
+    );
+    expect(resolve("f", active)).toEqual(command({ id: "view.fit" }));
   });
 
   it("does not rotate a stale selection underneath another active tool", () => {
     expect(
       resolve("r", {
         interactionMode: "drawing",
-        hasRotatableSelection: true,
+        canRotate: false,
       }),
-    ).toEqual({ kind: "activate-tool", tool: "rectangle" });
+    ).toEqual(command({ id: "tool.activate", tool: "rectangle" }));
     expect(
       resolve("r", {
         interactionMode: "placing-component",
-        hasRotatableSelection: true,
+        canRotate: true,
       }),
-    ).toEqual({ kind: "rotate-placement", deltaDegrees: 90 });
+    ).toEqual(command({ id: "transform.rotate", deltaDegrees: 90 }));
   });
 
   it("suppresses every global shortcut while typing", () => {
