@@ -58,6 +58,7 @@ import {
   refreshInstanceValueAnnotation,
   translateObjectAnchoredAnnotation,
 } from "./transaction-instance-annotations.js";
+import { reconcileTransformDirectContacts } from "./transaction-direct-contact.js";
 import {
   addEndpointToNet,
   endpointOwnerNetId,
@@ -3136,6 +3137,28 @@ export function executeTransaction(
       }
     }
     geometryChanged = true;
+  }
+
+  if (
+    resolver &&
+    transaction.edits.some(
+      (edit) =>
+        edit.kind === "move_instance" ||
+        edit.kind === "rotate_instance" ||
+        edit.kind === "mirror_instance",
+    )
+  ) {
+    const directContact = reconcileTransformDirectContacts(
+      document,
+      draft,
+      resolver,
+      transaction.transactionId,
+      changedObjectIds,
+    );
+    geometryChanged ||= directContact.geometryChanged;
+    for (const routeId of directContact.changedRouteIds) {
+      changedRouteIds.add(routeId);
+    }
   }
 
   const introducedNetContractIssue = validateLogicalNetContract(draft).find(

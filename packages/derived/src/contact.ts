@@ -44,8 +44,77 @@ export interface DocumentContactEvidence {
   byEndpointKey: ReadonlyMap<string, CoincidentContact>;
 }
 
+/**
+ * One pairwise projection of a confirmed same-Net {@link CoincidentContact}.
+ * It is the transform-time input used to detect when a previously confirmed
+ * direct contact has been separated. New contact intent remains an explicit
+ * authoring operation.
+ */
+export interface DirectContactPair {
+  id: string;
+  netId: string;
+  point: Point;
+  endpoints: readonly [RouteEndpoint, RouteEndpoint];
+}
+
+export interface DirectContactDelta {
+  gained: readonly DirectContactPair[];
+  lost: readonly DirectContactPair[];
+  retained: readonly DirectContactPair[];
+}
+
 function pointKey(point: Point): string {
   return `${point.x},${point.y}`;
+}
+
+function directContactPairs(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+): DirectContactPair[] {
+  const pairs: DirectContactPair[] = [];
+  for (const contact of deriveDocumentContactEvidence(document, resolver)
+    .contacts) {
+    for (let leftIndex = 0; leftIndex < contact.endpoints.length; leftIndex++) {
+      for (
+        let rightIndex = leftIndex + 1;
+        rightIndex < contact.endpoints.length;
+        rightIndex++
+      ) {
+        const left = contact.endpoints[leftIndex]!;
+        const right = contact.endpoints[rightIndex]!;
+        pairs.push({
+          id: [endpointKey(left), endpointKey(right)]
+            .sort((a, b) => a.localeCompare(b, "en"))
+            .join("|"),
+          netId: contact.netId,
+          point: { ...contact.point },
+          endpoints: [left, right],
+        });
+      }
+    }
+  }
+  return pairs.sort((left, right) => left.id.localeCompare(right.id, "en"));
+}
+
+/**
+ * Compare confirmed direct contacts across one projected edit. Pair identity
+ * is endpoint-based, so two endpoints translated together are retained even
+ * though their page coordinate changes.
+ */
+export function deriveDirectContactDelta(
+  before: SchematicDocument,
+  after: SchematicDocument,
+  resolver: SymbolResolver,
+): DirectContactDelta {
+  const beforePairs = directContactPairs(before, resolver);
+  const afterPairs = directContactPairs(after, resolver);
+  const beforeById = new Map(beforePairs.map((pair) => [pair.id, pair]));
+  const afterById = new Map(afterPairs.map((pair) => [pair.id, pair]));
+  return {
+    gained: afterPairs.filter((pair) => !beforeById.has(pair.id)),
+    lost: beforePairs.filter((pair) => !afterById.has(pair.id)),
+    retained: afterPairs.filter((pair) => beforeById.has(pair.id)),
+  };
 }
 
 function directionKey(direction: Point): string {
