@@ -57,6 +57,116 @@ interface RecycledEntry {
   recycledAt?: string | null;
 }
 
+interface SchemaConvergenceReport {
+  applied: boolean;
+  targetSchemaVersion: number;
+  inventory: Record<string, Record<string, number>>;
+  records: number;
+  ready: number;
+  failures: Array<{
+    table: string;
+    id: string;
+    storedSchemaVersion: number;
+    message: string;
+  }>;
+}
+
+function SchemaMaintenance() {
+  const [running, setRunning] = useState(false);
+  const [report, setReport] = useState<SchemaConvergenceReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function converge(apply: boolean): Promise<void> {
+    if (
+      apply &&
+      !window.confirm(
+        "Apply schema 23 to every Gallery entry, saved version, and workspace slot? A full backup should already exist.",
+      )
+    ) {
+      return;
+    }
+    setRunning(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/gallery/maintenance/schema23", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ apply }),
+      });
+      const payload = (await response.json()) as
+        SchemaConvergenceReport | { error?: string };
+      if (!response.ok || !("inventory" in payload)) {
+        throw new Error("error" in payload ? payload.error : undefined);
+      }
+      setReport(payload);
+    } catch (cause) {
+      setError(
+        cause instanceof Error && cause.message
+          ? cause.message
+          : "Schema maintenance failed.",
+      );
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <section className="review-bin" data-testid="schema-maintenance">
+      <h2>Project schema maintenance</h2>
+      <p className="review-card-meta">
+        Back up all stored Projects, validate the complete inventory, then apply
+        one transactional schema 23 convergence.
+      </p>
+      <div className="review-card-actions">
+        <a
+          href="/api/gallery/maintenance/schema-backup"
+          data-testid="schema-backup-download"
+        >
+          Download full backup
+        </a>
+        <button
+          type="button"
+          disabled={running}
+          data-testid="schema23-dry-run"
+          onClick={() => void converge(false)}
+        >
+          Validate schema 23
+        </button>
+        <button
+          type="button"
+          className="review-approve"
+          disabled={running || (report !== null && report.failures.length > 0)}
+          data-testid="schema23-apply"
+          onClick={() => void converge(true)}
+        >
+          Apply schema 23
+        </button>
+      </div>
+      {error ? <p className="account-notice">{error}</p> : null}
+      {report ? (
+        <div className="gallery-status" data-testid="schema23-report">
+          <p>
+            {report.applied ? "Applied" : "Validated"}: {report.ready}/
+            {report.records} records ready for schema{" "}
+            {report.targetSchemaVersion}; {report.failures.length} failures.
+          </p>
+          <ul>
+            {Object.entries(report.inventory).map(([table, versions]) => (
+              <li key={table}>
+                {table}:{" "}
+                {Object.entries(versions)
+                  .map(([version, count]) => `v${version}=${count}`)
+                  .join(", ") || "empty"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 /**
  * The recycle bin: the takedown surface. Restore returns an entry to the
  * public wall; Delete forever is the only hard deletion and asks for
@@ -221,7 +331,10 @@ export function Moderation() {
           </form>
         ) : null}
         {state.user.isAdmin ? (
-          <RecycleBin />
+          <>
+            <SchemaMaintenance />
+            <RecycleBin />
+          </>
         ) : (
           <p className="gallery-status">
             Withdraw an entry from its page; the owner and the admin can bring

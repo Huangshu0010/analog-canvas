@@ -836,6 +836,7 @@ test("an ordinary user sees blocking quality gates on an empty project", async (
 test("the retired review queue is gone from the moderation page", async ({
   page,
 }) => {
+  const convergenceCalls: boolean[] = [];
   await page.route("**/api/auth/me", (route) =>
     route.fulfill({
       json: {
@@ -853,9 +854,44 @@ test("the retired review queue is gone from the moderation page", async ({
   await page.route("**/api/gallery/recycled", (route) =>
     route.fulfill({ json: { entries: [] } }),
   );
+  await page.route("**/api/gallery/maintenance/schema23", async (route) => {
+    const body = route.request().postDataJSON() as { apply?: boolean };
+    convergenceCalls.push(body.apply === true);
+    await route.fulfill({
+      json: {
+        applied: body.apply === true,
+        targetSchemaVersion: 23,
+        inventory: {
+          gallery_entries: { "21": 2, "22": 1 },
+          gallery_entry_versions: { "21": 1 },
+          workspace_slots: { "22": 1 },
+        },
+        records: 5,
+        ready: 5,
+        failures: [],
+      },
+    });
+  });
 
   await page.goto("/moderation");
   await expect(page.getByTestId("moderation")).toBeVisible();
+  await expect(page.getByTestId("schema-backup-download")).toHaveAttribute(
+    "href",
+    "/api/gallery/maintenance/schema-backup",
+  );
+  await page.getByTestId("schema23-dry-run").click();
+  await expect(page.getByTestId("schema23-report")).toContainText(
+    "Validated: 5/5 records ready for schema 23; 0 failures.",
+  );
+  await expect(page.getByTestId("schema23-report")).toContainText(
+    "gallery_entries: v21=2, v22=1",
+  );
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByTestId("schema23-apply").click();
+  await expect(page.getByTestId("schema23-report")).toContainText(
+    "Applied: 5/5 records ready for schema 23; 0 failures.",
+  );
+  expect(convergenceCalls).toEqual([false, true]);
   // Curation is post-publication now: a bin to restore from, no inbox.
   await expect(page.getByTestId("bin-empty")).toBeVisible();
   await expect(page.getByTestId("review-empty")).toHaveCount(0);
