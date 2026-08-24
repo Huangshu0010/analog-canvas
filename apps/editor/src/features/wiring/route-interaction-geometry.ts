@@ -437,10 +437,7 @@ export function annotationHitBox(
       : vertical
         ? "start"
         : annotation.alignment;
-    const arrowLength =
-      styleProfile.id === "textbook-monochrome-v1"
-        ? 24
-        : styleProfile.annotations.currentArrowLength;
+    const arrowLength = styleProfile.annotations.currentArrowLength;
     const halfLength = arrowLength / 2;
     arrowBounds = vertical
       ? {

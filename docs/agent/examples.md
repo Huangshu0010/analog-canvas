@@ -3,13 +3,7 @@
 The schemas and request fixtures in
 [`../../fixtures/agent-api/`](../../fixtures/agent-api/) are checked by the
 Agent adapter tests. The retained guidance-structure report lives in
-[`../../fixtures/agent-layout-eval/`](../../fixtures/agent-layout-eval/);
-retired Phase 9 traces live under [`../archive/`](../archive/).
-
-Current optional Phase 9 research:
-
-- [Archived external quality run 1](../archive/phase9-external-quality-studies/run-1-flash-adc.md)
-- [Archived external quality run 2](../archive/phase9-external-quality-studies/run-2-chopper-afe.md)
+[`../../fixtures/agent-layout-eval/`](../../fixtures/agent-layout-eval/).
 
 ## 1. Read once, edit, render, refresh
 

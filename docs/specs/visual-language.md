@@ -27,34 +27,19 @@ from editor-only interaction overlays.
 | ------------- | ------------------------------------------------------------------ |
 | Formal layer  | Electrical and explanatory content included in export              |
 | Overlay       | Grid, selection, hit target, preview, flightline, or diagnostic UI |
-| Style profile | Versioned tokens and rendering rules selected by a Document        |
+| Style profile | The Razavi token set and rendering rules used by a Document        |
 
 ## Data model or interface
 
-The compatibility profile ID is `textbook-monochrome-v1`.
-
-```yaml
-background: "#ffffff"
-foreground: "#000000"
-symbolStroke: 1
-wireStroke: 1
-annotationStroke: 0.8
-junctionRadius: 1.75
-fontFamily: "Georgia, Times New Roman, serif"
-```
-
-The accepted `razavi-textbook-v1` profile, including its sole token table,
+The accepted `razavi-textbook-v1` profile, including its token table,
 component-construction rules, and pixel-alignment contract, is defined in
 [`razavi-visual-contract.md`](razavi-visual-contract.md). This generic visual
 language specification does not duplicate Razavi values.
 
 Unknown persisted profile IDs are blocking render errors; the renderer never
 silently substitutes a profile. Semantic symbol roles resolve through the
-selected profile. Legacy numeric primitive widths remain literal only under
-`textbook-monochrome-v1`; Razavi output clusters them into profile-owned normal
-or emphasis widths until the source asset is explicitly migrated. Reviewed
-Razavi assets use semantic roles and retain measured finite-decimal geometry;
-retired source weights remain provenance evidence only.
+Razavi profile. Reviewed Razavi assets use semantic roles and retain measured
+finite-decimal geometry.
 
 For Razavi formal output, the reviewed `port` and `port-filled` Symbol assets
 provide explicit hollow and filled interface presentations. Each is an
@@ -121,9 +106,8 @@ active symbol variant's visible geometry and clusters repeated overlaps.
 - Selection, hit targets, grid, drag preview, diagnostics, and flightlines are
   absent from formal SVG export.
 - SVG is derived output and never becomes connectivity or persistence truth.
-- `textbook-monochrome-v1` keeps non-scaling formal strokes for byte
-  compatibility. `razavi-textbook-v1` scales formal geometry and strokes
-  together and emits no `vector-effect="non-scaling-stroke"`.
+- Razavi formal output scales geometry and strokes together and emits no
+  `vector-effect="non-scaling-stroke"`.
 - Annotation attachment moves with an edited instance while its offset and
   semantic kind remain persisted.
 - Hollow `port`, filled `port-filled`, and supply-rail presentations remain
@@ -149,23 +133,11 @@ placed symbol geometry plus an explicit integer margin.
 The Document persists `styleProfileId`, placement, annotations, and presentation
 intent. Render scenes, SVG XML, grid, viewport, and overlay state are transient.
 
-## Valid example
-
-The Phase 1 rendered fixture produces `phase-1-manual.svg` with one formal
-group and no editor overlay terms.
-
 ## Rejected example
 
 An exported SVG containing a `hit-target`, `selection`, `editor-overlay`, or
 grid pattern fails formal-layer validation even if the on-screen canvas is
 correct.
-
-## Compatibility and migration
-
-`textbook-monochrome-v1` remains available for compatibility fixtures and old
-documents. New Projects use `razavi-textbook-v1`. A non-backward-compatible
-profile or golden change requires visual review and an explicit profile-version
-decision under the unified Razavi visual contract.
 
 ## Deterministic validation
 

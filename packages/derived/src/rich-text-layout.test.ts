@@ -9,10 +9,7 @@ import {
   measureRichTextDocument,
   richTextMetrics,
 } from "./rich-text-layout.js";
-import {
-  razaviTextbookProfile,
-  textbookMonochromeProfile,
-} from "./style-profile.js";
+import { razaviTextbookProfile } from "./style-profile.js";
 
 describe("shared rich-text layout", () => {
   it("uses the longest line instead of accumulating line widths", () => {
@@ -38,15 +35,15 @@ describe("shared rich-text layout", () => {
     const content = {
       runs: [{ kind: "text", value: "caption" }],
     } as RichTextDocument;
-    const textbook = measureRichTextDocument(
+    const base = measureRichTextDocument(
       content,
-      richTextMetrics(textbookMonochromeProfile, "caption"),
+      richTextMetrics(razaviTextbookProfile, "caption"),
     );
     const razaviScaled = measureRichTextDocument(
       content,
       richTextMetrics(razaviTextbookProfile, "caption", 2),
     );
-    expect(razaviScaled.width).toBe(textbook.width * 2);
+    expect(razaviScaled.width).toBe(base.width * 2);
   });
 
   it("uses the profile baseline shift when reserving subscript bounds", () => {

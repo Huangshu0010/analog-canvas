@@ -20,7 +20,7 @@ import {
   resolveDocumentStyleProfile,
   resolveDocumentLogicalNets,
   resolveRouteAttachment,
-  textbookMonochromeProfile,
+  razaviTextbookProfile,
 } from "@icm/derived";
 import { flattenRichText } from "@icm/model";
 import type {
@@ -204,9 +204,7 @@ function renderRouteAnchorMiterBridges(
 }
 
 function profileMiterAttribute(profile: SchematicStyleProfile): string {
-  return profile.id === "textbook-monochrome-v1"
-    ? ""
-    : ` stroke-miterlimit="${profile.miterLimit}"`;
+  return ` stroke-miterlimit="${profile.miterLimit}"`;
 }
 
 function primitiveStyle(
@@ -253,7 +251,7 @@ export function renderSymbolDefinitionBody(
   definition: SymbolDefinition,
   hiddenPrimitiveParts: readonly string[] = [],
   additionalPrimitives: readonly SymbolPrimitive[] = [],
-  profile: SchematicStyleProfile = textbookMonochromeProfile,
+  profile: SchematicStyleProfile = razaviTextbookProfile,
 ): string {
   const hidden = new Set(hiddenPrimitiveParts);
   return [...definition.primitives, ...additionalPrimitives]
@@ -352,10 +350,7 @@ function renderVisiblePinNames(
         outward.y * hierarchyVerticalInset;
       const alignment =
         outward.x < 0 ? "start" : outward.x > 0 ? "end" : "middle";
-      const sizeAttribute =
-        profile.id === "textbook-monochrome-v1"
-          ? ' style="font-size:8px"'
-          : schematicTextSizeAttribute("pin-name", profile);
+      const sizeAttribute = schematicTextSizeAttribute("pin-name", profile);
       const content = definition.hierarchicalBlock
         ? semanticTextDocument(pin.name, "formal-port")
         : { runs: [{ kind: "text" as const, value: pin.name }] };
@@ -695,39 +690,32 @@ export function buildSvgScene(
           : vertical
             ? "start"
             : annotation.alignment;
-        if (profile.id !== "textbook-monochrome-v1") {
-          const arrow = profile.annotations;
-          // A route-marker is mounted on an existing route, so that route is
-          // the arrow shaft.  Draw only the triangular head; a separate fixed
-          // shaft leaves visible stubs on short/vertical wires.
-          const tipX = x + arrow.arrowHeadLength / 2;
-          const baseX = x - arrow.arrowHeadLength / 2;
-          const halfHeadWidth = arrow.arrowHeadWidth / 2;
-          const razaviTextX = label
-            ? label.x
-            : vertical
-              ? x + arrow.arrowHeadLength / 2 + arrow.currentLabelGap
-              : x;
-          const razaviTextY = label
-            ? label.y
-            : vertical
-              ? y + 4
-              : y - arrow.currentLabelGap;
-          return `<g ${attributes}><g transform="${transform}"><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(document, annotation, profile)}</text></g>`;
-        }
-        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(document, annotation, profile)}</text></g>`;
+        const arrow = profile.annotations;
+        // A route-marker is mounted on an existing route, so that route is
+        // the arrow shaft. Draw only the triangular head; a separate fixed
+        // shaft leaves visible stubs on short or vertical wires.
+        const tipX = x + arrow.arrowHeadLength / 2;
+        const baseX = x - arrow.arrowHeadLength / 2;
+        const halfHeadWidth = arrow.arrowHeadWidth / 2;
+        const markerTextX = label
+          ? label.x
+          : vertical
+            ? x + arrow.arrowHeadLength / 2 + arrow.currentLabelGap
+            : x;
+        const markerTextY = label
+          ? label.y
+          : vertical
+            ? y + 4
+            : y - arrow.currentLabelGap;
+        return `<g ${attributes}><g transform="${transform}"><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${markerTextX}" y="${markerTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(document, annotation, profile)}</text></g>`;
       }
-      if (
-        profile.id !== "textbook-monochrome-v1" &&
-        annotation.kind === "power-label"
-      ) {
+      if (annotation.kind === "power-label") {
         // The power-rail Route is the complete supply bar. Drawing a second,
         // thinner annotation-owned bar at its endpoint creates the visible
         // terminal stub and makes hit geometry disagree with presentation.
         return `<g ${attributes}><text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderAnnotationText(document, annotation, profile)}</text></g>`;
       }
       if (
-        profile.id !== "textbook-monochrome-v1" &&
         annotation.kind === "route-marker" &&
         annotation.markerKind === "voltage"
       ) {
@@ -743,11 +731,7 @@ export function buildSvgScene(
         const polarityStyle = `font-style:normal;font-weight:${profile.typography.plainWeight}`;
         return `<g ${attributes}><text data-role="polarity-positive" x="${position.x + positiveOffset.x}" y="${position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${position.x + negativeOffset.x}" y="${position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(document, annotation, profile)}</text></g>`;
       }
-      const emphasis =
-        profile.id === "textbook-monochrome-v1" &&
-        annotation.kind === "power-label"
-          ? ' font-weight="bold"'
-          : "";
+      const emphasis = "";
       const fractionRun =
         annotation.rotation === 0 &&
         content.runs.length === 1 &&
@@ -1164,8 +1148,5 @@ export function renderDocumentSvg(
   const profile = resolveDocumentStyleProfile(document.presentation);
   const title = escapeXml(options.title ?? document.name);
   const { x, y, width, height } = scene.viewBox;
-  const scalingRule = profile.scaleFormalStrokes
-    ? ""
-    : "path,polyline,line,circle{vector-effect:non-scaling-stroke}";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}" role="img" aria-labelledby="title" data-style-profile="${profile.id}"><title id="title">${title}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${profile.background}"/><style>text{fill:${profile.foreground};font-family:${profile.typography.fontFamily};font-size:${profile.typography.annotationFontSize}px}${scalingRule}</style>${scene.formalBody}</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}" role="img" aria-labelledby="title" data-style-profile="${profile.id}"><title id="title">${title}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${profile.background}"/><style>text{fill:${profile.foreground};font-family:${profile.typography.fontFamily};font-size:${profile.typography.annotationFontSize}px}</style>${scene.formalBody}</svg>\n`;
 }

@@ -7,14 +7,10 @@ import {
   resolvePrimitiveStrokeWidth,
   resolveSchematicStyleProfile,
   strokeWidthForRole,
-  textbookMonochromeProfile,
 } from "./style-profile.js";
 
 describe("schematic style profiles", () => {
-  it("shares one calibrated typography system across every profile", () => {
-    expect(textbookMonochromeProfile.typography).toBe(
-      globalSchematicTypography,
-    );
+  it("uses one calibrated typography system", () => {
     expect(razaviTextbookProfile.typography).toBe(globalSchematicTypography);
   });
 
@@ -29,9 +25,6 @@ describe("schematic style profiles", () => {
   });
 
   it("resolves the immutable presentation and stroke tokens", () => {
-    expect(resolveSchematicStyleProfile("textbook-monochrome-v1")).toBe(
-      textbookMonochromeProfile,
-    );
     expect(resolveSchematicStyleProfile("razavi-textbook-v1")).toBe(
       razaviTextbookProfile,
     );
@@ -50,9 +43,6 @@ describe("schematic style profiles", () => {
     });
     expect(
       resolvePrimitiveStrokeWidth(razaviTextbookProfile, undefined, 2),
-    ).toBe(2.4);
-    expect(
-      resolvePrimitiveStrokeWidth(textbookMonochromeProfile, undefined, 2),
     ).toBe(2);
   });
 

@@ -11,8 +11,8 @@ Owners: `apps/editor`, `packages/*`, `tools/*`
 Human GUI gestures and Agent edits must share one in-process Edit Engine.
 Introducing a Python service between the editor and circuit model would create
 an avoidable serialization protocol and split validation, history, and revision
-ownership. Some development-only tasks, especially Visio extraction, may still
-need platform-specific tooling.
+ownership. Some development-only tasks may still need platform-specific
+tooling.
 
 ## Decision
 
@@ -41,7 +41,7 @@ studied during bounded migration work.
 ### Rewrite every tool in TypeScript
 
 - Benefits: one language everywhere.
-- Costs: unnecessary friction for Visio COM and one-time asset conversion.
+- Costs: unnecessary friction for one-time asset conversion.
 - Reason not selected: offline tool implementation language does not affect the
   runtime when outputs use owned contracts.
 
@@ -73,4 +73,3 @@ with product-owned tests. Production code never imports `.reference-src/`.
 
 - [`0003-isolate-reference-sources.md`](0003-isolate-reference-sources.md)
 - [`edit-engine.md`](../specs/edit-engine.md)
-- [`Phase 0`](../archive/roadmap/phase-0-contracts-and-scaffold.md)

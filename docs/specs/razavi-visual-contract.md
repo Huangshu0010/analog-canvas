@@ -32,7 +32,7 @@ keeps final validation on the same diff protocol as raster-owned assets.
 Candidate Symbol rendering, manually reconstructed selection PDFs, and other
 derived artwork must never serve as the raster witness.
 
-VSS, Visio, decoded master IR, historical generators, legacy assets, and the
+VSS, decoded master IR, historical generators, and the
 current candidate rendering are not visual evidence. If the authority lacks a
 component or feature, it remains unreviewed; do not infer it from those sources.
 
@@ -139,7 +139,7 @@ annotations:
 lineCap: butt
 lineJoin: miter
 miterLimit: 4
-scaleFormalStrokes: true
+formalStrokeScaling: "geometry-and-strokes"
 typography:
   fontFamily: "'DejaVu Sans', Arial, 'Helvetica Neue', Helvetica, sans-serif"
   mathWeight: 700
@@ -320,7 +320,6 @@ are superseded by this document and retained as redirects.
 
 Related decisions and explanatory evidence:
 
-- [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)
 - [`../adr/0012-pdf-vector-evidence-for-razavi-assets.md`](../adr/0012-pdf-vector-evidence-for-razavi-assets.md)
 - [`symbol-dsl.md`](symbol-dsl.md)
 - [`visual-language.md`](visual-language.md)

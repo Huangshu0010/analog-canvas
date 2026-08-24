@@ -19,31 +19,6 @@ function transaction(
 }
 
 describe("presentation and layout edits", () => {
-  it("changes the persisted style through undoable document history", () => {
-    const document = createEmptyDocument("doc", "Presentation");
-    document.presentation.styleProfileId = "textbook-monochrome-v1";
-    const history = new DocumentHistory(document);
-
-    const applied = history.transact(
-      transaction("doc", [
-        {
-          kind: "set_presentation_style",
-          styleProfileId: "razavi-textbook-v1",
-        },
-      ]),
-    );
-    expect(applied).toMatchObject({ ok: true, applied: true });
-    expect(history.document.presentation.styleProfileId).toBe(
-      "razavi-textbook-v1",
-    );
-
-    const undone = history.transact(transaction("doc", [{ kind: "undo" }], 1));
-    expect(undone).toMatchObject({ ok: true, applied: true });
-    expect(history.document.presentation.styleProfileId).toBe(
-      "textbook-monochrome-v1",
-    );
-  });
-
   it("sets, preserves, and clears document style overrides undoably", () => {
     const document = createEmptyDocument("doc", "Presentation");
     const history = new DocumentHistory(document);

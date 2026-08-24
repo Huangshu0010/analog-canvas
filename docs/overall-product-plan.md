@@ -70,8 +70,7 @@ revision, lock, or transaction invariants.
 - A Project is a canonical schema-22 JSON file. Browser recovery is an
   origin-local, non-authoritative copy.
 - Visual variants may change presentation but never remove electrical terminal
-  semantics. The Razavi raster manifest is the sole visual authority; Visio/VSS
-  is retired historical evidence by [ADR 0011](adr/0011-retire-visio-vss-as-visual-authority.md).
+  semantics. The Razavi raster manifest is the sole visual authority.
 - An Agent reads a complete Snapshot, submits typed edits with an expected
   revision, and refreshes after a conflict. It does not infer a second command
   language or mutate through DOM automation.
@@ -83,6 +82,3 @@ revision, lock, or transaction invariants.
 - Why shared boundaries exist: [architecture decisions](adr/README.md).
 - How an Agent should operate: [Agent workflow](agent/workflow.md).
 - Remaining cross-module work: [roadmap](roadmap/README.md).
-
-Historical delivery records and retired evidence live under
-[archive/](archive/README.md). They do not define current behavior.
