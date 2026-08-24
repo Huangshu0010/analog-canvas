@@ -13,12 +13,11 @@ RichText formatting but cannot store a divergent alias. A
 canonical v23 file can be opened, saved, reopened, and saved again without
 byte drift.
 
-During Gallery convergence, schemas v21 and v22 are accepted through a bounded
-upgrade to v23. The upgrade adds deterministic ownership evidence where needed
-and removes inert Base-Net projections without changing the visible drawing.
-The next save writes v23. The original file is never overwritten silently.
-Schema v20 and older, and versions newer than v23, are rejected. The temporary
-v21 hop is removed after online Gallery storage has converged.
+Schema v22 is accepted through a bounded upgrade to v23. The upgrade repairs
+power-role Evidence where needed and removes inert Base-Net projections without
+changing the visible drawing. The next save writes v23. The original file is
+never overwritten silently. Schema v21 and older, and versions newer than v23,
+are rejected.
 
 The canonical-current corpus at
 [`fixtures/projects/compatibility-corpus.json`](../../fixtures/projects/compatibility-corpus.json)

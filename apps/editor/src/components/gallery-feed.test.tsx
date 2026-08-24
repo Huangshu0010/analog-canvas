@@ -23,7 +23,7 @@ describe("loadGalleryFeed", () => {
             author: "tz",
             description: "",
             createdAt: "2026-08-21T00:00:00.000Z",
-            schemaVersion: 21,
+            schemaVersion: 23,
           },
         ],
         nextCursor: "2026-08-21T00:00:00.000Z|g1",

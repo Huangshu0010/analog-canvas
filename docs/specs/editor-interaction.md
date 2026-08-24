@@ -340,7 +340,7 @@ no electrical meaning.
 Open, demo load, restore, and human-approved staged import replace the entire
 Project through one replacement boundary; they are not Edit Engine
 transactions. Replacement cancels pending recovery for the outgoing Project
-and terminates its Agent session. A complete schema-21 Project may be upgraded
+and terminates its Agent session. A complete schema-22 Project may be upgraded
 at the read boundary and then enters the editor only as schema-23; migrated
 files are marked as needing save.
 
