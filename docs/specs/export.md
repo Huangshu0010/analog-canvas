@@ -4,8 +4,6 @@ Status: `accepted`
 
 Version: `1.0`
 
-Owning phase: `Phase 7`
-
 Related ADR: [`0014-resolved-route-geometry.md`](../adr/0014-resolved-route-geometry.md).
 Formal export consumes the resolved route geometry (centerline + endpoint joins)
 and, as today, excludes editor overlays, flightlines, selection, and

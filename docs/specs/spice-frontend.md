@@ -4,8 +4,6 @@ Status: `accepted`
 
 Version: `2.0-ngspice-46-core`
 
-Owning phase: `Phase 2/4`
-
 Primary owner: `packages/spice`
 
 ## Purpose

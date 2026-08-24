@@ -1,14 +1,9 @@
 # Community Gallery
 
-Status: `accepted` (Phase G1 surface + Phase G2 accounts, dark-shipped)
+Status: `accepted`
 
 Primary owners: `worker/gallery.ts`, `worker/auth.ts`, `apps/editor`
 landing feed
-
-Roadmap: [community gallery platform](../roadmap/community-gallery-platform.md)
-(G1 public feed foundation → G2 sign-in → G3 ownership → G4 feed
-experience). This specification describes the currently shipped surface and
-names the clauses later phases replace.
 
 ## Trust boundary
 
@@ -70,7 +65,7 @@ published it even if the account is later renamed. These two fields are
 traceability data, not feed data — the detail route returns them only to
 a moderator or admin, never on a public surface.
 
-## Submission quality gates (Phase G3)
+## Submission quality gates
 
 `evaluateSubmissionGates` in `@icm/derived` is the single evaluator; the
 worker enforces it (422 `{error: "quality-gate", failures}`) and the
@@ -115,7 +110,7 @@ admin-only moderator appointment) and the submitter's view at `/mine`
 (status chips, owner-visible preview, open-in-editor). Every gallery
 page state wears the shared site chrome.
 
-## Owner editing (Phase G3 completion)
+## Owner editing
 
 `PUT /api/gallery/<id>` (same-origin) updates an entry's content and
 metadata (tags included — they stay editable any time) with the
@@ -156,7 +151,7 @@ The editor surfaces this as "Version history…" inside the publish
 dialog's update mode (moderators and owners) and as a per-entry
 "Version history" action on `/mine`.
 
-## Accounts and sessions (Phase G2, dark-shipped)
+## Accounts and sessions
 
 `AuthDO` (one SQLite Durable Object singleton) owns users and sessions
 behind `/api/auth/*`. Every provider is invisible until its Worker

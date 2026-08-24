@@ -4,8 +4,6 @@ Status: `proposed`
 
 Version: `0.1`
 
-Owning phase: `Phase N`
-
 Primary owner: `<module>`
 
 ## Purpose
