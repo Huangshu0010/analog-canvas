@@ -2103,6 +2103,20 @@ body {
   font-family: "DejaVu Sans", Arial, "Helvetica Neue", Helvetica, sans-serif;
 }
 
+/*
+ * Instance movement is previewed by rendering the Engine dry-run Document.
+ * Base-document hit geometry is stale until commit, so keep only the live snap
+ * guides instead of layering a contradictory interaction presentation over
+ * the projected formal scene.
+ */
+.schematic-canvas.semantic-move-preview
+  [data-layer="editor-overlay"]
+  > :not([data-layer="snap-guides"]),
+.schematic-canvas.semantic-move-preview .net-highlight-overlay,
+.schematic-canvas.semantic-move-preview .cell-symbol-layout-overlay {
+  visibility: hidden;
+}
+
 .hit-target {
   fill: transparent;
   stroke: transparent;

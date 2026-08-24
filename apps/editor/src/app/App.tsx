@@ -951,7 +951,10 @@ export function App({
   const netLabelPropertyInputRef = useRef<HTMLInputElement>(null);
   const netLabelEditorInputRef = useRef<HTMLInputElement>(null);
   const documentViewBoxes = useRef(new Map<string, GridRect>());
+  const [projectedMovePreviewDocument, setProjectedMovePreviewDocument] =
+    useState<SchematicDocument | null>(null);
   const renderedDocument = useMemo(() => {
+    if (projectedMovePreviewDocument) return projectedMovePreviewDocument;
     if (!draftingHandlePreview || !document.drafting) return document;
     return {
       ...document,
@@ -964,7 +967,7 @@ export function App({
         ),
       },
     };
-  }, [document, draftingHandlePreview]);
+  }, [document, draftingHandlePreview, projectedMovePreviewDocument]);
   const lastGoodSceneRef = useRef<ReturnType<typeof buildSvgScene> | null>(
     null,
   );
@@ -1854,6 +1857,7 @@ export function App({
     completeInstanceMove,
     logicalRadiusForPixels,
     snapGuides: paintSnapGuides,
+    setProjectedMovePreview: setProjectedMovePreviewDocument,
     beginSelectionMoveInteraction,
     visualMoveOrigin: commandMoveVisualOrigin,
   });
@@ -7050,6 +7054,7 @@ export function App({
     if (currentInteraction.kind === "moving-selection") {
       updateCommandMovePreviewFromSelection(
         pointFromClient(event.clientX, event.clientY, event.currentTarget),
+        { x: event.clientX, y: event.clientY },
         event.currentTarget,
         event.altKey,
       );
@@ -10310,6 +10315,7 @@ export function App({
               tool === "rectangle"
                 ? "drawing-mode"
                 : "",
+              projectedMovePreviewDocument ? "semantic-move-preview" : "",
               panPreview ? "pan-mode" : "",
             ]
               .filter(Boolean)
@@ -10331,6 +10337,7 @@ export function App({
                       event.clientY,
                       event.currentTarget,
                     ),
+                    { x: event.clientX, y: event.clientY },
                     event.currentTarget,
                   );
                 }

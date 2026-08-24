@@ -203,13 +203,15 @@ async function clickRouteVertexWithScreenOffset(
 }
 
 async function readRoutePoints(page: Page, routeId: string) {
-  return page.getByTestId(`route-hit-${routeId}`).evaluate((element) => {
-    const polyline = element as SVGPolylineElement;
-    return Array.from(polyline.points).map((point) => ({
-      x: point.x,
-      y: point.y,
-    }));
-  });
+  return page
+    .locator(`[data-layer="routes"] [data-object-id="${routeId}"]`)
+    .evaluate((element) => {
+      const polyline = element as SVGPolylineElement;
+      return Array.from(polyline.points).map((point) => ({
+        x: point.x,
+        y: point.y,
+      }));
+    });
 }
 
 async function onlyRouteId(page: Page): Promise<string> {
@@ -484,6 +486,35 @@ test("command move follows the pointer and commits on one click", async ({
   expect(after.x).toBeGreaterThan(before.x + 20);
 });
 
+test("command move commits a materially different click instead of a stale preview", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await placeComponent(page, "resistor", { x: 340, y: 220 });
+  const canvas = page.getByTestId("schematic-canvas");
+  const resistor = page.getByTestId("hit-R1");
+  await resistor.click();
+  const before = await resistor.boundingBox();
+  if (!before) throw new Error("Placed resistor is not measurable");
+
+  await page.keyboard.press("m");
+  await page.mouse.move(before.x + 40, before.y + 20);
+
+  // Dispatch click without a preceding pointermove. This is the browser path
+  // that exposed the old "last painted frame wins" bug.
+  await canvas.dispatchEvent("click", {
+    bubbles: true,
+    clientX: before.x + 140,
+    clientY: before.y + 20,
+    detail: 1,
+  });
+
+  await expect(page.getByTestId("revision")).toHaveText("2");
+  const after = await resistor.boundingBox();
+  if (!after) throw new Error("Moved resistor is not measurable");
+  expect(after.x).toBeGreaterThan(before.x + 100);
+});
+
 test("command move owns rotate and commits pose plus translation atomically", async ({
   page,
 }) => {
@@ -503,7 +534,14 @@ test("command move owns rotate and commits pose plus translation atomically", as
   );
   await expect(page.getByTestId("revision")).toHaveText("1");
   await expect(page.locator('[data-kind="draft-rectangle"]')).toHaveCount(0);
-  await expect(resistor).toHaveAttribute("transform", /^matrix\(0 1 -1 0 /u);
+  await expect(
+    page.locator('[data-layer="symbols"] [data-object-id="R1"] > g'),
+  ).toHaveAttribute("transform", /rotate\(90\)/u);
+  const reference = page.locator(
+    '[data-layer="annotations"] [data-object-id="instance-label-R1"]',
+  );
+  await expect(reference).toHaveAttribute("transform", /^rotate\(0 /u);
+  await expect(reference).not.toHaveAttribute("transform", /matrix|scale/u);
 
   await page.mouse.click(before.x + 100, before.y + 80);
   await expect(page.getByTestId("revision")).toHaveText("2");
@@ -528,7 +566,9 @@ test("command move restores its exact preview when cancelled after a turn", asyn
   await page.keyboard.press("m");
   await page.mouse.move(before.x + 120, before.y + 90);
   await page.keyboard.press("r");
-  await expect(resistor).toHaveAttribute("transform", /^matrix\(/u);
+  await expect(
+    page.locator('[data-layer="symbols"] [data-object-id="R1"] > g'),
+  ).toHaveAttribute("transform", /rotate\(90\)/u);
   await page.keyboard.press("Escape");
 
   await expect(resistor).not.toHaveAttribute("transform", /^matrix\(/u);
@@ -552,6 +592,11 @@ test("command move turns a component while locally stretching its boundary wire"
   const hit = await resistor.boundingBox();
   if (!hit) throw new Error("Connected resistor is not measurable");
   const before = await readRoutePoints(page, "route-ui-1");
+  const terminalBridge = page
+    .locator('[data-role="terminal-miter-bridge"]')
+    .first();
+  await expect(terminalBridge).toBeAttached();
+  const bridgeBefore = await terminalBridge.getAttribute("d");
   await resistor.click();
   await page.keyboard.press("m");
   await page.mouse.move(hit.x + 100, hit.y + 100);
@@ -561,13 +606,16 @@ test("command move turns a component while locally stretching its boundary wire"
     .poll(() => readRoutePoints(page, "route-ui-1"))
     .not.toEqual(before);
   const preview = await readRoutePoints(page, "route-ui-1");
+  const bridgePreview = await terminalBridge.getAttribute("d");
   expect(preview[0]).not.toEqual(before[0]);
   expect(preview.at(-1)).toEqual(before.at(-1));
+  expect(bridgePreview).not.toBe(bridgeBefore);
   await expect(page.getByTestId("revision")).toHaveText("3");
 
   await page.mouse.click(hit.x + 100, hit.y + 100);
   await expect(page.getByTestId("revision")).toHaveText("4");
   expect(await readRoutePoints(page, "route-ui-1")).toEqual(preview);
+  expect(await terminalBridge.getAttribute("d")).toBe(bridgePreview);
 });
 
 test("Port shortcut starts ordinary component placement", async ({ page }) => {
@@ -1493,12 +1541,9 @@ test("moves internal wiring with a selected group and copies the routed subgraph
       await expect
         .poll(() => readRoutePoints(page, "route-ui-1"))
         .not.toEqual(before);
-      await expect(
-        page.locator('[data-layer="symbols"] [data-object-id="R1"]'),
-      ).toHaveAttribute("transform", /translate/u);
-      await expect(
-        page.locator('[data-layer="annotations"] [data-object-id="current-1"]'),
-      ).toHaveAttribute("transform", /translate/u);
+      await expect(page.getByTestId("schematic-canvas")).toHaveClass(
+        /semantic-move-preview/u,
+      );
       await expect(page.getByTestId("revision")).toHaveText("4");
     },
   );
@@ -1555,9 +1600,9 @@ test("keeps an internal junction with the live group preview", async ({
   if (!routeTestId) throw new Error("Internal route has no test id");
   const routeId = routeTestId.replace(/^route-hit-/u, "");
   await dragRouteSegment(page, routeId, { x: 76, y: 62 }, 0.35, 0, async () => {
-    await expect(
-      page.locator(`[data-object-id="${junctionId}"]`),
-    ).toHaveAttribute("transform", /translate/u);
+    await expect(page.getByTestId("schematic-canvas")).toHaveClass(
+      /semantic-move-preview/u,
+    );
     await expect(page.getByTestId("revision")).toHaveText("5");
   });
   const junctionAfter = await junctionHit.boundingBox();
@@ -1650,12 +1695,15 @@ test("moves an unselected component in one thresholded drag", async ({
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   const canvas = page.getByTestId("schematic-canvas");
   const hit = page.getByTestId("hit-R1");
+  const symbol = page.locator('[data-layer="symbols"] [data-object-id="R1"]');
 
   // Placement selects the new part; clear that convenience selection so this
   // is the same gesture a user makes in a dense, established schematic.
   await canvas.click({ position: { x: 760, y: 420 } });
   const before = await hit.boundingBox();
+  const symbolBefore = await symbol.boundingBox();
   if (!before) throw new Error("Component hit target is not measurable");
+  if (!symbolBefore) throw new Error("Component symbol is not measurable");
   const start = {
     x: before.x + before.width * 0.7,
     y: before.y + before.height * 0.6,
@@ -1663,17 +1711,11 @@ test("moves an unselected component in one thresholded drag", async ({
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(start.x + 74, start.y + 53, { steps: 4 });
-  await expect
-    .poll(() =>
-      page
-        .locator('[data-layer="symbols"] [data-object-id="R1"]')
-        .getAttribute("transform"),
-    )
-    .toContain("translate(");
+  await expect(canvas).toHaveClass(/semantic-move-preview/u);
   await expect(page.getByTestId("revision")).toHaveText("1");
-  const during = await hit.boundingBox();
-  expect(during?.x).not.toBe(before.x);
-  expect(during?.y).not.toBe(before.y);
+  const during = await symbol.boundingBox();
+  expect(during?.x).not.toBe(symbolBefore.x);
+  expect(during?.y).not.toBe(symbolBefore.y);
   await page.mouse.up();
   await expect(page.getByTestId("revision")).toHaveText("2");
 });
