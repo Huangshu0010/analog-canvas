@@ -213,6 +213,22 @@ describe("email magic-link sign-in", () => {
     expect(await me(auth)).toBeNull();
   });
 
+  it("unions the primary and additive administrator email secrets", async () => {
+    const auth = harness({
+      RESEND_API_KEY: "rk",
+      ADMIN_EMAILS: "owner@example.com",
+      ADMIN_EMAILS_EXTRA: " Added.Admin@Example.com ",
+    });
+
+    const ownerCookie = await emailSignIn(auth, "owner@example.com");
+    const addedCookie = await emailSignIn(auth, "added.admin@example.com");
+    const ordinaryCookie = await emailSignIn(auth, "user@example.com");
+
+    expect((await me(auth, ownerCookie))?.isAdmin).toBe(true);
+    expect((await me(auth, addedCookie))?.isAdmin).toBe(true);
+    expect((await me(auth, ordinaryCookie))?.isAdmin).toBe(false);
+  });
+
   it("magic links are single-use, expire, and are rate-limited", async () => {
     const auth = harness({ RESEND_API_KEY: "rk" });
     const sent: { to: string; text: string }[] = [];

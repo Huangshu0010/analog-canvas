@@ -6,9 +6,10 @@
 // until its secrets are configured. The browser holds a random session
 // token in an HttpOnly cookie; the database stores only SHA-256 hashes of
 // session and login tokens, so a copied database cannot impersonate
-// anyone. Super-admin is computed per request from the `ADMIN_EMAILS`
-// secret (comma-separated, case-insensitive) — rotating it needs no
-// re-login. Provider HTTP calls go through an injectable fetch seam so
+// anyone. Super-admin is computed per request from the union of the
+// `ADMIN_EMAILS` and additive `ADMIN_EMAILS_EXTRA` secrets
+// (comma-separated, case-insensitive) — rotating either needs no re-login.
+// Provider HTTP calls go through an injectable fetch seam so
 // tests never touch the network.
 
 export const AUTH_SESSION_COOKIE = "icm_session";
@@ -49,6 +50,7 @@ export type AuthEnv = {
   RESEND_API_KEY?: string;
   AUTH_EMAIL_FROM?: string;
   ADMIN_EMAILS?: string;
+  ADMIN_EMAILS_EXTRA?: string;
 };
 
 export interface SessionUser {
@@ -84,7 +86,9 @@ function enabledProviders(env: AuthEnv): {
 }
 
 function adminEmails(env: AuthEnv): string[] {
-  return (env.ADMIN_EMAILS ?? "")
+  return [env.ADMIN_EMAILS, env.ADMIN_EMAILS_EXTRA]
+    .filter((value): value is string => typeof value === "string")
+    .join(",")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter((email) => email.length > 0);

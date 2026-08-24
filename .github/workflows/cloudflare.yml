@@ -47,7 +47,7 @@ jobs:
       # GITHUB_, hence GH_OAUTH_*.
       - name: Sync worker secrets
         run: |
-          for name in GH_OAUTH_CLIENT_ID GH_OAUTH_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET RESEND_API_KEY AUTH_EMAIL_FROM ADMIN_EMAILS; do
+          for name in GH_OAUTH_CLIENT_ID GH_OAUTH_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET RESEND_API_KEY AUTH_EMAIL_FROM ADMIN_EMAILS ADMIN_EMAILS_EXTRA; do
             value="${!name}"
             if [ -z "$value" ]; then
               echo "$name is not configured; skipping"
@@ -65,3 +65,4 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+          ADMIN_EMAILS_EXTRA: ${{ secrets.ADMIN_EMAILS_EXTRA }}

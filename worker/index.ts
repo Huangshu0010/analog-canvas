@@ -36,6 +36,7 @@ type Env = {
   RESEND_API_KEY?: string;
   AUTH_EMAIL_FROM?: string;
   ADMIN_EMAILS?: string;
+  ADMIN_EMAILS_EXTRA?: string;
 };
 
 type RequestCf = {
