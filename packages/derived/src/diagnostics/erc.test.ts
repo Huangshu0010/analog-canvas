@@ -121,7 +121,7 @@ function roleInstance(variant?: string) {
 function connectDrainAndSource(project: CircuitProject): void {
   project.documents[0]!.nets.push({
     id: "net-channel",
-    scope: "local",
+
     terminals: [
       { instanceId: "M1", pinName: "D" },
       { instanceId: "M1", pinName: "S" },
@@ -137,8 +137,7 @@ describe("ERC engine", () => {
     document.nets = [
       {
         id: "net-1",
-        name: "sig",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },
@@ -194,8 +193,7 @@ describe("ERC engine", () => {
     project.documents[0]!.nets = [
       {
         id: "net-1",
-        name: "sig",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },
@@ -220,13 +218,12 @@ describe("ERC engine", () => {
     document.nets.push(
       {
         id: "net-gate-only",
-        scope: "local",
+
         terminals: [{ instanceId: "M1", pinName: "G" }],
       },
       {
         id: "net-vss",
-        name: "VSS",
-        scope: "local",
+
         terminals: [{ instanceId: "M1", pinName: "B" }],
       },
     );
@@ -254,8 +251,7 @@ describe("ERC engine", () => {
     document.nets = [
       {
         id: "net-short",
-        scope: "local",
-        powerDomain: "conflict",
+
         terminals: [
           { instanceId: "VDD1", pinName: "P" },
           { instanceId: "GND1", pinName: "0" },
@@ -320,7 +316,7 @@ describe("ERC engine", () => {
     ];
     document.nets.push({
       id: "net-bulk-only",
-      scope: "local",
+
       terminals: [
         { instanceId: "M1", pinName: "B" },
         { instanceId: "M2", pinName: "B" },
@@ -343,8 +339,7 @@ describe("ERC engine", () => {
     project.documents[0]!.nets = [
       {
         id: "net-1",
-        name: "sig",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },
@@ -367,8 +362,7 @@ describe("ERC engine", () => {
     project.documents[0]!.nets = [
       {
         id: "net-a",
-        name: "out",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I2", pinName: "L" },
@@ -376,8 +370,7 @@ describe("ERC engine", () => {
       },
       {
         id: "net-b",
-        name: "OUT",
-        scope: "local",
+
         terminals: [{ instanceId: "I1", pinName: "R" }],
       },
     ];
@@ -408,23 +401,17 @@ describe("ERC engine", () => {
     project.documents[0]!.nets = [
       {
         id: "net-ground-1",
-        name: "0",
-        scope: "global",
-        powerDomain: "ground",
+
         terminals: [{ instanceId: "GND1", pinName: "0" }],
       },
       {
         id: "net-ground-2",
-        name: "0",
-        scope: "global",
-        powerDomain: "ground",
+
         terminals: [{ instanceId: "GND2", pinName: "0" }],
       },
       {
         id: "net-global-0",
-        name: "0",
-        scope: "global",
-        powerDomain: "ground",
+
         terminals: [{ instanceId: "M1", pinName: "B" }],
       },
     ];
@@ -441,8 +428,7 @@ describe("ERC engine", () => {
     project.documents[0]!.nets = [
       {
         id: "net-1",
-        name: "sig",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I2", pinName: "L" },
@@ -496,7 +482,7 @@ describe("ERC engine", () => {
     document.nets = [
       {
         id: "net-1",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },
@@ -546,7 +532,7 @@ describe("ERC engine", () => {
     document.nets = [
       {
         id: "net-1",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },

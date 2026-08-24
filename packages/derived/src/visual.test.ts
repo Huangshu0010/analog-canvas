@@ -142,7 +142,7 @@ describe("visual quality diagnostics", () => {
     );
     document.nets.push({
       id: "net-ui-2",
-      scope: "local",
+
       terminals: [
         { instanceId: "P1", pinName: "P" },
         { instanceId: "P2", pinName: "P" },

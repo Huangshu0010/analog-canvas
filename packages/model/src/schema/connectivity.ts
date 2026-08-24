@@ -11,26 +11,9 @@ export const NetPowerDomainSchema = z.enum([
   "ground",
   "conflict",
 ]);
-/** Temporary schema-23 convergence input; removed after Gallery migration. */
-export const NetOriginSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("authored") }),
-  z.strictObject({
-    kind: z.literal("spice-import"),
-    sourceNetIds: z.array(StableIdSchema).min(1).max(256),
-  }),
-]);
-
 export const NetSchema = z.strictObject({
   id: StableIdSchema,
-  /** Temporary migration projection; never authoritative in schema 23. */
-  name: z.string().min(1).optional(),
-  /** Temporary migration projection; never authoritative in schema 23. */
-  scope: z.enum(["local", "global"]).optional(),
-  /** Temporary migration projection; never authoritative in schema 23. */
-  powerDomain: NetPowerDomainSchema.optional(),
   terminals: z.array(TerminalRefSchema),
-  /** Temporary migration projection; never authoritative in schema 23. */
-  origin: NetOriginSchema.optional(),
 });
 
 export const ConnectivityNameClaimOwnerSchema = z.discriminatedUnion("kind", [

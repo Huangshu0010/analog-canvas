@@ -118,9 +118,7 @@ describe("component placement electrical contacts", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-global-0",
-      name: "0",
-      scope: "global",
-      powerDomain: "ground",
+
       terminals: [{ instanceId: "M1", pinName: "B" }],
     });
     addSupplyClaim(document, "net-global-0", "0", "global", "ground");
@@ -178,8 +176,7 @@ describe("component placement electrical contacts", () => {
     });
     document.nets.push({
       id: "net-tail",
-      name: "TAIL",
-      scope: "global",
+
       terminals: [{ instanceId: "R1", pinName: "1" }],
     });
     const ground = {
@@ -290,9 +287,7 @@ describe("component placement electrical contacts", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-power-vdd1",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     addSupplyClaim(document, "net-power-vdd1", "VDD", "global", "vdd");
@@ -336,9 +331,7 @@ describe("component placement electrical contacts", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-avdd",
-      name: "AVDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     addSupplyClaim(document, "net-avdd", "AVDD", "global", "vdd");
@@ -419,16 +412,12 @@ describe("component placement electrical contacts", () => {
     document.nets.push(
       {
         id: "net-avdd",
-        name: "AVDD",
-        scope: "global",
-        powerDomain: "vdd",
+
         terminals: [],
       },
       {
         id: "net-dvdd",
-        name: "DVDD",
-        scope: "global",
-        powerDomain: "vdd",
+
         terminals: [],
       },
     );

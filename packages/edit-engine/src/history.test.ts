@@ -47,8 +47,7 @@ describe("DocumentHistory", () => {
     });
     document.nets.push({
       id: "net-vss",
-      name: "VSS",
-      scope: "global",
+
       terminals: [],
     });
     document.mosBulkDefaults = { nmosNetId: "net-vss" };

@@ -185,14 +185,13 @@ describe("reviewBrowserRecoveryProject", () => {
     }
   });
 
-  it("accepts a schema-21 recovery envelope after upgrading its Project", () => {
+  it("accepts a schema-22 recovery envelope after upgrading its Project", () => {
     const previous = JSON.parse(projectText);
-    previous.schemaVersion = 21;
-    delete previous.documents[0].connectivityEvidence;
+    previous.schemaVersion = 22;
     const previousText = JSON.stringify(previous);
     const review = reviewBrowserRecoveryProject(
       finalizeBrowserRecoveryRecord(
-        draft({ projectText: previousText, projectSchemaVersion: 21 }),
+        draft({ projectText: previousText, projectSchemaVersion: 22 }),
       ),
     );
 

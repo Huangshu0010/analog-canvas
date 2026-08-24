@@ -173,7 +173,7 @@ describe("diagnostic aggregation", () => {
     resolved.documents[0]!.nets = [
       {
         id: "net-left",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I2", pinName: "L" },
@@ -181,7 +181,7 @@ describe("diagnostic aggregation", () => {
       },
       {
         id: "net-right",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "R" },
           { instanceId: "I2", pinName: "R" },

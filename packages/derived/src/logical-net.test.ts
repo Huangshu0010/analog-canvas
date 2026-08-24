@@ -7,10 +7,10 @@ describe("resolved logical Nets", () => {
   it("unions scoped names, source identity, and explicit equivalence deterministically", () => {
     const document = createEmptyDocument("document", "Document");
     document.nets.push(
-      { id: "net-d", scope: "local", terminals: [] },
-      { id: "net-a", scope: "local", terminals: [] },
-      { id: "net-c", scope: "local", terminals: [] },
-      { id: "net-b", scope: "local", terminals: [] },
+      { id: "net-d", terminals: [] },
+      { id: "net-a", terminals: [] },
+      { id: "net-c", terminals: [] },
+      { id: "net-b", terminals: [] },
     );
     document.connectivityEvidence.push(
       {
@@ -65,8 +65,8 @@ describe("resolved logical Nets", () => {
   it("keeps conflicting explicit equivalence inspectable without choosing a name", () => {
     const document = createEmptyDocument("document", "Document");
     document.nets.push(
-      { id: "net-a", scope: "local", terminals: [] },
-      { id: "net-b", scope: "global", terminals: [] },
+      { id: "net-a", terminals: [] },
+      { id: "net-b", terminals: [] },
     );
     document.connectivityEvidence.push(
       {
@@ -103,8 +103,8 @@ describe("resolved logical Nets", () => {
   it("ignores inert legacy projections when resolving marker-owned names", () => {
     const document = createEmptyDocument("document", "Document");
     document.nets.push(
-      { id: "legacy", name: "VDD", scope: "local", terminals: [] },
-      { id: "marker", scope: "local", terminals: [] },
+      { id: "legacy", terminals: [] },
+      { id: "marker", terminals: [] },
     );
     document.connectivityEvidence.push({
       id: "claim-vdd",
@@ -130,8 +130,7 @@ describe("resolved logical Nets", () => {
     const document = createEmptyDocument("document", "Document");
     document.nets.push({
       id: "net",
-      name: "VDD",
-      scope: "local",
+
       terminals: [],
     });
     document.connectivityEvidence.push({
@@ -153,8 +152,8 @@ describe("resolved logical Nets", () => {
   it("keeps a formal Cell Port name distinct from the connected logical Net name", () => {
     const document = createEmptyDocument("document", "Document");
     document.nets.push(
-      { id: "net-port", scope: "local", terminals: [] },
-      { id: "net-label", scope: "local", terminals: [] },
+      { id: "net-port", terminals: [] },
+      { id: "net-label", terminals: [] },
     );
     document.netlist = {
       name: "Document",

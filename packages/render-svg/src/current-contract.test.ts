@@ -192,7 +192,7 @@ describe("current rendering contract", () => {
     );
     document.nets.push({
       id: "signal",
-      scope: "local",
+
       terminals: [
         { instanceId: "VIN", pinName: "P" },
         { instanceId: "VOUT", pinName: "P" },
@@ -224,9 +224,7 @@ describe("current rendering contract", () => {
     const document = createEmptyDocument("doc", "Power rail");
     document.nets.push({
       id: "net-vdd",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     document.junctions.push(
@@ -313,7 +311,7 @@ describe("current rendering contract", () => {
     });
     document.nets.push({
       id: "base-net",
-      scope: "local",
+
       terminals: [{ instanceId: "Q1", pinName: "B" }],
     });
     document.junctions.push({

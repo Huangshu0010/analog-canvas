@@ -16,8 +16,7 @@ function documentWithMarker(symbolId: "port" | "vdd-port") {
   });
   document.nets.push({
     id: "net-p1",
-    scope: symbolId === "vdd-port" ? "global" : "local",
-    powerDomain: symbolId === "vdd-port" ? "vdd" : "none",
+
     terminals: [{ instanceId: "P1", pinName: "P" }],
   });
   document.connectivityEvidence.push({

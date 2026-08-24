@@ -89,7 +89,7 @@ describe("Edit Transaction envelope", () => {
     expect(result.document.nets).toEqual([
       expect.objectContaining({ id: "net-authored" }),
     ]);
-    expect(result.document.nets[0]?.origin).toBeUndefined();
+    expect(Object.hasOwn(result.document.nets[0]!, "origin")).toBe(false);
     expect(resolveDocumentLogicalNets(result.document).groups).toEqual([
       expect.objectContaining({
         id: "net-authored",
@@ -133,7 +133,7 @@ describe("Edit Transaction envelope", () => {
     });
     document.nets.push({
       id: "net-vout",
-      scope: "local",
+
       terminals: [{ instanceId: "port-object", pinName: "P" }],
     });
     document.netlist = {
@@ -176,7 +176,7 @@ describe("Edit Transaction envelope", () => {
     });
     document.nets.push({
       id: "net-vout",
-      scope: "local",
+
       terminals: [{ instanceId: "port-object", pinName: "P" }],
     });
     document.netlist = {
@@ -256,8 +256,7 @@ describe("Edit Transaction envelope", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({
       id: "net-vin",
-      name: "VIN",
-      scope: "local",
+
       terminals: [],
     });
     document.annotations.push({
@@ -572,9 +571,7 @@ describe("Edit Transaction envelope", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({
       id: "net-vdd",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     document.connectivityEvidence.push({
@@ -624,8 +621,7 @@ describe("Edit Transaction envelope", () => {
     });
     document.nets.push({
       id: "net-substrate",
-      name: "SUBSTRATE",
-      scope: "local",
+
       terminals: [],
     });
     const result = executeTransaction(
@@ -699,7 +695,7 @@ describe("Edit Transaction envelope", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({
       id: "net-signal",
-      scope: "local",
+
       terminals: [],
     });
     const annotation = {
@@ -745,12 +741,17 @@ describe("Edit Transaction envelope", () => {
     };
     document.nets.push({
       id: "net-ab",
-      scope: "local",
+
       terminals: [
         { instanceId: "A", pinName: "P" },
         { instanceId: "B", pinName: "P" },
       ],
-      origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+    });
+    document.connectivityEvidence.push({
+      id: "source-net-ab",
+      kind: "spice-source",
+      netId: "net-ab",
+      sourceNetId: "net-ab",
     });
     document.instances.push(
       {
@@ -790,9 +791,11 @@ describe("Edit Transaction envelope", () => {
     expect(placed).toMatchObject({
       ok: true,
       document: {
-        nets: [
+        connectivityEvidence: [
           expect.objectContaining({
-            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+            kind: "spice-source",
+            netId: "net-ab",
+            sourceNetId: "net-ab",
           }),
         ],
       },
@@ -813,9 +816,11 @@ describe("Edit Transaction envelope", () => {
     expect(moved).toMatchObject({
       ok: true,
       document: {
-        nets: [
+        connectivityEvidence: [
           expect.objectContaining({
-            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+            kind: "spice-source",
+            netId: "net-ab",
+            sourceNetId: "net-ab",
           }),
         ],
       },
@@ -843,9 +848,11 @@ describe("Edit Transaction envelope", () => {
     expect(wired).toMatchObject({
       ok: true,
       document: {
-        nets: [
+        connectivityEvidence: [
           expect.objectContaining({
-            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+            kind: "spice-source",
+            netId: "net-ab",
+            sourceNetId: "net-ab",
           }),
         ],
       },
@@ -874,9 +881,11 @@ describe("Edit Transaction envelope", () => {
     expect(labelled).toMatchObject({
       ok: true,
       document: {
-        nets: [
+        connectivityEvidence: [
           expect.objectContaining({
-            origin: { kind: "spice-import", sourceNetIds: ["net-ab"] },
+            kind: "spice-source",
+            netId: "net-ab",
+            sourceNetId: "net-ab",
           }),
         ],
       },
@@ -892,16 +901,29 @@ describe("Edit Transaction envelope", () => {
     document.nets.push(
       {
         id: "net-imported-bus",
-        name: "BUS",
-        scope: "local",
+
         terminals: [{ instanceId: "P1", pinName: "P" }],
-        origin: { kind: "spice-import", sourceNetIds: ["source-bus"] },
       },
       {
         id: "net-authored-port",
-        scope: "local",
+
         terminals: [{ instanceId: "P2", pinName: "P" }],
-        origin: { kind: "authored" },
+      },
+    );
+    document.connectivityEvidence.push(
+      {
+        id: "claim-imported-bus",
+        kind: "name-claim",
+        netId: "net-imported-bus",
+        name: "BUS",
+        owner: { kind: "explicit-net-property" },
+        scope: "local",
+      },
+      {
+        id: "source-imported-bus",
+        kind: "spice-source",
+        netId: "net-imported-bus",
+        sourceNetId: "source-bus",
       },
     );
 
@@ -922,24 +944,37 @@ describe("Edit Transaction envelope", () => {
         nets: [
           {
             id: "net-imported-bus",
-            name: "BUS",
             terminals: [
               { instanceId: "P1", pinName: "P" },
               { instanceId: "P2", pinName: "P" },
             ],
-            origin: { kind: "spice-import", sourceNetIds: ["source-bus"] },
           },
         ],
       },
     });
+    if (!result.ok) return;
+    expect(result.document.connectivityEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "name-claim",
+          netId: "net-imported-bus",
+          name: "BUS",
+        }),
+        expect.objectContaining({
+          kind: "spice-source",
+          netId: "net-imported-bus",
+          sourceNetId: "source-bus",
+        }),
+      ]),
+    );
   });
 
   it("retargets every connectivity evidence reference when Nets merge", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push(
-      { id: "net-target", scope: "local", terminals: [] },
-      { id: "net-source", scope: "local", terminals: [] },
-      { id: "net-peer", scope: "local", terminals: [] },
+      { id: "net-target", terminals: [] },
+      { id: "net-source", terminals: [] },
+      { id: "net-peer", terminals: [] },
     );
     document.connectivityEvidence.push(
       {
@@ -998,7 +1033,7 @@ describe("Edit Transaction envelope", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({
       id: "net-evidence",
-      scope: "local",
+
       terminals: [],
     });
 
@@ -1045,7 +1080,7 @@ describe("Edit Transaction envelope", () => {
 
   it("rejects evidence ID collisions and missing owners atomically", () => {
     const document = createEmptyDocument("document-main", "Main");
-    document.nets.push({ id: "net-a", scope: "local", terminals: [] });
+    document.nets.push({ id: "net-a", terminals: [] });
     const collision = executeTransaction(document, {
       ...transaction(),
       edits: [
@@ -1111,7 +1146,7 @@ describe("Edit Transaction envelope", () => {
     document.instances.push({ id: "P1", symbolId: "port", placement: null });
     document.nets.push({
       id: "net-port",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     document.connectivityEvidence.push({
@@ -1159,7 +1194,7 @@ describe("Edit Transaction envelope", () => {
     });
     document.nets.push({
       id: "net-power-gnd1",
-      scope: "local",
+
       terminals: [{ instanceId: "GND1", pinName: "0" }],
     });
     document.connectivityEvidence.push({
@@ -1248,7 +1283,7 @@ describe("Edit Transaction envelope", () => {
     );
     document.nets.push({
       id: "net-power-vdd1",
-      scope: "local",
+
       terminals: [
         { instanceId: "M1", pinName: "B" },
         { instanceId: "VDD1", pinName: "P" },
@@ -1301,7 +1336,7 @@ describe("Edit Transaction envelope", () => {
     });
     document.nets.push({
       id: "net-body",
-      scope: "local",
+
       terminals: [{ instanceId: "M1", pinName: "B" }],
     });
     document.mosBulkDefaults = { pmosNetId: "net-body" };
@@ -1336,7 +1371,7 @@ describe("Edit Transaction envelope", () => {
     document.nets.push(
       {
         id: "net-vdd-1",
-        scope: "local",
+
         terminals: [
           { instanceId: "M1", pinName: "B" },
           { instanceId: "VDD1", pinName: "P" },
@@ -1344,7 +1379,7 @@ describe("Edit Transaction envelope", () => {
       },
       {
         id: "net-vdd-2",
-        scope: "local",
+
         terminals: [{ instanceId: "VDD2", pinName: "P" }],
       },
     );
@@ -1407,7 +1442,7 @@ describe("Edit Transaction envelope", () => {
 
   it("removes only evidence owned by a deleted Net Label", () => {
     const document = createEmptyDocument("document-main", "Main");
-    document.nets.push({ id: "net-a", scope: "local", terminals: [] });
+    document.nets.push({ id: "net-a", terminals: [] });
     document.annotations.push({
       id: "label-a",
       kind: "net-label",
@@ -1993,8 +2028,7 @@ describe("Edit Transaction envelope", () => {
     document.instances.push(instance);
     document.nets.push({
       id: "net-vin",
-      name: "VIN",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     const resolved = resolver.resolve("port");

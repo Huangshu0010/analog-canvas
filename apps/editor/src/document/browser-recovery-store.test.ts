@@ -533,11 +533,10 @@ describe("migrateLegacyProjectRecovery", () => {
     expect(firstSession(read).latest?.source).toBe("recovered");
   });
 
-  it("stores a schema-21 legacy slot as internally consistent schema 23", async () => {
+  it("stores a schema-22 legacy slot as internally consistent schema 23", async () => {
     const { store } = freshStore();
     const previous = JSON.parse(projectText);
-    previous.schemaVersion = 21;
-    delete previous.documents[0].connectivityEvidence;
+    previous.schemaVersion = 22;
     const previousText = JSON.stringify(previous);
     const storage = memoryStorage({ [PROJECT_RECOVERY_KEY]: previousText });
 

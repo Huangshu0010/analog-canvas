@@ -16,23 +16,35 @@ describe("Project protocol boundary", () => {
     });
   });
 
-  it("converges schema 21 directly to schema 23", () => {
+  it("upgrades the previous schema to schema 23", () => {
     const current = JSON.parse(
       serializeProject(createEmptyProject("protocol-project", "Protocol")),
     ) as Record<string, unknown>;
-    const documents = current.documents as Array<Record<string, unknown>>;
-    delete documents[0]!.connectivityEvidence;
     const result = tryParseProjectWithMetadata(
       JSON.stringify({
         ...current,
-        schemaVersion: 21,
+        schemaVersion: 22,
       }),
     );
     expect(result).toMatchObject({
       ok: true,
-      sourceSchemaVersion: 21,
+      sourceSchemaVersion: 22,
       migrated: true,
       project: { schemaVersion: 23, structureRevision: 0 },
+    });
+  });
+
+  it("rejects projects older than the rolling compatibility window", () => {
+    const current = JSON.parse(
+      serializeProject(createEmptyProject("protocol-project", "Protocol")),
+    ) as Record<string, unknown>;
+    expect(
+      tryParseProjectWithMetadata(
+        JSON.stringify({ ...current, schemaVersion: 21 }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      diagnostics: [{ code: "UNSUPPORTED_SCHEMA_VERSION" }],
     });
   });
 

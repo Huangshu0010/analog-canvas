@@ -1492,13 +1492,6 @@ async function handleEntryUpdate(
   return Response.json(payload, { status });
 }
 
-async function handleReserialize(env: GalleryEnv): Promise<Response> {
-  const { status, payload } = await callGallery(env, "schema-converge", {
-    apply: true,
-  });
-  return Response.json(payload, { status });
-}
-
 /**
  * All `/api/gallery*` routing. Returns null for unrelated paths so the
  * worker entry keeps its ordinary dispatch.
@@ -1620,17 +1613,6 @@ export async function routeGalleryRequest(
       status,
       headers: { "cache-control": "no-store" },
     });
-  }
-  if (
-    segments.length === 2 &&
-    segments[0] === "maintenance" &&
-    segments[1] === "reserialize" &&
-    request.method === "POST"
-  ) {
-    if (!(await isAdmin(request, env))) {
-      return Response.json({ error: "unauthorized" }, { status: 401 });
-    }
-    return handleReserialize(env);
   }
   if (
     segments.length === 1 &&

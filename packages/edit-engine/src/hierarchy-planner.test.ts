@@ -265,7 +265,7 @@ describe("reviewed external MOS model targets", () => {
     });
     document.nets.push({
       id: "net-drain",
-      scope: "local",
+
       terminals: [{ instanceId: "M1", pinName: "D" }],
     });
     document.junctions.push({

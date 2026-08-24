@@ -15,6 +15,24 @@ describe("CircuitProject schema", () => {
     expect(CircuitProjectJsonSchema).toMatchObject({ type: "object" });
   });
 
+  it("rejects retired logical projections on physical Base Nets", () => {
+    const project = createEmptyProject("project-net", "Net");
+    for (const projection of [
+      { name: "VDD" },
+      { scope: "global" },
+      { powerDomain: "vdd" },
+      { origin: { kind: "authored" } },
+    ]) {
+      const candidate = structuredClone(project) as unknown as Record<
+        string,
+        unknown
+      >;
+      const documents = candidate.documents as Array<Record<string, unknown>>;
+      documents[0]!.nets = [{ id: "net-vdd", terminals: [], ...projection }];
+      expect(CircuitProjectSchema.safeParse(candidate).success).toBe(false);
+    }
+  });
+
   it("has no legacy Instance property authority and validates external definitions", () => {
     const project = createEmptyProject("project-netlist", "Netlist");
     const document = project.documents[0]!;
@@ -91,7 +109,7 @@ describe("CircuitProject schema", () => {
     });
     document.nets.push({
       id: "net-vout",
-      scope: "local",
+
       terminals: [{ instanceId: "port-object", pinName: "P" }],
     });
     document.netlist = {
@@ -200,7 +218,7 @@ describe("CircuitProject schema", () => {
 
     parent.nets.push({
       id: "net-parent",
-      scope: "local",
+
       terminals: [{ instanceId: "X1", pinName: "MISSING" }],
     });
     expect(() => CircuitProjectSchema.parse(project)).toThrow(
@@ -244,8 +262,7 @@ describe("CircuitProject schema", () => {
     });
     document.nets.push({
       id: "net-input",
-      name: "VIN",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     document.netlist!.terminals.push({
@@ -274,11 +291,10 @@ describe("CircuitProject schema", () => {
     document.nets.push(
       {
         id: "net-a",
-        name: "A",
-        scope: "local",
+
         terminals: [{ instanceId: "P1", pinName: "P" }],
       },
-      { id: "net-b", scope: "local", terminals: [] },
+      { id: "net-b", terminals: [] },
     );
     document.annotations.push({
       id: "label-a",
@@ -513,8 +529,7 @@ describe("CircuitProject schema", () => {
     });
     document.nets.push({
       id: "net-input",
-      name: "VIN",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     document.netlist!.terminals.push({

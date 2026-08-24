@@ -127,22 +127,22 @@ describe("semantic authoring", () => {
     document.nets.push(
       {
         id: "net-d",
-        scope: "local",
+
         terminals: [{ instanceId: "XM1", pinName: "P1" }],
       },
       {
         id: "net-g",
-        scope: "local",
+
         terminals: [{ instanceId: "XM1", pinName: "P2" }],
       },
       {
         id: "net-s",
-        scope: "local",
+
         terminals: [{ instanceId: "XM1", pinName: "P3" }],
       },
       {
         id: "net-b",
-        scope: "local",
+
         terminals: [{ instanceId: "XM1", pinName: "P4" }],
       },
     );
@@ -241,7 +241,7 @@ describe("semantic authoring", () => {
     });
     document.nets.push({
       id: "net-a",
-      scope: "local",
+
       terminals: [{ instanceId: "X1", pinName: "P1" }],
     });
     const result = executeTransaction(
@@ -269,12 +269,12 @@ describe("semantic authoring", () => {
     document.nets.push(
       {
         id: "net-a",
-        scope: "local",
+
         terminals: [{ instanceId: "R1", pinName: "2" }],
       },
       {
         id: "net-b",
-        scope: "local",
+
         terminals: [{ instanceId: "R2", pinName: "1" }],
       },
     );
@@ -320,12 +320,12 @@ describe("semantic authoring", () => {
     document.nets.push(
       {
         id: "net-a",
-        scope: "local",
+
         terminals: [{ instanceId: "P1", pinName: "P" }],
       },
       {
         id: "net-b",
-        scope: "local",
+
         terminals: [{ instanceId: "P2", pinName: "P" }],
       },
     );
@@ -373,7 +373,7 @@ describe("semantic authoring", () => {
     document.instances.push(addInstance("R1", "resistor", 100).instance);
     document.nets.push({
       id: "net-a",
-      scope: "local",
+
       terminals: [{ instanceId: "R1", pinName: "1" }],
     });
     const before = structuredClone(document);
@@ -392,8 +392,8 @@ describe("semantic authoring", () => {
   it("joins equal name claims logically without a physical merge", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push(
-      { id: "net-a", name: "SIGNAL", scope: "local", terminals: [] },
-      { id: "net-b", scope: "local", terminals: [] },
+      { id: "net-a", terminals: [] },
+      { id: "net-b", terminals: [] },
     );
     document.connectivityEvidence.push({
       id: "claim-net-a",
@@ -430,7 +430,7 @@ describe("semantic authoring", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({
       id: "net-a",
-      scope: "local",
+
       terminals: [],
     });
     document.junctions.push({

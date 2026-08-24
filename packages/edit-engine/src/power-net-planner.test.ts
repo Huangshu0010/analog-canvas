@@ -14,16 +14,12 @@ describe("power Net planner", () => {
     document.nets.push(
       {
         id: "net-avdd",
-        name: "AVDD",
-        scope: "global",
-        powerDomain: "vdd",
+
         terminals: [],
       },
       {
         id: "net-vdd",
-        name: "VDD",
-        scope: "global",
-        powerDomain: "vdd",
+
         terminals: [],
       },
     );
@@ -57,7 +53,7 @@ describe("power Net planner", () => {
 
   it("promotes an unnamed contacted Net to the requested canonical supply", () => {
     const document = createEmptyDocument("main", "Main");
-    document.nets.push({ id: "net-contact", scope: "local", terminals: [] });
+    document.nets.push({ id: "net-contact", terminals: [] });
 
     expect(
       planEnsurePowerNet(document, {
@@ -91,15 +87,12 @@ describe("power Net planner", () => {
     document.nets.push(
       {
         id: "net-tail",
-        name: "TAIL",
-        scope: "local",
+
         terminals: [],
       },
       {
         id: "net-global-0",
-        name: "0",
-        scope: "global",
-        powerDomain: "ground",
+
         terminals: [],
       },
     );
@@ -126,7 +119,7 @@ describe("power Net planner", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-tail",
-      scope: "local",
+
       terminals: [],
     });
     expect(
@@ -156,9 +149,7 @@ describe("power Net planner", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-avdd",
-      name: "AVDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     document.connectivityEvidence.push({

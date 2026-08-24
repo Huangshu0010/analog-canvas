@@ -122,9 +122,8 @@ function previousVersionText(): string {
 
 function previousPowerRailVersionText(): string {
   const raw = JSON.parse(projectText("Legacy VDD")) as any;
-  raw.schemaVersion = 21;
+  raw.schemaVersion = 22;
   const document = raw.documents[0];
-  delete document.connectivityEvidence;
   document.nets.push({
     id: "net-vdd",
     name: "VDD",
@@ -132,6 +131,15 @@ function previousPowerRailVersionText(): string {
     powerDomain: "vdd",
     origin: { kind: "authored" },
     terminals: [],
+  });
+  document.connectivityEvidence.push({
+    id: "legacy-label-vdd",
+    kind: "name-claim",
+    netId: "net-vdd",
+    name: "VDD",
+    owner: { kind: "power-marker", objectId: "label-vdd" },
+    scope: "global",
+    powerDomain: "vdd",
   });
   document.junctions.push(
     {
@@ -1043,7 +1051,6 @@ function wiredProjectText(name = "Wired"): string {
   document.nets = [
     {
       id: "n1",
-      scope: "local",
       terminals: [
         { instanceId: "R1", pinName: "1" },
         { instanceId: "R2", pinName: "1" },
@@ -1051,7 +1058,6 @@ function wiredProjectText(name = "Wired"): string {
     },
     {
       id: "n2",
-      scope: "local",
       terminals: [
         { instanceId: "R1", pinName: "2" },
         { instanceId: "R2", pinName: "2" },
@@ -1561,7 +1567,7 @@ describe("gallery administration", () => {
     expect(((await gone.json()) as { entries: unknown[] }).entries).toEqual([]);
   });
 
-  it("re-serializes stored entries back into the rolling window", async () => {
+  it("converges stored entries back into the rolling window", async () => {
     const env = environment();
     const adminCookie = await adminOf(env);
     const id = await submitOne(env, "Aging Entry", { cookie: adminCookie });
@@ -1584,9 +1590,13 @@ describe("gallery administration", () => {
 
     const maintenance = await route(
       env,
-      new Request(`${ORIGIN}/api/gallery/maintenance/reserialize`, {
+      new Request(`${ORIGIN}/api/gallery/maintenance/schema23`, {
         method: "POST",
-        headers: cookieHeaders(adminCookie),
+        headers: {
+          ...cookieHeaders(adminCookie),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ apply: true }),
       }),
     );
     expect(await maintenance.json()).toMatchObject({
@@ -1624,7 +1634,7 @@ describe("gallery administration", () => {
         body: JSON.stringify({
           id,
           projectText: brokenCurrentPowerRailText(),
-          schemaVersion: CURRENT_PROJECT_SCHEMA_VERSION,
+          schemaVersion: CURRENT_PROJECT_SCHEMA_VERSION - 1,
           svgText: "<svg/>",
         }),
       },
@@ -1632,9 +1642,13 @@ describe("gallery administration", () => {
 
     const maintenance = await route(
       env,
-      new Request(`${ORIGIN}/api/gallery/maintenance/reserialize`, {
+      new Request(`${ORIGIN}/api/gallery/maintenance/schema23`, {
         method: "POST",
-        headers: cookieHeaders(adminCookie),
+        headers: {
+          ...cookieHeaders(adminCookie),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ apply: true }),
       }),
     );
     expect(await maintenance.json()).toMatchObject({
@@ -1698,7 +1712,7 @@ describe("gallery administration", () => {
     );
     env.gallerySql.exec(
       "UPDATE gallery_entry_versions SET schema_version = ?, project_text = ? WHERE id = ?",
-      21,
+      22,
       previousPowerRailVersionText(),
       versionId,
     );
@@ -1711,7 +1725,7 @@ describe("gallery administration", () => {
       "Legacy workspace",
       "2026-08-24T00:00:00.000Z",
       1,
-      21,
+      22,
       previousPowerRailVersionText(),
     );
 
@@ -1745,8 +1759,8 @@ describe("gallery administration", () => {
       failures: [],
       inventory: {
         gallery_entries: { "22": 1 },
-        gallery_entry_versions: { "21": 1 },
-        workspace_slots: { "21": 1 },
+        gallery_entry_versions: { "22": 1 },
+        workspace_slots: { "22": 1 },
       },
     });
     expect(

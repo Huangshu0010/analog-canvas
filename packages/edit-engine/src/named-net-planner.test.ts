@@ -8,7 +8,7 @@ const owner = { kind: "explicit-net-property" as const };
 describe("named Net planner", () => {
   it("writes an unused name only as an owner-addressed claim", () => {
     const document = createEmptyDocument("main", "Main");
-    document.nets.push({ id: "net-source", scope: "local", terminals: [] });
+    document.nets.push({ id: "net-source", terminals: [] });
     expect(
       planEnsureNamedNet(document, {
         candidateNetId: "net-source",
@@ -39,8 +39,8 @@ describe("named Net planner", () => {
   it("keeps same-name Base Nets separate and emits no semantic merge", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push(
-      { id: "net-a", name: "BIAS", scope: "local", terminals: [] },
-      { id: "net-source", scope: "local", terminals: [] },
+      { id: "net-a", terminals: [] },
+      { id: "net-source", terminals: [] },
     );
     const plan = planEnsureNamedNet(document, {
       candidateNetId: "net-source",
@@ -68,15 +68,12 @@ describe("named Net planner", () => {
     document.nets.push(
       {
         id: "net-vdd",
-        name: "VDD",
-        scope: "local",
-        powerDomain: "vdd",
+
         terminals: [],
       },
       {
         id: "net-source",
-        scope: "local",
-        powerDomain: "ground",
+
         terminals: [],
       },
     );
@@ -104,8 +101,7 @@ describe("named Net planner", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-source",
-      name: "OLD",
-      scope: "local",
+
       terminals: [],
     });
     document.connectivityEvidence.push({

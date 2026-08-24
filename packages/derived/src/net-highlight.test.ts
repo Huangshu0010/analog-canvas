@@ -31,9 +31,7 @@ describe("Net highlight", () => {
     project.documents[0]!.id = "top";
     project.documents[0]!.nets.push({
       id: "net-vdd-top",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     project.documents[0]!.connectivityEvidence.push({
@@ -48,9 +46,7 @@ describe("Net highlight", () => {
     const child = createEmptyDocument("child", "Child");
     child.nets.push({
       id: "net-vdd-child",
-      name: "vdd",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     child.connectivityEvidence.push({
@@ -113,10 +109,10 @@ describe("Net highlight", () => {
       },
     });
     top.nets.push(
-      { id: "net-a", scope: "local", terminals: [] },
+      { id: "net-a", terminals: [] },
       {
         id: "net-b",
-        scope: "local",
+
         terminals: [{ instanceId: "X1", pinName: "P" }],
       },
     );
@@ -142,7 +138,7 @@ describe("Net highlight", () => {
     child.instances.push({ id: "P1", symbolId: "port", placement: null });
     child.nets.push({
       id: "child-net",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     child.netlist = {
@@ -212,12 +208,12 @@ describe("Net highlight", () => {
     top.nets.push(
       {
         id: "parent-a",
-        scope: "local",
+
         terminals: [{ instanceId: "X1", pinName: "P" }],
       },
       {
         id: "parent-b",
-        scope: "local",
+
         terminals: [{ instanceId: "X2", pinName: "P" }],
       },
     );
@@ -225,7 +221,7 @@ describe("Net highlight", () => {
     child.instances.push({ id: "P1", symbolId: "port", placement: null });
     child.nets.push({
       id: "child-net",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     child.netlist = {

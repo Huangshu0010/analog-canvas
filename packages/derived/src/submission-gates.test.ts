@@ -96,7 +96,7 @@ describe("evaluateSubmissionGates", () => {
     document.nets = [
       {
         id: "n1",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I2", pinName: "L" },
@@ -104,7 +104,7 @@ describe("evaluateSubmissionGates", () => {
       },
       {
         id: "n2",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "R" },
           { instanceId: "I2", pinName: "R" },
@@ -121,7 +121,7 @@ describe("evaluateSubmissionGates", () => {
     document.nets = [
       {
         id: "n1",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I2", pinName: "L" },
@@ -159,7 +159,7 @@ describe("evaluateSubmissionGates", () => {
     document.nets = [
       {
         id: "channel",
-        scope: "local",
+
         terminals: [
           { instanceId: "M1", pinName: "D" },
           { instanceId: "M1", pinName: "S" },
@@ -170,7 +170,7 @@ describe("evaluateSubmissionGates", () => {
       },
       {
         id: "gate-net",
-        scope: "local",
+
         terminals: [{ instanceId: "M1", pinName: "G" }],
       },
     ];
@@ -194,7 +194,7 @@ describe("evaluateSubmissionGates", () => {
     document.nets = [
       {
         id: "n1",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I2", pinName: "L" },
@@ -202,7 +202,7 @@ describe("evaluateSubmissionGates", () => {
       },
       {
         id: "n2",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "R" },
           { instanceId: "I2", pinName: "R" },

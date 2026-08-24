@@ -55,12 +55,12 @@ describe("hierarchy navigation", () => {
     child.nets.push(
       {
         id: "child-l",
-        scope: "local",
+
         terminals: [{ instanceId: "P1", pinName: "P" }],
       },
       {
         id: "child-r",
-        scope: "local",
+
         terminals: [{ instanceId: "P2", pinName: "P" }],
       },
     );

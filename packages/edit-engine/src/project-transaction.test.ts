@@ -52,7 +52,7 @@ describe("Project structural transaction", () => {
     );
     child.nets.push({
       id: "net-in",
-      scope: "local",
+
       terminals: [
         { instanceId: "P1", pinName: "P" },
         { instanceId: "P2", pinName: "P" },
@@ -71,7 +71,7 @@ describe("Project structural transaction", () => {
     );
     project.documents[0]!.nets.push({
       id: "net-parent-in",
-      scope: "local",
+
       terminals: [{ instanceId: "X1", pinName: "IN" }],
     });
 
@@ -327,7 +327,7 @@ describe("Project structural transaction", () => {
     });
     child.nets.push({
       id: "net-in",
-      scope: "local",
+
       terminals: [{ instanceId: "port-in", pinName: "P" }],
     });
     child.netlist!.terminals.push({
@@ -350,7 +350,7 @@ describe("Project structural transaction", () => {
     project.documents[0]!.instances.push(caller);
     project.documents[0]!.nets.push({
       id: "net-parent",
-      scope: "local",
+
       terminals: [{ instanceId: "X1", pinName: "IN" }],
     });
 
@@ -397,7 +397,7 @@ describe("Project structural transaction", () => {
     });
     child.nets.push({
       id: "net-vout",
-      scope: "local",
+
       terminals: [{ instanceId: "port-vout", pinName: "P" }],
     });
     child.netlist!.terminals.push({
@@ -481,7 +481,7 @@ describe("Project structural transaction", () => {
     });
     child.nets.push({
       id: "net-unused",
-      scope: "local",
+
       terminals: [{ instanceId: "port-unused", pinName: "P" }],
     });
     child.netlist!.terminals.push({
@@ -534,12 +534,12 @@ describe("Project structural transaction", () => {
     child.nets.push(
       {
         id: "net-a",
-        scope: "local",
+
         terminals: [{ instanceId: "port-a", pinName: "P" }],
       },
       {
         id: "net-b",
-        scope: "local",
+
         terminals: [{ instanceId: "port-b", pinName: "P" }],
       },
     );
@@ -625,7 +625,7 @@ describe("Project structural transaction", () => {
     });
     child.nets.push({
       id: "net-in",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     child.netlist!.terminals.push({
@@ -640,7 +640,7 @@ describe("Project structural transaction", () => {
     parent.instances.push(hierarchyInstance("X1", "Child", child.id));
     parent.nets.push({
       id: "net-parent",
-      scope: "local",
+
       terminals: [{ instanceId: "X1", pinName: "IN" }],
     });
     parent.junctions.push({

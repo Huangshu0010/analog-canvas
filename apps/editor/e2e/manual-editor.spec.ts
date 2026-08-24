@@ -2770,7 +2770,6 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   // deliberately captures D.P, so named HORIZONTAL/VERTICAL claims would
   // correctly turn it into an electrical name conflict instead.
   project.documents[0]!.connectivityEvidence = [];
-  for (const net of project.documents[0]!.nets) delete net.name;
   await page.getByTestId("project-file").setInputFiles({
     name: "routing-example.icproj.json",
     mimeType: "application/json",
@@ -2830,15 +2829,11 @@ test("places a Ground pin onto a canonical Route and keeps real split topology",
   const document = project.documents[0]!;
   const horizontalNet = document.nets.find((net) => net.id === "net-h");
   if (!horizontalNet) throw new Error("Routing demo is missing net-h");
-  Object.assign(horizontalNet, {
-    name: "0",
-    scope: "global" as const,
-    powerDomain: "ground" as const,
-  });
   for (const evidence of document.connectivityEvidence) {
     if (evidence.kind === "name-claim" && evidence.netId === horizontalNet.id) {
       evidence.name = "0";
       evidence.scope = "global";
+      evidence.powerDomain = "ground";
     }
   }
   document.routes.push({
@@ -2943,9 +2938,17 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
   );
   document.nets.push({
     id: "net-ground",
-    name: "0",
-    scope: "global",
+
     terminals: [{ instanceId: "GND1", pinName: "0" }],
+  });
+  document.connectivityEvidence.push({
+    id: "claim-ground",
+    kind: "name-claim",
+    netId: "net-ground",
+    name: "0",
+    owner: { kind: "power-marker", objectId: "GND1" },
+    scope: "global",
+    powerDomain: "ground",
   });
 
   await page.goto("/editor");
@@ -3120,7 +3123,7 @@ test("requires warning review before exporting generated NoConnect nodes", async
   });
   document.nets.push({
     id: "net-in",
-    scope: "local",
+
     terminals: [{ instanceId: "R1", pinName: "1" }],
   });
   document.connectivityEvidence.push({
@@ -3673,7 +3676,7 @@ test("recomputes highlighted routed components after a Net Label is deleted", as
   document.nets = [
     {
       id: "net-historically-merged",
-      scope: "local",
+
       terminals: [],
     },
   ];

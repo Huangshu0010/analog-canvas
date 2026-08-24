@@ -26,8 +26,7 @@ describe("current terminal-only connectivity contract", () => {
       });
       document.nets.push({
         id: "net-in",
-        name: "VIN",
-        scope: "local",
+
         terminals: [{ instanceId: "VIN", pinName: "P" }],
       });
       const endpoint = {
@@ -54,7 +53,7 @@ describe("current terminal-only connectivity contract", () => {
     });
     document.nets.push({
       id: "net-out",
-      scope: "local",
+
       terminals: [{ instanceId: "VOUT", pinName: "P" }],
     });
     expect(electricalTopologyHash(project)).not.toBe(before);

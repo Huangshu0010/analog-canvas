@@ -46,15 +46,12 @@ describe("editor shell", () => {
     document.nets.push(
       {
         id: "net-vdd",
-        name: "VDD",
-        scope: "global",
-        powerDomain: "vdd",
+
         terminals: [{ instanceId: "Msupply", pinName: "B" }],
       },
       {
         id: "net-body-bias",
-        name: "Vbody",
-        scope: "local",
+
         terminals: [{ instanceId: "MbodyBias", pinName: "B" }],
       },
     );

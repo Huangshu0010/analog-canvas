@@ -105,7 +105,7 @@ describe("routing guidance", () => {
     document.nets.push(
       {
         id: "net-imported",
-        scope: "local",
+
         terminals: [
           { instanceId: "A", pinName: "P" },
           { instanceId: "B", pinName: "P" },
@@ -113,7 +113,7 @@ describe("routing guidance", () => {
       },
       {
         id: "net-authored",
-        scope: "local",
+
         terminals: [
           { instanceId: "C", pinName: "P" },
           { instanceId: "D", pinName: "P" },
@@ -159,7 +159,7 @@ describe("routing guidance", () => {
     );
     document.nets.push({
       id: "net-imported-body",
-      scope: "local",
+
       terminals: [
         { instanceId: "XM1", pinName: "B" },
         { instanceId: "P1", pinName: "P" },
@@ -206,12 +206,12 @@ describe("routing guidance", () => {
     document.nets.push(
       {
         id: "base-a",
-        scope: "local",
+
         terminals: [{ instanceId: "A", pinName: "P" }],
       },
       {
         id: "base-b",
-        scope: "local",
+
         terminals: [{ instanceId: "B", pinName: "P" }],
       },
     );

@@ -93,7 +93,7 @@ describe("bound annotation text", () => {
     });
     document.nets.push({
       id: "net-vout",
-      scope: "local",
+
       terminals: [{ instanceId: "port-object", pinName: "P" }],
     });
     document.netlist = {
@@ -149,8 +149,7 @@ describe("bound annotation text", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({
       id: "net-vin",
-      name: "V_{in,cm}",
-      scope: "local",
+
       terminals: [],
     });
     const annotation = {
@@ -185,7 +184,6 @@ describe("bound annotation text", () => {
     expect(flattenRichText(resolveAnnotationText(document, annotation))).toBe(
       "Vin,cm",
     );
-    document.nets[0]!.name = "V_{refp}";
     expect(flattenRichText(resolveAnnotationText(document, annotation))).toBe(
       "Vin,cm",
     );

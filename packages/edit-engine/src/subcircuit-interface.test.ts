@@ -69,7 +69,7 @@ describe("subcircuit interface proposals", () => {
     });
     document.nets.push({
       id: "net-out",
-      scope: "local",
+
       terminals: [{ instanceId: "X1", pinName: "OUT" }],
     });
 
@@ -152,7 +152,7 @@ describe("subcircuit interface proposals", () => {
     });
     document.nets.push({
       id: "net-out",
-      scope: "local",
+
       terminals: [{ instanceId: "X1", pinName: "OUT" }],
     });
 
