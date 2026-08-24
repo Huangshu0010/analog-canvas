@@ -245,28 +245,25 @@ async function submitOne(
   return payload.id;
 }
 
-describe("endless shuffled feed", () => {
-  async function seededPage(
+describe("newest-first gallery feed", () => {
+  async function galleryPage(
     env: Harness,
-    seed: string,
     cursor?: string,
-  ): Promise<{ ids: string[]; nextCursor: string | null; total: number }> {
-    const params = new URLSearchParams({ seed, limit: "3" });
+  ): Promise<{
+    entries: { id: string; createdAt: string }[];
+    nextCursor: string | null;
+  }> {
+    const params = new URLSearchParams({ limit: "3" });
     if (cursor) params.set("cursor", cursor);
     const response = await route(
       env,
       new Request(`${ORIGIN}/api/gallery?${params.toString()}`),
     );
     const payload = (await response.json()) as {
-      entries: { id: string }[];
+      entries: { id: string; createdAt: string }[];
       nextCursor: string | null;
-      total: number;
     };
-    return {
-      ids: payload.entries.map((entry) => entry.id),
-      nextCursor: payload.nextCursor,
-      total: payload.total,
-    };
+    return payload;
   }
 
   async function wallOf(env: Harness, count: number): Promise<string[]> {
@@ -278,53 +275,36 @@ describe("endless shuffled feed", () => {
     return ids;
   }
 
-  it("pages one shuffle without repeating or skipping a circuit", async () => {
+  it("pages newest-first without repeating or skipping a circuit", async () => {
     const env = environment();
     const wall = await wallOf(env, 7);
 
-    const first = await seededPage(env, "seed-a");
-    expect(first.total).toBe(7);
-    const second = await seededPage(env, "seed-a", first.nextCursor!);
-    const third = await seededPage(env, "seed-a", second.nextCursor!);
+    const first = await galleryPage(env);
+    const second = await galleryPage(env, first.nextCursor!);
+    const third = await galleryPage(env, second.nextCursor!);
     expect(third.nextCursor).toBeNull();
 
-    const seen = [...first.ids, ...second.ids, ...third.ids];
+    const entries = [...first.entries, ...second.entries, ...third.entries];
+    const seen = entries.map((entry) => entry.id);
     expect(seen).toHaveLength(7);
     expect(new Set(seen).size).toBe(7);
     expect([...seen].sort()).toEqual([...wall].sort());
+    const order = entries.map((entry) => `${entry.createdAt}|${entry.id}`);
+    expect(order).toEqual([...order].sort().reverse());
   });
 
-  it("gives the same order to the same seed and a different one to another", async () => {
+  it("stops when the newest-first cursor chain is exhausted", async () => {
     const env = environment();
-    await wallOf(env, 7);
-    const again = await seededPage(env, "seed-a");
-    const same = await seededPage(env, "seed-a");
-    expect(same.ids).toEqual(again.ids);
-
-    // Some seed orders the wall differently; the feed would be pointless if
-    // every visit saw the same column.
-    const orders = await Promise.all(
-      ["s1", "s2", "s3", "s4", "s5"].map((seed) => seededPage(env, seed)),
-    );
-    expect(orders.some((order) => order.ids.join() !== again.ids.join())).toBe(
-      true,
-    );
-  });
-
-  it("reports an exhausted round apart from an empty wall", async () => {
-    const env = environment();
-    // Nothing published: no next page and nothing to come back to, which is
-    // what tells the feed to stop rather than loop forever.
-    const empty = await seededPage(env, "seed-a");
-    expect(empty).toMatchObject({ ids: [], nextCursor: null, total: 0 });
+    const empty = await galleryPage(env);
+    expect(empty).toEqual({ entries: [], nextCursor: null });
 
     await wallOf(env, 2);
-    const full = await seededPage(env, "seed-a");
+    const full = await galleryPage(env);
+    expect(full.entries).toHaveLength(2);
     expect(full.nextCursor).toBeNull();
-    expect(full.total).toBe(2);
   });
 
-  it("keeps newest-first when no seed is asked for", async () => {
+  it("returns the same newest-first order on every read", async () => {
     const env = environment();
     await wallOf(env, 3);
     const read = async () => {
