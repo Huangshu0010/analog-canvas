@@ -2,18 +2,19 @@
 
 Status: `accepted`
 
-Current Project schema: `22`
+Current Project schema: `23`
 
 Primary owners: `packages/model` (current shape) and
 `packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`@icm/project-protocol` exposes `parseProject` and accepts Project schemas 21
-and 22. Schema 21 advances directly to 22 by adding deterministic Connectivity
-Evidence for existing explicit Net names, Net/power Labels, and imported Net
-source membership. Every reader returns the sole schema-22 in-memory Project
-shape; schema 20 and older and all future versions are rejected. There is no
-sequential migration registry or second in-memory Project shape.
+`@icm/project-protocol` exposes `parseProject`. During the Gallery convergence
+release it accepts schemas 21, 22, and 23, upgrades every accepted input to the
+sole schema-23 in-memory Project, and writes only schema 23. Schema 21 first
+gains deterministic Connectivity Evidence; schema 22 then drops the inert
+Base-Net name, scope, power-role, and origin projections. This temporary
+two-hop reader is removed after Gallery entries, history, and workspaces have
+all been rewritten to 23.
 
 ## Current authorities
 
@@ -64,8 +65,8 @@ sequential migration registry or second in-memory Project shape.
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 21 or 22
--> direct v21-to-v22 upgrade when needed -> strict schema-22 validation -> open
+read text -> parse JSON -> require Project schema 21, 22, or 23
+-> converge to schema 23 -> strict schema-23 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```
 
@@ -75,7 +76,7 @@ after explicit human approval in the editor.
 
 A migrated formal file is marked as needing save. The editor does not silently
 overwrite the source selected through the browser file input. Browser recovery
-records may be canonicalized to v22 only after a successful validated write.
+records may be canonicalized to v23 only after a successful validated write.
 
 Project entry does not repair duplicate canonical supply Nets (`0` or `VDD`).
 Duplicate folded Net names are invalid input and remain a blocking diagnostic
@@ -84,7 +85,7 @@ until the author explicitly renames or merges the Nets.
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in
 `fixtures/projects/compatibility-corpus.json`; its accepted entries must all be
-already canonical Project schema 22. The rejected corpus names expected
+already canonical Project schema 23. The rejected corpus names expected
 validation failures.
 
 Viewport, selection, undo history, canvas overlays, Agent credentials,

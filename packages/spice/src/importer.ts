@@ -336,7 +336,6 @@ function importDocument(
   );
   const nets: Net[] = cell.nets.map((net) => ({
     id: net.id,
-    scope: net.scope,
     terminals: visibleInstances
       .filter((instance) => importedInstanceById.has(instance.id))
       .flatMap((instance) =>

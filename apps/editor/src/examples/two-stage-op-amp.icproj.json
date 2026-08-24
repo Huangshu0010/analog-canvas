@@ -257,6 +257,29 @@
           "sizeScale": 1
         }
       ],
+      "connectivityEvidence": [
+        {
+          "id": "connectivity-evidence-b1565547153d949f",
+          "kind": "name-claim",
+          "name": "VDD",
+          "netId": "net-global-vdd",
+          "owner": {
+            "kind": "explicit-net-property"
+          },
+          "scope": "global"
+        },
+        {
+          "id": "connectivity-evidence-4f697832b597ca42",
+          "kind": "name-claim",
+          "name": "0",
+          "netId": "net-contact-gnd11",
+          "owner": {
+            "kind": "explicit-net-property"
+          },
+          "powerDomain": "ground",
+          "scope": "global"
+        }
+      ],
       "constraints": [],
       "drafting": {
         "objects": []
@@ -434,22 +457,10 @@
       "nets": [
         {
           "id": "net-global-vdd",
-          "name": "VDD",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "global",
           "terminals": []
         },
         {
           "id": "net-contact-gnd11",
-          "name": "0",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "ground",
-          "scope": "global",
           "terminals": [
             {
               "instanceId": "GND11",
@@ -463,11 +474,6 @@
         },
         {
           "id": "net-ui-1",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "X7",
@@ -485,11 +491,6 @@
         },
         {
           "id": "net-contact-p13",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "P13",
@@ -519,11 +520,6 @@
         },
         {
           "id": "net-split-f9c443f2edef6e67",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "X7",
@@ -700,7 +696,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 21,
+  "schemaVersion": 23,
   "source": {
     "dialect": "none",
     "entry": null,

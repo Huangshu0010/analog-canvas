@@ -242,7 +242,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       if (edit.kind !== "connect_endpoints" || !edit.newNetId) continue;
       projectedDocument.nets.push({
         id: edit.newNetId,
-        scope: "local",
         terminals: [edit.from, edit.to]
           .filter(
             (
@@ -656,8 +655,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     if (!namedNetDocument.nets.some((net) => net.id === candidateNetId)) {
       namedNetDocument.nets.push({
         id: candidateNetId,
-        scope: "local",
-        powerDomain: "none",
         terminals: [],
       });
     }

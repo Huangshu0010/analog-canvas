@@ -12,10 +12,14 @@ import {
 } from "./diagnostics.js";
 import {
   ProjectMigrationError,
-  upgradePreviousProject,
+  upgradeSchema21To22,
+  upgradeSchema22To23,
 } from "./previous-to-current.js";
-import { repairCurrentProjectEvidence } from "./transforms/project.js";
-import { PREVIOUS_PROJECT_SCHEMA_VERSION } from "./version.js";
+import { canonicalizeSchema23Project } from "./transforms/project.js";
+import {
+  GALLERY_MIGRATION_SCHEMA_VERSION,
+  PREVIOUS_PROJECT_SCHEMA_VERSION,
+} from "./version.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -87,14 +91,19 @@ export function tryParseProjectWithMetadata(
   }
 
   const sourceSchemaVersion = parsed.schemaVersion as number;
-  const migrated = sourceSchemaVersion === PREVIOUS_PROJECT_SCHEMA_VERSION;
-  if (sourceSchemaVersion !== CURRENT_PROJECT_SCHEMA_VERSION && !migrated) {
+  const migrated = sourceSchemaVersion !== CURRENT_PROJECT_SCHEMA_VERSION;
+  const supported = new Set([
+    GALLERY_MIGRATION_SCHEMA_VERSION,
+    PREVIOUS_PROJECT_SCHEMA_VERSION,
+    CURRENT_PROJECT_SCHEMA_VERSION,
+  ]);
+  if (!supported.has(sourceSchemaVersion)) {
     return {
       ok: false,
       diagnostics: [
         {
           code: "UNSUPPORTED_SCHEMA_VERSION",
-          message: `Project schemaVersion must be ${PREVIOUS_PROJECT_SCHEMA_VERSION} or ${CURRENT_PROJECT_SCHEMA_VERSION}`,
+          message: `Project schemaVersion must be ${GALLERY_MIGRATION_SCHEMA_VERSION}, ${PREVIOUS_PROJECT_SCHEMA_VERSION}, or ${CURRENT_PROJECT_SCHEMA_VERSION}`,
           path: ["schemaVersion"],
         },
       ],
@@ -103,9 +112,12 @@ export function tryParseProjectWithMetadata(
 
   let current: Record<string, unknown>;
   try {
-    current = repairCurrentProjectEvidence(
-      migrated ? upgradePreviousProject(parsed) : parsed,
-    );
+    current =
+      sourceSchemaVersion === GALLERY_MIGRATION_SCHEMA_VERSION
+        ? upgradeSchema22To23(upgradeSchema21To22(parsed))
+        : sourceSchemaVersion === PREVIOUS_PROJECT_SCHEMA_VERSION
+          ? upgradeSchema22To23(parsed)
+          : canonicalizeSchema23Project(parsed);
   } catch (error) {
     if (error instanceof ProjectMigrationError) {
       return {

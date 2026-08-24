@@ -146,8 +146,6 @@ describe("drawn VDD rail construction", () => {
     expect(result.document.nets).toMatchObject([
       {
         id: "net-power-vdd1",
-        scope: "local",
-        powerDomain: "none",
       },
     ]);
     expect(

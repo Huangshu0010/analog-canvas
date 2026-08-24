@@ -331,6 +331,126 @@
           "sizeScale": 1
         }
       ],
+      "connectivityEvidence": [
+        {
+          "id": "connectivity-evidence-25e634a2eea84516",
+          "kind": "name-claim",
+          "name": "VDD",
+          "netId": "net-power-vdd1",
+          "owner": {
+            "kind": "explicit-net-property"
+          },
+          "powerDomain": "vdd",
+          "scope": "local"
+        },
+        {
+          "id": "connectivity-evidence-43d121a9b2699894",
+          "kind": "name-claim",
+          "name": "Vout",
+          "netId": "net-ui-8",
+          "owner": {
+            "kind": "explicit-net-property"
+          },
+          "scope": "local"
+        },
+        {
+          "id": "connectivity-evidence-e49301de7c4e842c",
+          "kind": "name-claim",
+          "name": "Vin1",
+          "netId": "net-contact-p1",
+          "owner": {
+            "kind": "explicit-net-property"
+          },
+          "scope": "local"
+        },
+        {
+          "id": "connectivity-evidence-3505353a1aed4e2e",
+          "kind": "name-claim",
+          "name": "Vin2",
+          "netId": "net-contact-p2",
+          "owner": {
+            "kind": "explicit-net-property"
+          },
+          "scope": "local"
+        },
+        {
+          "id": "connectivity-evidence-0ee42d8cf01c7bbb",
+          "kind": "name-claim",
+          "name": "Vb",
+          "netId": "net-contact-p4",
+          "owner": {
+            "kind": "explicit-net-property"
+          },
+          "scope": "local"
+        },
+        {
+          "id": "connectivity-evidence-5c878c49425c1514",
+          "kind": "name-claim",
+          "name": "0",
+          "netId": "net-contact-gnd1",
+          "owner": {
+            "kind": "explicit-net-property"
+          },
+          "powerDomain": "ground",
+          "scope": "global"
+        },
+        {
+          "id": "connectivity-evidence-362a0827f36de02c",
+          "kind": "name-claim",
+          "name": "VDD",
+          "netId": "net-power-vdd1",
+          "owner": {
+            "kind": "power-marker",
+            "objectId": "junction-vdd1-end"
+          },
+          "powerDomain": "vdd",
+          "scope": "local"
+        },
+        {
+          "id": "connectivity-evidence-6609436bdf68a3a6",
+          "kind": "name-claim",
+          "name": "Vin1",
+          "netId": "net-contact-p1",
+          "owner": {
+            "annotationId": "instance-label-P1",
+            "kind": "net-label"
+          },
+          "scope": "local"
+        },
+        {
+          "id": "connectivity-evidence-34bd0e453fcb04a8",
+          "kind": "name-claim",
+          "name": "Vin2",
+          "netId": "net-contact-p2",
+          "owner": {
+            "annotationId": "instance-label-P2",
+            "kind": "net-label"
+          },
+          "scope": "local"
+        },
+        {
+          "id": "connectivity-evidence-f799d25adc817336",
+          "kind": "name-claim",
+          "name": "Vout",
+          "netId": "net-ui-8",
+          "owner": {
+            "annotationId": "instance-label-P3",
+            "kind": "net-label"
+          },
+          "scope": "local"
+        },
+        {
+          "id": "connectivity-evidence-f33b12f0d8af9c38",
+          "kind": "name-claim",
+          "name": "Vb",
+          "netId": "net-contact-p4",
+          "owner": {
+            "annotationId": "instance-label-P4",
+            "kind": "net-label"
+          },
+          "scope": "local"
+        }
+      ],
       "constraints": [],
       "drafting": {
         "objects": []
@@ -584,11 +704,11 @@
         }
       ],
       "layoutGroups": [],
-      "name": "Main",
       "mosBulkDefaults": {
         "nmosNetId": "net-contact-gnd1",
         "pmosNetId": "net-power-vdd1"
       },
+      "name": "Main",
       "netlist": {
         "formalParameters": [],
         "name": "Main",
@@ -597,12 +717,6 @@
       "nets": [
         {
           "id": "net-power-vdd1",
-          "name": "VDD",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "vdd",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "M2",
@@ -624,11 +738,6 @@
         },
         {
           "id": "net-ui-7",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "M2",
@@ -650,12 +759,6 @@
         },
         {
           "id": "net-ui-8",
-          "name": "Vout",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "M4",
@@ -673,11 +776,6 @@
         },
         {
           "id": "net-ui-15",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "M3",
@@ -695,12 +793,6 @@
         },
         {
           "id": "net-contact-p1",
-          "name": "Vin1",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "P1",
@@ -714,12 +806,6 @@
         },
         {
           "id": "net-contact-p2",
-          "name": "Vin2",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "P2",
@@ -733,12 +819,6 @@
         },
         {
           "id": "net-contact-p4",
-          "name": "Vb",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "P4",
@@ -752,12 +832,6 @@
         },
         {
           "id": "net-contact-gnd1",
-          "name": "0",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "ground",
-          "scope": "global",
           "terminals": [
             {
               "instanceId": "GND1",
@@ -1051,7 +1125,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 21,
+  "schemaVersion": 23,
   "source": {
     "dialect": "none",
     "entry": null,

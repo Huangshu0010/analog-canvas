@@ -1517,8 +1517,6 @@ describe("Edit Transaction envelope", () => {
         nets: [
           {
             id: "net-ui-2",
-            scope: "local",
-            powerDomain: "none",
             terminals: [],
           },
         ],

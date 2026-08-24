@@ -1,6 +1,6 @@
 # Project File Compatibility
 
-The released Project schema version is `22`. It retains schematic-only
+The released Project schema version is `23`. It retains schematic-only
 hierarchy integrity, a Project structural revision, stable formal Cell ports,
 and definition-level Cell symbol presentation. It also has one typed Instance
 netlist authority, formal Cell parameters, and Project-local external
@@ -10,16 +10,15 @@ from its internal schematic or netlist reference until the user edits it. A
 free Port is identified by its Net name; a formal Cell Pin is identified by its
 terminal name, such as `Vout`. Their bound annotations may persist same-text
 RichText formatting but cannot store a divergent alias. A
-canonical v22 file can be opened, saved, reopened, and saved again without
+canonical v23 file can be opened, saved, reopened, and saved again without
 byte drift.
 
-Schema v21 is accepted through one direct upgrade to v22. The upgrade adds
-deterministic ownership evidence for retained Net names, labels, and imported
-source membership without changing the visible drawing. The next save writes
-v22. The
-original file is never overwritten silently. Schema v20 and older, and
-versions newer than v22, are rejected; there is no accumulating
-migration registry.
+During Gallery convergence, schemas v21 and v22 are accepted through a bounded
+upgrade to v23. The upgrade adds deterministic ownership evidence where needed
+and removes inert Base-Net projections without changing the visible drawing.
+The next save writes v23. The original file is never overwritten silently.
+Schema v20 and older, and versions newer than v23, are rejected. The temporary
+v21 hop is removed after online Gallery storage has converged.
 
 The canonical-current corpus at
 [`fixtures/projects/compatibility-corpus.json`](../../fixtures/projects/compatibility-corpus.json)
@@ -31,7 +30,7 @@ Retired fields such as first-class
 
 An incompatible Project is rejected before it can replace the current browser
 Project. Conversion, when needed, is an explicit external operation that must
-produce and validate a complete v21 candidate before a human chooses to load it.
+produce and validate a complete v23 candidate before a human chooses to load it.
 
 The editor never silently merges duplicate canonical Ground (`0`) or VDD Nets.
 Duplicate folded Net names are invalid and remain diagnostics until the author

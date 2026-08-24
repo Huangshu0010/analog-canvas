@@ -95,10 +95,10 @@ Its editor-local VDD artwork is preview-only and is not registered with the
 product Symbol Resolver. Before the first click the artwork follows the
 pointer; after the first click the preview becomes a straight horizontal or
 vertical rail, selected by the pointer's dominant axis. The second click
-  creates a Base Net with the selected global supply claim, creates two route-anchor
+creates a Base Net with the selected global supply claim, creates two route-anchor
 Junctions and one `power-rail` Route, and persists one net-name-bound RichText
-  power-label annotation. Same-name supply claims resolve to one Logical Net
-  without a physical merge. The Route is the only rail geometry: the annotation adds no
+power-label annotation. Same-name supply claims resolve to one Logical Net
+without a physical merge. The Route is the only rail geometry: the annotation adds no
 supply bar or terminal stub, and the semantic name uses the shared Razavi
 schematic-math style. It creates no VDD Instance and exits placement after the
 commit. Deleting the rail also deletes its power label and rail-only Junctions;
@@ -341,7 +341,7 @@ Open, demo load, restore, and human-approved staged import replace the entire
 Project through one replacement boundary; they are not Edit Engine
 transactions. Replacement cancels pending recovery for the outgoing Project
 and terminates its Agent session. A complete schema-21 Project may be upgraded
-at the read boundary and then enters the editor only as schema-22; migrated
+at the read boundary and then enters the editor only as schema-23; migrated
 files are marked as needing save.
 
 Selection, viewport, active tool, previews, Agent tokens, and approval UI are

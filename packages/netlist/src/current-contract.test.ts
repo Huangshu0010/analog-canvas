@@ -25,7 +25,7 @@ function analyzeDesignNetlist(project: CircuitProject) {
         netId: net.id,
         name: net.name,
         owner: { kind: "explicit-net-property" },
-        scope: net.scope,
+        scope: net.scope ?? "local",
         ...(net.powerDomain === "vdd" || net.powerDomain === "ground"
           ? { powerDomain: net.powerDomain }
           : {}),

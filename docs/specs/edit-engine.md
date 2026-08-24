@@ -143,7 +143,7 @@ Document revision once and is restored by one Undo. The retired Agent product
 categorizes these guarded UI lifecycle edits as unsupported.
 
 `upsert_connectivity_evidence` and `remove_connectivity_evidence` are the only
-atomic writers for the schema-22 evidence list. Upsert replaces evidence with
+atomic writers for the schema-23 evidence list. Upsert replaces evidence with
 the same ID or inserts a new record after checking the shared Document object
 namespace; final Document validation checks every Net and owner reference.
 Removing an Instance, Net Label, Junction, or Route also removes only

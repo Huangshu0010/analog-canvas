@@ -2741,9 +2741,14 @@ test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
   const savedDocument = JSON.parse(savedWithoutLabel.toString("utf8"))
     .documents[0];
   expect(savedDocument.annotations).toHaveLength(0);
-  expect(
-    savedDocument.nets.find((net: { id: string }) => net.id === "net-h"),
-  ).toMatchObject({ name: "HORIZONTAL" });
+  expect(savedDocument.connectivityEvidence).toContainEqual(
+    expect.objectContaining({
+      kind: "name-claim",
+      netId: "net-h",
+      name: "HORIZONTAL",
+      owner: { kind: "explicit-net-property" },
+    }),
+  );
   await page.getByTestId("project-file").setInputFiles({
     name: "legacy-net-label-reopened.icproj.json",
     mimeType: "application/json",

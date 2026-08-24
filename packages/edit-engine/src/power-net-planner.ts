@@ -92,8 +92,6 @@ export function planEnsurePowerNet(
   if (!candidate) {
     planningDocument.nets.push({
       id: request.candidateNetId,
-      scope: "local",
-      powerDomain: "none",
       terminals: [],
     });
   }

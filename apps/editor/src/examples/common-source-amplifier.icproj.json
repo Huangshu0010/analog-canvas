@@ -428,6 +428,42 @@
           "sizeScale": 1.1
         }
       ],
+      "connectivityEvidence": [
+        {
+          "id": "connectivity-evidence-1e6705e4ac6d8747",
+          "kind": "name-claim",
+          "name": "0",
+          "netId": "net-global-0",
+          "owner": {
+            "kind": "explicit-net-property"
+          },
+          "powerDomain": "ground",
+          "scope": "global"
+        },
+        {
+          "id": "connectivity-evidence-b6abc746278caab4",
+          "kind": "name-claim",
+          "name": "VDD",
+          "netId": "net-power-vdd7",
+          "owner": {
+            "kind": "explicit-net-property"
+          },
+          "powerDomain": "vdd",
+          "scope": "global"
+        },
+        {
+          "id": "connectivity-evidence-4abcbfaaa1acf7fc",
+          "kind": "name-claim",
+          "name": "VDD",
+          "netId": "net-power-vdd7",
+          "owner": {
+            "kind": "power-marker",
+            "objectId": "junction-vdd7-end"
+          },
+          "powerDomain": "vdd",
+          "scope": "global"
+        }
+      ],
       "constraints": [],
       "drafting": {
         "objects": [
@@ -873,12 +909,6 @@
       "nets": [
         {
           "id": "net-global-0",
-          "name": "0",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "ground",
-          "scope": "global",
           "terminals": [
             {
               "instanceId": "M2",
@@ -896,11 +926,6 @@
         },
         {
           "id": "net-ui-4",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "ground",
-          "scope": "global",
           "terminals": [
             {
               "instanceId": "GND5-copy-2-copy-3-copy-4",
@@ -914,11 +939,6 @@
         },
         {
           "id": "net-ui-5",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "V6",
@@ -932,11 +952,6 @@
         },
         {
           "id": "net-ui-9",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "ground",
-          "scope": "global",
           "terminals": [
             {
               "instanceId": "C1",
@@ -950,11 +965,6 @@
         },
         {
           "id": "net-split-315c27b4f6e1c409",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "ground",
-          "scope": "global",
           "terminals": [
             {
               "instanceId": "R3",
@@ -976,12 +986,6 @@
         },
         {
           "id": "net-power-vdd7",
-          "name": "VDD",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "vdd",
-          "scope": "global",
           "terminals": [
             {
               "instanceId": "VDD7",
@@ -999,11 +1003,6 @@
         },
         {
           "id": "net-split-1143160ec6fc8d88",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "C1-copy-1",
@@ -1293,7 +1292,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 21,
+  "schemaVersion": 23,
   "source": {
     "dialect": "none",
     "entry": null,

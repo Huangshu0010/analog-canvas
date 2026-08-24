@@ -1900,8 +1900,6 @@ export function executeTransaction(
           }
           draft.nets.push({
             id: edit.netId,
-            scope: "local",
-            powerDomain: "none",
             terminals: [],
           });
           changedObjectIds.add(edit.netId);
@@ -2383,8 +2381,6 @@ export function executeTransaction(
             const groupNetId = netIdByEndpoint.get(group[0]!)!;
             draft.nets.push({
               id: groupNetId,
-              scope: "local",
-              powerDomain: "none",
               terminals: terminalsFor(groupNetId),
             });
             changedObjectIds.add(groupNetId);
@@ -2469,8 +2465,6 @@ export function executeTransaction(
           netId = edit.newNetId;
           draft.nets.push({
             id: netId,
-            scope: "local",
-            powerDomain: "none",
             terminals: [],
           });
           changedObjectIds.add(netId);
@@ -2544,8 +2538,6 @@ export function executeTransaction(
         if (!existingSupplyNet) {
           draft.nets.push({
             id: edit.netId,
-            scope: "local",
-            powerDomain: "none",
             terminals: [],
           });
         }

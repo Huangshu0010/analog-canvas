@@ -20,7 +20,7 @@ export class ProjectMigrationError extends Error {
  * while deterministic evidence is added beside them. Historical destructive
  * merge lineage cannot be reconstructed and is never fabricated here.
  */
-export function upgradePreviousProject(
+export function upgradeSchema21To22(
   raw: Record<string, unknown>,
 ): Record<string, unknown> {
   const project = structuredClone(raw);
@@ -98,6 +98,13 @@ export function upgradePreviousProject(
         const powerDomain = legacyPowerDomain(net);
         const ownerKind =
           annotation.kind === "power-label" ? "power-marker" : "net-label";
+        const markerObjectId =
+          annotation.kind === "power-label" &&
+          isRecord(annotation.anchor) &&
+          annotation.anchor.kind === "object" &&
+          typeof annotation.anchor.objectId === "string"
+            ? annotation.anchor.objectId
+            : annotation.id;
         evidence.push({
           id: evidenceId(
             documentId,
@@ -110,7 +117,7 @@ export function upgradePreviousProject(
           name,
           owner:
             ownerKind === "power-marker"
-              ? { kind: "power-marker", objectId: annotation.id }
+              ? { kind: "power-marker", objectId: markerObjectId }
               : { kind: "net-label", annotationId: annotation.id },
           scope: net.scope === "global" ? "global" : "local",
           ...(powerDomain ? { powerDomain } : {}),
@@ -119,7 +126,7 @@ export function upgradePreviousProject(
       rawDocument.connectivityEvidence = evidence;
     }
   }
-  project.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;
+  project.schemaVersion = 22;
   return project;
 }
 
@@ -129,7 +136,7 @@ export function upgradePreviousProject(
  * load-boundary normalization merely restores information that the same file
  * already carries in its inert schema-21 Net projection.
  */
-export function repairCurrentProjectEvidence(
+export function repairSchema22ProjectEvidence(
   raw: Record<string, unknown>,
 ): Record<string, unknown> {
   const project = structuredClone(raw);
@@ -144,13 +151,13 @@ export function repairCurrentProjectEvidence(
         typeof net.id === "string" ? [[net.id, net] as const] : [],
       ),
     );
-    const powerLabelIds = new Set(
+    const powerLabelsById = new Map(
       (Array.isArray(rawDocument.annotations)
         ? rawDocument.annotations.filter(isRecord)
         : []
       ).flatMap((annotation) =>
         annotation.kind === "power-label" && typeof annotation.id === "string"
-          ? [annotation.id]
+          ? [[annotation.id, annotation] as const]
           : [],
       ),
     );
@@ -176,12 +183,59 @@ export function repairCurrentProjectEvidence(
       if (
         owner?.kind === "net-label" &&
         typeof owner.annotationId === "string" &&
-        powerLabelIds.has(owner.annotationId)
+        powerLabelsById.has(owner.annotationId)
       ) {
-        claim.owner = { kind: "power-marker", objectId: owner.annotationId };
+        const annotation = powerLabelsById.get(owner.annotationId);
+        const anchor = isRecord(annotation?.anchor) ? annotation.anchor : null;
+        claim.owner = {
+          kind: "power-marker",
+          objectId:
+            anchor?.kind === "object" && typeof anchor.objectId === "string"
+              ? anchor.objectId
+              : owner.annotationId,
+        };
+      } else if (
+        owner?.kind === "power-marker" &&
+        typeof owner.objectId === "string" &&
+        powerLabelsById.has(owner.objectId)
+      ) {
+        const annotation = powerLabelsById.get(owner.objectId);
+        const anchor = isRecord(annotation?.anchor) ? annotation.anchor : null;
+        if (anchor?.kind === "object" && typeof anchor.objectId === "string") {
+          claim.owner = { kind: "power-marker", objectId: anchor.objectId };
+        }
       }
     }
   }
+  return project;
+}
+
+/** Schema 23 makes Base Nets purely physical; Evidence owns every logical fact. */
+export function upgradeSchema22To23(
+  raw: Record<string, unknown>,
+): Record<string, unknown> {
+  const project = repairSchema22ProjectEvidence(raw);
+  return canonicalizeSchema23Project(project);
+}
+
+/** Remove convergence-only projections from an already-versioned schema-23 input. */
+export function canonicalizeSchema23Project(
+  raw: Record<string, unknown>,
+): Record<string, unknown> {
+  const project = structuredClone(raw);
+  if (Array.isArray(project.documents)) {
+    for (const rawDocument of project.documents) {
+      if (!isRecord(rawDocument) || !Array.isArray(rawDocument.nets)) continue;
+      for (const rawNet of rawDocument.nets) {
+        if (!isRecord(rawNet)) continue;
+        delete rawNet.name;
+        delete rawNet.scope;
+        delete rawNet.powerDomain;
+        delete rawNet.origin;
+      }
+    }
+  }
+  project.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;
   return project;
 }
 

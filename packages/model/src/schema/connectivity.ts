@@ -4,13 +4,14 @@ import { StableIdSchema } from "./common.js";
 import { TerminalRefSchema } from "./instance.js";
 import { SourceSpanSchema } from "./source.js";
 
+/** Logical-Net electrical role shared by derived and Agent contracts. */
 export const NetPowerDomainSchema = z.enum([
   "none",
   "vdd",
   "ground",
   "conflict",
 ]);
-/** Legacy schema-21 import lineage. Runtime connectivity never reads it. */
+/** Temporary schema-23 convergence input; removed after Gallery migration. */
 export const NetOriginSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("authored") }),
   z.strictObject({
@@ -18,16 +19,17 @@ export const NetOriginSchema = z.discriminatedUnion("kind", [
     sourceNetIds: z.array(StableIdSchema).min(1).max(256),
   }),
 ]);
+
 export const NetSchema = z.strictObject({
   id: StableIdSchema,
-  /** @deprecated Inert schema-21 projection; Logical Net evidence is authoritative. */
+  /** Temporary migration projection; never authoritative in schema 23. */
   name: z.string().min(1).optional(),
-  /** @deprecated Base Nets are physical; marker evidence carries logical scope. */
-  scope: z.enum(["local", "global"]),
-  /** @deprecated Base Nets have no power role; retained until schema-23 cleanup. */
+  /** Temporary migration projection; never authoritative in schema 23. */
+  scope: z.enum(["local", "global"]).optional(),
+  /** Temporary migration projection; never authoritative in schema 23. */
   powerDomain: NetPowerDomainSchema.optional(),
   terminals: z.array(TerminalRefSchema),
-  /** @deprecated Import lineage is represented by spice-source evidence. */
+  /** Temporary migration projection; never authoritative in schema 23. */
   origin: NetOriginSchema.optional(),
 });
 

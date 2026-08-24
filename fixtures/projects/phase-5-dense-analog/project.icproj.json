@@ -192,12 +192,6 @@
       "nets": [
         {
           "id": "net-vinp",
-          "name": "VINP",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "VINP",
@@ -211,12 +205,6 @@
         },
         {
           "id": "net-vout",
-          "name": "VOUT",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "M1",
@@ -234,11 +222,6 @@
         },
         {
           "id": "net-tail",
-          "origin": {
-            "kind": "authored"
-          },
-          "powerDomain": "none",
-          "scope": "local",
           "terminals": [
             {
               "instanceId": "M1",
@@ -376,7 +359,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-phase-5-dense-analog",
   "name": "Current Differential Stage",
-  "schemaVersion": 22,
+  "schemaVersion": 23,
   "source": {
     "dialect": "none",
     "entry": null,

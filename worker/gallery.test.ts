@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 
 import { createEmptyProject, CURRENT_PROJECT_SCHEMA_VERSION } from "@icm/model";
-import { serializeProject } from "@icm/project-protocol";
+import { parseProject, serializeProject } from "@icm/project-protocol";
 
 import {
   GALLERY_DAILY_SUBMISSION_LIMIT,
@@ -122,7 +122,7 @@ function previousVersionText(): string {
 
 function previousPowerRailVersionText(): string {
   const raw = JSON.parse(projectText("Legacy VDD")) as any;
-  raw.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION - 1;
+  raw.schemaVersion = 21;
   const document = raw.documents[0];
   delete document.connectivityEvidence;
   document.nets.push({
@@ -171,7 +171,7 @@ function previousPowerRailVersionText(): string {
 
 function brokenCurrentPowerRailText(): string {
   const raw = JSON.parse(previousPowerRailVersionText()) as any;
-  raw.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;
+  raw.schemaVersion = 22;
   raw.documents[0].connectivityEvidence = [
     {
       id: "legacy-explicit-vdd",
@@ -1589,11 +1589,12 @@ describe("gallery administration", () => {
         headers: cookieHeaders(adminCookie),
       }),
     );
-    const report = (await maintenance.json()) as {
-      upgraded: number;
-      failed: unknown[];
-    };
-    expect(report).toMatchObject({ upgraded: 1, failed: [] });
+    expect(await maintenance.json()).toMatchObject({
+      applied: true,
+      ready: 1,
+      failures: [],
+      targetSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION,
+    });
 
     const detail = await route(env, new Request(`${ORIGIN}/api/gallery/${id}`));
     const payload = (await detail.json()) as {
@@ -1636,7 +1637,12 @@ describe("gallery administration", () => {
         headers: cookieHeaders(adminCookie),
       }),
     );
-    expect(await maintenance.json()).toMatchObject({ upgraded: 1, failed: [] });
+    expect(await maintenance.json()).toMatchObject({
+      applied: true,
+      ready: 1,
+      failures: [],
+      targetSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION,
+    });
 
     const detail = await route(env, new Request(`${ORIGIN}/api/gallery/${id}`));
     const payload = (await detail.json()) as { projectText: string };
@@ -1654,7 +1660,143 @@ describe("gallery administration", () => {
       env,
       new Request(`${ORIGIN}/api/gallery/${id}/preview.svg`),
     );
-    expect(await preview.text()).toContain('stroke-width="3.24"');
+    expect(await preview.text()).toBe("<svg/>");
+  });
+
+  it("backs up, dry-runs, and atomically converges every Project table", async () => {
+    const env = environment();
+    const adminCookie = await adminOf(env);
+    const id = await submitOne(env, "Schema convergence", {
+      cookie: adminCookie,
+    });
+    await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}`, {
+        method: "PUT",
+        headers: {
+          Origin: ORIGIN,
+          Cookie: adminCookie,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          name: "Schema convergence v2",
+          projectText: projectText("Schema convergence v2"),
+        }),
+      }),
+    );
+    const versionId = env.gallerySql
+      .exec<{ id: string }>(
+        "SELECT id FROM gallery_entry_versions WHERE entry_id = ?",
+        id,
+      )
+      .one().id;
+    env.gallerySql.exec(
+      "UPDATE gallery_entries SET schema_version = ?, project_text = ? WHERE id = ?",
+      22,
+      previousVersionText(),
+      id,
+    );
+    env.gallerySql.exec(
+      "UPDATE gallery_entry_versions SET schema_version = ?, project_text = ? WHERE id = ?",
+      21,
+      previousPowerRailVersionText(),
+      versionId,
+    );
+    env.gallerySql.exec(
+      `INSERT INTO workspace_slots
+       (id, user_id, name, saved_at, seq, schema_version, project_text)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      "workspace-legacy",
+      "user-legacy",
+      "Legacy workspace",
+      "2026-08-24T00:00:00.000Z",
+      1,
+      21,
+      previousPowerRailVersionText(),
+    );
+
+    const backup = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/maintenance/schema-backup`, {
+        headers: cookieHeaders(adminCookie),
+      }),
+    );
+    expect(backup.status).toBe(200);
+    expect(backup.headers.get("content-disposition")).toContain("attachment");
+    const backupPayload = (await backup.json()) as any;
+    expect(backupPayload.tables.galleryEntries).toHaveLength(1);
+    expect(backupPayload.tables.galleryEntryVersions).toHaveLength(1);
+    expect(backupPayload.tables.workspaceSlots).toHaveLength(1);
+
+    const dryRun = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/maintenance/schema23`, {
+        method: "POST",
+        headers: {
+          ...cookieHeaders(adminCookie),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ apply: false }),
+      }),
+    );
+    expect(await dryRun.json()).toMatchObject({
+      applied: false,
+      ready: 3,
+      failures: [],
+      inventory: {
+        gallery_entries: { "22": 1 },
+        gallery_entry_versions: { "21": 1 },
+        workspace_slots: { "21": 1 },
+      },
+    });
+    expect(
+      env.gallerySql
+        .exec<{ schema_version: number }>(
+          "SELECT schema_version FROM gallery_entries WHERE id = ?",
+          id,
+        )
+        .one().schema_version,
+    ).toBe(22);
+
+    const applied = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/maintenance/schema23`, {
+        method: "POST",
+        headers: {
+          ...cookieHeaders(adminCookie),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ apply: true }),
+      }),
+    );
+    expect(await applied.json()).toMatchObject({
+      applied: true,
+      ready: 3,
+      failures: [],
+    });
+    for (const table of [
+      "gallery_entries",
+      "gallery_entry_versions",
+      "workspace_slots",
+    ]) {
+      const row = env.gallerySql
+        .exec<{
+          id: string;
+          schema_version: number;
+          project_text: string;
+        }>(`SELECT id, schema_version, project_text FROM ${table}`)
+        .one();
+      expect(row.schema_version).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
+      expect(parseProject(row.project_text).schemaVersion).toBe(
+        CURRENT_PROJECT_SCHEMA_VERSION,
+      );
+      const stored = JSON.parse(row.project_text) as any;
+      for (const document of stored.documents) {
+        for (const net of document.nets) {
+          expect(Object.keys(net).sort()).toEqual(["id", "terminals"]);
+        }
+      }
+    }
   });
 });
 
