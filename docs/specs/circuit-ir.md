@@ -4,8 +4,6 @@ Status: `accepted`
 
 Version: `1.2-spice-baseline`
 
-Owning phase: `Phase 0/2`
-
 Primary owner: `packages/spice`
 
 ## Purpose
@@ -85,9 +83,9 @@ with a `placement` property is rejected as renderer leakage.
 
 ## Compatibility and migration
 
-Phase 2 expands the boundary with parsing evidence while preserving these
-separation rules. Dialect-specific syntax remains in frontend projections, not
-in persistent Documents.
+Parsing evidence expands the boundary while preserving these separation rules.
+Dialect-specific syntax remains in frontend projections, not in persistent
+Documents.
 
 ## Deterministic validation
 
@@ -98,4 +96,5 @@ in persistent Documents.
 
 ## Open decisions
 
-- The full SPICE3/ngspice compatibility matrix is selected in Phase 4.
+- Full SPICE3/ngspice compatibility coverage remains outside the current
+  accepted profile.

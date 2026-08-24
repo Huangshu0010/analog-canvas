@@ -4,8 +4,6 @@ Status: `accepted`
 
 Version: `1.7`
 
-Owning phase: `Phase 1/5`
-
 Primary owner: `packages/render-svg`, `apps/editor`
 
 ## Purpose
@@ -149,4 +147,4 @@ correct.
 
 ## Open decisions
 
-- Font embedding and cross-format metric calibration remain Phase 7 work.
+- Font embedding and cross-format metric calibration remain deferred.

@@ -4,13 +4,12 @@ Status: `accepted`
 
 Version: `1.13`
 
-Owning phase: `Phase 0/1/8`
-
 Primary owner: `packages/edit-engine`
 
 Related ADRs: [`0013-project-connectivity-index.md`](../adr/0013-project-connectivity-index.md),
-[`0014-resolved-route-geometry.md`](../adr/0014-resolved-route-geometry.md).
-Routing planners (WP-R4) read the unified connectivity index and resolved route
+[`0014-resolved-route-geometry.md`](../adr/0014-resolved-route-geometry.md),
+[`0041-physical-cut-and-endpoint-readiness.md`](../adr/0041-physical-cut-and-endpoint-readiness.md).
+Routing planners read the unified connectivity index and resolved route
 geometry as read-only input; the Edit Engine remains the sole mutation path and
 validates every edit independently without trusting the planner.
 
@@ -122,16 +121,17 @@ Junction, flightline, Pin, or SPICE instance. A `transact` dry run returns:
 resolved anchors, invalid/unresolved attachments, possible overlaps with
 electrical objects, and the actual changed IDs.
 
-Deleting an anchor target is non-cascading and non-rejecting: the same
-transaction that removes a Route or Instance/Junction updates each
-attached object's `fallbackPosition` and marks its anchor unresolved, but does
-not delete the attached object and does not reject the delete. Content locks do
-not block this fallback maintenance. `upsert_drafting_object` for a
-floating-symbol validates `symbolId` against the Symbol Resolver and rejects a
-non-`decorative` entry or a `decorative` entry whose definition contains a
-terminal, mirroring `add_instance` Symbol validation. Locked drafting objects
-reject user replacement or removal, matching the existing lock
-discipline.
+Deleting an Instance or Junction anchor target is non-cascading and
+non-rejecting: the same transaction updates each attached object's
+`fallbackPosition` and marks its anchor unresolved, but does not delete the
+attached object. Route-anchored annotations are explicit deletion closure:
+`remove_route_geometry` and `cut_connection` reject until a preceding typed
+edit removes them. Content locks do not block fallback maintenance.
+`upsert_drafting_object` for a floating-symbol validates `symbolId` against the
+Symbol Resolver and rejects a non-`decorative` entry or a `decorative` entry
+whose definition contains a terminal, mirroring `add_instance` Symbol
+validation. Locked drafting objects reject user replacement or removal,
+matching the existing lock discipline.
 
 The old unscoped `clear_document` edit is retired. Cell removal now uses three
 atomic, browser-editor lifecycle edits planned by `cell-reset-planner.ts`:
@@ -189,7 +189,7 @@ Cell/caller summaries are derived data owned by `@icm/derived`.
   `connectivity-modified`; geometry-only edits preserve the prior status
   transition.
 
-Phase 8 topology operations have these preconditions:
+Topology operations have these preconditions:
 
 - `add_instance` requires a globally unused object ID and resolvable Symbol.
 - `set_instance_symbol` requires a resolvable target Symbol/variant. Every
@@ -252,15 +252,14 @@ Phase 8 topology operations have these preconditions:
   before removing the source Net.
 - `disconnect_endpoint` requires all route geometry that uses the endpoint to
   be removed explicitly first.
-- `cut_connection` requires one existing unlocked Route. If the Net is fully
-  routed, removing a bridge deterministically partitions its endpoints,
-  Junctions, and remaining Routes into local Nets; removing a redundant cycle
-  keeps the original Net. For global Nets and Nets that already had multiple
-  routed components, the Route is removed while logical membership is retained
-  so the derived layer can restore flightlines without guessing at an
-  electrical split. Newly orphaned Junction endpoints of the deleted branch
-  are removed, an empty local Net is removed, and attached annotations follow
-  the normal unresolved-anchor fallback rule.
+- `cut_connection` requires one existing unlocked Route. Removing a bridge
+  partitions the affected Base Net by remaining explicit Routes and confirmed
+  direct contacts; global, imported, and logical-name Evidence never suppress
+  that physical split. A redundant cycle keeps the original Base Net.
+  The component containing the deleted Route's `from` endpoint retains the
+  original Base-Net ID; detached components receive deterministic new IDs.
+  Newly orphaned Junction endpoints are removed. Route-anchored annotations
+  must be removed by a preceding typed edit in the same transaction.
 - `remove_route_geometry` is the explicit geometry-only operation: it removes
   a Route while preserving logical Net membership. It supports advanced
   rerouting without conflating a persisted mutation with derived guidance.
@@ -312,7 +311,7 @@ protocol exposes only `upsert_schematic_annotation` and
 - stale revision and Document mismatch tests
 - schema rejection before apply
 - atomic no-op and dry-run tests
-- GUI/Agent parity tests for Phase 8 authoring operations
+- GUI/Agent parity tests for authoring operations
 
 ## Open decisions
 
@@ -320,4 +319,4 @@ protocol exposes only `upsert_schematic_annotation` and
   opened Document. It is a session-memory budget, not persisted Project data;
   callers may supply a smaller or larger positive limit for a constrained host.
 - Persistent history, history compaction, and recovery integration remain
-  deferred; Phase 1 history is validated in-memory session state.
+  deferred; history is validated in-memory session state.

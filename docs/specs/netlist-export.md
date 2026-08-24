@@ -4,8 +4,6 @@ Status: `accepted`
 
 Version: `1.0-structural`
 
-Owning phase: `Netlist Export WP0/6`
-
 Primary owner: `packages/netlist`
 
 Related ADR: [`0017-deterministic-design-netlist-boundary.md`](../adr/0017-deterministic-design-netlist-boundary.md)

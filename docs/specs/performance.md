@@ -4,8 +4,6 @@ Status: `accepted`
 
 Version: `1.0-v0.1`
 
-Owning phase: `Phase 7`
-
 ## Representative workload
 
 The release benchmark uses a deterministic generated Project with 500 placed
