@@ -15,6 +15,7 @@ function fixture(overrides: Partial<EditorCommandContext> = {}) {
     hasMoveSelection: true,
     hasRotatableSelection: true,
     hasMirrorableSelection: true,
+    canTransformMove: true,
     hasInspectableSelection: true,
     propertiesOpen: false,
     canUndo: true,
@@ -39,9 +40,11 @@ function fixture(overrides: Partial<EditorCommandContext> = {}) {
     beginMove: vi.fn(),
     rotatePlacement: vi.fn(),
     rotateCopy: vi.fn(),
+    rotateMove: vi.fn(),
     rotateSelection: vi.fn(),
     mirrorPlacement: vi.fn(),
     mirrorCopy: vi.fn(),
+    mirrorMove: vi.fn(),
     mirrorSelection: vi.fn(),
     startInsert: vi.fn(),
     openInsert: vi.fn(),
@@ -94,6 +97,30 @@ describe("editor command router", () => {
     const copy = fixture({ interactionMode: "copy-placement" });
     copy.router.execute({ id: "transform.rotate" });
     expect(copy.operations.rotateCopy).toHaveBeenCalledWith(90);
+
+    const move = fixture({ interactionMode: "moving-selection" });
+    move.router.execute({ id: "transform.rotate" });
+    expect(move.operations.rotateMove).toHaveBeenCalledWith(90);
+    expect(move.operations.rotateSelection).not.toHaveBeenCalled();
+    move.router.execute({
+      id: "transform.mirror",
+      direction: "left-right",
+    });
+    expect(move.operations.mirrorMove).toHaveBeenCalledWith("left-right");
+    expect(move.operations.mirrorSelection).not.toHaveBeenCalled();
+  });
+
+  it("keeps an unsupported Move transform inside the active session", () => {
+    const { router, operations } = fixture({
+      interactionMode: "moving-selection",
+      canTransformMove: false,
+    });
+    expect(router.state({ id: "transform.rotate" })).toMatchObject({
+      enabled: false,
+    });
+    expect(router.execute({ id: "transform.rotate" }).status).toBe("rejected");
+    expect(operations.rotateMove).not.toHaveBeenCalled();
+    expect(operations.rotateSelection).not.toHaveBeenCalled();
   });
 
   it("keeps Power Rail specialized and rejects generic transforms", () => {
@@ -140,6 +167,18 @@ describe("editor command router", () => {
     });
     router.execute({ id: "tool.activate", tool: "arrow" });
     expect(operations.activateTool).toHaveBeenCalledWith("arrow");
+  });
+
+  it("leaves history and tool re-entry lifecycle to their domain owners", () => {
+    const history = fixture({ interactionMode: "moving-selection" });
+    history.router.execute({ id: "history.undo" });
+    expect(history.operations.cancelInteraction).not.toHaveBeenCalled();
+    expect(history.operations.undo).toHaveBeenCalledOnce();
+
+    const tool = fixture({ interactionMode: "copy-placement" });
+    tool.router.execute({ id: "tool.activate", tool: "wire" });
+    expect(tool.operations.cancelInteraction).not.toHaveBeenCalled();
+    expect(tool.operations.activateTool).toHaveBeenCalledWith("wire");
   });
 
   it("preserves silent shortcut no-ops while publishing disabled menu state", () => {

@@ -13,27 +13,27 @@ import {
 import type { SchematicClipboard } from "../clipboard/clipboard";
 import {
   createConnectivityProposal,
+  executeTransaction,
   gateConnectivityProposal,
   proposeVisualRouteDeletion,
   proposeGroupMoveEdits,
+  proposeGroupReflectionEdits,
+  proposeGroupRotationEdits,
   type ConnectivityIntent,
   type SchematicEdit,
   type WireSource,
 } from "@icm/edit-engine";
-import { resolveEndpointPoint } from "@icm/derived";
 import type { Point, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 import type { SnapGuideLine, SnapResult } from "../../snap/engine";
 
-import type {
-  CopyPlacement,
-  InteractionState,
-} from "../../interaction/interaction-state";
+import type { InteractionState } from "../../interaction/interaction-state";
 import {
   startCanvasDragSession,
   type CanvasDragSession,
 } from "../../canvas/canvas-drag-session";
 import { startCanvasDragVisual } from "../../canvas/canvas-drag-visual";
+import type { ScreenFlip } from "../../interaction/shortcut-orientation";
 import {
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
@@ -46,6 +46,20 @@ import {
 
 type TransactionResult = { ok: boolean; revision: number };
 
+interface ResolvedInstanceMove {
+  snap: SnapResult;
+  moves: { instanceId: string; position: Point }[];
+}
+
+interface MoveProjectionCache {
+  screenPoint: Point;
+  suppressSnap: boolean;
+  tolerance: number;
+  sourceRevision: number;
+  resolved: ResolvedInstanceMove;
+  document: SchematicDocument;
+}
+
 export interface InstanceMovePreview {
   instanceIds: string[];
   primaryInstanceId: string;
@@ -56,13 +70,43 @@ export interface InstanceMovePreview {
 
 interface CommandMoveSession {
   documentId: string;
+  baseRevision: number;
   movePlan: SelectionMovePlan;
   instancePreview: InstanceMovePreview | null;
   pointerOrigin: Point;
   visual: ReturnType<typeof startCanvasDragVisual> | null;
+  projectedDocument: SchematicDocument;
+  prefixEdits: SchematicEdit[];
+  latestPoint: Point | null;
+  latestScreenPoint: Point | null;
+  svg: SVGSVGElement | null;
+  lastProjection: MoveProjectionCache | null;
   lastSnap?: SnapResult;
   lastDelta: Point;
 }
+
+export interface ProjectedInstanceMove {
+  document: SchematicDocument;
+  prefixEdits: readonly SchematicEdit[];
+  resolvedMove?: ResolvedInstanceMove;
+}
+
+const isSameMoveProjectionInput = (
+  cached: MoveProjectionCache | null,
+  screenPoint: Point,
+  suppressSnap: boolean,
+  tolerance: number,
+  sourceRevision: number,
+): cached is MoveProjectionCache =>
+  cached !== null &&
+  // PointerEvent keeps sub-pixel coordinates while its following MouseEvent
+  // rounds them to integers. Treat that browser precision loss as the same
+  // physical input, but never reuse a projection for a genuinely new click.
+  Math.abs(cached.screenPoint.x - screenPoint.x) < 1 &&
+  Math.abs(cached.screenPoint.y - screenPoint.y) < 1 &&
+  cached.suppressSnap === suppressSnap &&
+  cached.tolerance === tolerance &&
+  cached.sourceRevision === sourceRevision;
 
 export interface UseSelectionInteractionOptions {
   document: SchematicDocument;
@@ -75,8 +119,7 @@ export interface UseSelectionInteractionOptions {
   selectedEndpoint: WireSource | null;
   selectedNoConnect: SchematicDocument["noConnects"][number] | undefined;
   selectedEndpointNetId: string | null;
-  copyPlacement: CopyPlacement<SchematicClipboard> | null;
-  getInteractionKind: () => InteractionState["kind"];
+  getInteractionState: () => InteractionState<SchematicClipboard>;
   transact: (
     edits: SchematicEdit[],
     options?: { preserveInteraction?: boolean },
@@ -129,6 +172,7 @@ export interface UseSelectionInteractionOptions {
     tolerance: number,
     suppressSnap: boolean,
     previous?: SnapResult,
+    projectedDocument?: SchematicDocument,
   ) => { snap: SnapResult; moves: { instanceId: string; position: Point }[] };
   completeInstanceMove: (
     preview: InstanceMovePreview,
@@ -136,11 +180,12 @@ export interface UseSelectionInteractionOptions {
     tolerance: number,
     suppressSnap: boolean,
     previous?: SnapResult,
+    projection?: ProjectedInstanceMove,
   ) => void;
   logicalRadiusForPixels: (svg: SVGSVGElement, pixels: number) => number;
   snapGuides: (guides: SnapGuideLine[]) => void;
+  setProjectedMovePreview: (document: SchematicDocument | null) => void;
   beginSelectionMoveInteraction: () => void;
-  hasSelectedRoute: boolean;
   visualMoveOrigin: (movePlan: SelectionMovePlan) => Point;
 }
 
@@ -176,17 +221,100 @@ export function useSelectionInteraction(
     return options.transact([...gate.edits], options_);
   };
 
+  const projectedInstancePreview = (
+    session: CommandMoveSession,
+  ): InstanceMovePreview | null => {
+    const primaryInstanceId = session.instancePreview?.primaryInstanceId;
+    if (!primaryInstanceId) return null;
+    const primary = session.projectedDocument.instances.find(
+      (instance) => instance.id === primaryInstanceId,
+    );
+    if (!primary?.placement) return null;
+    return {
+      instanceIds: session.movePlan.instanceIds,
+      primaryInstanceId,
+      originalPositions: Object.fromEntries(
+        session.movePlan.instanceIds.flatMap((instanceId) => {
+          const placement = session.projectedDocument.instances.find(
+            (instance) => instance.id === instanceId,
+          )?.placement;
+          return placement
+            ? [[instanceId, { ...placement.position }] as const]
+            : [];
+        }),
+      ),
+      pointerStart: { ...primary.placement.position },
+      movePlan: session.movePlan,
+    };
+  };
+
+  const commandMoveTransformReason = (): string | null => {
+    const session = commandMoveSessionRef.current;
+    if (!session) return "Move is not active";
+    if (
+      session.documentId !== options.document.id ||
+      session.baseRevision !== options.document.revision
+    ) {
+      return "The document changed; restart Move before transforming";
+    }
+    if (!session.instancePreview) {
+      return "Rotate and mirror during Move require a component selection";
+    }
+    if (
+      session.movePlan.looseRouteIds.length > 0 ||
+      session.movePlan.freeAnnotationIds.length > 0 ||
+      session.movePlan.draftingIds.length > 0
+    ) {
+      return "Rotate and mirror during Move require a component-and-wire closure";
+    }
+    return null;
+  };
+
   const clearCommandMoveSession = (): void => {
     commandMoveSessionRef.current?.visual?.restore();
     commandMoveSessionRef.current = null;
+    options.setProjectedMovePreview(null);
+  };
+
+  /**
+   * The formal renderer is the sole semantic preview authority for Instance
+   * movement. A dry-run applies exactly the same typed edits as commit, so
+   * upright labels, Route markers, miter bridges, pin names and NoConnects are
+   * all derived from one projected Document instead of ad-hoc DOM transforms.
+   */
+  const projectInstanceMove = (
+    sourceDocument: SchematicDocument,
+    moves: readonly { instanceId: string; position: Point }[],
+  ): SchematicDocument => {
+    const plan = proposeGroupMoveEdits(sourceDocument, options.resolver, moves);
+    const result = executeTransaction(
+      sourceDocument,
+      {
+        transactionId: "selection-move-semantic-preview",
+        documentId: sourceDocument.id,
+        expectedRevision: sourceDocument.revision,
+        actor: { kind: "human", id: "selection-move-preview" },
+        dryRun: true,
+        edits: plan.edits,
+      },
+      { symbolResolver: options.resolver },
+    );
+    if (!result.ok) throw new Error(result.error.message);
+    return result.document;
   };
 
   const beginKeyboardSelectionMove = (): void => {
+    if (commandMoveSessionRef.current) {
+      options.setStatus(
+        "Move is already active · click to place · Esc cancels",
+      );
+      return;
+    }
     const movePlan = planSelectionMove(
       options.document,
       options.visualSelection,
     );
-    if (movePlan.previewObjectIds.length === 0 && !options.hasSelectedRoute) {
+    if (movePlan.previewObjectIds.length === 0) {
       options.setStatus(
         "Selected objects are attached or locked and cannot move",
       );
@@ -217,14 +345,22 @@ export function useSelectionInteraction(
       : null;
     commandMoveSessionRef.current = {
       documentId: options.document.id,
+      baseRevision: options.document.revision,
       movePlan,
       instancePreview,
       pointerOrigin: instancePreview
         ? instancePreview.pointerStart
         : options.visualMoveOrigin(movePlan),
       visual: null,
+      projectedDocument: structuredClone(options.document),
+      prefixEdits: [],
+      latestPoint: null,
+      latestScreenPoint: null,
+      svg: null,
+      lastProjection: null,
       lastDelta: { x: 0, y: 0 },
     };
+    options.setProjectedMovePreview(null);
     options.beginSelectionMoveInteraction();
     options.setStatus(
       "Move: move the pointer, then click to place (Esc to cancel)",
@@ -233,23 +369,43 @@ export function useSelectionInteraction(
 
   const updateCommandMovePreview = (
     point: Point,
+    screenPoint: Point,
     svg: SVGSVGElement,
     suppressSnap: boolean,
   ): boolean => {
     const session = commandMoveSessionRef.current;
     if (!session || session.documentId !== options.document.id) return false;
-    session.visual ??= startCanvasDragVisual(
-      svg,
-      session.movePlan.previewObjectIds,
-    );
+    if (session.baseRevision !== options.document.revision) {
+      clearCommandMoveSession();
+      options.snapGuides([]);
+      options.cancelInteraction();
+      options.setStatus("Move cancelled because the document changed");
+      return false;
+    }
+    session.latestPoint = point;
+    session.latestScreenPoint = screenPoint;
+    session.svg = svg;
     if (session.instancePreview) {
-      const resolved = options.resolveInstanceMove(
-        session.instancePreview,
-        point,
-        options.logicalRadiusForPixels(svg, 7),
+      const tolerance = options.logicalRadiusForPixels(svg, 7);
+      const cached = isSameMoveProjectionInput(
+        session.lastProjection,
+        screenPoint,
         suppressSnap,
-        session.lastSnap,
-      );
+        tolerance,
+        session.projectedDocument.revision,
+      )
+        ? session.lastProjection
+        : null;
+      const resolved =
+        cached?.resolved ??
+        options.resolveInstanceMove(
+          session.instancePreview,
+          point,
+          tolerance,
+          suppressSnap,
+          session.lastSnap,
+          session.projectedDocument,
+        );
       session.lastSnap = resolved.snap;
       const primary = resolved.moves.find(
         (move) =>
@@ -265,35 +421,162 @@ export function useSelectionInteraction(
         y: primary.position.y - original.y,
       };
       options.snapGuides(resolved.snap.guides);
-    } else {
-      session.lastDelta = {
-        x: options.snapCoordinate(
-          point.x - session.pointerOrigin.x,
-          options.document.presentation.grid,
-        ),
-        y: options.snapCoordinate(
-          point.y - session.pointerOrigin.y,
-          options.document.presentation.grid,
-        ),
-      };
-      options.snapGuides([]);
+      try {
+        const projectedDocument =
+          cached?.document ??
+          projectInstanceMove(session.projectedDocument, resolved.moves);
+        session.lastProjection = {
+          screenPoint: { ...screenPoint },
+          suppressSnap,
+          tolerance,
+          sourceRevision: session.projectedDocument.revision,
+          resolved,
+          document: projectedDocument,
+        };
+        options.setProjectedMovePreview(projectedDocument);
+      } catch (error) {
+        session.lastProjection = null;
+        options.setProjectedMovePreview(null);
+        options.setStatus(
+          error instanceof Error ? error.message : "Move preview failed",
+        );
+        return false;
+      }
+      return true;
     }
+
+    session.lastDelta = {
+      x: options.snapCoordinate(
+        point.x - session.pointerOrigin.x,
+        options.document.presentation.grid,
+      ),
+      y: options.snapCoordinate(
+        point.y - session.pointerOrigin.y,
+        options.document.presentation.grid,
+      ),
+    };
+    options.setProjectedMovePreview(null);
+    options.snapGuides([]);
+    session.visual ??= startCanvasDragVisual(
+      svg,
+      session.movePlan.previewObjectIds,
+    );
     session.visual.translate(session.lastDelta);
     return true;
   };
 
-  const commitCommandMove = (point: Point, svg: SVGSVGElement): void => {
-    if (!updateCommandMovePreview(point, svg, false)) return;
+  const transformCommandMove = (
+    transform:
+      | { kind: "rotate"; deltaDegrees: 90 | -90 }
+      | { kind: "mirror"; direction: ScreenFlip },
+  ): boolean => {
+    const reason = commandMoveTransformReason();
+    if (reason) {
+      options.setStatus(reason);
+      return false;
+    }
+    const session = commandMoveSessionRef.current!;
+    try {
+      const plan =
+        transform.kind === "rotate"
+          ? proposeGroupRotationEdits(
+              session.projectedDocument,
+              options.resolver,
+              session.movePlan.instanceIds,
+              transform.deltaDegrees,
+            )
+          : proposeGroupReflectionEdits(
+              session.projectedDocument,
+              options.resolver,
+              session.movePlan.instanceIds,
+              transform.direction,
+            );
+      const result = executeTransaction(
+        session.projectedDocument,
+        {
+          transactionId: "selection-move-orientation-preview",
+          documentId: session.projectedDocument.id,
+          expectedRevision: session.projectedDocument.revision,
+          actor: { kind: "human", id: "selection-move-preview" },
+          dryRun: true,
+          edits: plan.edits,
+        },
+        { symbolResolver: options.resolver },
+      );
+      if (!result.ok) {
+        options.setStatus(
+          result.diagnostics[0]?.message ?? "Move transform was rejected",
+        );
+        return false;
+      }
+      session.projectedDocument = result.document;
+      session.prefixEdits.push(...plan.edits);
+      session.instancePreview = projectedInstancePreview(session);
+      session.lastProjection = null;
+      delete session.lastSnap;
+      if (session.latestPoint && session.latestScreenPoint && session.svg) {
+        if (
+          !updateCommandMovePreview(
+            session.latestPoint,
+            session.latestScreenPoint,
+            session.svg,
+            false,
+          )
+        ) {
+          return false;
+        }
+      } else {
+        options.setProjectedMovePreview(session.projectedDocument);
+      }
+      options.setStatus(
+        transform.kind === "rotate"
+          ? "Move preview rotated · click to place · Esc cancels"
+          : `Move preview mirrored ${
+              transform.direction === "left-right" ? "left/right" : "top/bottom"
+            } · click to place · Esc cancels`,
+      );
+      return true;
+    } catch (error) {
+      options.setStatus(
+        error instanceof Error ? error.message : "Move transform failed",
+      );
+      return false;
+    }
+  };
+
+  const commitCommandMove = (
+    point: Point,
+    screenPoint: Point,
+    svg: SVGSVGElement,
+  ): void => {
+    if (!commandMoveSessionRef.current) return;
+    // Click intent is authoritative. Re-resolve a genuinely new click against
+    // the projected orientation Document; only the same physical pointer spot
+    // may reuse preview because click events discard pointer sub-pixels.
+    if (!updateCommandMovePreview(point, screenPoint, svg, false)) return;
     const session = commandMoveSessionRef.current!;
     session.visual?.restore();
     commandMoveSessionRef.current = null;
+    options.setProjectedMovePreview(null);
     if (session.instancePreview) {
+      const resolvedMove = session.lastProjection?.resolved;
+      if (!resolvedMove) {
+        options.setStatus("Move could not resolve the clicked position");
+        options.snapGuides([]);
+        options.cancelInteraction();
+        return;
+      }
       options.completeInstanceMove(
         session.instancePreview,
         point,
         options.logicalRadiusForPixels(svg, 7),
         false,
         session.lastSnap,
+        {
+          document: session.projectedDocument,
+          prefixEdits: session.prefixEdits,
+          resolvedMove,
+        },
       );
     } else {
       options.completeVisualSelectionMove(session.movePlan, session.lastDelta);
@@ -313,7 +596,7 @@ export function useSelectionInteraction(
     hitTarget: SVGElement = event.currentTarget,
   ): void => {
     if (options.tool !== "pointer" || event.button !== 0) return;
-    if (options.getInteractionKind() === "moving-selection") {
+    if (options.getInteractionState().kind === "moving-selection") {
       options.cancelInteraction();
     }
     event.stopPropagation();
@@ -368,115 +651,104 @@ export function useSelectionInteraction(
       pointerStart,
       movePlan,
     };
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    let routeVisual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const routeIdSet = new Set(
-      options.document.routes.map((route) => route.id),
-    );
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(
-        svg,
-        movePlan.previewObjectIds.filter((id) => !routeIdSet.has(id)),
-      ));
-    const paintMovePreview = (
-      moves: readonly { instanceId: string; position: Point }[],
-      delta: Point,
-    ): void => {
-      dragVisual().translate(delta);
-      const groupMove = proposeGroupMoveEdits(
-        options.document,
-        options.resolver,
-        moves,
-      );
-      if (groupMove.preview.routes.length === 0) return;
-      routeVisual ??= startCanvasDragVisual(
-        svg,
-        groupMove.preview.routes.map((route) => route.routeId),
-      );
-      const projected = structuredClone(options.document);
-      for (const move of moves) {
-        const instance = projected.instances.find(
-          (candidate) => candidate.id === move.instanceId,
-        );
-        if (instance?.placement) instance.placement.position = move.position;
-      }
-      for (const move of groupMove.preview.junctions) {
-        const junction = projected.junctions.find(
-          (candidate) => candidate.id === move.junctionId,
-        );
-        if (junction) junction.position = move.position;
-      }
-      for (const routeMove of groupMove.preview.routes) {
-        const route = projected.routes.find(
-          (candidate) => candidate.id === routeMove.routeId,
-        );
-        if (!route) continue;
-        const from = resolveEndpointPoint(
-          projected,
-          options.resolver,
-          route.from,
-        );
-        const to = resolveEndpointPoint(projected, options.resolver, route.to);
-        if (!from || !to) continue;
-        routeVisual.setObjectPolyline(route.id, [
-          from,
-          ...routeMove.waypoints,
-          to,
-        ]);
-      }
-    };
+    options.setProjectedMovePreview(null);
     const tolerance = options.logicalRadiusForPixels(svg, 7);
     let lastSnap: SnapResult | undefined;
+    let lastProjection: MoveProjectionCache | null = null;
+    const resolveProjection = (
+      point: Point,
+      screenPoint: Point,
+      suppressSnap: boolean,
+    ): MoveProjectionCache => {
+      if (
+        isSameMoveProjectionInput(
+          lastProjection,
+          screenPoint,
+          suppressSnap,
+          tolerance,
+          options.document.revision,
+        )
+      ) {
+        return lastProjection;
+      }
+      const resolved = options.resolveInstanceMove(
+        preview,
+        point,
+        tolerance,
+        suppressSnap,
+        lastSnap,
+      );
+      const document = projectInstanceMove(options.document, resolved.moves);
+      lastSnap = resolved.snap;
+      lastProjection = {
+        screenPoint: { ...screenPoint },
+        suppressSnap,
+        tolerance,
+        sourceRevision: options.document.revision,
+        resolved,
+        document,
+      };
+      return lastProjection;
+    };
     options.canvasDragSessionRef.current = startCanvasDragSession({
       target: hitTarget,
       pointerId: event.pointerId,
       startClient: { x: event.clientX, y: event.clientY },
       thresholdPx: 4,
       onPreview: (client) => {
-        const resolved = options.resolveInstanceMove(
-          preview,
-          options.pointFromClient(client.x, client.y, svg, false),
-          tolerance,
-          Boolean(client.altKey),
-          lastSnap,
-        );
-        lastSnap = resolved.snap;
-        options.snapGuides(resolved.snap.guides);
-        const primary = resolved.moves.find(
-          (move) => move.instanceId === preview.primaryInstanceId,
-        )!;
-        const original = preview.originalPositions[preview.primaryInstanceId]!;
-        const delta = {
-          x: primary.position.x - original.x,
-          y: primary.position.y - original.y,
-        };
         try {
-          paintMovePreview(resolved.moves, delta);
-        } catch {
-          // Final edits surface protected or unresolved geometry on release;
-          // retain the responsive Instance preview during the gesture.
-          dragVisual().translate(delta);
+          const projection = resolveProjection(
+            options.pointFromClient(client.x, client.y, svg, false),
+            { x: client.x, y: client.y },
+            Boolean(client.altKey),
+          );
+          options.snapGuides(projection.resolved.snap.guides);
+          options.setProjectedMovePreview(projection.document);
+        } catch (error) {
+          lastProjection = null;
+          options.setProjectedMovePreview(null);
+          options.setStatus(
+            error instanceof Error ? error.message : "Move preview failed",
+          );
         }
       },
       onFinish: ({ client, dragged }) => {
         options.canvasDragSessionRef.current = null;
-        visual?.restore();
-        routeVisual?.restore();
+        options.setProjectedMovePreview(null);
         options.snapGuides([]);
         if (dragged) {
+          const point = options.pointFromClient(client.x, client.y, svg, false);
+          const suppressSnap = Boolean(client.altKey);
+          let projection: MoveProjectionCache;
+          try {
+            projection = resolveProjection(
+              point,
+              { x: client.x, y: client.y },
+              suppressSnap,
+            );
+          } catch (error) {
+            options.setStatus(
+              error instanceof Error ? error.message : "Move failed",
+            );
+            return;
+          }
           options.completeInstanceMove(
             preview,
-            options.pointFromClient(client.x, client.y, svg, false),
+            point,
             tolerance,
-            Boolean(client.altKey),
-            lastSnap,
+            suppressSnap,
+            projection.resolved.snap,
+            {
+              document: options.document,
+              prefixEdits: [],
+              resolvedMove: projection.resolved,
+            },
           );
         }
       },
       onCancel: () => {
         options.canvasDragSessionRef.current = null;
-        visual?.restore();
-        routeVisual?.restore();
+        options.setProjectedMovePreview(null);
         options.snapGuides([]);
       },
     });
@@ -734,7 +1006,7 @@ export function useSelectionInteraction(
   };
 
   const beginCopyPlacement = (): void => {
-    const interactionKind = options.getInteractionKind();
+    const interactionKind = options.getInteractionState().kind;
     if (interactionKind === "copy-placement") {
       options.setStatus("Copy placement is already active · Esc cancels");
       return;
@@ -763,14 +1035,16 @@ export function useSelectionInteraction(
   };
 
   const commitCopyPlacement = (point: Point): void => {
-    if (!options.copyPlacement) return;
+    const interaction = options.getInteractionState();
+    if (interaction.kind !== "copy-placement") return;
+    const copyPlacement = interaction.copy;
     copyCounter.current += 1;
     const proposal = proposePaste(
       options.document,
-      options.copyPlacement.clipboard,
+      copyPlacement.clipboard,
       {
-        x: point.x - options.copyPlacement.anchor.x,
-        y: point.y - options.copyPlacement.anchor.y,
+        x: point.x - copyPlacement.anchor.x,
+        y: point.y - copyPlacement.anchor.y,
       },
       copyCounter.current,
     );
@@ -781,9 +1055,9 @@ export function useSelectionInteraction(
       return;
     }
     const orientationEdits = copyPlacementOrientationEdits(
-      options.copyPlacement.clipboard.instances,
+      copyPlacement.clipboard.instances,
       proposal.instanceIds,
-      options.copyPlacement.orientationOperations,
+      copyPlacement.orientationOperations,
     );
     const edits = [...proposal.edits, ...orientationEdits];
     const editsCellInterface = edits.some(
@@ -835,6 +1109,14 @@ export function useSelectionInteraction(
     deleteSelection,
     toggleSelectedNoConnect,
     updateCommandMovePreview,
+    canBeginKeyboardSelectionMove: () =>
+      planSelectionMove(options.document, options.visualSelection)
+        .previewObjectIds.length > 0,
+    canTransformCommandMove: () => commandMoveTransformReason() === null,
+    rotateCommandMove: (deltaDegrees: 90 | -90) =>
+      transformCommandMove({ kind: "rotate", deltaDegrees }),
+    mirrorCommandMove: (direction: ScreenFlip) =>
+      transformCommandMove({ kind: "mirror", direction }),
     selectInstance,
   };
 }

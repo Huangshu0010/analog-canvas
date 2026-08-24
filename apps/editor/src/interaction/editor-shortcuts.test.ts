@@ -129,18 +129,25 @@ describe("editor shortcut contract", () => {
         canRotate: true,
       }),
     ).toEqual(command({ id: "transform.rotate", deltaDegrees: 90 }));
-    expect(resolve("r", { interactionMode: "copy-placement" })).toEqual(
-      command({ id: "transform.rotate", deltaDegrees: 90 }),
-    );
+    expect(
+      resolve("r", {
+        interactionMode: "copy-placement",
+        canRotate: true,
+      }),
+    ).toEqual(command({ id: "transform.rotate", deltaDegrees: 90 }));
     expect(
       resolve(
         "r",
-        { interactionMode: "placing-component" },
+        { interactionMode: "placing-component", canMirror: true },
         { shiftKey: true },
       ),
     ).toEqual(command({ id: "transform.mirror", direction: "left-right" }));
     expect(
-      resolve("r", { interactionMode: "copy-placement" }, { shiftKey: true }),
+      resolve(
+        "r",
+        { interactionMode: "copy-placement", canMirror: true },
+        { shiftKey: true },
+      ),
     ).toEqual(command({ id: "transform.mirror", direction: "left-right" }));
     expect(
       resolve("v", { interactionMode: "copy-placement" }, { shiftKey: true }),
@@ -312,13 +319,46 @@ describe("editor shortcut contract", () => {
         interactionMode: "drawing",
         canRotate: false,
       }),
-    ).toEqual(command({ id: "tool.activate", tool: "rectangle" }));
+    ).toEqual({
+      kind: "blocked-interaction-command",
+      command: "Rotate or Mirror",
+    });
     expect(
       resolve("r", {
         interactionMode: "placing-component",
         canRotate: true,
       }),
     ).toEqual(command({ id: "transform.rotate", deltaDegrees: 90 }));
+  });
+
+  it("routes Move secondary transforms without falling through to Rectangle", () => {
+    expect(
+      resolve("r", {
+        interactionMode: "moving-selection",
+        canRotate: true,
+      }),
+    ).toEqual(command({ id: "transform.rotate", deltaDegrees: 90 }));
+    expect(
+      resolve(
+        "r",
+        { interactionMode: "moving-selection", canMirror: true },
+        { shiftKey: true },
+      ),
+    ).toEqual(
+      command({
+        id: "transform.mirror",
+        direction: "left-right",
+      }),
+    );
+    expect(
+      resolve("r", {
+        interactionMode: "moving-selection",
+        canRotate: false,
+      }),
+    ).toEqual({
+      kind: "blocked-interaction-command",
+      command: "Rotate or Mirror",
+    });
   });
 
   it("suppresses every global shortcut while typing", () => {

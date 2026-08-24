@@ -229,6 +229,89 @@ describe("schematic clipboard", () => {
     });
   });
 
+  it("does not inherit reference-bearing metadata outside the copied fragment", () => {
+    const document = createEmptyDocument("document-main", "Preview");
+    document.instances.push(
+      {
+        id: "R1",
+        symbolId: "resistor",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+      {
+        id: "R2",
+        symbolId: "resistor",
+        placement: {
+          position: { x: 300, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+    );
+    document.nets.push(
+      {
+        id: "net-r1",
+        scope: "local",
+        terminals: [{ instanceId: "R1", pinName: "1" }],
+      },
+      {
+        id: "net-r2",
+        scope: "local",
+        terminals: [{ instanceId: "R2", pinName: "1" }],
+      },
+    );
+    document.connectivityEvidence.push(
+      {
+        id: "claim-r1",
+        kind: "name-claim",
+        netId: "net-r1",
+        name: "N1",
+        scope: "local",
+        owner: { kind: "explicit-net-property" },
+      },
+      {
+        id: "claim-r2",
+        kind: "name-claim",
+        netId: "net-r2",
+        name: "N2",
+        scope: "local",
+        owner: { kind: "explicit-net-property" },
+      },
+    );
+    document.mosBulkDefaults = { nmosNetId: "net-r2" };
+    document.layoutGroups.push({
+      id: "group-r2",
+      kind: "custom",
+      objectIds: ["R2"],
+      locked: false,
+    });
+    document.constraints.push({
+      id: "align-r1-r2",
+      kind: "align-y",
+      objectIds: ["R1", "R2"],
+      locked: false,
+    });
+
+    const clipboard = copySelection(document, ["R1"]);
+    expect(clipboard).not.toBeNull();
+    const preview = clipboardPreviewDocument(document, clipboard!, {
+      x: 40,
+      y: 0,
+    });
+
+    expect(preview.connectivityEvidence).toEqual([
+      expect.objectContaining({ id: "claim-r1", netId: "net-r1" }),
+    ]);
+    expect(preview.mosBulkDefaults).toBeUndefined();
+    expect(preview.layoutGroups).toEqual([]);
+    expect(preview.constraints).toEqual([]);
+    expect(preview.netlist).toBeUndefined();
+    expect(() => buildSvgScene(preview, resolver)).not.toThrow();
+  });
+
   it("replays copy secondary commands in their input order", () => {
     const instance: Instance = {
       id: "R1",

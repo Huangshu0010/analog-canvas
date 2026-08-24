@@ -48,10 +48,10 @@ export function startCanvasDragVisual(
   return {
     translate(delta) {
       for (const item of saved) {
-        const translation = `translate(${delta.x} ${delta.y})`;
+        const prefix = `translate(${delta.x} ${delta.y})`;
         item.element.setAttribute(
           "transform",
-          item.transform ? `${translation} ${item.transform}` : translation,
+          item.transform ? `${prefix} ${item.transform}` : prefix,
         );
       }
     },

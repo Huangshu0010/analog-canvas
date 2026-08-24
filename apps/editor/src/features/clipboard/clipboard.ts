@@ -210,6 +210,16 @@ function fallbackClipboardPreviewDocument(
     noConnects: structuredClone(clipboard.noConnects),
     annotations,
     drafting: undefined,
+    // A copy ghost is an isolated fragment, not a filtered view of the base
+    // Document. Every reference-bearing Document field must therefore be
+    // owned explicitly here. Inheriting any of these through `...base` leaves
+    // references to objects deliberately omitted from the ghost and makes the
+    // renderer reject otherwise valid clipboard content.
+    netlist: undefined,
+    mosBulkDefaults: undefined,
+    connectivityEvidence: structuredClone(clipboard.connectivityEvidence),
+    layoutGroups: [],
+    constraints: [],
   };
 }
 
@@ -254,10 +264,7 @@ export function clipboardPreviewDocument(
         );
         if (previewClipboard) {
           return fallbackClipboardPreviewDocument(
-            // A ghost contains only the copied fragment.  Retaining the
-            // full Cell interface here would leave it pointing at omitted
-            // formal Port markers and make the renderer reject the preview.
-            { ...result.document, netlist: undefined },
+            result.document,
             previewClipboard,
             { x: 0, y: 0 },
           );

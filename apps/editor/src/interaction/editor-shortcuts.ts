@@ -155,36 +155,25 @@ export function resolveEditorShortcut(
         command: { id: "tool.activate", tool: "construction-line" },
       };
     }
-    if (
-      plain &&
-      event.shiftKey &&
-      key === "r" &&
-      (context.interactionMode === "placing-component" ||
-        context.interactionMode === "copy-placement")
-    ) {
+    if (plain && event.shiftKey && key === "r" && context.canMirror) {
       return {
         kind: "run-command",
         command: { id: "transform.mirror", direction: "left-right" },
       };
     }
     if (plain && key === "r") {
-      if (context.interactionMode === "placing-component") {
+      if (context.canRotate) {
         return {
           kind: "run-command",
           command: { id: "transform.rotate", deltaDegrees: 90 },
         };
       }
-      if (context.interactionMode === "copy-placement") {
-        return {
-          kind: "run-command",
-          command: { id: "transform.rotate", deltaDegrees: 90 },
-        };
-      }
-      if (!event.shiftKey)
-        return {
-          kind: "run-command",
-          command: { id: "tool.activate", tool: "rectangle" },
-        };
+      // An active modal owner never lets R fall through to another primary
+      // tool. Unsupported secondary transforms are rejected in place.
+      return {
+        kind: "blocked-interaction-command",
+        command: "Rotate or Mirror",
+      };
     }
     if (plain && key === "f" && !event.shiftKey) {
       return { kind: "run-command", command: { id: "view.fit" } };

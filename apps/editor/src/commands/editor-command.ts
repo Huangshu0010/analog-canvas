@@ -43,6 +43,7 @@ export interface EditorCommandContext {
   hasMoveSelection: boolean;
   hasRotatableSelection: boolean;
   hasMirrorableSelection: boolean;
+  canTransformMove: boolean;
   hasInspectableSelection: boolean;
   propertiesOpen: boolean;
   canUndo: boolean;
@@ -67,9 +68,11 @@ export interface EditorCommandOperations {
   beginMove(): void;
   rotatePlacement(deltaDegrees: 90 | -90): void;
   rotateCopy(deltaDegrees: 90 | -90): void;
+  rotateMove(deltaDegrees: 90 | -90): void;
   rotateSelection(deltaDegrees: 90 | -90): void;
   mirrorPlacement(direction: ScreenFlip): void;
   mirrorCopy(direction: ScreenFlip): void;
+  mirrorMove(direction: ScreenFlip): void;
   mirrorSelection(direction: ScreenFlip): void;
   startInsert(launch: InsertLaunch): void;
   openInsert(): void;
@@ -98,6 +101,51 @@ function enabled(active = false): EditorCommandState {
 
 function disabled(reason: string): EditorCommandState {
   return { enabled: false, active: false, reason };
+}
+
+type TransformOwner =
+  | "component-placement"
+  | "copy-placement"
+  | "selection-move"
+  | "idle-selection";
+
+type TransformResolution =
+  | { owner: TransformOwner; active: boolean }
+  | { owner: "unavailable"; reason: string };
+
+/** One exhaustive owner resolver shared by capability and execution. */
+function resolveTransformOwner(
+  context: EditorCommandContext,
+  kind: "rotate" | "mirror",
+): TransformResolution {
+  if (context.interactionMode === "placing-component") {
+    return { owner: "component-placement", active: true };
+  }
+  if (context.interactionMode === "copy-placement") {
+    return { owner: "copy-placement", active: true };
+  }
+  if (context.interactionMode === "moving-selection") {
+    return context.canTransformMove
+      ? { owner: "selection-move", active: true }
+      : {
+          owner: "unavailable",
+          reason: `${kind === "rotate" ? "Rotate" : "Mirror"} is unavailable for this Move selection`,
+        };
+  }
+  const idleCapability =
+    kind === "rotate"
+      ? context.hasRotatableSelection
+      : context.hasMirrorableSelection;
+  if (context.interactionMode === "idle" && idleCapability) {
+    return { owner: "idle-selection", active: false };
+  }
+  return {
+    owner: "unavailable",
+    reason:
+      kind === "rotate"
+        ? "Rotate is unavailable for the current interaction"
+        : "Mirror is unavailable for the current selection",
+  };
 }
 
 /**
@@ -149,28 +197,18 @@ export function createEditorCommandRouter(
           context.interactionMode === "moving-selection"
           ? enabled(context.interactionMode === "moving-selection")
           : disabled("Select objects before moving them");
-      case "transform.rotate":
-        if (
-          context.interactionMode === "placing-component" ||
-          context.interactionMode === "copy-placement"
-        ) {
-          return enabled(true);
-        }
-        return context.interactionMode === "idle" &&
-          context.hasRotatableSelection
-          ? enabled()
-          : disabled("Rotate is unavailable for the current interaction");
-      case "transform.mirror":
-        if (
-          context.interactionMode === "placing-component" ||
-          context.interactionMode === "copy-placement"
-        ) {
-          return enabled(true);
-        }
-        return context.interactionMode === "idle" &&
-          context.hasMirrorableSelection
-          ? enabled()
-          : disabled("Mirror is unavailable for the current selection");
+      case "transform.rotate": {
+        const resolution = resolveTransformOwner(context, "rotate");
+        return resolution.owner === "unavailable"
+          ? disabled(resolution.reason)
+          : enabled(resolution.active);
+      }
+      case "transform.mirror": {
+        const resolution = resolveTransformOwner(context, "mirror");
+        return resolution.owner === "unavailable"
+          ? disabled(resolution.reason)
+          : enabled(resolution.active);
+      }
       case "insert.start":
       case "insert.open":
       case "insert.free-net-port":
@@ -226,6 +264,9 @@ export function createEditorCommandRouter(
         }
         break;
       case "history.undo":
+        // History owners publish the circuit revision first, then let the
+        // active interaction invalidate itself against that revision. This
+        // preserves the precise cancellation reason and avoids double exits.
         options.operations.undo();
         break;
       case "history.redo":
@@ -248,34 +289,65 @@ export function createEditorCommandRouter(
         break;
       case "transform.rotate": {
         const deltaDegrees = request.deltaDegrees ?? 90;
-        if (context.interactionMode === "placing-component") {
-          options.operations.rotatePlacement(deltaDegrees);
-        } else if (context.interactionMode === "copy-placement") {
-          options.operations.rotateCopy(deltaDegrees);
-        } else {
-          options.operations.rotateSelection(deltaDegrees);
+        const resolution = resolveTransformOwner(context, "rotate");
+        if (resolution.owner === "unavailable") break;
+        switch (resolution.owner) {
+          case "component-placement":
+            options.operations.rotatePlacement(deltaDegrees);
+            break;
+          case "copy-placement":
+            options.operations.rotateCopy(deltaDegrees);
+            break;
+          case "selection-move":
+            options.operations.rotateMove(deltaDegrees);
+            break;
+          case "idle-selection":
+            options.operations.rotateSelection(deltaDegrees);
+            break;
         }
         break;
       }
-      case "transform.mirror":
-        if (context.interactionMode === "placing-component") {
-          options.operations.mirrorPlacement(request.direction);
-        } else if (context.interactionMode === "copy-placement") {
-          options.operations.mirrorCopy(request.direction);
-        } else {
-          options.operations.mirrorSelection(request.direction);
+      case "transform.mirror": {
+        const resolution = resolveTransformOwner(context, "mirror");
+        if (resolution.owner === "unavailable") break;
+        switch (resolution.owner) {
+          case "component-placement":
+            options.operations.mirrorPlacement(request.direction);
+            break;
+          case "copy-placement":
+            options.operations.mirrorCopy(request.direction);
+            break;
+          case "selection-move":
+            options.operations.mirrorMove(request.direction);
+            break;
+          case "idle-selection":
+            options.operations.mirrorSelection(request.direction);
+            break;
         }
         break;
+      }
       case "insert.start":
+        if (context.interactionMode !== "idle") {
+          options.operations.cancelInteraction(context.interactionMode);
+        }
         options.operations.startInsert(request.launch);
         break;
       case "insert.open":
+        if (context.interactionMode !== "idle") {
+          options.operations.cancelInteraction(context.interactionMode);
+        }
         options.operations.openInsert();
         break;
       case "insert.free-net-port":
+        if (context.interactionMode !== "idle") {
+          options.operations.cancelInteraction(context.interactionMode);
+        }
         options.operations.placeFreeNetPort();
         break;
       case "tool.activate":
+        // Tool owners arbitrate their own re-entry and transition semantics.
+        // Cancelling here first loses useful in-progress state such as a Wire
+        // source when the user presses W again for the already-active tool.
         options.operations.activateTool(request.tool);
         break;
       case "drafting.add-text":

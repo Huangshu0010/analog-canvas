@@ -64,6 +64,7 @@ import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
   deriveCrossings,
+  deriveNetConnectivity,
   deriveInternalGroupSelection,
   derivePowerRailComponent,
   diagnoseProjectSnapshot,
@@ -85,6 +86,7 @@ import {
   resolveDocumentLogicalNets,
   resolveRouteAttachment,
   resolveRouteTap,
+  resolveDocumentRoutingGeometry,
   summarizeProjectCells,
   traceHierarchyNet,
 } from "@icm/derived";
@@ -361,6 +363,7 @@ import {
 } from "../features/editor-shell/use-editor-panels";
 import {
   type InstanceMovePreview,
+  type ProjectedInstanceMove,
   useSelectionInteraction,
 } from "../features/selection/use-selection-interaction";
 import {
@@ -948,7 +951,10 @@ export function App({
   const netLabelPropertyInputRef = useRef<HTMLInputElement>(null);
   const netLabelEditorInputRef = useRef<HTMLInputElement>(null);
   const documentViewBoxes = useRef(new Map<string, GridRect>());
+  const [projectedMovePreviewDocument, setProjectedMovePreviewDocument] =
+    useState<SchematicDocument | null>(null);
   const renderedDocument = useMemo(() => {
+    if (projectedMovePreviewDocument) return projectedMovePreviewDocument;
     if (!draftingHandlePreview || !document.drafting) return document;
     return {
       ...document,
@@ -961,7 +967,7 @@ export function App({
         ),
       },
     };
-  }, [document, draftingHandlePreview]);
+  }, [document, draftingHandlePreview, projectedMovePreviewDocument]);
   const lastGoodSceneRef = useRef<ReturnType<typeof buildSvgScene> | null>(
     null,
   );
@@ -989,35 +995,50 @@ export function App({
   // unrelated state such as recovery status changes. Memoize the prop object
   // so re-renders with unchanged scene content leave the DOM subtree alone.
   const sceneInnerHtml = useMemo(() => ({ __html: scene.formalBody }), [scene]);
-  const copyPreviewScene = useMemo(() => {
-    if (!copyPlacement || !copyPlacement.previewPoint) return null;
+  const copyPreviewState = useMemo(() => {
+    if (!copyPlacement || !copyPlacement.previewPoint) {
+      return { scene: null, error: null };
+    }
     const offset = {
       x: copyPlacement.previewPoint.x - copyPlacement.anchor.x,
       y: copyPlacement.previewPoint.y - copyPlacement.anchor.y,
     };
     try {
-      return buildSvgScene(
-        clipboardPreviewDocument(
-          document,
-          copyPlacement.clipboard,
-          offset,
-          copyPlacement.orientationOperations,
+      return {
+        scene: buildSvgScene(
+          clipboardPreviewDocument(
+            document,
+            copyPlacement.clipboard,
+            offset,
+            copyPlacement.orientationOperations,
+            resolver,
+          ),
           resolver,
+          { bounds: viewBox },
         ),
-        resolver,
-        { bounds: viewBox },
-      );
-    } catch {
-      // A transient copy preview is never worth crashing the render for.
-      return null;
+        error: null,
+      };
+    } catch (error) {
+      return {
+        scene: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Copy preview could not be rendered",
+      };
     }
   }, [copyPlacement, document, resolver, viewBox]);
+  useEffect(() => {
+    if (copyPreviewState.error) {
+      setStatus(`Copy preview unavailable — ${copyPreviewState.error}`);
+    }
+  }, [copyPreviewState.error]);
   const copyPreviewInnerHtml = useMemo(
     () =>
-      copyPreviewScene === null
+      copyPreviewState.scene === null
         ? null
-        : { __html: copyPreviewScene.formalBody },
-    [copyPreviewScene],
+        : { __html: copyPreviewState.scene.formalBody },
+    [copyPreviewState.scene],
   );
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
@@ -1768,6 +1789,10 @@ export function App({
     clearCommandMoveSession: clearCommandMoveSessionFromSelection,
     deleteSelectedJunction: deleteSelectedJunctionFromSelection,
     deleteSelection: deleteSelectionFromSelection,
+    canBeginKeyboardSelectionMove,
+    canTransformCommandMove,
+    mirrorCommandMove: mirrorCommandMoveFromSelection,
+    rotateCommandMove: rotateCommandMoveFromSelection,
     selectInstance: selectInstanceFromSelection,
     toggleSelectedNoConnect: toggleSelectedNoConnectFromSelection,
     updateCommandMovePreview: updateCommandMovePreviewFromSelection,
@@ -1782,8 +1807,7 @@ export function App({
     selectedEndpoint,
     selectedNoConnect,
     selectedEndpointNetId,
-    copyPlacement,
-    getInteractionKind: () => getCurrentInteractionState().kind,
+    getInteractionState: getCurrentInteractionState,
     transact,
     transactProjectDocument: (transactionId, edits) => {
       const committed = commitStructure(transactionId, [
@@ -1833,8 +1857,8 @@ export function App({
     completeInstanceMove,
     logicalRadiusForPixels,
     snapGuides: paintSnapGuides,
+    setProjectedMovePreview: setProjectedMovePreviewDocument,
     beginSelectionMoveInteraction,
-    hasSelectedRoute: Boolean(selectedRoute),
     visualMoveOrigin: commandMoveVisualOrigin,
   });
 
@@ -3446,6 +3470,9 @@ export function App({
       (nextTool === "pointer" && currentInteraction.kind === "idle");
     if (alreadyActive) return;
     exitCellSymbolLayout();
+    if (currentInteraction.kind === "moving-selection") {
+      clearCommandMoveSessionFromSelection();
+    }
     canvasDragSessionRef.current?.cancel();
     clearTransientCanvasState();
     paintSnapGuides([]);
@@ -4534,10 +4561,11 @@ export function App({
   function selectionVisualMoveEdits(
     movePlan: SelectionMovePlan,
     delta: Point,
+    sourceDocument: SchematicDocument = document,
   ): SchematicEdit[] {
     return [
       ...movePlan.freeAnnotationIds.flatMap((annotationId) => {
-        const annotation = document.annotations.find(
+        const annotation = sourceDocument.annotations.find(
           (candidate) => candidate.id === annotationId,
         );
         if (!annotation || annotation.anchor.kind !== "free") return [];
@@ -4553,7 +4581,7 @@ export function App({
                     x: annotation.anchor.position.x + delta.x,
                     y: annotation.anchor.position.y + delta.y,
                   },
-                  document.presentation.grid,
+                  sourceDocument.presentation.grid,
                 ),
               },
             },
@@ -4561,7 +4589,7 @@ export function App({
         ];
       }),
       ...movePlan.draftingIds.flatMap((draftingId) => {
-        const object = document.drafting?.objects.find(
+        const object = sourceDocument.drafting?.objects.find(
           (candidate) => candidate.id === draftingId,
         );
         return object
@@ -4571,7 +4599,7 @@ export function App({
                 object: translateDraftingObject(
                   object,
                   delta,
-                  document.presentation.grid,
+                  sourceDocument.presentation.grid,
                 ),
               },
             ]
@@ -4635,16 +4663,89 @@ export function App({
     tolerance: number,
     suppressSnap: boolean,
     previous?: SnapResult,
+    projectedDocument?: SchematicDocument,
   ) {
+    const sourceDocument = projectedDocument ?? document;
+    const sourceVisibleEndpoints: WireSource[] = projectedDocument
+      ? [
+          ...sourceDocument.instances.flatMap((instance) => {
+            if (!instance.placement) return [];
+            const resolved = resolver.resolve(
+              instance.symbolId,
+              instance.symbolVariantId,
+            );
+            if (!resolved) return [];
+            return resolved.definition.pins
+              .filter((pin) =>
+                isVisibleEndpoint(sourceDocument, resolver, {
+                  kind: "terminal",
+                  instanceId: instance.id,
+                  pinName: pin.name,
+                }),
+              )
+              .map((pin): WireSource => {
+                const endpoint: RouteEndpoint = {
+                  kind: "terminal",
+                  instanceId: instance.id,
+                  pinName: pin.name,
+                };
+                return {
+                  endpoint,
+                  netId: endpointNetId(sourceDocument, endpoint),
+                  point:
+                    resolveEndpointPoint(sourceDocument, resolver, endpoint) ??
+                    transformPoint(
+                      pin.at,
+                      instance.placement!.position,
+                      instance.placement!,
+                    ),
+                  preludeEdits: [],
+                  ...(isMosBulkTerminal(sourceDocument, endpoint)
+                    ? { routePresentation: "bulk-dashed" as const }
+                    : {}),
+                };
+              });
+          }),
+          ...sourceDocument.junctions
+            .filter((junction) => {
+              const role = junction.role ?? "branch";
+              return role === "branch" || role === "route-anchor";
+            })
+            .map((junction): WireSource => ({
+              endpoint: { kind: "junction", junctionId: junction.id },
+              netId: junction.netId,
+              point: junction.position,
+              preludeEdits: [],
+            })),
+        ]
+      : visibleEndpoints;
+    const sourceRouteGeometryRecords = projectedDocument
+      ? (() => {
+          const routingGeometry = resolveDocumentRoutingGeometry(
+            sourceDocument,
+            resolver,
+          );
+          return sourceDocument.routes.flatMap((route) => {
+            const geometry = routingGeometry.routes.get(route.id);
+            return geometry ? [{ route, geometry }] : [];
+          });
+        })()
+      : routeGeometryRecords;
+    const sourceContactComponents = projectedDocument
+      ? sourceDocument.nets.flatMap(
+          (net) =>
+            deriveNetConnectivity(sourceDocument, resolver, net).components,
+        )
+      : contactComponents;
     const rawDelta = {
       x: position.x - preview.pointerStart.x,
       y: position.y - preview.pointerStart.y,
     };
     const movingIds = new Set(preview.instanceIds);
     const movingAnchors = buildInstanceAnchors(
-      document,
+      sourceDocument,
       resolver,
-      visibleEndpoints,
+      sourceVisibleEndpoints,
       movingIds,
     );
     const routeTargets: SnapAnchor[] = suppressSnap
@@ -4655,7 +4756,7 @@ export function App({
             x: moving.point.x + rawDelta.x,
             y: moving.point.y + rawDelta.y,
           };
-          return routeGeometryRecords.flatMap(({ route, geometry }) => {
+          return sourceRouteGeometryRecords.flatMap(({ route, geometry }) => {
             const belongsToMovingInstance = [route.from, route.to].some(
               (endpoint) =>
                 endpoint.kind === "terminal" &&
@@ -4694,9 +4795,9 @@ export function App({
           });
         });
     const staticTargets = buildSceneSnapTargets(
-      document,
+      sourceDocument,
       resolver,
-      visibleEndpoints,
+      sourceVisibleEndpoints,
       movingIds,
     );
     let snap: SnapResult = suppressSnap
@@ -4707,7 +4808,7 @@ export function App({
             movingAnchors,
             targetAnchors: [...staticTargets, ...routeTargets],
             primaryAnchorId: `instance:${preview.primaryInstanceId}:origin`,
-            grid: document.presentation.grid,
+            grid: sourceDocument.presentation.grid,
             tolerance,
             profile: SNAP_PROFILES.instanceMove,
           },
@@ -4722,7 +4823,7 @@ export function App({
           target.point.y === point.y,
       );
       const conductors = resolveElectricalContactTargets(
-        document,
+        sourceDocument,
         resolver,
         coincidentRoutes.flatMap((target) =>
           target.electrical?.kind === "route"
@@ -4738,7 +4839,7 @@ export function App({
               ]
             : [],
         ),
-        contactComponents,
+        sourceContactComponents,
       );
       if (conductors.length > 1) {
         snap = resolveTranslationSnap(
@@ -4747,7 +4848,7 @@ export function App({
             movingAnchors,
             targetAnchors: staticTargets,
             primaryAnchorId: `instance:${preview.primaryInstanceId}:origin`,
-            grid: document.presentation.grid,
+            grid: sourceDocument.presentation.grid,
             tolerance,
             profile: SNAP_PROFILES.instanceMove,
           },
@@ -4764,7 +4865,7 @@ export function App({
             x: original.x + snap.delta.x,
             y: original.y + snap.delta.y,
           },
-          document.presentation.grid,
+          sourceDocument.presentation.grid,
         ),
       };
     });
@@ -4777,14 +4878,20 @@ export function App({
     tolerance: number,
     suppressSnap: boolean,
     previous?: SnapResult,
+    projection?: ProjectedInstanceMove,
   ): void {
-    const { snap: resolvedSnap, moves } = instanceMoveAt(
-      preview,
-      position,
-      tolerance,
-      suppressSnap,
-      previous,
-    );
+    const sourceDocument = projection?.document ?? document;
+    const prefixEdits = [...(projection?.prefixEdits ?? [])];
+    const { snap: resolvedSnap, moves } =
+      projection?.resolvedMove ??
+      instanceMoveAt(
+        preview,
+        position,
+        tolerance,
+        suppressSnap,
+        previous,
+        projection?.document,
+      );
     const electricalMatch = resolvedSnap.electricalMatch;
     const delta = {
       x:
@@ -4794,17 +4901,24 @@ export function App({
         moves[0]!.position.y -
         preview.originalPositions[moves[0]!.instanceId]!.y,
     };
-    if (delta.x !== 0 || delta.y !== 0) {
+    if (delta.x !== 0 || delta.y !== 0 || prefixEdits.length > 0) {
       try {
-        const groupMove = proposeGroupMoveEdits(document, resolver, moves);
+        const groupMove =
+          delta.x !== 0 || delta.y !== 0
+            ? proposeGroupMoveEdits(sourceDocument, resolver, moves)
+            : { edits: [], preview: { routes: [], junctions: [] } };
         const looseRouteEdits = preview.movePlan.looseRouteIds.flatMap(
           (routeId) =>
-            proposeLooseRouteTranslation(document, routeId, delta).edits,
+            proposeLooseRouteTranslation(sourceDocument, routeId, delta).edits,
         );
-        const visualEdits = selectionVisualMoveEdits(preview.movePlan, delta);
+        const visualEdits = selectionVisualMoveEdits(
+          preview.movePlan,
+          delta,
+          sourceDocument,
+        );
         const movingElectrical = electricalMatch?.moving.electrical;
         const targetElectrical = electricalMatch?.target.electrical;
-        const projected = structuredClone(document);
+        const projected = structuredClone(sourceDocument);
         for (const move of moves) {
           const instance = projected.instances.find(
             (candidate) => candidate.id === move.instanceId,
@@ -4847,6 +4961,7 @@ export function App({
               ? "connect_without_wire"
               : "move_connected_selection",
           [
+            ...prefixEdits,
             ...groupMove.edits,
             ...looseRouteEdits,
             ...visualEdits,
@@ -4856,6 +4971,8 @@ export function App({
         );
         if (result?.ok && electricalMatch) {
           setStatus("Snapped pin endpoints and connected them without a wire");
+        } else if (result?.ok && prefixEdits.length > 0) {
+          setStatus("Moved and transformed selection");
         }
       } catch (error) {
         setStatus(
@@ -4995,9 +5112,10 @@ export function App({
       activeTool: tool,
       hasDeletableSelection:
         hasVisualSelection(visualSelection) || selectedEndpoint !== null,
-      hasMoveSelection: hasVisualSelection(visualSelection),
+      hasMoveSelection: canBeginKeyboardSelectionMove(),
       hasRotatableSelection,
       hasMirrorableSelection,
+      canTransformMove: canTransformCommandMove(),
       hasInspectableSelection,
       propertiesOpen: selectionOpen,
       canUndo,
@@ -5051,9 +5169,11 @@ export function App({
       beginMove: beginKeyboardSelectionMoveFromSelection,
       rotatePlacement: rotatePendingComponentFromHook,
       rotateCopy: rotatePendingCopy,
+      rotateMove: rotateCommandMoveFromSelection,
       rotateSelection: rotateSelected,
       mirrorPlacement: mirrorPendingComponentFromHook,
       mirrorCopy: mirrorPendingCopy,
+      mirrorMove: mirrorCommandMoveFromSelection,
       mirrorSelection: mirrorSelected,
       startInsert: startInsertFromHook,
       openInsert: () => startInsertFromHook(fullInsertLaunch()),
@@ -6930,9 +7050,11 @@ export function App({
   function continueCanvasGesture(
     event: ReactPointerEvent<SVGSVGElement>,
   ): void {
-    if (getCurrentInteractionState().kind === "moving-selection") {
+    const currentInteraction = getCurrentInteractionState();
+    if (currentInteraction.kind === "moving-selection") {
       updateCommandMovePreviewFromSelection(
         pointFromClient(event.clientX, event.clientY, event.currentTarget),
+        { x: event.clientX, y: event.clientY },
         event.currentTarget,
         event.altKey,
       );
@@ -6986,7 +7108,7 @@ export function App({
       setComponentPreviewPoint(point);
       return;
     }
-    if (copyPlacement) {
+    if (currentInteraction.kind === "copy-placement") {
       setCopyPreviewPoint({
         x: snapCoordinate(point.x, document.presentation.grid),
         y: snapCoordinate(point.y, document.presentation.grid),
@@ -10185,12 +10307,15 @@ export function App({
             className={[
               "schematic-canvas",
               tool === "wire" ? "wire-mode" : "",
-              pendingSymbolId || vddRailMode ? "component-mode" : "",
+              pendingSymbolId || vddRailMode || copyPlacement
+                ? "component-mode"
+                : "",
               tool === "arrow" ||
               tool === "construction-line" ||
               tool === "rectangle"
                 ? "drawing-mode"
                 : "",
+              projectedMovePreviewDocument ? "semantic-move-preview" : "",
               panPreview ? "pan-mode" : "",
             ]
               .filter(Boolean)
@@ -10201,7 +10326,8 @@ export function App({
             viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
             onWheel={handleWheel}
             onClickCapture={(event) => {
-              if (getCurrentInteractionState().kind === "moving-selection") {
+              const currentInteraction = getCurrentInteractionState();
+              if (currentInteraction.kind === "moving-selection") {
                 if (event.detail === 1) {
                   event.preventDefault();
                   event.stopPropagation();
@@ -10211,9 +10337,25 @@ export function App({
                       event.clientY,
                       event.currentTarget,
                     ),
+                    { x: event.clientX, y: event.clientY },
                     event.currentTarget,
                   );
                 }
+                return;
+              }
+              if (currentInteraction.kind === "copy-placement") {
+                if (event.detail > 1) return;
+                event.preventDefault();
+                event.stopPropagation();
+                const point = pointFromClient(
+                  event.clientX,
+                  event.clientY,
+                  event.currentTarget,
+                );
+                commitCopyPlacementFromSelection({
+                  x: snapCoordinate(point.x, document.presentation.grid),
+                  y: snapCoordinate(point.y, document.presentation.grid),
+                });
                 return;
               }
               if (
@@ -10276,26 +10418,16 @@ export function App({
             onPointerDown={beginCanvasGesture}
             onPointerMove={continueCanvasGesture}
             onPointerLeave={() => {
+              const currentInteraction = getCurrentInteractionState();
               if (pendingSymbolId) setComponentPreviewPoint(null);
               if (vddRailMode) setVddRailPreviewPoint(null);
-              if (copyPlacement) setCopyPreviewPoint(null);
+              if (currentInteraction.kind === "copy-placement") {
+                setCopyPreviewPoint(null);
+              }
             }}
             onPointerUp={finishCanvasGesture}
             onPointerCancel={finishCanvasGesture}
             onClick={(event) => {
-              if (copyPlacement) {
-                if (event.detail > 1) return;
-                const point = pointFromClient(
-                  event.clientX,
-                  event.clientY,
-                  event.currentTarget,
-                );
-                commitCopyPlacementFromSelection({
-                  x: snapCoordinate(point.x, document.presentation.grid),
-                  y: snapCoordinate(point.y, document.presentation.grid),
-                });
-                return;
-              }
               const target = event.target as Element;
               const onBackground =
                 target === event.currentTarget || target.tagName === "rect";
