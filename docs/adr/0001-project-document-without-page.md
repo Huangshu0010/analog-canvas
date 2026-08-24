@@ -72,4 +72,3 @@ views or pages only with an explicit migration from version 1.
 
 - [`schematic-model.md`](../specs/schematic-model.md)
 - [`project-file-format.md`](../specs/project-file-format.md)
-- [`Phase 0`](../archive/roadmap/phase-0-contracts-and-scaffold.md)

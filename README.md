@@ -41,11 +41,10 @@ files. Use **File / Save Project** to download the authoritative
 - `packages/exporters/` and `packages/render-svg/`: formal SVG, PNG, and PDF
   output.
 - `docs/`: current architecture, user guides, normative contracts, ADRs, and
-  explicitly non-authoritative historical records.
+  delivery plans.
 
 The [Razavi reference manifest](fixtures/visual-reference/razavi-reference-v1/)
-is the sole visual authority. Retired Visio/VSS assets are historical evidence,
-not product inputs; see [ADR 0011](docs/adr/0011-retire-visio-vss-as-visual-authority.md).
+is the sole visual authority.
 
 ## Validation
 

@@ -112,4 +112,3 @@ the dialect field is already an open string.
 
 - [`spice-frontend.md`](../specs/spice-frontend.md)
 - [`circuit-ir.md`](../specs/circuit-ir.md)
-- [`Phase 4`](../archive/roadmap/phase-4-full-spice-baseline.md)

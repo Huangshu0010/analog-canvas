@@ -92,7 +92,7 @@ Dependencies flow strictly downward; `@icm/model` is the root everything shares.
 - Routes are visible geometry only; they may stretch during movement without changing logical connectivity.
 - An Agent reads a complete Snapshot and submits typed edits with an expected revision. There is no second command language and no DOM-automation mutation path.
 - The `.icproj.json` Project file is canonical; browser recovery copies are non-authoritative.
-- The Razavi reference manifest (`fixtures/visual-reference/razavi-reference-v1/`) is the sole visual authority (ADR 0011); retired Visio/VSS assets are historical evidence only.
+- The Razavi reference manifest (`fixtures/visual-reference/razavi-reference-v1/`) is the sole visual authority.
 
 ## Documentation authority
 
@@ -101,4 +101,3 @@ When documents disagree: accepted ADR / normative spec (`docs/adr/`, `docs/specs
 - Default reading set for product work: `docs/current/README.md` (ordered list of the ADRs and specs defining the current Project shape).
 - Test layers and contract ownership: `docs/testing/README.md` and its contract matrix.
 - Agent schematic-layout workflow: `docs/agent/workflow.md` and the repo-local `skills/circuit-layout/SKILL.md`.
-- `docs/archive/` is historical, non-authoritative, and excluded from default task context.

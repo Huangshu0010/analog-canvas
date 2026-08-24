@@ -239,7 +239,6 @@ the adapter.
 - [`0024-device-protocol-and-compatibility-boundaries.md`](0024-device-protocol-and-compatibility-boundaries.md)
 - [`0025-schematic-hierarchy-and-formal-ports.md`](0025-schematic-hierarchy-and-formal-ports.md)
 - [`0026-definition-level-cell-symbol-presentation.md`](0026-definition-level-cell-symbol-presentation.md)
-- [`../roadmap/stage-1-schematic-foundation.md`](../roadmap/stage-1-schematic-foundation.md)
 - [`../specs/schematic-model.md`](../specs/schematic-model.md)
 - [`../specs/edit-engine.md`](../specs/edit-engine.md)
 - [`../specs/netlist-export.md`](../specs/netlist-export.md)

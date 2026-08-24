@@ -3,7 +3,7 @@ import type { SymbolStrokeRole } from "@icm/symbols";
 import { razaviPeripheralGeometry } from "./razavi-peripheral-geometry.generated.js";
 
 export interface SchematicStyleProfile {
-  readonly id: "textbook-monochrome-v1" | "razavi-textbook-v1";
+  readonly id: "razavi-textbook-v1";
   readonly foreground: string;
   readonly background: string;
   readonly strokes: {
@@ -31,7 +31,6 @@ export interface SchematicStyleProfile {
   readonly lineCap: "butt" | "round" | "square";
   readonly lineJoin: "miter" | "round" | "bevel";
   readonly miterLimit: number;
-  readonly scaleFormalStrokes: boolean;
   readonly typography: SchematicTypography;
 }
 
@@ -72,37 +71,6 @@ export const globalSchematicTypography: SchematicTypography = {
   lineHeight: 1,
 };
 
-export const textbookMonochromeProfile: SchematicStyleProfile = {
-  id: "textbook-monochrome-v1",
-  foreground: "#000",
-  background: "#fff",
-  strokes: {
-    wire: 1,
-    symbol: 1,
-    normal: 1.2,
-    emphasis: 2.16,
-    ground: 2.16,
-    supply: 2.16,
-    powerRail: 2.16,
-    annotation: 0.8,
-  },
-  nodes: { junctionRadius: 1.75 },
-  annotations: {
-    supplyBarWidth: 0,
-    currentArrowLength: 24,
-    arrowHeadLength: 7,
-    arrowHeadWidth: 8,
-    currentLabelGap: 7,
-    polarityOffsetX: 0,
-    polarityHalfGap: 0,
-  },
-  lineCap: "square",
-  lineJoin: "miter",
-  miterLimit: 4,
-  scaleFormalStrokes: false,
-  typography: globalSchematicTypography,
-};
-
 export const razaviTextbookProfile: SchematicStyleProfile = {
   id: "razavi-textbook-v1",
   foreground: "#000",
@@ -133,12 +101,10 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
   lineCap: "butt",
   lineJoin: "miter",
   miterLimit: 4,
-  scaleFormalStrokes: true,
   typography: globalSchematicTypography,
 };
 
 const profiles = new Map<string, SchematicStyleProfile>([
-  [textbookMonochromeProfile.id, textbookMonochromeProfile],
   [razaviTextbookProfile.id, razaviTextbookProfile],
 ]);
 
@@ -233,10 +199,8 @@ export function strokeWidthForRole(
 export function resolvePrimitiveStrokeWidth(
   profile: SchematicStyleProfile,
   role: SymbolStrokeRole | undefined,
-  legacyWidth: number | undefined,
+  explicitWidth: number | undefined,
 ): number | undefined {
   if (role !== undefined) return strokeWidthForRole(profile, role);
-  if (legacyWidth === undefined) return undefined;
-  if (profile.id === "textbook-monochrome-v1") return legacyWidth;
-  return legacyWidth >= 1.8 ? profile.strokes.emphasis : profile.strokes.normal;
+  return explicitWidth;
 }

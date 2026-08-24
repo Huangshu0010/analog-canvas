@@ -8,8 +8,8 @@ Owners: `fixtures/visual-reference`, `packages/symbols`, `scripts`, `tools`
 
 ## Context
 
-ADR 0011 retired Visio/VSS and made the Razavi reference manifest the sole
-visual authority. The accepted screenshot set contains no inductor, while
+The Razavi reference manifest is the sole visual authority. The accepted
+screenshot set contains no inductor, while
 Figure 15.21 of the approved Razavi textbook contains a clean PDF-native
 inductor path. Reconstructing that curve from pixels would discard coordinates,
 stroke width, and Bézier control points already present in the source.
@@ -112,7 +112,6 @@ capacitor, and the reviewed VCCS rather than represented by a pseudo-device.
 
 ## Related documents
 
-- [`0011-retire-visio-vss-as-visual-authority.md`](0011-retire-visio-vss-as-visual-authority.md)
 - [`../specs/razavi-visual-contract.md`](../specs/razavi-visual-contract.md)
 - [`../../tools/pdf-vector-extract/README.md`](../../tools/pdf-vector-extract/README.md)
 - [`../../fixtures/visual-reference/razavi-reference-v1/manifest.json`](../../fixtures/visual-reference/razavi-reference-v1/manifest.json)

@@ -4,10 +4,7 @@
 优先级：`P0 foundation`
 建议位置：Phase 9 之后、ERC 与全局搜索/Net 追踪之前的横向重构阶段
 
-已完成的恢复证据在
-[connectivity recovery status](../archive/roadmap/connectivity-recovery-status.md)，已完成的
-Net 合同收口在 [Net contract unification record](../archive/roadmap/net-contract-unification.md)。
-本文件只保留尚未排期的路线几何、搜索、ERC 策略与诊断体验后续工作；已归档记录不再是默认实现上下文。
+本文件只保留尚未排期的路线几何、搜索、ERC 策略与诊断体验后续工作。
 
 ## 1. 目标
 

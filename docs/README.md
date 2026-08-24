@@ -1,7 +1,7 @@
 # Project Documentation
 
-This directory separates current product and user documentation from durable
-contracts, delivery planning, and explicitly non-authoritative history.
+This directory contains the current product, contract, and delivery
+documentation.
 
 ## Documentation map
 
@@ -17,7 +17,6 @@ contracts, delivery planning, and explicitly non-authoritative history.
 | [`release/`](release/v0.1-checklist.md)              | Release checklist and known accessibility limits                            |
 | [`experience/`](experience/README.md)                | Human-requested, evidence-backed reusable lessons                           |
 | [`testing/`](testing/README.md)                       | Test layers, change-impact discipline, and contract ownership matrix        |
-| [`archive/`](archive/README.md)                      | Historical records; excluded from default task context                      |
 
 ## Authority order
 
@@ -33,8 +32,7 @@ accepted ADR or approved normative spec
 
 Implementation and tests are evidence, but they do not silently redefine an
 approved contract. Update the relevant spec or ADR when behavior intentionally
-changes. Archived documents cannot override an accepted ADR, active spec, or
-current product plan.
+changes.
 
 ## Start in the right place
 

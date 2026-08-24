@@ -34,9 +34,6 @@ export function schematicTextSizeAttribute(
   profile: SchematicStyleProfile,
   sizeScale?: number,
 ): string {
-  if (profile.id === "textbook-monochrome-v1" && sizeScale === undefined) {
-    return "";
-  }
   const base = schematicTextFontSize(kind, profile);
   const size =
     sizeScale !== undefined && Number.isFinite(sizeScale) && sizeScale > 0

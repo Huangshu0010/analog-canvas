@@ -103,4 +103,3 @@ Document/Instance/ordinary-Port hierarchy model remains accepted.
 - [`0023-rolling-previous-project-compatibility.md`](0023-rolling-previous-project-compatibility.md)
 - [`../specs/schematic-model.md`](../specs/schematic-model.md)
 - [`../specs/edit-engine.md`](../specs/edit-engine.md)
-- [`../roadmap/schematic-hierarchy-authoring-and-visual-plan.md`](../roadmap/schematic-hierarchy-authoring-and-visual-plan.md)
