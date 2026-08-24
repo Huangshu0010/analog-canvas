@@ -182,10 +182,12 @@ database stores only SHA-256 hashes of session and login tokens.
 
 Identities from different providers are distinct accounts in G2 (linking
 is a later refinement). Super-admin is computed per request: a session
-whose email appears in the `ADMIN_EMAILS` secret (comma-separated,
-case-insensitive) has admin authority — including the administration
-routes below — and rotation of `ADMIN_EMAILS` needs no re-login. The
-session cookie is the only publishing credential there is: there is no
+whose email appears in the union of the `ADMIN_EMAILS` and additive
+`ADMIN_EMAILS_EXTRA` secrets (both comma-separated and case-insensitive)
+has admin authority — including the administration routes below — and
+rotation of either secret needs no re-login. The additive secret allows
+operators to grant access without replacing the primary administrator
+list. The session cookie is the only publishing credential there is: there is no
 passphrase, bearer token, or shared secret anywhere on the gallery
 write path.
 

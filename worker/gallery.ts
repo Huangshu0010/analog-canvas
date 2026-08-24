@@ -106,6 +106,7 @@ export type GalleryEnv = {
   /** Sessions are the only identity: publishing requires one. */
   AUTH?: AuthNamespaceLike;
   ADMIN_EMAILS?: string;
+  ADMIN_EMAILS_EXTRA?: string;
 };
 
 export interface GalleryEntrySummary {
