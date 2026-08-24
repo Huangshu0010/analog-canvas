@@ -41,7 +41,7 @@ function lifecycleDocument() {
   );
   document.nets.push({
     id: "net-1",
-    scope: "local",
+
     terminals: [
       { instanceId: "R1", pinName: "2" },
       { instanceId: "R2", pinName: "1" },
@@ -123,7 +123,7 @@ describe("Instance lifecycle planning", () => {
     });
     document.nets.push({
       id: "net-vin",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     document.netlist = {
@@ -273,8 +273,7 @@ describe("Instance lifecycle planning", () => {
     });
     document.nets.push({
       id: "net-port-p1",
-      name: "BUS",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     document.annotations.push({
@@ -321,10 +320,8 @@ describe("Instance lifecycle planning", () => {
     });
     document.nets.push({
       id: "net-port-p1",
-      name: "BUS",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
-      origin: { kind: "spice-import", sourceNetIds: ["source-bus"] },
     });
     document.connectivityEvidence.push({
       id: "source-bus-evidence",
@@ -387,8 +384,7 @@ describe("Instance lifecycle planning", () => {
     });
     document.nets.push({
       id: "net-vin",
-      name: "VIN",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     document.netlist = {
@@ -422,7 +418,6 @@ describe("Instance lifecycle planning", () => {
         nets: [
           {
             id: "net-vin",
-            name: "VIN",
             terminals: [{ instanceId: "P1", pinName: "P" }],
           },
         ],

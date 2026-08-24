@@ -29,8 +29,7 @@ describe("selection move plan", () => {
     );
     document.nets.push({
       id: "n1",
-      name: "n1",
-      scope: "local",
+
       terminals: [
         { instanceId: "R1", pinName: "1" },
         { instanceId: "R2", pinName: "1" },

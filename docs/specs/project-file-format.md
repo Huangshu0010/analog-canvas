@@ -65,7 +65,7 @@ all been rewritten to 23.
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 21, 22, or 23
+read text -> parse JSON -> require Project schema 22 or 23
 -> converge to schema 23 -> strict schema-23 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```

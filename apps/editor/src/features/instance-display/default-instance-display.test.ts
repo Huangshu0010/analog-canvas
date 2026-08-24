@@ -93,8 +93,7 @@ describe("default instance display annotations", () => {
     document.instances.push(instance);
     document.nets.push({
       id: "net-vin",
-      name: "VIN",
-      scope: "local",
+
       terminals: [{ instanceId: instance.id, pinName: "P" }],
     });
 

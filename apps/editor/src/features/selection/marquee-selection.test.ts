@@ -35,7 +35,7 @@ function fixture(): {
   labelBounds: Rect;
 } {
   const document = createEmptyDocument("marquee", "Marquee");
-  document.nets.push({ id: "net-1", scope: "local", terminals: [] });
+  document.nets.push({ id: "net-1", terminals: [] });
   document.junctions.push(
     {
       id: "j1",

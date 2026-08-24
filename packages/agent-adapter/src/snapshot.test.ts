@@ -118,9 +118,7 @@ describe("Agent Document Snapshot", () => {
     const document = createEmptyDocument("power-snapshot", "Power Snapshot");
     document.nets.push({
       id: "net-vdd",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     document.connectivityEvidence.push({
@@ -152,9 +150,7 @@ describe("Agent Document Snapshot", () => {
     });
     document.nets.push({
       id: "net-global-0",
-      name: "0",
-      scope: "global",
-      powerDomain: "ground",
+
       terminals: [{ instanceId: "M1", pinName: "B" }],
     });
 

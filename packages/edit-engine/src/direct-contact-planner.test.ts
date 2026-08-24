@@ -38,12 +38,12 @@ describe("direct endpoint connection planner", () => {
     document.nets.push(
       {
         id: "net-a",
-        scope: "local",
+
         terminals: [{ instanceId: "A", pinName: "P" }],
       },
       {
         id: "net-b",
-        scope: "local",
+
         terminals: [{ instanceId: "B", pinName: "P" }],
       },
     );
@@ -69,12 +69,12 @@ describe("direct endpoint connection planner", () => {
     document.nets.push(
       {
         id: "net-a",
-        scope: "local",
+
         terminals: [{ instanceId: "A", pinName: "P" }],
       },
       {
         id: "net-b",
-        scope: "local",
+
         terminals: [{ instanceId: "B", pinName: "P" }],
       },
     );

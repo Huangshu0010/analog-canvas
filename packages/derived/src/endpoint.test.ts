@@ -202,7 +202,7 @@ describe("endpoint primitives", () => {
       const document = createEmptyProject("ep", "EP").documents[0]!;
       const net: Net = {
         id: "net-a",
-        scope: "local",
+
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },

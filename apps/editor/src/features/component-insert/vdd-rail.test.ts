@@ -68,9 +68,7 @@ describe("drawn VDD rail construction", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-avdd",
-      name: "AVDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
 
@@ -211,9 +209,7 @@ describe("drawn VDD rail construction", () => {
     });
     document.nets.push({
       id: "net-global-vdd",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [{ instanceId: "M1", pinName: "B" }],
     });
 
@@ -303,9 +299,7 @@ describe("drawn VDD rail construction", () => {
     const document = createEmptyDocument("main", "Main");
     document.nets.push({
       id: "net-port-avdd",
-      name: "AVDD",
-      scope: "local",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     document.connectivityEvidence.push({

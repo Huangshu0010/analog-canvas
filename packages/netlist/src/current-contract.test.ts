@@ -8,31 +8,25 @@ import {
 import { analyzeDesignNetlist as analyzeCurrentDesignNetlist } from "./index.js";
 
 function analyzeDesignNetlist(project: CircuitProject) {
-  for (const document of project.documents) {
-    for (const net of document.nets) {
-      if (
-        !net.name ||
-        document.connectivityEvidence.some(
-          (evidence) =>
-            evidence.kind === "name-claim" && evidence.netId === net.id,
-        )
-      ) {
-        continue;
-      }
-      document.connectivityEvidence.push({
-        id: deriveStableId("fixture-net-name", document.id, net.id),
-        kind: "name-claim",
-        netId: net.id,
-        name: net.name,
-        owner: { kind: "explicit-net-property" },
-        scope: net.scope ?? "local",
-        ...(net.powerDomain === "vdd" || net.powerDomain === "ground"
-          ? { powerDomain: net.powerDomain }
-          : {}),
-      });
-    }
-  }
   return analyzeCurrentDesignNetlist(project);
+}
+
+function claimNet(
+  document: CircuitProject["documents"][number],
+  netId: string,
+  name: string,
+  scope: "local" | "global" = "local",
+  powerDomain?: "vdd" | "ground",
+): void {
+  document.connectivityEvidence.push({
+    id: deriveStableId("fixture-net-name", document.id, netId),
+    kind: "name-claim",
+    netId,
+    name,
+    owner: { kind: "explicit-net-property" },
+    scope,
+    ...(powerDomain ? { powerDomain } : {}),
+  });
 }
 
 function resistorProject(parameters: Record<string, string>) {
@@ -51,17 +45,17 @@ function resistorProject(parameters: Record<string, string>) {
   document.nets.push(
     {
       id: "net-in",
-      name: "VIN",
-      scope: "local",
+
       terminals: [{ instanceId: "R1", pinName: "1" }],
     },
     {
       id: "net-out",
-      name: "VOUT",
-      scope: "local",
+
       terminals: [{ instanceId: "R1", pinName: "2" }],
     },
   );
+  claimNet(document, "net-in", "VIN");
+  claimNet(document, "net-out", "VOUT");
   return project;
 }
 
@@ -96,12 +90,12 @@ describe("current formal cell interface", () => {
     document.nets.push(
       {
         id: "net-in",
-        scope: "local",
+
         terminals: [{ instanceId: "P1", pinName: "P" }],
       },
       {
         id: "net-out",
-        scope: "local",
+
         terminals: [{ instanceId: "P2", pinName: "P" }],
       },
     );
@@ -128,10 +122,10 @@ describe("current formal cell interface", () => {
     });
     document.nets.push({
       id: "net-vin",
-      name: "VIN",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
+    claimNet(document, "net-vin", "VIN");
 
     const result = analyzeDesignNetlist(project);
 
@@ -160,12 +154,12 @@ describe("current formal cell interface", () => {
     document.nets.push(
       {
         id: "net-a",
-        scope: "local",
+
         terminals: [{ instanceId: "R1", pinName: "1" }],
       },
       {
         id: "net-b",
-        scope: "local",
+
         terminals: [{ instanceId: "R1", pinName: "2" }],
       },
     );
@@ -224,10 +218,10 @@ describe("current formal cell interface", () => {
     document.nets[1]!.terminals = [];
     document.nets.push({
       id: "occupied-no-connect-name",
-      name: "NC0001",
-      scope: "local",
+
       terminals: [],
     });
+    claimNet(document, "occupied-no-connect-name", "NC0001");
     document.noConnects.push({
       id: "no-connect-r1-2",
       endpoint: { kind: "terminal", instanceId: "R1", pinName: "2" },
@@ -320,7 +314,7 @@ describe("current formal cell interface", () => {
     const document = project.documents[0]!;
     document.nets.push({
       id: "net-global",
-      scope: "local",
+
       terminals: [],
     });
     document.connectivityEvidence.push(
@@ -363,10 +357,10 @@ describe("current formal cell interface", () => {
     });
     document.nets.push({
       id: "net-ground",
-      name: "0",
-      scope: "global",
+
       terminals: [{ instanceId: "GND", pinName: "0" }],
     });
+    claimNet(document, "net-ground", "0", "global", "ground");
 
     const result = analyzeDesignNetlist(project);
 
@@ -385,11 +379,10 @@ describe("current formal cell interface", () => {
     });
     document.nets.push({
       id: "net-vdd",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
     });
+    claimNet(document, "net-vdd", "VDD", "global", "vdd");
 
     const result = analyzeDesignNetlist(project);
 
@@ -413,10 +406,10 @@ describe("current formal cell interface", () => {
     });
     document.nets.push({
       id: "net-signal",
-      name: "SIGNAL",
-      scope: "local",
+
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
     });
+    claimNet(document, "net-signal", "SIGNAL");
 
     const result = analyzeDesignNetlist(project);
 
@@ -460,10 +453,10 @@ describe("current formal cell interface", () => {
     ] as const) {
       document.nets.push({
         id,
-        name,
-        scope: "local",
+
         terminals: [{ instanceId: "X1", pinName }],
       });
+      claimNet(document, id, name);
     }
 
     const result = analyzeDesignNetlist(project);
@@ -517,10 +510,10 @@ describe("current formal cell interface", () => {
     });
     document.nets.push({
       id: "net-in",
-      name: "IN",
-      scope: "local",
+
       terminals: [{ instanceId: "X1", pinName: "IN" }],
     });
+    claimNet(document, "net-in", "IN");
 
     const result = analyzeDesignNetlist(project);
 
@@ -560,10 +553,10 @@ describe("current formal cell interface", () => {
     });
     document.nets.push({
       id: "net-in",
-      name: "IN",
-      scope: "local",
+
       terminals: [{ instanceId: "X1", pinName: "P1" }],
     });
+    claimNet(document, "net-in", "IN");
 
     const result = analyzeDesignNetlist(project);
 
@@ -604,17 +597,17 @@ describe("current formal cell interface", () => {
     document.nets.push(
       {
         id: "net-a",
-        name: "NET_A",
-        scope: "local",
+
         terminals: [{ instanceId: "X1", pinName: "A" }],
       },
       {
         id: "net-b",
-        name: "NET_B",
-        scope: "local",
+
         terminals: [{ instanceId: "X1", pinName: "B" }],
       },
     );
+    claimNet(document, "net-a", "NET_A");
+    claimNet(document, "net-b", "NET_B");
 
     const result = analyzeDesignNetlist(project);
 
@@ -660,10 +653,10 @@ describe("current formal cell interface", () => {
     ] as const) {
       document.nets.push({
         id: `net-${pinName.toLowerCase()}`,
-        name: netName,
-        scope: "local",
+
         terminals: [{ instanceId: "XM1", pinName }],
       });
+      claimNet(document, `net-${pinName.toLowerCase()}`, netName);
     }
 
     const result = analyzeDesignNetlist(project);

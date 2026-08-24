@@ -36,7 +36,7 @@ describe("schematic clipboard", () => {
     });
     document.nets.push({
       id: "net-input",
-      scope: "local",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     document.netlist = {
@@ -122,8 +122,7 @@ describe("schematic clipboard", () => {
     );
     document.nets.push({
       id: "net-signal",
-      name: "SIGNAL",
-      scope: "local",
+
       terminals: [
         { instanceId: "R1", pinName: "2" },
         { instanceId: "R2", pinName: "1" },
@@ -254,12 +253,12 @@ describe("schematic clipboard", () => {
     document.nets.push(
       {
         id: "net-r1",
-        scope: "local",
+
         terminals: [{ instanceId: "R1", pinName: "1" }],
       },
       {
         id: "net-r2",
-        scope: "local",
+
         terminals: [{ instanceId: "R2", pinName: "1" }],
       },
     );
@@ -647,9 +646,7 @@ describe("schematic clipboard", () => {
     );
     document.nets.push({
       id: "net-global-0",
-      name: "0",
-      scope: "global",
-      powerDomain: "ground",
+
       terminals: [
         { instanceId: "M1", pinName: "B" },
         { instanceId: "M2", pinName: "B" },
@@ -703,11 +700,17 @@ describe("copyWholeDocument", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({
       id: "net-vdd",
-      name: "VDD",
-      scope: "local",
-      powerDomain: "vdd",
+
       terminals: [],
-      origin: { kind: "authored" },
+    });
+    document.connectivityEvidence.push({
+      id: "claim-vdd",
+      kind: "name-claim",
+      netId: "net-vdd",
+      name: "VDD",
+      owner: { kind: "explicit-net-property" },
+      scope: "global",
+      powerDomain: "vdd",
     });
     document.junctions.push(
       {
@@ -741,7 +744,11 @@ describe("copyWholeDocument", () => {
     expect(whole?.routes).toHaveLength(1);
     expect(whole?.routes[0]?.presentation).toBe("power-rail");
     expect(whole?.junctions).toHaveLength(2);
-    expect(whole?.nets.map((net) => net.name)).toEqual(["VDD"]);
+    expect(whole?.connectivityEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "name-claim", name: "VDD" }),
+      ]),
+    );
   });
 
   it("retains migrated Power Rail name claims when inserting an example", () => {
@@ -817,9 +824,16 @@ describe("a copy stands on its own", () => {
     });
     document.nets.push({
       id: "net-p12",
-      scope: "local",
-      name: "P12",
+
       terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    document.connectivityEvidence.push({
+      id: "claim-p12",
+      kind: "name-claim",
+      netId: "net-p12",
+      name: "P12",
+      owner: { kind: "free-port", instanceId: "P1" },
+      scope: "local",
     });
 
     const clipboard = copySelection(document, ["P1"]);
@@ -848,7 +862,13 @@ describe("a copy stands on its own", () => {
     expect(netOf("P1")?.id).not.toBe(netOf(copyId)?.id);
     // The copy brings its own, unnamed Net rather than joining the source's,
     // so naming one of them cannot rename the other.
-    expect(netOf(copyId)?.name).toBeUndefined();
-    expect(netOf("P1")?.name).toBe("P12");
+    const names = new Map(
+      [...resolveDocumentLogicalNets(result.document).groups].map((group) => [
+        group.id,
+        group.name,
+      ]),
+    );
+    expect(names.get(netOf(copyId)?.id ?? "")).toBeUndefined();
+    expect(names.get(netOf("P1")?.id ?? "")).toBe("P12");
   });
 });

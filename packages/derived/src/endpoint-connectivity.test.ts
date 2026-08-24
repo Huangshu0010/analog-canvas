@@ -73,12 +73,12 @@ describe("endpoint connectivity assessment", () => {
     document.nets.push(
       {
         id: "single",
-        scope: "local",
+
         terminals: [{ instanceId: "A", pinName: "L" }],
       },
       {
         id: "peer",
-        scope: "local",
+
         terminals: [
           { instanceId: "A", pinName: "R" },
           { instanceId: "B", pinName: "L" },
@@ -111,12 +111,12 @@ describe("endpoint connectivity assessment", () => {
     document.nets.push(
       {
         id: "formal",
-        scope: "local",
+
         terminals: [{ instanceId: "A", pinName: "L" }],
       },
       {
         id: "supply",
-        scope: "local",
+
         terminals: [{ instanceId: "A", pinName: "R" }],
       },
     );

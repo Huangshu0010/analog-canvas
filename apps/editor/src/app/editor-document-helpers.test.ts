@@ -65,8 +65,7 @@ describe("editor document helpers", () => {
     const document = createEmptyDocument("doc", "Doc");
     document.nets.push({
       id: "net-ui-7",
-      name: "N",
-      scope: "local",
+
       terminals: [],
     });
     document.routes.push({

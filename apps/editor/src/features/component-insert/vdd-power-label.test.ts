@@ -149,9 +149,7 @@ describe("vdd power label annotation", () => {
     document.instances.push(instance);
     document.nets.push({
       id: "net-vdd",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     document.annotations.push(
@@ -241,9 +239,7 @@ describe("vdd power label annotation", () => {
     document.instances.push(instance);
     document.nets.push({
       id: "net-vdd",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     document.annotations.push(
@@ -334,9 +330,7 @@ describe("vdd power label annotation", () => {
     document.instances.push(instance);
     document.nets.push({
       id: "net-vdd",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     document.annotations.push(
@@ -430,9 +424,7 @@ describe("vdd power label annotation", () => {
     document.instances.push(instance);
     document.nets.push({
       id: "net-vdd",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     document.annotations.push(annotation);

@@ -79,7 +79,7 @@ function transaction(documentId: string, revision: number, edits: unknown[]) {
 describe("routing Edit Engine", () => {
   it("accepts one octilinear Route without creating a second topology protocol", () => {
     const document = createEmptyDocument("octilinear", "Octilinear");
-    document.nets.push({ id: "n1", scope: "local", terminals: [] });
+    document.nets.push({ id: "n1", terminals: [] });
     document.junctions.push(
       {
         id: "J1",
@@ -118,7 +118,7 @@ describe("routing Edit Engine", () => {
       "agent-octilinear",
       "Agent octilinear",
     );
-    document.nets.push({ id: "n1", scope: "local", terminals: [] });
+    document.nets.push({ id: "n1", terminals: [] });
     document.junctions.push(
       { id: "J1", netId: "n1", position: { x: 0, y: 0 }, role: "route-anchor" },
       {
@@ -150,7 +150,7 @@ describe("routing Edit Engine", () => {
 
   it("rejects a Junction move that would leave an incident Route geometry stale", () => {
     const document = createEmptyDocument("junction-integrity", "Junction");
-    document.nets.push({ id: "n1", scope: "local", terminals: [] });
+    document.nets.push({ id: "n1", terminals: [] });
     document.junctions.push(
       {
         id: "J1",
@@ -209,9 +209,7 @@ describe("routing Edit Engine", () => {
     const document = createEmptyDocument("vdd-manipulation", "VDD edit");
     document.nets.push({
       id: "VDD",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     addNameClaim(document, "VDD", "VDD", "global", "vdd");
@@ -345,9 +343,7 @@ describe("routing Edit Engine", () => {
     const document = createEmptyDocument("vertical-rail", "Vertical rail");
     document.nets.push({
       id: "VDD",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     addNameClaim(document, "VDD", "VDD", "global", "vdd");
@@ -398,7 +394,7 @@ describe("routing Edit Engine", () => {
     const document = createEmptyDocument("vdd-delete", "VDD delete");
     document.nets.push({
       id: "VDD",
-      scope: "global",
+
       terminals: [],
     });
     document.junctions.push(
@@ -620,7 +616,7 @@ describe("routing Edit Engine", () => {
 
   it("moves a three-way Junction with its dragged segment", () => {
     const document = createEmptyDocument("junction-follow", "Junction follow");
-    document.nets.push({ id: "net-j", scope: "local", terminals: [] });
+    document.nets.push({ id: "net-j", terminals: [] });
     document.junctions.push(
       { id: "junction-center", netId: "net-j", position: { x: 100, y: 100 } },
       {
@@ -763,7 +759,7 @@ describe("routing Edit Engine", () => {
   it("never drags a Junction so far that a branch hides inside a wire", () => {
     // A T: two arms on y=300 meeting a tap that rises to y=200.
     const document = createEmptyDocument("tap", "Tap");
-    document.nets.push({ id: "n1", scope: "local", terminals: [] });
+    document.nets.push({ id: "n1", terminals: [] });
     document.junctions.push({
       id: "J",
       netId: "n1",
@@ -2265,7 +2261,7 @@ describe("routing Edit Engine", () => {
     const document = documentFixture();
     document.nets.push({
       id: "net-free",
-      scope: "local",
+
       terminals: [],
     });
     document.junctions.push(
@@ -2370,7 +2366,6 @@ describe("routing Edit Engine", () => {
   it("physically splits a global-Net Route instead of hiding the cut behind global Evidence", () => {
     const document = documentFixture();
     const net = document.nets.find((candidate) => candidate.id === "net-v")!;
-    net.scope = "global";
     for (const evidence of document.connectivityEvidence) {
       if (evidence.kind === "name-claim" && evidence.netId === net.id) {
         evidence.scope = "global";

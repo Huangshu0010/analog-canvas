@@ -28,7 +28,7 @@ describe("route-attached current arrows", () => {
     );
     document.nets.push({
       id: "net-signal",
-      scope: "local",
+
       terminals: [
         { instanceId: "R1", pinName: "2" },
         { instanceId: "R2", pinName: "1" },
@@ -104,7 +104,7 @@ describe("route-attached current arrows", () => {
     );
     document.nets.push({
       id: "net-signal",
-      scope: "local",
+
       terminals: [
         { instanceId: "R1", pinName: "2" },
         { instanceId: "R2", pinName: "1" },

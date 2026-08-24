@@ -76,9 +76,7 @@ describe("initial MOS bulk defaults", () => {
     document.nets.push(
       {
         id: "net-avdd",
-        name: "AVDD",
-        scope: "local",
-        powerDomain: "vdd",
+
         terminals: [
           { instanceId: "M1", pinName: "B" },
           { instanceId: "M2", pinName: "B" },
@@ -86,9 +84,7 @@ describe("initial MOS bulk defaults", () => {
       },
       {
         id: "net-dvdd",
-        name: "DVDD",
-        scope: "local",
-        powerDomain: "vdd",
+
         terminals: [],
       },
     );

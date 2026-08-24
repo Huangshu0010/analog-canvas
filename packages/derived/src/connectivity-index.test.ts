@@ -18,12 +18,12 @@ describe("Project Connectivity Index logical aliases", () => {
     document.nets.push(
       {
         id: "net-a",
-        scope: "local",
+
         terminals: [{ instanceId: "P1", pinName: "P" }],
       },
       {
         id: "net-b",
-        scope: "local",
+
         terminals: [{ instanceId: "P2", pinName: "P" }],
       },
     );

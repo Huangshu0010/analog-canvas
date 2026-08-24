@@ -68,12 +68,11 @@ describe("Project persistence", () => {
     }
   });
 
-  it("upgrades schema-21 names, labels, and source membership to evidence", () => {
+  it("upgrades schema-22 evidence while preserving bound identities", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     );
-    source.schemaVersion = 21;
-    delete source.documents[0].connectivityEvidence;
+    source.schemaVersion = 22;
     source.documents[0].instances.push({
       id: "P-object",
       symbolId: "port",
@@ -113,6 +112,48 @@ describe("Project persistence", () => {
       powerDomain: "vdd",
       terminals: [],
     });
+    source.documents[0].connectivityEvidence.push(
+      {
+        id: "claim-vout",
+        kind: "name-claim",
+        netId: "net-vout",
+        name: "Vout",
+        owner: { kind: "explicit-net-property" },
+        scope: "local",
+      },
+      {
+        id: "source-vout",
+        kind: "spice-source",
+        netId: "net-vout",
+        sourceNetId: "source-vout",
+      },
+      {
+        id: "claim-vdd",
+        kind: "name-claim",
+        netId: "net-vdd",
+        name: "VDD",
+        owner: { kind: "explicit-net-property" },
+        scope: "global",
+        powerDomain: "vdd",
+      },
+      {
+        id: "label-claim-vout",
+        kind: "name-claim",
+        netId: "net-vout",
+        name: "Vout",
+        owner: { kind: "net-label", annotationId: "label-vout" },
+        scope: "local",
+      },
+      {
+        id: "label-claim-vdd",
+        kind: "name-claim",
+        netId: "net-vdd",
+        name: "VDD",
+        owner: { kind: "power-marker", objectId: "label-vdd" },
+        scope: "global",
+        powerDomain: "vdd",
+      },
+    );
     source.documents[0].annotations.push(
       {
         id: "reference-R7",
@@ -162,7 +203,7 @@ describe("Project persistence", () => {
     const previousText = JSON.stringify(source);
     const migrated = parseProjectWithMetadata(previousText);
     expect(migrated).toMatchObject({
-      sourceSchemaVersion: 21,
+      sourceSchemaVersion: 22,
       migrated: true,
       project: { schemaVersion: 23 },
     });
@@ -228,8 +269,7 @@ describe("Project persistence", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     );
-    source.schemaVersion = 21;
-    delete source.documents[0].connectivityEvidence;
+    source.schemaVersion = 22;
     const project = parseProject(JSON.stringify(source));
     project.documents[0]!.annotations.push({
       id: "value-fraction",
@@ -312,12 +352,11 @@ describe("Project persistence", () => {
     ]);
   });
 
-  it("migrates an object-anchored schema-21 VDD format override", () => {
+  it("preserves an object-anchored schema-22 VDD format override", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Gallery VDD")),
     );
-    source.schemaVersion = 21;
-    delete source.documents[0].connectivityEvidence;
+    source.schemaVersion = 22;
     source.documents[0].instances.push({
       id: "VDD1",
       symbolId: "vdd-port",
@@ -335,6 +374,15 @@ describe("Project persistence", () => {
       powerDomain: "vdd",
       origin: { kind: "authored" },
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
+    });
+    source.documents[0].connectivityEvidence.push({
+      id: "claim-vdd1",
+      kind: "name-claim",
+      netId: "net-power-vdd1",
+      name: "VDD",
+      owner: { kind: "power-marker", objectId: "VDD1" },
+      scope: "global",
+      powerDomain: "vdd",
     });
     source.documents[0].annotations.push({
       id: "power-label-vdd1",
@@ -399,9 +447,9 @@ describe("Project persistence", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/must be 21, 22, or 23/);
+    ).toThrow(/must be 22 or 23/);
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 20 })),
-    ).toThrow(/must be 21, 22, or 23/);
+    ).toThrow(/must be 22 or 23/);
   });
 });

@@ -11,6 +11,22 @@ import type { DesignNetlistIR } from "./ir.js";
 import { analyzeDesignNetlist } from "./extract.js";
 import { printSpiceNetlist } from "./printers.js";
 
+function claimNet(
+  document: CircuitProject["documents"][number],
+  netId: string,
+  name: string,
+  scope: "local" | "global" = "local",
+): void {
+  document.connectivityEvidence.push({
+    id: deriveStableId("fixture-net-name", document.id, netId),
+    kind: "name-claim",
+    netId,
+    name,
+    owner: { kind: "explicit-net-property" },
+    scope,
+  });
+}
+
 function structuralProject(): CircuitProject {
   const project = createEmptyProject("roundtrip-project", "Roundtrip", "top");
   const top = project.documents[0]!;
@@ -75,8 +91,7 @@ function structuralProject(): CircuitProject {
   top.nets.push(
     {
       id: "top-net-vin",
-      name: "internal_vin",
-      scope: "local",
+
       terminals: [
         { instanceId: "top-port-vin", pinName: "P" },
         { instanceId: "X1", pinName: "A" },
@@ -85,8 +100,7 @@ function structuralProject(): CircuitProject {
     },
     {
       id: "top-net-vout",
-      name: "internal_vout",
-      scope: "local",
+
       terminals: [
         { instanceId: "top-port-vout", pinName: "P" },
         { instanceId: "X1", pinName: "B" },
@@ -95,17 +109,19 @@ function structuralProject(): CircuitProject {
     },
     {
       id: "top-net-vdd",
-      name: "VDD",
-      scope: "global",
+
       terminals: [{ instanceId: "I1", pinName: "+" }],
     },
     {
       id: "top-net-ground",
-      name: "0",
-      scope: "global",
+
       terminals: [{ instanceId: "I1", pinName: "-" }],
     },
   );
+  claimNet(top, "top-net-vin", "internal_vin");
+  claimNet(top, "top-net-vout", "internal_vout");
+  claimNet(top, "top-net-vdd", "VDD", "global");
+  claimNet(top, "top-net-ground", "0", "global");
 
   const leaf = createEmptyDocument("leaf", "leaf");
   leaf.netlist = {
@@ -155,8 +171,7 @@ function structuralProject(): CircuitProject {
   leaf.nets.push(
     {
       id: "leaf-net-a",
-      name: "leaf_internal_a",
-      scope: "local",
+
       terminals: [
         { instanceId: "leaf-port-a", pinName: "P" },
         { instanceId: "C1", pinName: "1" },
@@ -165,14 +180,15 @@ function structuralProject(): CircuitProject {
     },
     {
       id: "leaf-net-b",
-      name: "leaf_internal_b",
-      scope: "local",
+
       terminals: [
         { instanceId: "leaf-port-b", pinName: "P" },
         { instanceId: "C1", pinName: "2" },
       ],
     },
   );
+  claimNet(leaf, "leaf-net-a", "leaf_internal_a");
+  claimNet(leaf, "leaf-net-b", "leaf_internal_b");
   leaf.noConnects.push({
     id: "leaf-r1-open",
     endpoint: { kind: "terminal", instanceId: "R1", pinName: "2" },
@@ -188,19 +204,6 @@ function structuralProject(): CircuitProject {
     formalParameters: [],
     interfaceStatus: "declared",
   });
-  for (const document of project.documents) {
-    for (const net of document.nets) {
-      if (!net.name) continue;
-      document.connectivityEvidence.push({
-        id: deriveStableId("fixture-net-name", document.id, net.id),
-        kind: "name-claim",
-        netId: net.id,
-        name: net.name,
-        owner: { kind: "explicit-net-property" },
-        scope: net.scope ?? "local",
-      });
-    }
-  }
   return project;
 }
 

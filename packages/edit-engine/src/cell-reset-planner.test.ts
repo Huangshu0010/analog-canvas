@@ -36,13 +36,13 @@ function fixture() {
   );
   child.nets.push({
     id: "net-in",
-    scope: "local",
+
     terminals: [
       { instanceId: "P1", pinName: "P" },
       { instanceId: "R1", pinName: "P" },
     ],
   });
-  child.nets.push({ id: "net-body", scope: "local", terminals: [] });
+  child.nets.push({ id: "net-body", terminals: [] });
   child.connectivityEvidence.push(
     {
       id: "claim-interface",

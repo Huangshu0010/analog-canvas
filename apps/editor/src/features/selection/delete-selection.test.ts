@@ -85,7 +85,7 @@ describe("connected instance deletion", () => {
     );
     document.nets.push({
       id: "net-1",
-      scope: "local",
+
       terminals: [
         { instanceId: "R1", pinName: "2" },
         { instanceId: "R2", pinName: "1" },
@@ -138,8 +138,7 @@ function documentWithJunctionRoute() {
     .documents[0]!;
   document.nets.push({
     id: "net-1",
-    name: "N1",
-    scope: "local",
+
     terminals: [],
   });
   document.junctions.push(
@@ -162,8 +161,7 @@ function documentWithBranchedJunction() {
     .documents[0]!;
   document.nets.push({
     id: "net-1",
-    name: "N1",
-    scope: "local",
+
     terminals: [],
   });
   document.junctions.push(

@@ -24,7 +24,7 @@ function looseRouteDocument() {
   const document = createEmptyDocument("route-geometry", "Route geometry");
   document.nets.push({
     id: "net-1",
-    scope: "local",
+
     terminals: [],
   });
   document.junctions.push(

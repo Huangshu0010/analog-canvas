@@ -19,13 +19,12 @@ describe("capacitor plate Properties projection", () => {
     document.nets.push(
       {
         id: "net-out",
-        name: "OUT",
-        scope: "local",
+
         terminals: [{ instanceId: "C1", pinName: "1" }],
       },
       {
         id: "net-return",
-        scope: "local",
+
         terminals: [{ instanceId: "C1", pinName: "2" }],
       },
     );

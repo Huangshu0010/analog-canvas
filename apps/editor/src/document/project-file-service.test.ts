@@ -390,20 +390,19 @@ describe("stageProjectFile", () => {
     });
   });
 
-  it("stages schema 21 as an upgraded schema-23 Project", async () => {
+  it("stages schema 22 as an upgraded schema-23 Project", async () => {
     const previous = JSON.parse(serializeProject(project));
-    previous.schemaVersion = 21;
-    delete previous.documents[0].connectivityEvidence;
+    previous.schemaVersion = 22;
     const previousText = JSON.stringify(previous);
     const outcome = await stageProjectFile(
-      fakeFile("amp-v21.icproj.json", previousText),
+      fakeFile("amp-v22.icproj.json", previousText),
       () => [],
     );
 
     expect(outcome).toMatchObject({
       status: "opened",
-      fileName: "amp-v21.icproj.json",
-      sourceSchemaVersion: 21,
+      fileName: "amp-v22.icproj.json",
+      sourceSchemaVersion: 22,
       migrated: true,
       project: { schemaVersion: 23 },
     });

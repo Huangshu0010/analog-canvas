@@ -205,11 +205,12 @@ header buys nothing. Without such a session every admin route answers
 - `DELETE /api/gallery/<id>` — permanent, and only for entries already in
   the bin (`409` otherwise).
 - `GET /api/gallery/recycled` — the bin.
-- `POST /api/gallery/maintenance/reserialize` — re-parse and re-serialize
-  every stored entry through the current protocol and refresh its preview;
-  run once per schema advance while the rolling window still reads the old
-  version. Failures are reported per entry and never destroy the record;
-  the independently stored preview keeps expired entries browsable.
+- `GET /api/gallery/maintenance/schema-backup` — download a full-fidelity
+  administrator backup of entries, saved versions, and workspace slots.
+- `POST /api/gallery/maintenance/schema23` — validate or transactionally
+  converge every stored Project to schema 23. The request body is
+  `{ "apply": false }` for a dry run and `{ "apply": true }` to commit only
+  when every record is valid.
 
 ## Retention and privacy
 

@@ -34,8 +34,7 @@ function fixture(): SchematicDocument {
   document.nets = [
     {
       id: "net-contact",
-      scope: "local",
-      powerDomain: "none",
+
       terminals: [
         { instanceId: "A", pinName: "P" },
         { instanceId: "B", pinName: "P" },
@@ -303,14 +302,12 @@ describe("direct-contact transform lifecycle", () => {
     document.nets = [
       {
         id: "net-a",
-        scope: "local",
-        powerDomain: "none",
+
         terminals: [{ instanceId: "A", pinName: "P" }],
       },
       {
         id: "net-b",
-        scope: "local",
-        powerDomain: "none",
+
         terminals: [{ instanceId: "B", pinName: "P" }],
       },
     ];

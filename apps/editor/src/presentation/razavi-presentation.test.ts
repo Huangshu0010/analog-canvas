@@ -23,9 +23,7 @@ describe("Razavi hidden bulk policy", () => {
     document.instances.push(manualMos("M1", "nmos"));
     document.nets.push({
       id: "net-ground",
-      name: "0",
-      scope: "global",
-      powerDomain: "ground",
+
       terminals: [],
     });
     document.mosBulkDefaults = { nmosNetId: "net-ground" };
@@ -45,9 +43,7 @@ describe("Razavi hidden bulk policy", () => {
     document.instances.push(manualMos("M4", "pmos"));
     document.nets.push({
       id: "net-vdd",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
     document.mosBulkDefaults = { pmosNetId: "net-vdd" };
@@ -67,9 +63,7 @@ describe("Razavi hidden bulk policy", () => {
     document.instances.push(manualMos("M4", "pmos"));
     document.nets.push({
       id: "net-ui-2",
-      name: "VDD",
-      scope: "global",
-      powerDomain: "vdd",
+
       terminals: [],
     });
 
@@ -113,16 +107,12 @@ describe("Razavi hidden bulk policy", () => {
     project.documents[0]!.nets.push(
       {
         id: "net-ground-a",
-        name: "0",
-        scope: "global",
-        powerDomain: "ground",
+
         terminals: [],
       },
       {
         id: "net-ground-b",
-        name: "0",
-        scope: "global",
-        powerDomain: "ground",
+
         terminals: [],
       },
     );
