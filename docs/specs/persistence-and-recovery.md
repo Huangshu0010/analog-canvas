@@ -9,12 +9,12 @@ model in `packages/model` validates the normalized shape;
 `packages/project-protocol` owns parsing, rolling compatibility diagnostics,
 and canonical serialization. Persistence validates
 the complete current schema before open or save and writes atomically where the
-platform supports it. During Gallery convergence, schemas 21 and 22 upgrade to
-23 at ingestion; serialization always writes schema 23. The schema-21 hop is a
-bounded deployment bridge and is removed after online storage convergence.
+platform supports it. Schema 22 upgrades to 23 at ingestion; serialization
+always writes schema 23. Older schemas are rejected outside the rolling
+current-and-previous compatibility window.
 
 Recovery state is a non-authoritative browser safety copy. It may restore a
-complete schema-23 Project or a schema-21/22 record that validates after the
+complete schema-23 Project or a schema-22 record that validates after the
 bounded upgrade, associated with a recorded working-copy session.
 Corrupt, incompatible, or partial recovery data is discarded or retained as raw
 data without changing the live Project. User-saved Library examples are the

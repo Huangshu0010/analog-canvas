@@ -74,8 +74,8 @@ the Properties values remain the precise fallback. These are definition operatio
 not top-level drawing tools.
 
 Hierarchy presentation is saved as definition-level size and pin-placement
-intent in current Project schema 23. During Gallery convergence, schema-21 and
-schema-22 projects open through the bounded upgrade; schema-20 files remain
-unsupported. The block uses a closed polygon body and the shared
-Razavi rich-text renderer for pin and Cell names; it is compatible with that
-visual grammar rather than a pixel-for-pixel textbook symbol asset.
+intent in current Project schema 23. Schema-22 projects open through the
+bounded upgrade; schema-21 and older files remain unsupported. The block uses
+a closed polygon body and the shared Razavi rich-text renderer for pin and Cell
+names; it is compatible with that visual grammar rather than a pixel-for-pixel
+textbook symbol asset.

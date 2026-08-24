@@ -8,13 +8,11 @@ Primary owners: `packages/model` (current shape) and
 `packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`@icm/project-protocol` exposes `parseProject`. During the Gallery convergence
-release it accepts schemas 21, 22, and 23, upgrades every accepted input to the
-sole schema-23 in-memory Project, and writes only schema 23. Schema 21 first
-gains deterministic Connectivity Evidence; schema 22 then drops the inert
-Base-Net name, scope, power-role, and origin projections. This temporary
-two-hop reader is removed after Gallery entries, history, and workspaces have
-all been rewritten to 23.
+`@icm/project-protocol` exposes `parseProject`. It accepts schemas 22 and 23,
+upgrades schema 22 to the sole schema-23 in-memory Project, and writes only
+schema 23. The bounded schema-22 adapter repairs power-role Evidence where
+needed and drops the inert Base-Net name, scope, power-role, and origin
+projections before strict current-schema validation.
 
 ## Current authorities
 

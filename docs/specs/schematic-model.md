@@ -150,6 +150,6 @@ ordinary Schematic edits inside one Project structural transaction. The
 Project's `structureRevision` protects this cross-Document boundary and the
 editor records it as one undoable structural commit.
 
-Persistence writes only schema 23. The convergence reader accepts schemas 21
-and 22 at the file boundary, then supplies the current model only; no
+Persistence writes only schema 23. The rolling reader accepts schema 22 at the
+file boundary, then supplies the current model only; no
 compatibility shape enters runtime electrical derivation.

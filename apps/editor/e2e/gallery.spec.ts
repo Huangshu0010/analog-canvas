@@ -12,7 +12,7 @@ const ENTRY = {
   author: "tz",
   description: "Three-stage loop",
   createdAt: "2026-08-21T10:00:00.000Z",
-  schemaVersion: 21,
+  schemaVersion: 23,
 };
 
 /**
@@ -70,7 +70,7 @@ test("masonry places the top row left-to-right in distinct columns", async ({
     author: "tz",
     description: index === 0 ? "taller card" : "",
     createdAt: "2026-08-22T10:00:00.000Z",
-    schemaVersion: 21,
+    schemaVersion: 23,
   }));
   await page.route(galleryListUrl, (route) =>
     route.fulfill({ json: { entries, nextCursor: null } }),
@@ -122,7 +122,7 @@ test("the feed pages through the cursor as the sentinel comes into view", async 
           author: "tz",
           description: "",
           createdAt: "2026-08-22T10:00:00.000Z",
-          schemaVersion: 21,
+          schemaVersion: 23,
         })),
         nextCursor: second ? null : "c1",
         total: 5,
@@ -168,7 +168,7 @@ test("the feed scrolls inside its shell despite the locked app root", async ({
     author: "tz",
     description: "",
     createdAt: "2026-08-22T10:00:00.000Z",
-    schemaVersion: 21,
+    schemaVersion: 23,
   }));
   await page.route(galleryListUrl, (route) =>
     route.fulfill({ json: { entries, nextCursor: null } }),
@@ -209,7 +209,7 @@ test("clicking a byline filters the wall to that author, clearable", async ({
         author: "alice",
         description: "",
         createdAt: "2026-08-22T10:00:00.000Z",
-        schemaVersion: 21,
+        schemaVersion: 23,
       },
       ...(alice
         ? []
@@ -220,7 +220,7 @@ test("clicking a byline filters the wall to that author, clearable", async ({
               author: "bob",
               description: "",
               createdAt: "2026-08-22T09:00:00.000Z",
-              schemaVersion: 21,
+              schemaVersion: 23,
             },
           ]),
     ];
@@ -285,7 +285,7 @@ test("the tag menu multi-selects and tile tags join the selection", async ({
         author: "tz",
         description: "",
         createdAt: "2026-08-22T10:00:00.000Z",
-        schemaVersion: 21,
+        schemaVersion: 23,
         tags: entry.tags,
       }));
     return route.fulfill({ json: { entries, nextCursor: null } });
@@ -862,9 +862,9 @@ test("the retired review queue is gone from the moderation page", async ({
         applied: body.apply === true,
         targetSchemaVersion: 23,
         inventory: {
-          gallery_entries: { "21": 2, "22": 1 },
-          gallery_entry_versions: { "21": 1 },
-          workspace_slots: { "22": 1 },
+          gallery_entries: { "23": 3 },
+          gallery_entry_versions: { "23": 1 },
+          workspace_slots: { "23": 1 },
         },
         records: 5,
         ready: 5,
@@ -885,7 +885,7 @@ test("the retired review queue is gone from the moderation page", async ({
     "Validated: 5/5 records ready for schema 23; 0 failures.",
   );
   await expect(page.getByTestId("schema23-report")).toContainText(
-    "gallery_entries: v21=2, v22=1",
+    "gallery_entries: v23=3",
   );
   await expect(page.getByTestId("schema23-apply")).toBeDisabled();
   await page.getByTestId("schema23-backup-confirmed").check();

@@ -12,8 +12,8 @@ export class ProjectMigrationError extends Error {
 /**
  * Repair the narrow schema-22 shape emitted before power roles were copied
  * into Connectivity Evidence. Runtime code still reads Evidence only; this
- * load-boundary normalization merely restores information that the same file
- * already carries in its inert schema-21 Net projection.
+ * load-boundary normalization merely restores information that the same
+ * schema-22 file already carries in its inert Base-Net projection.
  */
 export function repairSchema22ProjectEvidence(
   raw: Record<string, unknown>,
