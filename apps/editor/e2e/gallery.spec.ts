@@ -879,6 +879,7 @@ test("the retired review queue is gone from the moderation page", async ({
     "href",
     "/api/gallery/maintenance/schema-backup",
   );
+  await expect(page.getByTestId("schema23-apply")).toBeDisabled();
   await page.getByTestId("schema23-dry-run").click();
   await expect(page.getByTestId("schema23-report")).toContainText(
     "Validated: 5/5 records ready for schema 23; 0 failures.",
@@ -886,7 +887,8 @@ test("the retired review queue is gone from the moderation page", async ({
   await expect(page.getByTestId("schema23-report")).toContainText(
     "gallery_entries: v21=2, v22=1",
   );
-  page.once("dialog", (dialog) => void dialog.accept());
+  await expect(page.getByTestId("schema23-apply")).toBeDisabled();
+  await page.getByTestId("schema23-backup-confirmed").check();
   await page.getByTestId("schema23-apply").click();
   await expect(page.getByTestId("schema23-report")).toContainText(
     "Applied: 5/5 records ready for schema 23; 0 failures.",

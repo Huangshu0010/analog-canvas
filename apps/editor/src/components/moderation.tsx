@@ -75,18 +75,16 @@ function SchemaMaintenance() {
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState<SchemaConvergenceReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [backupConfirmed, setBackupConfirmed] = useState(false);
+  const [validated, setValidated] = useState(false);
 
   async function converge(apply: boolean): Promise<void> {
-    if (
-      apply &&
-      !window.confirm(
-        "Apply schema 23 to every Gallery entry, saved version, and workspace slot? A full backup should already exist.",
-      )
-    ) {
-      return;
-    }
     setRunning(true);
     setError(null);
+    if (!apply) {
+      setValidated(false);
+      setBackupConfirmed(false);
+    }
     try {
       const response = await fetch("/api/gallery/maintenance/schema23", {
         method: "POST",
@@ -100,6 +98,12 @@ function SchemaMaintenance() {
         throw new Error("error" in payload ? payload.error : undefined);
       }
       setReport(payload);
+      if (!apply) {
+        setValidated(payload.failures.length === 0);
+      } else {
+        setValidated(false);
+        setBackupConfirmed(false);
+      }
     } catch (cause) {
       setError(
         cause instanceof Error && cause.message
@@ -136,13 +140,23 @@ function SchemaMaintenance() {
         <button
           type="button"
           className="review-approve"
-          disabled={running || (report !== null && report.failures.length > 0)}
+          disabled={running || !validated || !backupConfirmed}
           data-testid="schema23-apply"
           onClick={() => void converge(true)}
         >
           Apply schema 23
         </button>
       </div>
+      <label className="review-card-meta">
+        <input
+          type="checkbox"
+          checked={backupConfirmed}
+          disabled={running || !validated}
+          data-testid="schema23-backup-confirmed"
+          onChange={(event) => setBackupConfirmed(event.currentTarget.checked)}
+        />{" "}
+        I verified the full backup and the zero-failure validation report.
+      </label>
       {error ? <p className="account-notice">{error}</p> : null}
       {report ? (
         <div className="gallery-status" data-testid="schema23-report">
