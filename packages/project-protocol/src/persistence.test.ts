@@ -164,7 +164,7 @@ describe("Project persistence", () => {
     expect(migrated).toMatchObject({
       sourceSchemaVersion: 21,
       migrated: true,
-      project: { schemaVersion: 22 },
+      project: { schemaVersion: 23 },
     });
     expect(
       migrated.project.documents[0]!.annotations.map(
@@ -250,7 +250,7 @@ describe("Project persistence", () => {
     });
 
     const reopened = parseProject(serializeProject(project));
-    expect(reopened.schemaVersion).toBe(22);
+    expect(reopened.schemaVersion).toBe(23);
     expect(
       reopened.documents[0]!.annotations[0]?.content!.runs[0],
     ).toMatchObject({ kind: "fraction" });
@@ -260,6 +260,7 @@ describe("Project persistence", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     );
+    source.schemaVersion = 22;
     source.documents[0].nets.push({
       id: "net-vdd",
       name: "VDD",
@@ -311,13 +312,96 @@ describe("Project persistence", () => {
     ]);
   });
 
+  it("migrates an object-anchored schema-21 VDD format override", () => {
+    const source = JSON.parse(
+      serializeProject(createEmptyProject("project-test", "Gallery VDD")),
+    );
+    source.schemaVersion = 21;
+    delete source.documents[0].connectivityEvidence;
+    source.documents[0].instances.push({
+      id: "VDD1",
+      symbolId: "vdd-port",
+      schematicReference: "VDD1",
+      placement: {
+        position: { x: 120, y: 350 },
+        rotation: 270,
+        mirror: "none",
+      },
+    });
+    source.documents[0].nets.push({
+      id: "net-power-vdd1",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      origin: { kind: "authored" },
+      terminals: [{ instanceId: "VDD1", pinName: "P" }],
+    });
+    source.documents[0].annotations.push({
+      id: "power-label-vdd1",
+      kind: "power-label",
+      binding: { kind: "net-name", netId: "net-power-vdd1" },
+      formatOverride: {
+        runs: [
+          {
+            kind: "span",
+            style: "italic",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "V" }],
+              },
+            ],
+          },
+          {
+            kind: "span",
+            style: "subscript",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "DD" }],
+              },
+            ],
+          },
+        ],
+      },
+      anchor: {
+        kind: "object",
+        objectId: "VDD1",
+        localOffset: { x: -30, y: 10 },
+        fallbackPosition: { x: 90, y: 360 },
+      },
+      netId: "net-power-vdd1",
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+      sizeScale: 1,
+    });
+
+    const migrated = parseProject(JSON.stringify(source));
+    expect(migrated.schemaVersion).toBe(23);
+    expect(migrated.documents[0]!.connectivityEvidence).toContainEqual(
+      expect.objectContaining({
+        kind: "name-claim",
+        name: "VDD",
+        powerDomain: "vdd",
+        owner: { kind: "power-marker", objectId: "VDD1" },
+      }),
+    );
+    expect(migrated.documents[0]!.nets[0]).toEqual({
+      id: "net-power-vdd1",
+      terminals: [{ instanceId: "VDD1", pinName: "P" }],
+    });
+  });
+
   it("rejects schemas outside the rolling current-and-previous window", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/must be 21 or 22/);
+    ).toThrow(/must be 21, 22, or 23/);
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 20 })),
-    ).toThrow(/must be 21 or 22/);
+    ).toThrow(/must be 21, 22, or 23/);
   });
 });

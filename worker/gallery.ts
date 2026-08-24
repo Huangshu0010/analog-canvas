@@ -18,7 +18,10 @@ import { analyzeDesignNetlist } from "@icm/netlist";
 import { parseProject, serializeProject } from "@icm/project-protocol";
 import { renderDocumentSvg } from "@icm/render-svg";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
-import type { CircuitProject } from "@icm/model";
+import {
+  CURRENT_PROJECT_SCHEMA_VERSION,
+  type CircuitProject,
+} from "@icm/model";
 
 import { sessionUserOf, type AuthNamespaceLike } from "./auth";
 
@@ -59,6 +62,12 @@ interface WorkspaceSlotRow {
   name: string;
   saved_at: string;
   schema_version: number;
+}
+
+interface StoredProjectRow {
+  id: string;
+  schema_version: number;
+  project_text: string;
 }
 export const GALLERY_MAX_NAME_LENGTH = 120;
 export const GALLERY_MAX_AUTHOR_LENGTH = 40;
@@ -376,6 +385,10 @@ export class GalleryDO {
         return this.workspaceList(String(body.userId));
       case "workspace-open":
         return this.workspaceOpen(String(body.userId), String(body.id));
+      case "schema-backup":
+        return this.schemaBackup();
+      case "schema-converge":
+        return this.schemaConverge(body.apply === true);
       default:
         return Response.json({ error: "Unknown operation" }, { status: 404 });
     }
@@ -798,6 +811,19 @@ export class GalleryDO {
     if (!entry || !version) {
       return Response.json({ error: "not-found" }, { status: 404 });
     }
+    let restoredProject: CircuitProject;
+    try {
+      restoredProject = parseProject(version.project_text);
+    } catch (error) {
+      return Response.json(
+        {
+          error: "invalid-version-project",
+          message: error instanceof Error ? error.message : String(error),
+        },
+        { status: 409 },
+      );
+    }
+    const restoredProjectText = serializeProject(restoredProject);
     this.state.storage.transactionSync(() => {
       this.snapshotEntry(entry, String(body.at));
       this.sql.exec(
@@ -808,9 +834,9 @@ export class GalleryDO {
         version.name,
         version.author,
         version.description,
-        version.project_text,
+        restoredProjectText,
         version.svg_text,
-        version.schema_version,
+        restoredProject.schemaVersion,
         version.tags ?? "",
         entry.id,
       );
@@ -913,6 +939,127 @@ export class GalleryDO {
       savedAt: row.saved_at,
       schemaVersion: row.schema_version,
       projectText: row.project_text,
+    });
+  }
+
+  /** Full-fidelity administrator backup before an online schema migration. */
+  private schemaBackup(): Response {
+    return Response.json({
+      format: "analog-canvas-gallery-schema-backup-v1",
+      exportedAt: new Date().toISOString(),
+      targetSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION,
+      tables: {
+        galleryEntries: this.sql
+          .exec<Record<string, unknown>>("SELECT * FROM gallery_entries")
+          .toArray(),
+        galleryEntryVersions: this.sql
+          .exec<Record<string, unknown>>("SELECT * FROM gallery_entry_versions")
+          .toArray(),
+        workspaceSlots: this.sql
+          .exec<Record<string, unknown>>("SELECT * FROM workspace_slots")
+          .toArray(),
+      },
+    });
+  }
+
+  /**
+   * Validate every persisted Project before writing any of them. The apply
+   * phase is one Durable Object transaction, so a failed record cannot leave
+   * the three storage surfaces at mixed schema versions.
+   */
+  private schemaConverge(apply: boolean): Response {
+    const sources = [
+      {
+        table: "gallery_entries",
+        rows: this.sql
+          .exec<StoredProjectRow>(
+            "SELECT id, schema_version, project_text FROM gallery_entries",
+          )
+          .toArray(),
+      },
+      {
+        table: "gallery_entry_versions",
+        rows: this.sql
+          .exec<StoredProjectRow>(
+            "SELECT id, schema_version, project_text FROM gallery_entry_versions",
+          )
+          .toArray(),
+      },
+      {
+        table: "workspace_slots",
+        rows: this.sql
+          .exec<StoredProjectRow>(
+            "SELECT id, schema_version, project_text FROM workspace_slots",
+          )
+          .toArray(),
+      },
+    ] as const;
+    const inventory: Record<string, Record<string, number>> = {};
+    const updates: Array<{
+      table: (typeof sources)[number]["table"];
+      id: string;
+      projectText: string;
+    }> = [];
+    const failures: Array<{
+      table: string;
+      id: string;
+      storedSchemaVersion: number;
+      message: string;
+    }> = [];
+    for (const source of sources) {
+      const versions: Record<string, number> = {};
+      inventory[source.table] = versions;
+      for (const row of source.rows) {
+        const versionKey = String(row.schema_version);
+        versions[versionKey] = (versions[versionKey] ?? 0) + 1;
+        try {
+          const project = parseProject(row.project_text);
+          updates.push({
+            table: source.table,
+            id: row.id,
+            projectText: serializeProject(project),
+          });
+        } catch (error) {
+          failures.push({
+            table: source.table,
+            id: row.id,
+            storedSchemaVersion: row.schema_version,
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+    if (apply && failures.length > 0) {
+      return Response.json(
+        {
+          applied: false,
+          targetSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION,
+          inventory,
+          failures,
+        },
+        { status: 409 },
+      );
+    }
+    if (apply) {
+      this.state.storage.transactionSync(() => {
+        for (const update of updates) {
+          this.sql.exec(
+            `UPDATE ${update.table}
+             SET project_text = ?, schema_version = ? WHERE id = ?`,
+            update.projectText,
+            CURRENT_PROJECT_SCHEMA_VERSION,
+            update.id,
+          );
+        }
+      });
+    }
+    return Response.json({
+      applied: apply,
+      targetSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION,
+      inventory,
+      records: updates.length + failures.length,
+      ready: updates.length,
+      failures,
     });
   }
 
@@ -1153,7 +1300,7 @@ async function handleWorkspace(
     name,
     savedAt: new Date().toISOString(),
     schemaVersion: project.schemaVersion,
-    projectText: body.projectText,
+    projectText: serializeProject(project),
   });
   return Response.json(payload, { status });
 }
@@ -1345,33 +1492,10 @@ async function handleEntryUpdate(
 }
 
 async function handleReserialize(env: GalleryEnv): Promise<Response> {
-  const { payload } = await callGallery<{ ids: string[] }>(env, "all-ids", {});
-  let upgraded = 0;
-  const failed: { id: string; message: string }[] = [];
-  for (const id of payload.ids) {
-    const detail = await callGallery<{ projectText?: string }>(
-      env,
-      "any-entry",
-      { id },
-    );
-    if (!detail.payload.projectText) continue;
-    try {
-      const project = parseProject(detail.payload.projectText);
-      await callGallery(env, "update-entry", {
-        id,
-        projectText: serializeProject(project),
-        schemaVersion: project.schemaVersion,
-        svgText: renderPreview(project),
-      });
-      upgraded += 1;
-    } catch (error) {
-      failed.push({
-        id,
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-  return Response.json({ upgraded, failed });
+  const { status, payload } = await callGallery(env, "schema-converge", {
+    apply: true,
+  });
+  return Response.json(payload, { status });
 }
 
 /**
@@ -1455,6 +1579,44 @@ export async function routeGalleryRequest(
     }
     const { payload } = await callGallery(env, "recycled", {});
     return Response.json(payload, {
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  if (
+    segments.length === 2 &&
+    segments[0] === "maintenance" &&
+    segments[1] === "schema-backup" &&
+    request.method === "GET"
+  ) {
+    if (!(await isAdmin(request, env))) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const { status, payload } = await callGallery(env, "schema-backup", {});
+    return Response.json(payload, {
+      status,
+      headers: {
+        "cache-control": "no-store",
+        "content-disposition": `attachment; filename="analog-canvas-gallery-schema-backup-${new Date().toISOString().slice(0, 10)}.json"`,
+      },
+    });
+  }
+  if (
+    segments.length === 2 &&
+    segments[0] === "maintenance" &&
+    segments[1] === "schema23" &&
+    request.method === "POST"
+  ) {
+    if (!(await isAdmin(request, env))) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const body = (await request.json().catch(() => null)) as {
+      apply?: unknown;
+    } | null;
+    const { status, payload } = await callGallery(env, "schema-converge", {
+      apply: body?.apply === true,
+    });
+    return Response.json(payload, {
+      status,
       headers: { "cache-control": "no-store" },
     });
   }

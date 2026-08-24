@@ -16,7 +16,7 @@ describe("Project protocol boundary", () => {
     });
   });
 
-  it("keeps the direct schema-21 to schema-22 upgrade", () => {
+  it("converges schema 21 directly to schema 23", () => {
     const current = JSON.parse(
       serializeProject(createEmptyProject("protocol-project", "Protocol")),
     ) as Record<string, unknown>;
@@ -32,7 +32,7 @@ describe("Project protocol boundary", () => {
       ok: true,
       sourceSchemaVersion: 21,
       migrated: true,
-      project: { schemaVersion: 22, structureRevision: 0 },
+      project: { schemaVersion: 23, structureRevision: 0 },
     });
   });
 

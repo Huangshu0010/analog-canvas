@@ -198,7 +198,7 @@ describe("reviewBrowserRecoveryProject", () => {
 
     expect(review.status).toBe("valid");
     if (review.status === "valid") {
-      expect(review.project.schemaVersion).toBe(22);
+      expect(review.project.schemaVersion).toBe(23);
     }
   });
 

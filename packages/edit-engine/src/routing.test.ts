@@ -2406,7 +2406,7 @@ describe("routing Edit Engine", () => {
       result.document.nets.find((candidate) =>
         candidate.terminals.some((terminal) => terminal.instanceId === "D"),
       ),
-    ).toMatchObject({ scope: "local", terminals: [{ instanceId: "D" }] });
+    ).toMatchObject({ terminals: [{ instanceId: "D" }] });
     expect(result.document.sourceStatus).toBe("connectivity-modified");
   });
 });

@@ -79,7 +79,7 @@ function unionGroups(
 }
 
 /**
- * Resolve Document-local logical identity from schema-22 evidence. Physical
+ * Resolve Document-local logical identity from schema-23 evidence. Physical
  * Base Nets remain intact; this pure result is the only name/source folding
  * implementation used by editor and netlist consumers.
  */

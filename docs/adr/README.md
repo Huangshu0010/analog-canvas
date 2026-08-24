@@ -84,6 +84,8 @@ The physical Wire-cut, derived endpoint-readiness, occurrence-aware trace, and
 revision-scoped Logical-Net representative decision—partially superseding ADR
 0035—is
 [`0041-physical-cut-and-endpoint-readiness.md`](0041-physical-cut-and-endpoint-readiness.md).
+The schema-23 Base-Net cleanup and full Gallery storage convergence decision is
+[`0042-schema-23-gallery-convergence.md`](0042-schema-23-gallery-convergence.md).
 The arbitrary-angle Route authoring decision is
 [`0039-any-angle-route-authoring.md`](0039-any-angle-route-authoring.md).
 

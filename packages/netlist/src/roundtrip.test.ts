@@ -197,7 +197,7 @@ function structuralProject(): CircuitProject {
         netId: net.id,
         name: net.name,
         owner: { kind: "explicit-net-property" },
-        scope: net.scope,
+        scope: net.scope ?? "local",
       });
     }
   }

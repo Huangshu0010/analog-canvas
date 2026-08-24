@@ -385,12 +385,12 @@ describe("stageProjectFile", () => {
       status: "opened",
       fileName: "amp.icproj.json",
       topDocumentRevision: 0,
-      sourceSchemaVersion: 22,
+      sourceSchemaVersion: 23,
       migrated: false,
     });
   });
 
-  it("stages schema 21 as an upgraded schema-22 Project", async () => {
+  it("stages schema 21 as an upgraded schema-23 Project", async () => {
     const previous = JSON.parse(serializeProject(project));
     previous.schemaVersion = 21;
     delete previous.documents[0].connectivityEvidence;
@@ -405,7 +405,7 @@ describe("stageProjectFile", () => {
       fileName: "amp-v21.icproj.json",
       sourceSchemaVersion: 21,
       migrated: true,
-      project: { schemaVersion: 22 },
+      project: { schemaVersion: 23 },
     });
   });
 
