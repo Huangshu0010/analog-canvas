@@ -1,6 +1,8 @@
 # No trailing slash: a bare `node_modules/` matches a directory but not a
 # symlink of the same name, which is how one reached the index once.
 node_modules
+.pnpm-store/
+.worktrees/
 dist/
 coverage/
 playwright-report/
@@ -22,7 +24,6 @@ fixtures/visual-reference/razavi-reference-v1/diff-common/
 
 # Local Agent-tooling scratch and generated layout exports
 .zcode/
-probe-conflicts.mjs
 netlists/*/agent-*-layout.icproj.json
 netlists/*/agent-*-layout.mjs
 netlists/*/agent-*-layout.pdf
