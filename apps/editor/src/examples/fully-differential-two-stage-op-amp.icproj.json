@@ -1273,7 +1273,36 @@
       "netlist": {
         "formalParameters": [],
         "name": "Main",
-        "terminals": []
+        "terminals": [
+          {
+            "direction": "passive",
+            "id": "cell-terminal-p1",
+            "interfaceInstanceId": "P1",
+            "name": "Vin+",
+            "netId": "net-ui-34"
+          },
+          {
+            "direction": "passive",
+            "id": "cell-terminal-p2",
+            "interfaceInstanceId": "P2",
+            "name": "Vin-",
+            "netId": "net-ui-35"
+          },
+          {
+            "direction": "passive",
+            "id": "cell-terminal-p3",
+            "interfaceInstanceId": "P3",
+            "name": "Vout1",
+            "netId": "net-port-p3"
+          },
+          {
+            "direction": "passive",
+            "id": "cell-terminal-p4",
+            "interfaceInstanceId": "P4",
+            "name": "Vout2",
+            "netId": "net-port-p4"
+          }
+        ]
       },
       "nets": [
         {
@@ -2136,7 +2165,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 23,
+  "schemaVersion": 24,
   "source": {
     "dialect": "none",
     "entry": null,

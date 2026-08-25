@@ -149,7 +149,7 @@ describe("resolved logical Nets", () => {
     });
   });
 
-  it("keeps a formal Cell Port name distinct from the connected logical Net name", () => {
+  it("keeps a formal Cell Pin name distinct from the connected logical Net name", () => {
     const document = createEmptyDocument("document", "Document");
     document.nets.push(
       { id: "net-port", terminals: [] },
@@ -164,7 +164,7 @@ describe("resolved logical Nets", () => {
           name: "P1",
           netId: "net-port",
           direction: "input",
-          interfaceInstanceIds: [],
+          interfaceInstanceId: "P1",
         },
       ],
     };

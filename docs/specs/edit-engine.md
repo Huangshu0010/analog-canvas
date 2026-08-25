@@ -94,9 +94,9 @@ is not another `SchematicEdit` member.
 `patch_instance_netlist_parameters` are the ordinary field writers for an
 existing netlist record. `set_instance_schematic_reference` changes the visible
 Reference for any non-formal Instance, including a non-emitting Port, without
-changing netlist output; formal Cell Ports use their terminal name and reject
+changing netlist output; Cell Pins use their terminal name and reject
 this edit. `set_instance_schematic_name` instead changes the user-owned
-RichText label shown on an ordinary schematic instance. Free Net Port and Net
+RichText label shown on an ordinary schematic instance. Net
 Label character edits update their owner-addressed name claim; formal Port
 character edits rename `CellTerminal.name`. A formatting-only edit
 upserts the same-text `Annotation.formatOverride`. A Cell-terminal character
@@ -143,7 +143,7 @@ Document revision once and is restored by one Undo. The retired Agent product
 categorizes these guarded UI lifecycle edits as unsupported.
 
 `upsert_connectivity_evidence` and `remove_connectivity_evidence` are the only
-atomic writers for the schema-23 evidence list. Upsert replaces evidence with
+atomic writers for the schema-24 evidence list. Upsert replaces evidence with
 the same ID or inserts a new record after checking the shared Document object
 namespace; final Document validation checks every Net and owner reference.
 Removing an Instance, Net Label, Junction, or Route also removes only

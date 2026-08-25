@@ -107,48 +107,52 @@ describe("EditorDocumentController", () => {
   });
 
   it("re-derives endpoint readiness when Wire Delete is undone and redone", () => {
-    const controller = new EditorDocumentController(hierarchicalProject());
-    controller.transact([
+    const project = hierarchicalProject();
+    const document = project.documents[0]!;
+    document.instances.push(
       {
-        kind: "add_instance",
-        instance: {
-          id: "P1",
-          symbolId: "port",
-          placement: {
-            position: { x: 0, y: 0 },
-            rotation: 0,
-            mirror: "none",
-          },
+        id: "M1",
+        symbolId: "nmos",
+        placement: {
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          mirror: "none",
         },
       },
       {
-        kind: "add_instance",
-        instance: {
-          id: "P2",
-          symbolId: "port",
-          placement: {
-            position: { x: 100, y: 0 },
-            rotation: 0,
-            mirror: "none",
-          },
+        id: "M2",
+        symbolId: "nmos",
+        placement: {
+          position: { x: 100, y: 0 },
+          rotation: 0,
+          mirror: "none",
         },
       },
-      {
-        kind: "connect_endpoints",
-        from: { kind: "terminal", instanceId: "P1", pinName: "P" },
-        to: { kind: "terminal", instanceId: "P2", pinName: "P" },
-        newNetId: "net-ports",
-      },
-      {
-        kind: "set_route_points",
-        routeId: "wire-ports",
-        netId: "net-ports",
-        from: { kind: "terminal", instanceId: "P1", pinName: "P" },
-        to: { kind: "terminal", instanceId: "P2", pinName: "P" },
-        waypoints: [],
-        segmentModes: ["manual"],
-      },
-    ]);
+    );
+    document.nets.push({
+      id: "net-ports",
+      terminals: ["M1", "M2"].map((instanceId) => ({
+        instanceId,
+        pinName: "D",
+      })),
+    });
+    document.noConnects.push(
+      ...["M1", "M2"].flatMap((instanceId) =>
+        ["G", "S", "B"].map((pinName) => ({
+          id: `nc-${instanceId.toLowerCase()}-${pinName.toLowerCase()}`,
+          endpoint: { kind: "terminal" as const, instanceId, pinName },
+        })),
+      ),
+    );
+    document.routes.push({
+      id: "wire-ports",
+      netId: "net-ports",
+      from: { kind: "terminal", instanceId: "M1", pinName: "D" },
+      to: { kind: "terminal", instanceId: "M2", pinName: "D" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+    const controller = new EditorDocumentController(project);
     const unconnectedCount = () =>
       diagnoseProjectSnapshot(
         controller.project,
@@ -161,7 +165,7 @@ describe("EditorDocumentController", () => {
     const cut = controller.transact([
       { kind: "cut_connection", routeId: "wire-ports" },
     ]);
-    expect(cut.ok).toBe(true);
+    if (!cut.ok) throw new Error(JSON.stringify(cut, null, 2));
     expect(unconnectedCount()).toBe(2);
 
     controller.transact([{ kind: "undo" }]);

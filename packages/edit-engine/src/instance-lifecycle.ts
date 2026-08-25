@@ -86,6 +86,53 @@ function planRoutedTerminalDetachment(
   selected: ReadonlySet<string>,
   sequence: number,
 ): SchematicEdit[] {
+  return planRoutedEndpointDetachment(
+    document,
+    resolver,
+    (endpoint) => selected.has(endpoint.instanceId),
+    sequence,
+  );
+}
+
+/**
+ * Removes selected terminal connectivity while preserving every visible wire
+ * as a Junction-anchored stub. Hierarchy planners use this when a child Cell
+ * Pin disappears but the parent Instance and its surrounding drawing remain.
+ */
+export function planTerminalDeletion(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  terminals: readonly { instanceId: string; pinName: string }[],
+  sequence: number,
+): SchematicEdit[] {
+  const selected = new Set(
+    terminals.map((terminal) => endpointKey({ kind: "terminal", ...terminal })),
+  );
+  const matches = (endpoint: { instanceId: string; pinName: string }) =>
+    selected.has(endpointKey({ kind: "terminal", ...endpoint }));
+  return [
+    ...planRoutedEndpointDetachment(document, resolver, matches, sequence),
+    ...document.nets.flatMap((net) =>
+      net.terminals.filter(matches).map((terminal): SchematicEdit => ({
+        kind: "disconnect_endpoint",
+        endpoint: { kind: "terminal", ...terminal },
+      })),
+    ),
+    ...document.noConnects
+      .filter((noConnect) => matches(noConnect.endpoint))
+      .map((noConnect): SchematicEdit => ({
+        kind: "remove_no_connect",
+        noConnectId: noConnect.id,
+      })),
+  ];
+}
+
+function planRoutedEndpointDetachment(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  matches: (endpoint: { instanceId: string; pinName: string }) => boolean,
+  sequence: number,
+): SchematicEdit[] {
   const replacements = new Map<string, RouteEndpoint>();
   const junctionEdits: SchematicEdit[] = [];
   const occupiedIds = new Set(
@@ -105,7 +152,7 @@ function planRoutedTerminalDetachment(
 
   for (const net of document.nets) {
     for (const terminal of net.terminals) {
-      if (!selected.has(terminal.instanceId)) continue;
+      if (!matches(terminal)) continue;
       const endpoint: RouteEndpoint = { kind: "terminal", ...terminal };
       const key = endpointKey(endpoint);
       const usedByRoute = document.routes.some(

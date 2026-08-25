@@ -167,8 +167,6 @@ function connectivityEvidenceOwnerId(
   switch (evidence.owner.kind) {
     case "net-label":
       return evidence.owner.annotationId;
-    case "free-port":
-      return evidence.owner.instanceId;
     case "power-marker":
       return evidence.owner.objectId;
     case "explicit-net-property":
@@ -237,15 +235,7 @@ function retargetOwnerEvidenceAfterSplit(
       continue;
     }
     let targetNetId: string | undefined;
-    if (evidence.owner.kind === "free-port") {
-      targetNetId = netIdByEndpoint.get(
-        endpointKey({
-          kind: "terminal",
-          instanceId: evidence.owner.instanceId,
-          pinName: "P",
-        }),
-      );
-    } else if (evidence.owner.kind === "net-label") {
+    if (evidence.owner.kind === "net-label") {
       const annotationId = evidence.owner.annotationId;
       const annotation = draft.annotations.find(
         (candidate) => candidate.id === annotationId,
@@ -633,29 +623,29 @@ export function executeTransaction(
         break;
       }
       case "reset_cell_body": {
-        const interfaceInstanceIds = new Set(
-          draft.netlist?.terminals.flatMap(
-            (terminal) => terminal.interfaceInstanceIds,
+        const cellPinInstanceIds = new Set(
+          draft.netlist?.terminals.map(
+            (terminal) => terminal.interfaceInstanceId,
           ) ?? [],
         );
         const interfaceNetIds = new Set(
           draft.netlist?.terminals.map((terminal) => terminal.netId) ?? [],
         );
         const retainedInstances = draft.instances.filter((instance) =>
-          interfaceInstanceIds.has(instance.id),
+          cellPinInstanceIds.has(instance.id),
         );
         const retainedNets = draft.nets
           .filter((net) => interfaceNetIds.has(net.id))
           .map((net) => ({
             ...net,
             terminals: net.terminals.filter((terminal) =>
-              interfaceInstanceIds.has(terminal.instanceId),
+              cellPinInstanceIds.has(terminal.instanceId),
             ),
           }));
         const retainedAnnotations = draft.annotations.filter(
           (annotation) =>
             annotation.anchor.kind === "object" &&
-            interfaceInstanceIds.has(annotation.anchor.objectId),
+            cellPinInstanceIds.has(annotation.anchor.objectId),
         );
         const retainedAnnotationIds = new Set(
           retainedAnnotations.map((annotation) => annotation.id),
@@ -674,11 +664,9 @@ export function executeTransaction(
                 return true;
               case "net-label":
                 return retainedAnnotationIds.has(evidence.owner.annotationId);
-              case "free-port":
-                return interfaceInstanceIds.has(evidence.owner.instanceId);
               case "power-marker":
                 return (
-                  interfaceInstanceIds.has(evidence.owner.objectId) ||
+                  cellPinInstanceIds.has(evidence.owner.objectId) ||
                   retainedAnnotationIds.has(evidence.owner.objectId)
                 );
             }
@@ -889,6 +877,16 @@ export function executeTransaction(
         const targetPins = new Set(
           resolved.definition.pins.map((pin) => pin.name),
         );
+        const pinMap = edit.pinMap ?? {};
+        if (
+          instance.netlist?.binding?.kind === "subcircuit" &&
+          instance.importProvenance?.terminalMapping
+        ) {
+          instance.importProvenance.terminalMapping =
+            instance.importProvenance.terminalMapping.filter((terminal) =>
+              targetPins.has(pinMap[terminal.pinName] ?? terminal.pinName),
+            );
+        }
         const currentPins = new Set(
           draft.nets.flatMap((net) =>
             net.terminals
@@ -915,7 +913,6 @@ export function executeTransaction(
           []) {
           currentPins.add(terminal.pinName);
         }
-        const pinMap = edit.pinMap ?? {};
         for (const sourcePin of Object.keys(pinMap)) {
           if (!currentPins.has(sourcePin)) {
             return rejectAt(
@@ -1357,13 +1354,13 @@ export function executeTransaction(
           );
         }
         if (
-          draft.netlist?.terminals.some((terminal) =>
-            terminal.interfaceInstanceIds.includes(instance.id),
+          draft.netlist?.terminals.some(
+            (terminal) => terminal.interfaceInstanceId === instance.id,
           )
         ) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            "A formal Cell Port is identified by its Cell terminal name, not a schematic reference",
+            "A formal Cell Pin is identified by its Cell terminal name, not a schematic reference",
             [],
             [instance.id],
           );
@@ -1691,8 +1688,8 @@ export function executeTransaction(
           }
         }
         if (edit.direction !== undefined) terminal.direction = edit.direction;
-        if (edit.interfaceInstanceIds !== undefined) {
-          terminal.interfaceInstanceIds = [...edit.interfaceInstanceIds];
+        if (edit.interfaceInstanceId !== undefined) {
+          terminal.interfaceInstanceId = edit.interfaceInstanceId;
         }
         changedObjectIds.add(terminal.id);
         connectivityChanged = true;
@@ -1709,7 +1706,7 @@ export function executeTransaction(
             `Cell terminal does not exist: ${edit.terminalId}`,
           );
         }
-        draft.netlist.terminals.splice(index, 1);
+        const [removedTerminal] = draft.netlist.terminals.splice(index, 1);
         if (draft.presentation.cellSymbol?.pinPlacements) {
           const retained = draft.presentation.cellSymbol.pinPlacements.filter(
             (placement) => placement.terminalId !== edit.terminalId,
@@ -1728,6 +1725,13 @@ export function executeTransaction(
           }
         }
         changedObjectIds.add(edit.terminalId);
+        if (removedTerminal) {
+          pruneUnreachableLocalNet(
+            draft,
+            removedTerminal.netId,
+            changedObjectIds,
+          );
+        }
         connectivityChanged = true;
         break;
       }
@@ -2384,6 +2388,20 @@ export function executeTransaction(
               terminals: terminalsFor(groupNetId),
             });
             changedObjectIds.add(groupNetId);
+          }
+          for (const cellTerminal of draft.netlist?.terminals ?? []) {
+            if (cellTerminal.netId !== net.id) continue;
+            const groupNetId = netIdByEndpoint.get(
+              endpointKey({
+                kind: "terminal",
+                instanceId: cellTerminal.interfaceInstanceId,
+                pinName: "P",
+              }),
+            );
+            if (groupNetId && groupNetId !== cellTerminal.netId) {
+              cellTerminal.netId = groupNetId;
+              changedObjectIds.add(cellTerminal.id);
+            }
           }
           for (const junction of draft.junctions.filter(
             (candidate) => candidate.netId === net.id,

@@ -898,23 +898,15 @@ function extractCell(
     }
   }
   const instances: DesignNetlistInstance[] = [];
-  const interfaceInstanceIds = new Set(
-    document.netlist.terminals.flatMap(
-      (terminal) => terminal.interfaceInstanceIds,
-    ),
+  const cellPinInstanceIds = new Set(
+    document.netlist.terminals.map((terminal) => terminal.interfaceInstanceId),
   );
   for (const instance of [...document.instances].sort((a, b) => {
     const left = a.netlist?.reference ?? a.id;
     const right = b.netlist?.reference ?? b.id;
     return compareText(left, right) || a.id.localeCompare(b.id);
   })) {
-    if (interfaceInstanceIds.has(instance.id)) continue;
-    if (instance.symbolId === "port" || instance.symbolId === "port-filled") {
-      // A Free Net Port is the schematic marker for its bound Net name. It is
-      // electrically significant but never emits a device or subcircuit line.
-      terminalNetName(document, instance, "P", context, diagnostics);
-      continue;
-    }
+    if (cellPinInstanceIds.has(instance.id)) continue;
     const binding = instance.netlist?.binding;
     const extracted =
       binding?.kind === "subcircuit"

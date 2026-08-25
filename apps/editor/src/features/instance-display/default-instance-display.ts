@@ -101,31 +101,15 @@ export function missingDefaultInstanceDisplayAnnotations(
   styleProfile: SchematicStyleProfile,
 ): readonly Annotation[] {
   if (!instance.placement) return [];
-  const formalTerminalId = document.netlist?.terminals.find((terminal) =>
-    terminal.interfaceInstanceIds.includes(instance.id),
+  const formalTerminalId = document.netlist?.terminals.find(
+    (terminal) => terminal.interfaceInstanceId === instance.id,
   )?.id;
-  const freePortNet =
-    !formalTerminalId &&
-    (instance.symbolId === "port" || instance.symbolId === "port-filled")
-      ? document.nets.find((net) =>
-          net.terminals.some((terminal) => terminal.instanceId === instance.id),
-        )
-      : undefined;
   const candidates = defaultInstanceDisplayAnnotations(
     document,
     instance,
     resolver,
     styleProfile,
     formalTerminalId ? { formalTerminalId } : {},
-  ).map((candidate) =>
-    freePortNet
-      ? {
-          ...candidate,
-          kind: "net-label" as const,
-          binding: { kind: "net-name" as const, netId: freePortNet.id },
-          netId: freePortNet.id,
-        }
-      : candidate,
   );
   return candidates.filter(
     (candidate) =>

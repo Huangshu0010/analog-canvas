@@ -10,120 +10,68 @@ export class ProjectMigrationError extends Error {
 }
 
 /**
- * Repair the narrow schema-22 shape emitted before power roles were copied
- * into Connectivity Evidence. Runtime code still reads Evidence only; this
- * load-boundary normalization merely restores information that the same
- * schema-22 file already carries in its inert Base-Net projection.
+ * Schema 24 gives every Port drawing one unambiguous Cell-interface meaning.
+ * Non-repeated schema-23 Cell Pins migrate structurally. Retired free Port
+ * objects are rejected instead of preserving a second interface meaning.
  */
-export function repairSchema22ProjectEvidence(
+export function upgradeSchema23To24(
   raw: Record<string, unknown>,
 ): Record<string, unknown> {
   const project = structuredClone(raw);
-  if (!Array.isArray(project.documents)) return project;
-  for (const rawDocument of project.documents) {
-    if (!isRecord(rawDocument)) continue;
-    const nets = Array.isArray(rawDocument.nets)
-      ? rawDocument.nets.filter(isRecord)
-      : [];
-    const netById = new Map(
-      nets.flatMap((net) =>
-        typeof net.id === "string" ? [[net.id, net] as const] : [],
-      ),
-    );
-    const powerLabelsById = new Map(
-      (Array.isArray(rawDocument.annotations)
-        ? rawDocument.annotations.filter(isRecord)
-        : []
-      ).flatMap((annotation) =>
-        annotation.kind === "power-label" && typeof annotation.id === "string"
-          ? [[annotation.id, annotation] as const]
-          : [],
-      ),
-    );
-    const evidence = Array.isArray(rawDocument.connectivityEvidence)
-      ? rawDocument.connectivityEvidence.filter(isRecord)
-      : [];
-    for (const claim of evidence) {
-      if (claim.kind !== "name-claim" || typeof claim.netId !== "string") {
-        continue;
-      }
-      const net = netById.get(claim.netId);
-      const powerDomain = net ? legacyPowerDomain(net) : undefined;
-      if (
-        powerDomain &&
-        claim.powerDomain === undefined &&
-        typeof claim.name === "string" &&
-        typeof net?.name === "string" &&
-        claim.name.trim() === net.name.trim()
-      ) {
-        claim.powerDomain = powerDomain;
-      }
-      const owner = isRecord(claim.owner) ? claim.owner : null;
-      if (
-        owner?.kind === "net-label" &&
-        typeof owner.annotationId === "string" &&
-        powerLabelsById.has(owner.annotationId)
-      ) {
-        const annotation = powerLabelsById.get(owner.annotationId);
-        const anchor = isRecord(annotation?.anchor) ? annotation.anchor : null;
-        claim.owner = {
-          kind: "power-marker",
-          objectId:
-            anchor?.kind === "object" && typeof anchor.objectId === "string"
-              ? anchor.objectId
-              : owner.annotationId,
-        };
-      } else if (
-        owner?.kind === "power-marker" &&
-        typeof owner.objectId === "string" &&
-        powerLabelsById.has(owner.objectId)
-      ) {
-        const annotation = powerLabelsById.get(owner.objectId);
-        const anchor = isRecord(annotation?.anchor) ? annotation.anchor : null;
-        if (anchor?.kind === "object" && typeof anchor.objectId === "string") {
-          claim.owner = { kind: "power-marker", objectId: anchor.objectId };
-        }
-      }
-    }
+  if (!Array.isArray(project.documents)) {
+    project.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;
+    return project;
   }
-  return project;
-}
-
-/** Schema 23 makes Base Nets purely physical; Evidence owns every logical fact. */
-export function upgradeSchema22To23(
-  raw: Record<string, unknown>,
-): Record<string, unknown> {
-  const project = repairSchema22ProjectEvidence(raw);
-  return canonicalizeSchema23Project(project);
-}
-
-/** Remove convergence-only projections from an already-versioned schema-23 input. */
-export function canonicalizeSchema23Project(
-  raw: Record<string, unknown>,
-): Record<string, unknown> {
-  const project = structuredClone(raw);
-  if (Array.isArray(project.documents)) {
-    for (const rawDocument of project.documents) {
-      if (!isRecord(rawDocument) || !Array.isArray(rawDocument.nets)) continue;
-      for (const rawNet of rawDocument.nets) {
-        if (!isRecord(rawNet)) continue;
-        delete rawNet.name;
-        delete rawNet.scope;
-        delete rawNet.powerDomain;
-        delete rawNet.origin;
+  for (const [documentIndex, rawDocument] of project.documents.entries()) {
+    if (!isRecord(rawDocument)) continue;
+    const netlist = isRecord(rawDocument.netlist) ? rawDocument.netlist : null;
+    const terminals =
+      netlist && Array.isArray(netlist.terminals)
+        ? netlist.terminals.filter(isRecord)
+        : [];
+    const formalMarkerIds = new Set<string>();
+    for (const [terminalIndex, terminal] of terminals.entries()) {
+      const markerIds = Array.isArray(terminal.interfaceInstanceIds)
+        ? terminal.interfaceInstanceIds.filter(
+            (value): value is string => typeof value === "string",
+          )
+        : [];
+      if (markerIds.length !== 1) {
+        throw new ProjectMigrationError(
+          [
+            "documents",
+            documentIndex,
+            "netlist",
+            "terminals",
+            terminalIndex,
+            "interfaceInstanceIds",
+          ],
+          "Schema 24 requires exactly one drawing marker per Cell Pin",
+        );
       }
+      terminal.interfaceInstanceId = markerIds[0];
+      delete terminal.interfaceInstanceIds;
+      formalMarkerIds.add(markerIds[0]!);
+    }
+
+    const instances = Array.isArray(rawDocument.instances)
+      ? rawDocument.instances.filter(isRecord)
+      : [];
+    const orphanPort = instances.find(
+      (instance) =>
+        (instance.symbolId === "port" || instance.symbolId === "port-filled") &&
+        typeof instance.id === "string" &&
+        !formalMarkerIds.has(instance.id),
+    );
+    if (orphanPort) {
+      throw new ProjectMigrationError(
+        ["documents", documentIndex, "instances"],
+        `Port ${String(orphanPort.id)} has no Cell terminal`,
+      );
     }
   }
   project.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;
   return project;
-}
-
-function legacyPowerDomain(
-  net: Record<string, unknown>,
-): "vdd" | "ground" | undefined {
-  return net.powerDomain === "vdd" || net.powerDomain === "ground"
-    ? net.powerDomain
-    : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

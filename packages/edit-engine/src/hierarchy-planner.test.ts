@@ -5,8 +5,7 @@ import { createEmptyDocument, createEmptyProject } from "@icm/model";
 import {
   createExternalSubcircuitInstance,
   createHierarchyInstance,
-  planAttachCellPortMarker,
-  planCreateCellPort,
+  planCreateCellPin,
   planDeleteCell,
   planPlaceCellInstance,
   planReorderCellTerminal,
@@ -39,7 +38,7 @@ describe("hierarchy domain planners", () => {
       name: "IN",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceIds: ["P1"],
+      interfaceInstanceId: "P1",
     });
 
     expect(
@@ -112,7 +111,7 @@ describe("hierarchy domain planners", () => {
       projectId: project.id,
       expectedStructureRevision: 0,
       actor: { kind: "human", id: "test" },
-      edits: planCreateCellPort(project, project.topDocumentId, {
+      edits: planCreateCellPin(project, project.topDocumentId, {
         instance,
         connectionEdits: [
           {
@@ -127,7 +126,7 @@ describe("hierarchy domain planners", () => {
           name: "IN",
           netId: "net-in",
           direction: "input",
-          interfaceInstanceIds: ["P1"],
+          interfaceInstanceId: "P1",
         },
       }),
     });
@@ -146,7 +145,7 @@ describe("hierarchy domain planners", () => {
     });
   });
 
-  it("adds a second marker to an existing terminal instead of a second terminal", () => {
+  it("keeps one drawing marker per Cell Pin and rejects a duplicate interface name", () => {
     const project = createEmptyProject("project", "Project");
     const port = (id: string, x: number) => ({
       id,
@@ -162,7 +161,7 @@ describe("hierarchy domain planners", () => {
       projectId: project.id,
       expectedStructureRevision: 0,
       actor: { kind: "human", id: "test" },
-      edits: planCreateCellPort(project, project.topDocumentId, {
+      edits: planCreateCellPin(project, project.topDocumentId, {
         instance: port("P1", 40),
         connectionEdits: [
           {
@@ -177,18 +176,14 @@ describe("hierarchy domain planners", () => {
           name: "IN",
           netId: "net-in",
           direction: "input",
-          interfaceInstanceIds: ["P1"],
+          interfaceInstanceId: "P1",
         },
       }),
     });
     expect(first.ok).toBe(true);
 
-    const second = executeProjectTransaction(first.project, {
-      transactionId: "add-second-marker",
-      projectId: project.id,
-      expectedStructureRevision: first.structureRevision,
-      actor: { kind: "human", id: "test" },
-      edits: planAttachCellPortMarker(first.project, project.topDocumentId, {
+    expect(() =>
+      planCreateCellPin(first.project, project.topDocumentId, {
         instance: port("P2", 200),
         connectionEdits: [
           {
@@ -198,30 +193,15 @@ describe("hierarchy domain planners", () => {
             newNetId: "net-marker-p2",
           },
         ],
-        terminalId: "terminal-in",
-        markerNetId: "net-marker-p2",
+        terminal: {
+          id: "terminal-in-2",
+          name: "in",
+          netId: "net-marker-p2",
+          direction: "input",
+          interfaceInstanceId: "P2",
+        },
       }),
-    });
-
-    expect(second.ok).toBe(true);
-    const document = second.project.documents.find(
-      (candidate) => candidate.id === project.topDocumentId,
-    )!;
-    // One formal terminal, two markers: the interface a parent resolves
-    // against stays single-valued.
-    expect(document.netlist!.terminals).toHaveLength(1);
-    expect(document.netlist!.terminals[0]).toMatchObject({
-      id: "terminal-in",
-      name: "IN",
-      interfaceInstanceIds: ["P1", "P2"],
-    });
-    // Both markers share the terminal's Net.
-    expect(document.nets.filter((net) => net.id === "net-in")).toHaveLength(1);
-    const net = document.nets.find((candidate) => candidate.id === "net-in")!;
-    expect(net.terminals.map((terminal) => terminal.instanceId).sort()).toEqual(
-      ["P1", "P2"],
-    );
-    expect(document.nets.some((n) => n.id === "net-marker-p2")).toBe(false);
+    ).toThrow("Cell Pin name already exists: in");
   });
 
   it("returns no reorder transaction at an interface boundary", () => {
@@ -231,7 +211,7 @@ describe("hierarchy domain planners", () => {
       name: "IN",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceIds: ["P1"],
+      interfaceInstanceId: "P1",
     });
     expect(
       planReorderCellTerminal(

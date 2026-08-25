@@ -42,21 +42,15 @@ async function createCell(
   await editor.getByRole("button", { name: "Create" }).click();
 }
 
-async function placePort(
+async function placeCellPin(
   page: import("@playwright/test").Page,
   options: {
-    role: "net-port" | "cell-terminal";
     name: string;
     direction?: "input" | "output" | "inout" | "passive";
     position: { x: number; y: number };
   },
 ): Promise<void> {
-  // Port placement has no setup dialog: the Library entry carries the role,
-  // the Instance takes a generated name, and naming happens afterwards.
-  const formal = options.role === "cell-terminal";
-  await page
-    .getByTestId(formal ? "shapes-chip-cell-pin" : "shapes-chip-port")
-    .click();
+  await page.getByTestId("shapes-chip-port").click();
   await page
     .getByTestId("schematic-canvas")
     .click({ position: options.position });
@@ -64,15 +58,11 @@ async function placePort(
   const shelf = page.getByTestId("selection-shelf");
   const wasExpanded = (await shelf.getAttribute("aria-expanded")) === "true";
   if (!wasExpanded) await shelf.click();
-  const nameField = page.getByLabel(
-    formal ? "Cell Port terminal name" : "Net Port name",
-  );
+  const nameField = page.getByLabel("Cell Pin name");
   await nameField.fill(options.name);
   await nameField.blur();
-  if (formal && options.direction) {
-    await page
-      .getByLabel("Cell Port direction")
-      .selectOption(options.direction);
+  if (options.direction) {
+    await page.getByLabel("Cell Pin direction").selectOption(options.direction);
   }
   // Leave the shelf as the caller found it so its own assertions still drive
   // the panel state.
@@ -167,13 +157,12 @@ test("manages Cell rename and lists callers", async ({ page }) => {
   );
 });
 
-test("declares and places a Cell Port on a new local Net", async ({ page }) => {
+test("declares and places a Cell Pin on a new local Net", async ({ page }) => {
   await page.goto("/editor");
   await createCell(page, "ReusableStage");
 
   const canvas = page.getByTestId("schematic-canvas");
-  await placePort(page, {
-    role: "cell-terminal",
+  await placeCellPin(page, {
     name: "Vout",
     direction: "output",
     position: { x: 300, y: 180 },
@@ -181,9 +170,9 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await expect(page.getByTestId("active-instance-count")).toHaveText("1");
 
   await page.getByTestId("selection-shelf").click();
-  const portProperties = page.getByLabel("Cell Port properties");
+  const portProperties = page.getByLabel("Cell Pin properties");
   await expect(portProperties).toBeVisible();
-  const terminalName = portProperties.getByLabel("Cell Port terminal name");
+  const terminalName = portProperties.getByLabel("Cell Pin name");
   await expect(terminalName).toHaveValue("Vout");
   await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
   const nameEditor = page.getByRole("textbox", { name: "Canvas text editor" });
@@ -198,7 +187,7 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   await nameEditor.fill("OUT");
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.getByTestId("status")).toContainText(
-    "Renamed formal port to OUT",
+    "Renamed Cell Pin to OUT",
   );
   await page.getByTestId("hit-P1").click();
   await expect(terminalName).toHaveValue("OUT");
@@ -206,9 +195,9 @@ test("declares and places a Cell Port on a new local Net", async ({ page }) => {
   if ((await shelf.getAttribute("aria-expanded")) === "false") {
     await shelf.click();
   }
-  const renamedPortProperties = page.getByLabel("Cell Port properties");
+  const renamedPortProperties = page.getByLabel("Cell Pin properties");
   await renamedPortProperties
-    .getByLabel("Cell Port direction")
+    .getByLabel("Cell Pin direction")
     .selectOption("input");
   await expect(page.getByTestId("status")).toContainText(
     "Updated Cell port direction",
@@ -330,8 +319,7 @@ test("declares a top Formal Cell Pin and exports the top interface", async ({
   page,
 }) => {
   await page.goto("/editor");
-  await placePort(page, {
-    role: "cell-terminal",
+  await placeCellPin(page, {
     name: "VIN",
     direction: "input",
     position: { x: 300, y: 180 },
@@ -341,7 +329,7 @@ test("declares a top Formal Cell Pin and exports the top interface", async ({
   if ((await shelf.getAttribute("aria-expanded")) === "false") {
     await shelf.click();
   }
-  await expect(page.getByLabel("Cell Port properties")).toBeVisible();
+  await expect(page.getByLabel("Cell Pin properties")).toBeVisible();
 
   await clickCommand(page, "Netlist", "Check Report…");
   const preflight = page.getByRole("dialog", { name: "Check Report" });
@@ -361,8 +349,7 @@ test("copies and independently deletes repeated Formal Cell Pin markers", async 
   });
   await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
-  await placePort(page, {
-    role: "cell-terminal",
+  await placeCellPin(page, {
     name: "VIN",
     direction: "input",
     position: { x: 280, y: 180 },
@@ -373,7 +360,7 @@ test("copies and independently deletes repeated Formal Cell Pin markers", async 
   if ((await shelf.getAttribute("aria-expanded")) === "false") {
     await shelf.click();
   }
-  await expect(page.getByLabel("Cell Port properties")).toBeVisible();
+  await expect(page.getByLabel("Cell Pin properties")).toBeVisible();
   const canvasBox = await canvas.boundingBox();
   expect(canvasBox).not.toBeNull();
   await page.keyboard.press("c");
@@ -384,7 +371,7 @@ test("copies and independently deletes repeated Formal Cell Pin markers", async 
   if ((await shelf.getAttribute("aria-expanded")) === "false") {
     await shelf.click();
   }
-  await expect(page.getByLabel("Cell Port properties")).toBeVisible();
+  await expect(page.getByLabel("Cell Pin properties")).toBeVisible();
   await page.keyboard.press("Escape");
 
   await expect(page.getByTestId("hit-P1-copy-1")).toBeVisible();
@@ -398,24 +385,21 @@ test("copies and independently deletes repeated Formal Cell Pin markers", async 
     await shelf.click();
   }
   await expect(
-    page
-      .getByLabel("Cell Port properties")
-      .getByLabel("Cell Port terminal name"),
-  ).toHaveValue("VIN");
+    page.getByLabel("Cell Pin properties").getByLabel("Cell Pin name"),
+  ).toHaveValue("VIN_copy");
   await clickCommand(page, "Netlist", "Check Report…");
   await expect(
     page
       .getByRole("dialog", { name: "Check Report" })
       .getByTestId("netlist-preview"),
-  ).toContainText(".subckt Main VIN");
+  ).toContainText(".subckt Main VIN_copy");
 });
 
-test("places a free Net Port whose rich label edits the Net name", async ({
+test("edits a Cell Pin name and RichText presentation in place", async ({
   page,
 }) => {
   await page.goto("/editor");
-  await placePort(page, {
-    role: "net-port",
+  await placeCellPin(page, {
     name: "VBIAS",
     position: { x: 300, y: 180 },
   });
@@ -427,9 +411,9 @@ test("places a free Net Port whose rich label edits the Net name", async ({
   if ((await shelf.getAttribute("aria-expanded")) === "false") {
     await shelf.click();
   }
-  const netName = page.getByLabel("Net Port name");
+  const netName = page.getByLabel("Cell Pin name");
   await expect(netName).toHaveValue("VBIAS");
-  await expect(page.getByLabel("Cell Port properties")).toHaveCount(0);
+  await expect(page.getByLabel("Cell Pin properties")).toBeVisible();
 
   await page.getByTestId("annotation-hit-instance-label-P1").dblclick();
   await page.getByRole("button", { name: "Bold" }).click();
@@ -447,18 +431,17 @@ test("places a free Net Port whose rich label edits the Net name", async ({
   const preflight = page.getByRole("dialog", { name: "Check Report" });
   await expect(preflight).not.toContainText("MISSING_DEVICE_DEFINITION");
   await expect(preflight.getByTestId("netlist-preview")).toContainText(
-    ".subckt Main",
+    ".subckt Main VINP",
   );
 });
 
-test("returns a formal Cell Port to the Tray without deleting its interface", async ({
+test("returns a formal Cell Pin to the Tray without deleting its interface", async ({
   page,
 }) => {
   await page.goto("/editor");
   await createCell(page, "ReusableStage");
   const canvas = page.getByTestId("schematic-canvas");
-  await placePort(page, {
-    role: "cell-terminal",
+  await placeCellPin(page, {
     name: "Vout",
     position: { x: 300, y: 180 },
   });
@@ -488,7 +471,7 @@ test("returns a formal Cell Port to the Tray without deleting its interface", as
     .click();
   await expect(page.getByTestId("hit-P1")).toBeVisible();
   await page.getByTestId("hit-P1").click();
-  await expect(page.getByLabel("Cell Port properties")).toBeVisible();
+  await expect(page.getByLabel("Cell Pin properties")).toBeVisible();
 });
 
 test("authors formal Cell parameters without entering Cell Symbol Layout", async ({
@@ -496,8 +479,7 @@ test("authors formal Cell parameters without entering Cell Symbol Layout", async
 }) => {
   await page.goto("/editor");
   await createCell(page, "ReusableStage");
-  await placePort(page, {
-    role: "cell-terminal",
+  await placeCellPin(page, {
     name: "Vout",
     position: { x: 300, y: 180 },
   });
@@ -523,14 +505,13 @@ test("authors formal Cell parameters without entering Cell Symbol Layout", async
   await expect(page.getByTestId("status")).toContainText("Committed revision");
 });
 
-test("deletes a wired child Cell Port through the ordinary instance path", async ({
+test("deletes a wired child Cell Pin through the ordinary instance path", async ({
   page,
 }) => {
   await page.goto("/editor");
   await createCell(page, "ReusableStage");
   const canvas = page.getByTestId("schematic-canvas");
-  await placePort(page, {
-    role: "cell-terminal",
+  await placeCellPin(page, {
     name: "Vout",
     position: { x: 300, y: 180 },
   });
@@ -597,54 +578,34 @@ test("places an existing Cell and blocks deleting its shared definition", async 
   await expect(page.getByTestId("document-count")).toHaveText("2");
 });
 
-test("places a second Port for a Cell terminal that already exists", async ({
+test("allows distinct Cell Pins to expose one internal contact", async ({
   page,
 }) => {
   await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
 
-  // First Cell Pin takes the free ordinal name and names its Net with it.
-  await page.getByTestId("shapes-chip-cell-pin").click();
+  await page.getByTestId("shapes-chip-port").click();
   await canvas.click({ position: { x: 240, y: 200 } });
   await page.keyboard.press("Escape");
 
-  // A second Cell Pin whose pin lands on that same named Net resolves its own
-  // formal name to P1, which previously aborted placement outright.
-  await page.getByTestId("shapes-chip-cell-pin").click();
+  await page.getByTestId("shapes-chip-port").click();
   await canvas.click({ position: { x: 240, y: 200 } });
-  await expect(page.getByTestId("status")).toContainText(
-    "marker for Cell port P1",
-  );
+  await expect(page.getByTestId("status")).toContainText("Added Cell Pin Vin2");
   await page.keyboard.press("Escape");
 
-  const saved = JSON.parse(
-    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
-  ) as {
-    documents: Array<{
-      netlist?: {
-        terminals: Array<{ name: string; interfaceInstanceIds: string[] }>;
-      };
-    }>;
-  };
-  const terminals = saved.documents[0]!.netlist!.terminals;
-  // One formal terminal, two markers: the Cell interface a parent resolves
-  // against stays single-valued.
-  expect(terminals).toHaveLength(1);
-  expect(terminals[0]!.name).toBe("P1");
-  expect(terminals[0]!.interfaceInstanceIds).toHaveLength(2);
+  await expect(page.getByTestId("hit-P1")).toBeVisible();
+  await expect(page.getByTestId("hit-P2")).toBeVisible();
 });
 
-test("renaming one Net Port leaves its same-named twin alone", async ({
+test("renaming one Cell Pin leaves another interface Pin alone", async ({
   page,
 }) => {
   await page.goto("/editor");
-  await placePort(page, {
-    role: "net-port",
-    name: "Vshared",
+  await placeCellPin(page, {
+    name: "Vother",
     position: { x: 260, y: 180 },
   });
-  await placePort(page, {
-    role: "net-port",
+  await placeCellPin(page, {
     name: "Vshared",
     position: { x: 260, y: 320 },
   });
@@ -654,20 +615,18 @@ test("renaming one Net Port leaves its same-named twin alone", async ({
   );
   await expect(labels).toHaveCount(2);
 
-  // Two Ports naming one node share a Net, so renaming that Net used to
-  // rename both. Renaming one Port is a statement about that Port.
   await page.getByTestId("hit-P2").click();
   const shelf = page.getByTestId("selection-shelf");
   if ((await shelf.getAttribute("aria-expanded")) === "false")
     await shelf.click();
-  const nameField = page.getByLabel("Net Port name");
+  const nameField = page.getByLabel("Cell Pin name");
   await nameField.fill("Vbias");
   await nameField.blur();
 
-  await expect(page.getByTestId("status")).toContainText("Renamed Net Port");
+  await expect(page.getByTestId("status")).toContainText("Renamed Cell Pin");
   const texts = await page
     .locator('[data-testid="schematic-canvas"] text')
     .allTextContents();
-  expect(texts).toContain("Vshared");
+  expect(texts).toContain("Vother");
   expect(texts).toContain("Vbias");
 });

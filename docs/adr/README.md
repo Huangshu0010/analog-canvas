@@ -44,7 +44,7 @@ current-only compatibility clause, is
 The independent current-device registry and Project compatibility-boundary
 decision is
 [`0024-device-protocol-and-compatibility-boundaries.md`](0024-device-protocol-and-compatibility-boundaries.md).
-The schematic-only hierarchy, formal Cell Port, structural transaction, and
+The schematic-only hierarchy, formal Cell Pin, structural transaction, and
 schema-12 decision is
 [`0025-schematic-hierarchy-and-formal-ports.md`](0025-schematic-hierarchy-and-formal-ports.md).
 The schema-13 definition-level Cell symbol presentation decision is
@@ -67,8 +67,9 @@ decision is
 The unified free/formal Port semantic-name and same-text RichText presentation
 decision is
 [`0033-port-semantic-name-and-richtext-presentation.md`](0033-port-semantic-name-and-richtext-presentation.md).
-The top-Cell formal interface and non-emitting Free Net Port decision is
-[`0034-top-cell-formal-port-and-free-port-export.md`](0034-top-cell-formal-port-and-free-port-export.md).
+The superseded top-Cell interface and Free Net Port decision is preserved in
+[`0034-top-cell-formal-port-and-free-port-export.md`](0034-top-cell-formal-port-and-free-port-export.md);
+ADR 0043 retires that split runtime contract.
 The imported-Net provenance and derived routing-guidance decision is
 [`0035-imported-net-routing-guidance.md`](0035-imported-net-routing-guidance.md).
 The named-power, Power Rail, and MOS bulk-default decision is
@@ -86,6 +87,9 @@ revision-scoped Logical-Net representative decision—partially superseding ADR
 [`0041-physical-cut-and-endpoint-readiness.md`](0041-physical-cut-and-endpoint-readiness.md).
 The schema-23 Base-Net cleanup and full Gallery storage convergence decision is
 [`0042-schema-23-gallery-convergence.md`](0042-schema-23-gallery-convergence.md).
+The one-to-one Cell Pin contract that retires Free Port and repeated marker
+semantics is
+[`0043-cell-pin-contract-convergence.md`](0043-cell-pin-contract-convergence.md).
 The arbitrary-angle Route authoring decision is
 [`0039-any-angle-route-authoring.md`](0039-any-angle-route-authoring.md).
 

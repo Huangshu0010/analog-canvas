@@ -43,27 +43,21 @@ function hierarchyInstance(
 }
 
 describe("Project structural transaction", () => {
-  it("removes one repeated formal marker while retaining its terminal and caller", () => {
+  it("deletes a Cell Pin and automatically disconnects every caller", () => {
     const project = createEmptyProject("project", "Project");
     const child = createEmptyDocument("document-child", "Child");
-    child.instances.push(
-      { id: "P1", symbolId: "port", placement: null },
-      { id: "P2", symbolId: "port", placement: null },
-    );
+    child.instances.push({ id: "P1", symbolId: "port", placement: null });
     child.nets.push({
       id: "net-in",
 
-      terminals: [
-        { instanceId: "P1", pinName: "P" },
-        { instanceId: "P2", pinName: "P" },
-      ],
+      terminals: [{ instanceId: "P1", pinName: "P" }],
     });
     child.netlist!.terminals.push({
       id: "terminal-in",
       name: "IN",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceIds: ["P1", "P2"],
+      interfaceInstanceId: "P1",
     });
     project.documents.push(child);
     project.documents[0]!.instances.push(
@@ -74,9 +68,23 @@ describe("Project structural transaction", () => {
 
       terminals: [{ instanceId: "X1", pinName: "IN" }],
     });
+    project.documents[0]!.junctions.push({
+      id: "junction-parent-tail",
+      netId: "net-parent-in",
+      position: { x: -100, y: 0 },
+      role: "route-anchor",
+    });
+    project.documents[0]!.routes.push({
+      id: "route-parent-in",
+      netId: "net-parent-in",
+      from: { kind: "terminal", instanceId: "X1", pinName: "IN" },
+      to: { kind: "junction", junctionId: "junction-parent-tail" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
 
     const result = executeProjectTransaction(project, {
-      transactionId: "remove-one-formal-marker",
+      transactionId: "remove-cell-pin-cascade",
       projectId: project.id,
       expectedStructureRevision: project.structureRevision,
       actor: { kind: "human", id: "human-local" },
@@ -94,32 +102,88 @@ describe("Project structural transaction", () => {
       ),
     });
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) throw new Error(JSON.stringify(result, null, 2));
     const updated = result.project.documents.find(
       (document) => document.id === child.id,
     )!;
-    expect(updated.instances.map((instance) => instance.id)).toEqual(["P2"]);
-    expect(updated.netlist?.terminals).toMatchObject([
-      { id: "terminal-in", interfaceInstanceIds: ["P2"] },
+    expect(updated.instances).toEqual([]);
+    expect(updated.netlist?.terminals).toEqual([]);
+    expect(updated.nets).toEqual([]);
+    const parent = result.project.documents[0]!;
+    expect(parent.instances).toEqual([expect.objectContaining({ id: "X1" })]);
+    expect(parent.nets).toEqual([
+      expect.objectContaining({ id: "net-parent-in", terminals: [] }),
     ]);
-    expect(updated.nets[0]?.terminals).toEqual([
-      { instanceId: "P2", pinName: "P" },
+    expect(parent.routes).toEqual([
+      expect.objectContaining({
+        id: "route-parent-in",
+        from: {
+          kind: "junction",
+          junctionId: expect.stringMatching(/^junction-lifecycle-/),
+        },
+        to: { kind: "junction", junctionId: "junction-parent-tail" },
+      }),
     ]);
-    expect(() =>
-      planRemoveCellTerminalMarkers(
-        result.project,
-        child.id,
-        ["P2"],
-        [
-          {
-            kind: "disconnect_endpoint",
-            endpoint: { kind: "terminal", instanceId: "P2", pinName: "P" },
-          },
-          { kind: "remove_instance", instanceId: "P2" },
-        ],
-      ),
-    ).toThrow("still referenced");
+    expect(parent.junctions).toHaveLength(2);
+  });
+
+  it("detaches both ends of a Wire between two callers of the same Cell", () => {
+    const project = createEmptyProject("project", "Project");
+    const child = createEmptyDocument("document-child", "Child");
+    child.instances.push({ id: "P1", symbolId: "port", placement: null });
+    child.nets.push({
+      id: "net-in",
+      terminals: [{ instanceId: "P1", pinName: "P" }],
+    });
+    child.netlist!.terminals.push({
+      id: "terminal-in",
+      name: "IN",
+      netId: "net-in",
+      direction: "input",
+      interfaceInstanceId: "P1",
+    });
+    project.documents.push(child);
+    const parent = project.documents[0]!;
+    parent.instances.push(hierarchyInstance("X1", "Child", child.id), {
+      ...hierarchyInstance("X2", "Child", child.id),
+      placement: {
+        position: { x: 200, y: 0 },
+        rotation: 0,
+        mirror: "none",
+      },
+    });
+    parent.nets.push({
+      id: "net-parent",
+      terminals: [
+        { instanceId: "X1", pinName: "IN" },
+        { instanceId: "X2", pinName: "IN" },
+      ],
+    });
+    parent.routes.push({
+      id: "route-between-callers",
+      netId: "net-parent",
+      from: { kind: "terminal", instanceId: "X1", pinName: "IN" },
+      to: { kind: "terminal", instanceId: "X2", pinName: "IN" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "remove-shared-caller-pin",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "human-local" },
+      edits: planRemoveCellTerminal(project, child.id, "terminal-in"),
+    });
+
+    if (!result.ok) throw new Error(JSON.stringify(result, null, 2));
+    const updatedParent = result.project.documents[0]!;
+    expect(updatedParent.nets[0]?.terminals).toEqual([]);
+    expect(updatedParent.routes[0]).toMatchObject({
+      from: { kind: "junction" },
+      to: { kind: "junction" },
+    });
+    expect(updatedParent.junctions).toHaveLength(2);
   });
 
   it("renames a Cell and reconciles every caller symbol", () => {
@@ -317,7 +381,7 @@ describe("Project structural transaction", () => {
     expect(result.diagnostics[0]?.message).toMatch(/Hierarchy cycle/);
   });
 
-  it("renames a formal port and every connected caller atomically", () => {
+  it("renames a formal Cell Pin and every connected caller atomically", () => {
     const project = createEmptyProject("project", "Project");
     const child = createEmptyDocument("document-child", "Child");
     child.instances.push({
@@ -335,7 +399,7 @@ describe("Project structural transaction", () => {
       name: "IN",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceIds: ["port-in"],
+      interfaceInstanceId: "port-in",
     });
     project.documents.push(child);
     const caller = {
@@ -405,7 +469,7 @@ describe("Project structural transaction", () => {
       name: "Vout",
       netId: "net-vout",
       direction: "output",
-      interfaceInstanceIds: ["port-vout"],
+      interfaceInstanceId: "port-vout",
     });
     child.annotations.push({
       id: "instance-label-port-vout",
@@ -471,7 +535,7 @@ describe("Project structural transaction", () => {
     });
   });
 
-  it("removes an unused formal port and reconciles caller source order", () => {
+  it("removes an unused Cell Pin and reconciles caller source order", () => {
     const project = createEmptyProject("project", "Project");
     const child = createEmptyDocument("document-child", "Child");
     child.instances.push({
@@ -489,7 +553,7 @@ describe("Project structural transaction", () => {
       name: "UNUSED",
       netId: "net-unused",
       direction: "passive",
-      interfaceInstanceIds: ["port-unused"],
+      interfaceInstanceId: "port-unused",
     });
     project.documents.push(child);
     project.documents[0]!.instances.push(
@@ -516,7 +580,7 @@ describe("Project structural transaction", () => {
     });
   });
 
-  it("removes multiple unreferenced formal ports in one atomic transaction", () => {
+  it("removes multiple unreferenced Cell Pins in one atomic transaction", () => {
     const project = createEmptyProject("project", "Project");
     const child = createEmptyDocument("document-child", "Child");
     child.instances.push(
@@ -549,14 +613,14 @@ describe("Project structural transaction", () => {
         name: "A",
         netId: "net-a",
         direction: "input",
-        interfaceInstanceIds: ["port-a"],
+        interfaceInstanceId: "port-a",
       },
       {
         id: "terminal-b",
         name: "B",
         netId: "net-b",
         direction: "output",
-        interfaceInstanceIds: ["port-b"],
+        interfaceInstanceId: "port-b",
       },
     );
     project.documents.push(child);
@@ -633,7 +697,7 @@ describe("Project structural transaction", () => {
       name: "IN",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceIds: ["P1"],
+      interfaceInstanceId: "P1",
     });
     project.documents.push(child);
     const parent = project.documents[0]!;

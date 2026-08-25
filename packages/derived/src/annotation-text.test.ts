@@ -105,7 +105,7 @@ describe("bound annotation text", () => {
           name: "Vout",
           netId: "net-vout",
           direction: "output",
-          interfaceInstanceIds: ["port-object"],
+          interfaceInstanceId: "port-object",
         },
       ],
     };

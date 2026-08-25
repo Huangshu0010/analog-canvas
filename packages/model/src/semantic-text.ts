@@ -89,7 +89,7 @@ export function semanticTextDocument(
 ): RichTextDocument {
   if (value.length === 0) return { runs: [{ kind: "line-break" }] };
   // `_suffix` and `_{suffix}` are the one explicit identifier notation the
-  // product accepts. Parse it before role-specific shorthand so Cell Ports,
+  // product accepts. Parse it before role-specific shorthand so Cell Pins,
   // ordinary labels, and hierarchy pin names never diverge on V_in.
   const explicitSubscript = /^(.+?)_(?:\{(.+)\}|(.+))$/u.exec(value);
   if (explicitSubscript) {

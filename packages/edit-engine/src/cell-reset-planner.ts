@@ -89,9 +89,9 @@ export function planCellReset(
     edit = { kind: "reset_cell_placement" };
     summary = `Return ${placedInstances.length} Instances to the tray and remove ${document.routes.length} Route geometries; retain devices, Nets, and formal interface`;
   } else {
-    const interfaceInstanceIds = new Set(
-      document.netlist?.terminals.flatMap(
-        (terminal) => terminal.interfaceInstanceIds,
+    const cellPinInstanceIds = new Set(
+      document.netlist?.terminals.map(
+        (terminal) => terminal.interfaceInstanceId,
       ) ?? [],
     );
     const interfaceNetIds = new Set(
@@ -100,7 +100,7 @@ export function planCellReset(
     const retainedAnnotationIds = new Set(
       document.annotations.flatMap((annotation) =>
         annotation.anchor.kind === "object" &&
-        interfaceInstanceIds.has(annotation.anchor.objectId)
+        cellPinInstanceIds.has(annotation.anchor.objectId)
           ? [annotation.id]
           : [],
       ),
@@ -123,12 +123,8 @@ export function planCellReset(
             return retainedAnnotationIds.has(evidence.owner.annotationId)
               ? [evidence.id]
               : [];
-          case "free-port":
-            return interfaceInstanceIds.has(evidence.owner.instanceId)
-              ? [evidence.id]
-              : [];
           case "power-marker":
-            return interfaceInstanceIds.has(evidence.owner.objectId) ||
+            return cellPinInstanceIds.has(evidence.owner.objectId) ||
               retainedAnnotationIds.has(evidence.owner.objectId)
               ? [evidence.id]
               : [];
@@ -150,11 +146,11 @@ export function planCellReset(
     affectedObjectIds = uniqueIds([
       ...allObjects.flatMap((object) => {
         const retained =
-          ("symbolId" in object && interfaceInstanceIds.has(object.id)) ||
+          ("symbolId" in object && cellPinInstanceIds.has(object.id)) ||
           ("terminals" in object &&
             interfaceNetIds.has(object.id) &&
             object.terminals.every((terminal) =>
-              interfaceInstanceIds.has(terminal.instanceId),
+              cellPinInstanceIds.has(terminal.instanceId),
             )) ||
           retainedAnnotationIds.has(object.id);
         const retainedWithEvidence =

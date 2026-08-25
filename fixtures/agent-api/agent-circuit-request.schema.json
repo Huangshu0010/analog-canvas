@@ -8782,12 +8782,8 @@
             "passive"
           ]
         },
-        "interfaceInstanceIds": {
-          "minItems": 1,
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/__schema1"
-          }
+        "interfaceInstanceId": {
+          "$ref": "#/$defs/__schema1"
         }
       },
       "required": [
@@ -8795,7 +8791,7 @@
         "name",
         "netId",
         "direction",
-        "interfaceInstanceIds"
+        "interfaceInstanceId"
       ],
       "additionalProperties": false
     },
@@ -8823,12 +8819,8 @@
             "passive"
           ]
         },
-        "interfaceInstanceIds": {
-          "minItems": 1,
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/__schema1"
-          }
+        "interfaceInstanceId": {
+          "$ref": "#/$defs/__schema1"
         }
       },
       "required": [
@@ -9393,23 +9385,6 @@
                   "required": [
                     "kind",
                     "annotationId"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "free-port"
-                    },
-                    "instanceId": {
-                      "$ref": "#/$defs/__schema1"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "instanceId"
                   ],
                   "additionalProperties": false
                 },
@@ -11690,26 +11665,6 @@
           "id": {
             "$ref": "#/$defs/__schema1"
           },
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "scope": {
-            "type": "string",
-            "enum": [
-              "local",
-              "global"
-            ]
-          },
-          "powerDomain": {
-            "type": "string",
-            "enum": [
-              "none",
-              "vdd",
-              "ground",
-              "conflict"
-            ]
-          },
           "terminals": {
             "type": "array",
             "items": {
@@ -11729,50 +11684,10 @@
               ],
               "additionalProperties": false
             }
-          },
-          "origin": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "authored"
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "spice-import"
-                  },
-                  "sourceNetIds": {
-                    "minItems": 1,
-                    "maxItems": 256,
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/$defs/__schema1"
-                    }
-                  }
-                },
-                "required": [
-                  "kind",
-                  "sourceNetIds"
-                ],
-                "additionalProperties": false
-              }
-            ]
           }
         },
         "required": [
           "id",
-          "scope",
           "terminals"
         ],
         "additionalProperties": false

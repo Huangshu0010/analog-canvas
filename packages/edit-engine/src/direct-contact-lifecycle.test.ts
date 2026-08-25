@@ -41,6 +41,13 @@ function fixture(): SchematicDocument {
       ],
     },
   ];
+  document.netlist!.terminals = ["A", "B"].map((instanceId) => ({
+    id: `cell-terminal-${instanceId.toLowerCase()}`,
+    name: instanceId,
+    netId: "net-contact",
+    direction: "passive" as const,
+    interfaceInstanceId: instanceId,
+  }));
   document.connectivityEvidence = [];
   document.instances.find((instance) => instance.id === "B")!.placement = {
     position: { x: 160, y: 300 },
@@ -263,35 +270,6 @@ describe("direct-contact transform lifecycle", () => {
     expect(aOwner).toBe(bOwner);
   });
 
-  it("does not infer a new Net from raw geometric coincidence", () => {
-    const document = fixture();
-    document.nets = [];
-    document.instances.find((instance) => instance.id === "B")!.placement = {
-      position: { x: 460, y: 300 },
-      rotation: 0,
-      mirror: "x",
-    };
-    const result = executeTransaction(
-      document,
-      transaction(
-        document,
-        [
-          {
-            kind: "move_instance",
-            instanceId: "B",
-            position: { x: 160, y: 300 },
-          },
-        ],
-        "gain",
-      ),
-      context,
-    );
-
-    if (!result.ok) throw new Error(result.error.message);
-    expect(result.document.nets).toEqual([]);
-    expect(result.document.routes).toEqual([]);
-  });
-
   it("does not merge different Base Nets from raw geometric coincidence", () => {
     const document = fixture();
     document.instances.find((instance) => instance.id === "B")!.placement = {
@@ -311,6 +289,8 @@ describe("direct-contact transform lifecycle", () => {
         terminals: [{ instanceId: "B", pinName: "P" }],
       },
     ];
+    document.netlist!.terminals[0]!.netId = "net-a";
+    document.netlist!.terminals[1]!.netId = "net-b";
     const result = executeTransaction(
       document,
       transaction(

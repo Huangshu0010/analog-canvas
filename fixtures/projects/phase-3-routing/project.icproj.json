@@ -40,7 +40,6 @@
             },
             "rotation": 0
           },
-          "schematicReference": "P1",
           "symbolId": "port"
         },
         {
@@ -53,7 +52,6 @@
             },
             "rotation": 0
           },
-          "schematicReference": "P2",
           "symbolId": "port"
         },
         {
@@ -66,7 +64,6 @@
             },
             "rotation": 90
           },
-          "schematicReference": "P3",
           "symbolId": "port"
         },
         {
@@ -79,7 +76,6 @@
             },
             "rotation": 270
           },
-          "schematicReference": "P4",
           "symbolId": "port"
         },
         {
@@ -92,7 +88,6 @@
             },
             "rotation": 90
           },
-          "schematicReference": "P5",
           "symbolId": "port"
         }
       ],
@@ -102,7 +97,43 @@
       "netlist": {
         "formalParameters": [],
         "name": "Phase_3_Routing",
-        "terminals": []
+        "terminals": [
+          {
+            "direction": "passive",
+            "id": "cell-terminal-a",
+            "interfaceInstanceId": "A",
+            "name": "HORIZONTAL",
+            "netId": "net-h"
+          },
+          {
+            "direction": "passive",
+            "id": "cell-terminal-b",
+            "interfaceInstanceId": "B",
+            "name": "P2",
+            "netId": "net-h"
+          },
+          {
+            "direction": "passive",
+            "id": "cell-terminal-c",
+            "interfaceInstanceId": "C",
+            "name": "VERTICAL",
+            "netId": "net-v"
+          },
+          {
+            "direction": "passive",
+            "id": "cell-terminal-d",
+            "interfaceInstanceId": "D",
+            "name": "P4",
+            "netId": "net-v"
+          },
+          {
+            "direction": "passive",
+            "id": "cell-terminal-e",
+            "interfaceInstanceId": "E",
+            "name": "P5",
+            "netId": "net-h"
+          }
+        ]
       },
       "nets": [
         {
@@ -150,7 +181,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-routing",
   "name": "Phase 3 Routing Demo",
-  "schemaVersion": 23,
+  "schemaVersion": 24,
   "source": {
     "dialect": "none",
     "entry": null,

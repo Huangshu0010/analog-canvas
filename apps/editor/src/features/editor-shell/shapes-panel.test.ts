@@ -20,7 +20,7 @@ describe("shapes quick-place", () => {
       }),
     );
 
-    expect(symbols).toHaveLength(34);
+    expect(symbols).toHaveLength(33);
     expect(markup).toContain("All devices");
     expect(markup.match(/data-testid="shapes-chip-/g)).toHaveLength(
       symbols.length,
@@ -34,7 +34,7 @@ describe("shapes quick-place", () => {
     ).toEqual([
       ["Transistors", 4],
       ["Passives", 8],
-      ["Power and Ports", 6],
+      ["Power and Ports", 5],
       ["Sources", 2],
       ["Switches", 2],
       ["Analog Blocks", 5],
@@ -99,26 +99,18 @@ describe("shapes quick-place", () => {
     });
   });
 
-  it("places both Port roles without a setup dialog", () => {
-    // ADR 0034 keeps the role explicit: the Library entry carries it, and the
-    // generated name is edited on the canvas afterwards.
+  it("places both Cell Pin artworks without a setup dialog", () => {
     expect(quickPlaceRequest("razavi", "port")).toMatchObject({
       kind: "symbol",
       symbolId: "port",
-      portRole: "net-port",
+      portDirection: "passive",
       showReference: false,
     });
     expect(quickPlaceRequest("razavi", "port-filled")).toMatchObject({
       symbolId: "port-filled",
-      portRole: "net-port",
-    });
-    expect(quickPlaceRequest("razavi", "cell-pin")).toMatchObject({
-      kind: "symbol",
-      symbolId: "port",
-      symbolName: "Interface Pin",
-      portRole: "cell-terminal",
       portDirection: "passive",
     });
+    expect(quickPlaceRequest("razavi", "cell-pin")).toBeNull();
   });
 
   it("returns null for unknown symbols", () => {

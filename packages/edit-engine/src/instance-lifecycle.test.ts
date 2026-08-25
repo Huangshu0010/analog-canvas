@@ -110,7 +110,7 @@ function transaction(documentId: string, edits: readonly SchematicEdit[]) {
 }
 
 describe("Instance lifecycle planning", () => {
-  it("returns a formal Cell Port without removing its exported interface", () => {
+  it("returns a formal Cell Pin without removing its exported interface", () => {
     const document = createEmptyDocument("document-child", "Child");
     document.instances.push({
       id: "P1",
@@ -135,7 +135,7 @@ describe("Instance lifecycle planning", () => {
           name: "VIN",
           netId: "net-vin",
           direction: "input",
-          interfaceInstanceIds: ["P1"],
+          interfaceInstanceId: "P1",
         },
       ],
     };
@@ -157,7 +157,7 @@ describe("Instance lifecycle planning", () => {
           terminals: [
             {
               name: "VIN",
-              interfaceInstanceIds: ["P1"],
+              interfaceInstanceId: "P1",
               netId: "net-vin",
             },
           ],
@@ -260,7 +260,7 @@ describe("Instance lifecycle planning", () => {
     });
   });
 
-  it("prunes the final unreferenced local Free Port Net with its Port", () => {
+  it("prunes the final unreferenced local Cell Pin Net with its marker", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "P1",
@@ -396,7 +396,7 @@ describe("Instance lifecycle planning", () => {
           name: "VIN",
           netId: "net-vin",
           direction: "input",
-          interfaceInstanceIds: ["P1"],
+          interfaceInstanceId: "P1",
         },
       ],
     };

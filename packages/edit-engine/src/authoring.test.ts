@@ -335,14 +335,14 @@ describe("semantic authoring", () => {
         name: "IN",
         netId: "net-a",
         direction: "input",
-        interfaceInstanceIds: ["P1"],
+        interfaceInstanceId: "P1",
       },
       {
         id: "cell-terminal-out",
         name: "OUT",
         netId: "net-b",
         direction: "output",
-        interfaceInstanceIds: ["P2"],
+        interfaceInstanceId: "P2",
       },
     ];
 

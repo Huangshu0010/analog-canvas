@@ -164,7 +164,7 @@ describe("editor shortcut contract", () => {
     expect(resolve("k")).toEqual(
       command({ id: "tool.activate", tool: "construction-line" }),
     );
-    expect(resolve("p")).toEqual(command({ id: "insert.free-net-port" }));
+    expect(resolve("p")).toEqual(command({ id: "insert.cell-pin" }));
     expect(resolve("m")).toEqual(command({ id: "selection.move" }));
     expect(resolve("l")).toEqual({ kind: "net-label-selection-required" });
     expect(resolve("l", { hasRouteSelection: true })).toEqual({

@@ -533,17 +533,17 @@ describe("migrateLegacyProjectRecovery", () => {
     expect(firstSession(read).latest?.source).toBe("recovered");
   });
 
-  it("stores a schema-22 legacy slot as internally consistent schema 23", async () => {
+  it("stores a schema-23 legacy slot as internally consistent schema 24", async () => {
     const { store } = freshStore();
     const previous = JSON.parse(projectText);
-    previous.schemaVersion = 22;
+    previous.schemaVersion = 23;
     const previousText = JSON.stringify(previous);
     const storage = memoryStorage({ [PROJECT_RECOVERY_KEY]: previousText });
 
     expect(await migrate(storage, store)).toMatchObject({ status: "migrated" });
     const latest = firstSession(await store.readAll()).latest!;
-    expect(latest.projectSchemaVersion).toBe(23);
-    expect(JSON.parse(latest.projectText).schemaVersion).toBe(23);
+    expect(latest.projectSchemaVersion).toBe(24);
+    expect(JSON.parse(latest.projectText).schemaVersion).toBe(24);
   });
 
   it("retains an unsupported-schema legacy slot", async () => {

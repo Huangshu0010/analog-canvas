@@ -9,6 +9,7 @@ import { executeTransaction } from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
 import type {
   Annotation,
+  CellNetlistTerminal,
   ConnectivityEvidence,
   Instance,
   Net,
@@ -33,6 +34,7 @@ import {
 
 export interface SchematicClipboard {
   instances: Instance[];
+  cellTerminals: CellNetlistTerminal[];
   /**
    * Nets entirely inside the copied selection. They are duplicated (or merged
    * by name) when the copy is committed.
@@ -215,7 +217,14 @@ function fallbackClipboardPreviewDocument(
     // owned explicitly here. Inheriting any of these through `...base` leaves
     // references to objects deliberately omitted from the ghost and makes the
     // renderer reject otherwise valid clipboard content.
-    netlist: undefined,
+    netlist:
+      clipboard.cellTerminals.length > 0
+        ? {
+            name: base.netlist?.name ?? base.name,
+            formalParameters: [],
+            terminals: structuredClone(clipboard.cellTerminals),
+          }
+        : undefined,
     mosBulkDefaults: undefined,
     connectivityEvidence: structuredClone(clipboard.connectivityEvidence),
     layoutGroups: [],
@@ -340,6 +349,7 @@ export function copyWholeDocument(
   }
   return structuredClone({
     instances: document.instances,
+    cellTerminals: document.netlist?.terminals ?? [],
     nets: document.nets.filter((net) => netIds.has(net.id)),
     boundaryNets: [],
     routes: document.routes,
@@ -384,6 +394,10 @@ export function copySelection(
   const annotationIds = new Set(annotations.map((annotation) => annotation.id));
   return structuredClone({
     instances,
+    cellTerminals:
+      document.netlist?.terminals.filter((terminal) =>
+        selectedIds.has(terminal.interfaceInstanceId),
+      ) ?? [],
     nets: document.nets.filter((net) => netIds.has(net.id)),
     boundaryNets: document.nets
       .filter(
@@ -420,8 +434,6 @@ export function copySelection(
           return true;
         case "net-label":
           return annotationIds.has(evidence.owner.annotationId);
-        case "free-port":
-          return selectedIds.has(evidence.owner.instanceId);
         case "power-marker":
           return (
             attachedIds.has(evidence.owner.objectId) ||
@@ -718,24 +730,32 @@ export function proposePaste(
   );
   const existingAnchors = new Map<string, RouteEndpoint>();
   const errors: string[] = [];
-  for (const net of clipboard.nets) {
-    const formalTerminal = document.netlist?.terminals.find(
-      (terminal) =>
-        terminal.netId === net.id &&
-        terminal.interfaceInstanceIds.some((instanceId) =>
-          instanceIds.has(instanceId),
-        ),
-    );
-    const existing = formalTerminal
-      ? document.nets.find((candidate) => candidate.id === formalTerminal.netId)
-      : undefined;
-    if (existing) {
-      netIds.set(net.id, existing.id);
-      const anchor = firstNetEndpoint(existing);
-      if (anchor) existingAnchors.set(net.id, anchor);
-    } else {
-      netIds.set(net.id, uniqueCopyId(net.id, sequence, occupied));
+  const copiedCellTerminals = clipboard.cellTerminals;
+  const terminalIds = new Map(
+    copiedCellTerminals.map((terminal) => [
+      terminal.id,
+      uniqueCopyId(terminal.id, sequence, occupied),
+    ]),
+  );
+  const occupiedTerminalNames = new Set(
+    (document.netlist?.terminals ?? []).map((terminal) =>
+      terminal.name.toLowerCase(),
+    ),
+  );
+  const terminalNames = new Map<string, string>();
+  for (const terminal of copiedCellTerminals) {
+    const base = `${terminal.name}_copy`;
+    let name = base;
+    let suffix = 2;
+    while (occupiedTerminalNames.has(name.toLowerCase())) {
+      name = `${base}${suffix}`;
+      suffix += 1;
     }
+    occupiedTerminalNames.add(name.toLowerCase());
+    terminalNames.set(terminal.id, name);
+  }
+  for (const net of clipboard.nets) {
+    netIds.set(net.id, uniqueCopyId(net.id, sequence, occupied));
   }
   const objectIds = new Map<string, string>([
     ...instanceIds,
@@ -782,21 +802,18 @@ export function proposePaste(
     }),
   );
 
-  for (const terminal of document.netlist?.terminals ?? []) {
-    const copiedMarkerIds = terminal.interfaceInstanceIds.flatMap(
-      (instanceId) => {
-        const copiedId = instanceIds.get(instanceId);
-        return copiedId ? [copiedId] : [];
-      },
-    );
-    if (copiedMarkerIds.length === 0) continue;
+  for (const terminal of copiedCellTerminals) {
+    const copiedMarkerId = instanceIds.get(terminal.interfaceInstanceId);
+    if (!copiedMarkerId) continue;
     edits.push({
-      kind: "update_cell_terminal",
-      terminalId: terminal.id,
-      interfaceInstanceIds: [
-        ...terminal.interfaceInstanceIds,
-        ...copiedMarkerIds,
-      ],
+      kind: "add_cell_terminal",
+      terminal: {
+        ...terminal,
+        id: terminalIds.get(terminal.id)!,
+        name: terminalNames.get(terminal.id)!,
+        netId: netIds.get(terminal.netId) ?? terminal.netId,
+        interfaceInstanceId: copiedMarkerId,
+      },
     });
   }
 
@@ -911,11 +928,6 @@ export function proposePaste(
                 annotationIds.get(clone.owner.annotationId) ??
                 clone.owner.annotationId;
               break;
-            case "free-port":
-              clone.owner.instanceId =
-                instanceIds.get(clone.owner.instanceId) ??
-                clone.owner.instanceId;
-              break;
             case "power-marker":
               clone.owner.objectId =
                 objectIds.get(clone.owner.objectId) ??
@@ -968,19 +980,28 @@ export function proposePaste(
                   netId: netIds.get(clone.binding.netId) ?? clone.binding.netId,
                 },
               }
-            : clone.binding?.kind === "instance-value" ||
-                clone.binding?.kind === "instance-designator" ||
-                clone.binding?.kind === "instance-schematic-name" ||
-                clone.binding?.kind === "instance-master-name"
+            : clone.binding?.kind === "cell-terminal-name"
               ? {
                   binding: {
-                    kind: clone.binding.kind,
-                    instanceId:
-                      objectIds.get(clone.binding.instanceId) ??
-                      clone.binding.instanceId,
+                    kind: "cell-terminal-name" as const,
+                    terminalId:
+                      terminalIds.get(clone.binding.terminalId) ??
+                      clone.binding.terminalId,
                   },
                 }
-              : {}),
+              : clone.binding?.kind === "instance-value" ||
+                  clone.binding?.kind === "instance-designator" ||
+                  clone.binding?.kind === "instance-schematic-name" ||
+                  clone.binding?.kind === "instance-master-name"
+                ? {
+                    binding: {
+                      kind: clone.binding.kind,
+                      instanceId:
+                        objectIds.get(clone.binding.instanceId) ??
+                        clone.binding.instanceId,
+                    },
+                  }
+                : {}),
           ...(annotation.netId
             ? { netId: netIds.get(annotation.netId) ?? annotation.netId }
             : {}),

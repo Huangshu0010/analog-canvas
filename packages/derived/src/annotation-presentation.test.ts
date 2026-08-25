@@ -129,7 +129,7 @@ describe("annotation presentation", () => {
           name: "Vout",
           netId: "net-r1",
           direction: "output",
-          interfaceInstanceIds: ["R1"],
+          interfaceInstanceId: "R1",
         },
       ],
     };

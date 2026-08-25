@@ -93,18 +93,16 @@ still open; explicit invalid names block export and printers do not silently
 rename them.
 
 `terminals` maps each ordered formal cell-terminal name to one existing Net.
-Canvas `port` and `port-filled` symbols are ordinary single-pin Instances. A
-Free Net Port names its bound Net without changing the interface. A Formal
-Cell Pin owns one or more canvas markers through
-`terminals[].interfaceInstanceIds` and contributes exactly one ordered
-interface terminal regardless of marker count. Both roles are available in top and child Documents,
-and neither emits an instance line. A hierarchy instance uses its bound child
+Canvas `port` and `port-filled` symbols are Cell Pins: each owns exactly one
+ordered interface terminal through `terminals[].interfaceInstanceId` and
+neither emits an instance line. Cell Pins are available in top and child
+Documents. A hierarchy instance uses its bound child
 Document and that child's explicit private interface. Ports receive no visible
-schematic Reference or `Instance.netlist.reference`. A free Net Port displays
-and edits its owner-addressed Logical-Net name claim. A formal Cell Pin uses its ordered
-`CellTerminal.name`, such as `Vout`, for interface and export identity. Either
-bound Annotation may retain same-text RichText formatting, which never changes
-emitted names.
+schematic Reference or `Instance.netlist.reference`. A Cell Pin uses its
+ordered `CellTerminal.name`, such as `Vout`, for interface and export identity.
+Its bound Annotation may retain same-text RichText formatting, which never
+changes emitted names. Repeated internal naming uses Net Labels, not another
+Cell Pin marker.
 
 Every manually inserted device receives an explicit reference. References are
 unique per cell and have the prefix required by their device definition. Model-

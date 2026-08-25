@@ -7,7 +7,6 @@ import type { CircuitProject, Instance } from "@icm/model";
 
 function instance(
   id: string,
-  schematicReference: string,
   x: number,
   y: number,
   rotation: 0 | 90 | 180 | 270,
@@ -16,7 +15,6 @@ function instance(
   return {
     id,
     symbolId: "port",
-    schematicReference,
     placement: { position: { x, y }, rotation, mirror },
   };
 }
@@ -40,13 +38,28 @@ export function createRoutingDemoProject(): CircuitProject {
         name: "Phase 3 Routing",
         revision: 0,
         sourceStatus: "in-sync",
-        netlist: { name: "Phase_3_Routing", terminals: [] },
+        netlist: {
+          name: "Phase_3_Routing",
+          terminals: [
+            ["A", "HORIZONTAL", "net-h"],
+            ["B", "P2", "net-h"],
+            ["C", "VERTICAL", "net-v"],
+            ["D", "P4", "net-v"],
+            ["E", "P5", "net-h"],
+          ].map(([instanceId, name, netId]) => ({
+            id: `cell-terminal-${instanceId!.toLowerCase()}`,
+            name: name!,
+            netId: netId!,
+            direction: "passive" as const,
+            interfaceInstanceId: instanceId!,
+          })),
+        },
         instances: [
-          instance("A", "P1", 140, 300, 0),
-          instance("B", "P2", 460, 300, 0, "x"),
-          instance("C", "P3", 300, 140, 90),
-          instance("D", "P4", 300, 460, 270),
-          instance("E", "P5", 340, 440, 90),
+          instance("A", 140, 300, 0),
+          instance("B", 460, 300, 0, "x"),
+          instance("C", 300, 140, 90),
+          instance("D", 300, 460, 270),
+          instance("E", 340, 440, 90),
         ],
         nets: [
           {

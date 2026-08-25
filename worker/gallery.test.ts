@@ -122,14 +122,10 @@ function previousVersionText(): string {
 
 function previousPowerRailVersionText(): string {
   const raw = JSON.parse(projectText("Legacy VDD")) as any;
-  raw.schemaVersion = 22;
+  raw.schemaVersion = 23;
   const document = raw.documents[0];
   document.nets.push({
     id: "net-vdd",
-    name: "VDD",
-    scope: "global",
-    powerDomain: "vdd",
-    origin: { kind: "authored" },
     terminals: [],
   });
   document.connectivityEvidence.push({
@@ -179,23 +175,16 @@ function previousPowerRailVersionText(): string {
 
 function brokenCurrentPowerRailText(): string {
   const raw = JSON.parse(previousPowerRailVersionText()) as any;
-  raw.schemaVersion = 22;
+  raw.schemaVersion = 23;
   raw.documents[0].connectivityEvidence = [
-    {
-      id: "legacy-explicit-vdd",
-      kind: "name-claim",
-      netId: "net-vdd",
-      name: "VDD",
-      owner: { kind: "explicit-net-property" },
-      scope: "global",
-    },
     {
       id: "legacy-label-vdd",
       kind: "name-claim",
       netId: "net-vdd",
       name: "VDD",
-      owner: { kind: "net-label", annotationId: "label-vdd" },
+      owner: { kind: "power-marker", objectId: "label-vdd" },
       scope: "global",
+      powerDomain: "vdd",
     },
   ];
   return JSON.stringify(raw);
@@ -1602,7 +1591,7 @@ describe("gallery administration", () => {
     expect(await preview.text()).toContain("<svg");
   });
 
-  it("repairs already-stored schema-22 power evidence during maintenance", async () => {
+  it("upgrades already-stored schema-23 power evidence during maintenance", async () => {
     const env = environment();
     const adminCookie = await adminOf(env);
     const id = await submitOne(env, "Broken VDD", { cookie: adminCookie });
@@ -1686,13 +1675,13 @@ describe("gallery administration", () => {
       .one().id;
     env.gallerySql.exec(
       "UPDATE gallery_entries SET schema_version = ?, project_text = ? WHERE id = ?",
-      22,
+      23,
       previousVersionText(),
       id,
     );
     env.gallerySql.exec(
       "UPDATE gallery_entry_versions SET schema_version = ?, project_text = ? WHERE id = ?",
-      22,
+      23,
       previousPowerRailVersionText(),
       versionId,
     );
@@ -1705,7 +1694,7 @@ describe("gallery administration", () => {
       "Legacy workspace",
       "2026-08-24T00:00:00.000Z",
       1,
-      22,
+      23,
       previousPowerRailVersionText(),
     );
 
@@ -1738,9 +1727,9 @@ describe("gallery administration", () => {
       ready: 3,
       failures: [],
       inventory: {
-        gallery_entries: { "22": 1 },
-        gallery_entry_versions: { "22": 1 },
-        workspace_slots: { "22": 1 },
+        gallery_entries: { "23": 1 },
+        gallery_entry_versions: { "23": 1 },
+        workspace_slots: { "23": 1 },
       },
     });
     expect(
@@ -1750,7 +1739,7 @@ describe("gallery administration", () => {
           id,
         )
         .one().schema_version,
-    ).toBe(22);
+    ).toBe(23);
 
     const applied = await route(
       env,

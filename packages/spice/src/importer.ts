@@ -355,7 +355,7 @@ function importDocument(
   }));
   const formalTerminals = cell.ports.map((port, index) => {
     const interfaceInstanceId = deriveStableId(
-      "cell-port",
+      "cell-pin",
       documentId,
       String(index),
       port.name,
@@ -372,7 +372,7 @@ function importDocument(
       name: port.name,
       netId: port.netId,
       direction: "passive" as const,
-      interfaceInstanceIds: [interfaceInstanceId],
+      interfaceInstanceId,
     };
   });
   return {
@@ -456,8 +456,8 @@ function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
   const boundDocuments: SchematicDocument[] = documents.map((document) => ({
     ...document,
     instances: document.instances.map((instance) => {
-      const isFormalPort = document.netlist?.terminals.some((terminal) =>
-        terminal.interfaceInstanceIds.includes(instance.id),
+      const isFormalPort = document.netlist?.terminals.some(
+        (terminal) => terminal.interfaceInstanceId === instance.id,
       );
       const referencedInstance = {
         ...instance,

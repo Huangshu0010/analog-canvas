@@ -1,4 +1,4 @@
 export {
   ProjectMigrationError,
-  upgradeSchema22To23,
+  upgradeSchema23To24,
 } from "./transforms/project.js";

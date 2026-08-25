@@ -129,7 +129,7 @@ describe("endpoint connectivity assessment", () => {
           name: "L",
           netId: "formal",
           direction: "passive",
-          interfaceInstanceIds: ["A"],
+          interfaceInstanceId: "A",
         },
       ],
     };

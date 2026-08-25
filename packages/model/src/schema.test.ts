@@ -98,8 +98,8 @@ describe("CircuitProject schema", () => {
     );
   });
 
-  it("rejects a schematic Reference on a formal Cell Port", () => {
-    const document = createEmptyProject("formal-port", "Formal Port")
+  it("rejects a schematic Reference on a formal Cell Pin", () => {
+    const document = createEmptyProject("formal-cell-pin", "Formal Cell Pin")
       .documents[0]!;
     document.instances.push({
       id: "port-object",
@@ -121,7 +121,7 @@ describe("CircuitProject schema", () => {
           name: "Vout",
           netId: "net-vout",
           direction: "output",
-          interfaceInstanceIds: ["port-object"],
+          interfaceInstanceId: "port-object",
         },
       ],
     };
@@ -270,7 +270,7 @@ describe("CircuitProject schema", () => {
       name: "VIN",
       netId: "net-input",
       direction: "input",
-      interfaceInstanceIds: ["P1"],
+      interfaceInstanceId: "P1",
     });
     expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
 
@@ -296,6 +296,19 @@ describe("CircuitProject schema", () => {
       },
       { id: "net-b", terminals: [] },
     );
+    document.netlist = {
+      name: "Evidence",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-p1",
+          name: "P1",
+          netId: "net-a",
+          direction: "passive",
+          interfaceInstanceId: "P1",
+        },
+      ],
+    };
     document.annotations.push({
       id: "label-a",
       kind: "net-label",
@@ -336,6 +349,10 @@ describe("CircuitProject schema", () => {
       },
     );
     expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
+    const originalLabelClaim = document.connectivityEvidence[0]!;
+    if (originalLabelClaim.kind !== "name-claim") {
+      throw new Error("Expected name claim");
+    }
 
     document.annotations[0]!.formatOverride = {
       runs: [
@@ -352,14 +369,6 @@ describe("CircuitProject schema", () => {
       objectId: "P1",
       localOffset: { x: 0, y: 0 },
       fallbackPosition: { x: 0, y: 0 },
-    };
-    const originalLabelClaim = document.connectivityEvidence[0]!;
-    if (originalLabelClaim.kind !== "name-claim") {
-      throw new Error("Expected claim");
-    }
-    document.connectivityEvidence[0] = {
-      ...originalLabelClaim,
-      owner: { kind: "free-port", instanceId: "P1" },
     };
     expect(SchematicDocumentSchema.safeParse(document).success).toBe(true);
     document.annotations[0]!.anchor = {
@@ -537,7 +546,7 @@ describe("CircuitProject schema", () => {
       name: "VIN",
       netId: "net-input",
       direction: "input",
-      interfaceInstanceIds: ["P1"],
+      interfaceInstanceId: "P1",
     });
     document.presentation.cellSymbol = {
       minimumBodySize: { width: 100, height: 60 },

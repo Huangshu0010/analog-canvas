@@ -60,6 +60,26 @@ function transaction(expectedRevision = 0, dryRun = false) {
   };
 }
 
+function defineCellPin(
+  document: ReturnType<typeof createEmptyDocument>,
+  instanceId: string,
+  name: string,
+  netId: string,
+): void {
+  document.netlist ??= {
+    name: document.name,
+    formalParameters: [],
+    terminals: [],
+  };
+  document.netlist.terminals.push({
+    id: `terminal-${instanceId.toLowerCase()}`,
+    name,
+    netId,
+    direction: "passive",
+    interfaceInstanceId: instanceId,
+  });
+}
+
 describe("Edit Transaction envelope", () => {
   it("creates a manual Base Net without adding naming semantics", () => {
     const document = createEmptyDocument("document-main", "Main");
@@ -67,6 +87,8 @@ describe("Edit Transaction envelope", () => {
       { id: "A", symbolId: "port", placement: null },
       { id: "B", symbolId: "port", placement: null },
     );
+    defineCellPin(document, "A", "A", "net-authored");
+    defineCellPin(document, "B", "B", "net-authored");
 
     const result = executeTransaction(
       document,
@@ -99,32 +121,7 @@ describe("Edit Transaction envelope", () => {
     ]);
   });
 
-  it("updates a Port schematic reference without creating a netlist record", () => {
-    const document = createEmptyDocument("document-main", "Main");
-    document.instances.push({
-      id: "port-object",
-      symbolId: "port",
-      schematicReference: "P1",
-      placement: null,
-    });
-    const result = executeTransaction(document, {
-      ...transaction(),
-      edits: [
-        {
-          kind: "set_instance_schematic_reference",
-          instanceId: "port-object",
-          reference: "P_IN",
-        },
-      ],
-    });
-
-    expect(result).toMatchObject({ ok: true });
-    if (!result.ok) return;
-    expect(result.document.instances[0]?.schematicReference).toBe("P_IN");
-    expect(result.document.instances[0]).not.toHaveProperty("netlist");
-  });
-
-  it("rejects a schematic reference on a formal Cell Port", () => {
+  it("rejects a schematic reference on a formal Cell Pin", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "port-object",
@@ -145,7 +142,7 @@ describe("Edit Transaction envelope", () => {
           name: "Vout",
           netId: "net-vout",
           direction: "output",
-          interfaceInstanceIds: ["port-object"],
+          interfaceInstanceId: "port-object",
         },
       ],
     };
@@ -188,7 +185,7 @@ describe("Edit Transaction envelope", () => {
           name: "Vout",
           netId: "net-vout",
           direction: "output",
-          interfaceInstanceIds: ["port-object"],
+          interfaceInstanceId: "port-object",
         },
       ],
     };
@@ -304,15 +301,15 @@ describe("Edit Transaction envelope", () => {
   it("enforces the same layout lock before placing a retained Instance", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
-      id: "P1",
-      symbolId: "port",
-      schematicReference: "P1",
+      id: "R1",
+      symbolId: "resistor",
+      schematicReference: "R1",
       placement: null,
     });
     document.layoutGroups.push({
-      id: "locked-port",
+      id: "locked-instance",
       kind: "custom",
-      objectIds: ["P1"],
+      objectIds: ["R1"],
       locked: true,
     });
     const result = executeTransaction(document, {
@@ -320,7 +317,7 @@ describe("Edit Transaction envelope", () => {
       edits: [
         {
           kind: "place_instance",
-          instanceId: "P1",
+          instanceId: "R1",
           placement: {
             position: { x: 100, y: 100 },
             rotation: 0,
@@ -769,6 +766,8 @@ describe("Edit Transaction envelope", () => {
         },
       },
     );
+    defineCellPin(document, "A", "A", "net-ab");
+    defineCellPin(document, "B", "B", "net-ab");
 
     const placed = executeTransaction(
       document,
@@ -926,6 +925,8 @@ describe("Edit Transaction envelope", () => {
         sourceNetId: "source-bus",
       },
     );
+    defineCellPin(document, "P1", "P1", "net-imported-bus");
+    defineCellPin(document, "P2", "P2", "net-authored-port");
 
     const result = executeTransaction(document, {
       ...transaction(),
@@ -1138,50 +1139,6 @@ describe("Edit Transaction envelope", () => {
       ok: false,
       applied: false,
       error: { code: "OBJECT_NOT_FOUND" },
-    });
-  });
-
-  it("removes free-Port evidence and its unreachable Net with the owner", () => {
-    const document = createEmptyDocument("document-main", "Main");
-    document.instances.push({ id: "P1", symbolId: "port", placement: null });
-    document.nets.push({
-      id: "net-port",
-
-      terminals: [{ instanceId: "P1", pinName: "P" }],
-    });
-    document.connectivityEvidence.push({
-      id: "claim-port",
-      kind: "name-claim",
-      netId: "net-port",
-      name: "PORT",
-      owner: { kind: "free-port", instanceId: "P1" },
-      scope: "local",
-    });
-
-    const result = executeTransaction(
-      document,
-      {
-        ...transaction(),
-        edits: [
-          {
-            kind: "disconnect_endpoint",
-            endpoint: { kind: "terminal", instanceId: "P1", pinName: "P" },
-          },
-          { kind: "remove_instance", instanceId: "P1" },
-        ],
-      },
-      { symbolResolver: resolver },
-    );
-    expect(result).toMatchObject({
-      ok: true,
-      document: { instances: [], nets: [], connectivityEvidence: [] },
-      diff: {
-        changedObjectIds: expect.arrayContaining([
-          "P1",
-          "claim-port",
-          "net-port",
-        ]),
-      },
     });
   });
 
@@ -2014,7 +1971,7 @@ describe("Edit Transaction envelope", () => {
     );
   });
 
-  it("reuses the canonical upright placement when a free Port rotates", () => {
+  it("reuses the canonical upright placement when a Cell Pin rotates", () => {
     const document = createEmptyDocument("document-main", "Port label");
     const instance = {
       id: "P1",
@@ -2031,6 +1988,7 @@ describe("Edit Transaction envelope", () => {
 
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
+    defineCellPin(document, "P1", "VIN", "net-vin");
     const resolved = resolver.resolve("port");
     if (!resolved) throw new Error("missing port");
     const profile = resolveSchematicStyleProfile(
@@ -2045,10 +2003,9 @@ describe("Edit Transaction envelope", () => {
     );
     if (!initial) throw new Error("missing default Port label placement");
     document.annotations.push({
-      id: "net-label-p1",
-      kind: "net-label",
-      binding: { kind: "net-name", netId: "net-vin" },
-      netId: "net-vin",
+      id: "cell-pin-label-p1",
+      kind: "instance-label",
+      binding: { kind: "cell-terminal-name", terminalId: "terminal-p1" },
       anchor: {
         kind: "object",
         objectId: "P1",

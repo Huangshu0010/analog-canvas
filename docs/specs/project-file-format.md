@@ -2,40 +2,37 @@
 
 Status: `accepted`
 
-Current Project schema: `23`
+Current Project schema: `24`
 
 Primary owners: `packages/model` (current shape) and
 `packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`@icm/project-protocol` exposes `parseProject`. It accepts schemas 22 and 23,
-upgrades schema 22 to the sole schema-23 in-memory Project, and writes only
-schema 23. The bounded schema-22 adapter repairs power-role Evidence where
-needed and drops the inert Base-Net name, scope, power-role, and origin
-projections before strict current-schema validation.
+`@icm/project-protocol` exposes `parseProject`. It accepts schemas 23 and 24,
+upgrades the previous singular Cell-Pin marker shape to the sole schema-24
+in-memory Project, and writes only schema 24. Older project files are rejected.
 
 ## Current authorities
 
 - `Document.netlist.terminals` defines the ordered formal Cell interface with
-  stable identity, direction, Net binding, and one or more ordinary Port marker
-  Instances.
+  stable identity, direction, Net binding, and exactly one ordinary Cell Pin
+  Instance.
 - `Document.netlist.formalParameters` and project-level
   `externalSubcircuitDefinitions` define exact nonlocal netlist interfaces.
   Each external definition has a stable identity, an ordered list of stable
   terminals, raw formal defaults, interface status and optional block
   presentation. It has no internal Document body.
 - `Instance.schematicReference` is the canvas-facing Reference for ordinary
-  Instances. Free Ports use their name claim; Formal Ports use
-  `CellTerminal.name`; neither displays a
-  `P#` reference. `Instance.netlist` contains the separate emitted reference,
+  Instances. Cell Pins use `CellTerminal.name` and never display a `P#`
+  reference. `Instance.netlist` contains the separate emitted reference,
   binding, and typed parameter values for emitting Instances. Import source
   order and symbol-mapping registry identity live in
   `Instance.importProvenance`; there is no persisted property bag.
 - Hierarchy is an acyclic graph of ordinary Instances whose typed subcircuit
   bindings resolve to child Documents; orphan Cell definitions are allowed.
-- Canvas `port` and `port-filled` objects are ordinary Instances with terminal
-  `P`; their connectivity is stored only in `Net.terminals` and ordinary
-  terminal Route endpoints.
+- Canvas `port` and `port-filled` objects are one-to-one Cell Pin Instances
+  with terminal `P`; their connectivity is stored in `Net.terminals` and
+  ordinary terminal Route endpoints.
 - Base `Net.terminals` is the physical membership authority.
 - `Document.connectivityEvidence` records owner-addressable name claims,
   SPICE-source assertions, and explicit Base-Net equivalence. The shared
@@ -63,8 +60,8 @@ projections before strict current-schema validation.
 ## Read and write
 
 ```text
-read text -> parse JSON -> require Project schema 22 or 23
--> converge to schema 23 -> strict schema-23 validation -> open
+read text -> parse JSON -> require Project schema 23 or 24
+-> converge to schema 24 -> strict schema-24 validation -> open
 save -> strict validation -> canonical key ordering -> atomic write
 ```
 
@@ -83,7 +80,7 @@ until the author explicitly renames or merges the Nets.
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in
 `fixtures/projects/compatibility-corpus.json`; its accepted entries must all be
-already canonical Project schema 23. The rejected corpus names expected
+already canonical Project schema 24. The rejected corpus names expected
 validation failures.
 
 Viewport, selection, undo history, canvas overlays, Agent credentials,

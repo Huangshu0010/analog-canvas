@@ -175,18 +175,6 @@ describe("Agent operating Kit", () => {
           },
         },
       },
-      ...["VIN", "VOUT"].map((id, index) => ({
-        kind: "add_instance" as const,
-        instance: {
-          id,
-          symbolId: port.symbolId,
-          placement: {
-            position: index === 0 ? { x: 160, y: 180 } : { x: 460, y: 220 },
-            rotation: 0,
-            mirror: "none" as const,
-          },
-        },
-      })),
       {
         kind: "add_power_rail" as const,
         netId: "net-vdd",
@@ -212,9 +200,9 @@ describe("Agent operating Kit", () => {
       edits: createEdits,
     });
 
-    expect(
-      service.handle(request("inverter-create-dry-run", true)),
-    ).toMatchObject({
+    const dryRun = service.handle(request("inverter-create-dry-run", true));
+    if (!dryRun.ok) throw new Error(JSON.stringify(dryRun, null, 2));
+    expect(dryRun).toMatchObject({
       ok: true,
       applied: false,
       revision: 0,
@@ -277,10 +265,8 @@ describe("Agent operating Kit", () => {
         },
       });
     for (const [requestId, from, fromPin, to, toPin] of [
-      ["wire-vin", "VIN", "P", "MP1", "G"],
       ["wire-gates", "MP1", "G", "MN1", "G"],
       ["wire-output", "MP1", "D", "MN1", "D"],
-      ["wire-vout", "MN1", "D", "VOUT", "P"],
       ["wire-ground", "MN1", "S", "GND1", "0"],
     ] as const) {
       expect(wire(requestId, from, fromPin, to, toPin)).toMatchObject({
