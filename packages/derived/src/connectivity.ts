@@ -222,6 +222,7 @@ function guidanceGraphForNet(
   const components = deriveNetConnectivity(document, resolver, net)
     .components.map((component) => ({
       id: component.id,
+      netId: net.id,
       nodes: component.nodes.flatMap((node) =>
         node.point === null
           ? []
@@ -242,20 +243,39 @@ function guidanceGraphForNet(
 function importedGuidanceGraph(
   document: SchematicDocument,
   resolver: SymbolResolver,
-  logicalNetId: string,
+  sourceNetId: string,
   baseNetIds: readonly string[],
 ): NetGuidanceGraph | null {
-  const logicalNet =
-    resolveDocumentLogicalNets(document).byId.get(logicalNetId);
-  if (logicalNet?.scope === "global" && logicalNet.name) return null;
   const baseNetIdSet = new Set(baseNetIds);
+  const logicalNets = resolveDocumentLogicalNets(document);
+  const logicalGroups = new Map(
+    baseNetIds.flatMap((baseNetId) => {
+      const group = logicalNets.byBaseNetId.get(baseNetId);
+      return group ? [[group.id, group] as const] : [];
+    }),
+  );
+  if (
+    logicalGroups.size === 1 &&
+    [...logicalGroups.values()].every(
+      (group) => group.scope === "global" && Boolean(group.name),
+    )
+  ) {
+    return null;
+  }
   const components = document.nets
     .filter((net) => baseNetIdSet.has(net.id))
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .flatMap(
       (net) => guidanceGraphForNet(document, resolver, net)?.components ?? [],
     );
-  return { netId: logicalNetId, components };
+  const representativeNetId = baseNetIdSet.has(sourceNetId)
+    ? sourceNetId
+    : [...baseNetIdSet].sort((left, right) =>
+        left.localeCompare(right, "en"),
+      )[0];
+  return representativeNetId
+    ? { netId: representativeNetId, sourceNetId, components }
+    : null;
 }
 
 /**
@@ -282,15 +302,19 @@ export function deriveImportedRoutingGuidance(
   document: SchematicDocument,
   resolver: SymbolResolver,
 ): RoutingGuide[] {
-  return resolveDocumentLogicalNets(document)
-    .groups.filter((logicalNet) => logicalNet.sourceNetIds.length > 0)
-    .flatMap((logicalNet) => {
-      const graph = importedGuidanceGraph(
-        document,
-        resolver,
-        logicalNet.id,
-        logicalNet.baseNetIds,
-      );
+  const baseNetIdsBySource = new Map<string, Set<string>>();
+  for (const evidence of document.connectivityEvidence) {
+    if (evidence.kind !== "spice-source") continue;
+    const netIds = baseNetIdsBySource.get(evidence.sourceNetId) ?? new Set();
+    netIds.add(evidence.netId);
+    baseNetIdsBySource.set(evidence.sourceNetId, netIds);
+  }
+  return [...baseNetIdsBySource]
+    .sort(([left], [right]) => left.localeCompare(right, "en"))
+    .flatMap(([sourceNetId, baseNetIds]) => {
+      const graph = importedGuidanceGraph(document, resolver, sourceNetId, [
+        ...baseNetIds,
+      ]);
       return graph ? deriveRoutingGuidance(graph) : [];
     });
 }

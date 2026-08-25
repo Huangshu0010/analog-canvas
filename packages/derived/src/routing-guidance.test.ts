@@ -19,6 +19,7 @@ describe("routing guidance", () => {
       components: [
         {
           id: "component-c",
+          netId: "net-imported",
           nodes: [
             {
               key: "C",
@@ -30,6 +31,7 @@ describe("routing guidance", () => {
         },
         {
           id: "component-a",
+          netId: "net-imported",
           nodes: [
             {
               key: "A",
@@ -41,6 +43,7 @@ describe("routing guidance", () => {
         },
         {
           id: "component-b",
+          netId: "net-imported",
           nodes: [
             {
               key: "B",
@@ -236,6 +239,72 @@ describe("routing guidance", () => {
     );
 
     expect(guides).toHaveLength(1);
-    expect(guides[0]).toMatchObject({ netId: "base-a" });
+    expect(guides[0]).toMatchObject({ netId: "base-a", sourceNetId: "VIN" });
+    expect(new Set([guides[0]!.fromNetId, guides[0]!.toNetId])).toEqual(
+      new Set(["base-a", "base-b"]),
+    );
+  });
+
+  it("keeps a resolved named global source exempt from routing guidance", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.instances.push(
+      {
+        id: "A",
+        symbolId: "port",
+        placement: { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
+      },
+      {
+        id: "B",
+        symbolId: "port",
+        placement: {
+          position: { x: 100, y: 0 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+    );
+    document.nets.push(
+      { id: "base-a", terminals: [{ instanceId: "A", pinName: "P" }] },
+      { id: "base-b", terminals: [{ instanceId: "B", pinName: "P" }] },
+    );
+    document.connectivityEvidence.push(
+      {
+        id: "source-a",
+        kind: "spice-source",
+        netId: "base-a",
+        sourceNetId: "VDD",
+      },
+      {
+        id: "source-b",
+        kind: "spice-source",
+        netId: "base-b",
+        sourceNetId: "VDD",
+      },
+      {
+        id: "claim-a",
+        kind: "name-claim",
+        netId: "base-a",
+        name: "VDD",
+        owner: { kind: "explicit-net-property" },
+        scope: "global",
+        powerDomain: "vdd",
+      },
+      {
+        id: "claim-b",
+        kind: "name-claim",
+        netId: "base-b",
+        name: "VDD",
+        owner: { kind: "explicit-net-property" },
+        scope: "global",
+        powerDomain: "vdd",
+      },
+    );
+
+    expect(
+      deriveImportedRoutingGuidance(
+        document,
+        new InMemorySymbolResolver(builtInSymbols),
+      ),
+    ).toEqual([]);
   });
 });

@@ -90,6 +90,9 @@ The schema-23 Base-Net cleanup and full Gallery storage convergence decision is
 The unified Cell Pin contract that retires Free Port while preserving repeated
 visual markers for one formal terminal is
 [`0043-cell-pin-contract-convergence.md`](0043-cell-pin-contract-convergence.md).
+The separation of imported source provenance from electrical equivalence, and
+the reviewed external-master ERC classification, is
+[`0044-imported-source-provenance.md`](0044-imported-source-provenance.md).
 The arbitrary-angle Route authoring decision is
 [`0039-any-angle-route-authoring.md`](0039-any-angle-route-authoring.md).
 

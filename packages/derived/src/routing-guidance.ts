@@ -12,18 +12,29 @@ export interface RoutingGuidanceNode {
 
 export interface RoutingGuidanceComponent {
   id: string;
+  /** Current electrical Base Net containing every node in this component. */
+  netId: string;
   nodes: readonly RoutingGuidanceNode[];
 }
 
 export interface NetGuidanceGraph {
+  /** Current representative Base Net used only for guide grouping/focus. */
   netId: string;
+  /** Original imported Net identity; never an electrical Net authority. */
+  sourceNetId?: string;
   components: readonly RoutingGuidanceComponent[];
 }
 
 /** A derived, non-persisted route suggestion between visible components. */
 export interface RoutingGuide {
   id: string;
+  /** Current representative Base Net used for grouping and focus. */
   netId: string;
+  /** Actual current Base Nets at the two endpoints. */
+  fromNetId: string;
+  toNetId: string;
+  /** Original imported Net identity when this is source routing guidance. */
+  sourceNetId?: string;
   from: RouteEndpoint;
   to: RouteEndpoint;
   fromPoint: Point;
@@ -136,11 +147,18 @@ export function deriveRoutingGuidance(graph: NetGuidanceGraph): RoutingGuide[] {
     result.push({
       id: deriveStableId(
         "routing-guide",
-        graph.netId,
+        graph.sourceNetId ?? graph.netId,
         edge.from.key,
         edge.to.key,
       ),
       netId: graph.netId,
+      fromNetId: components.find(
+        (component) => component.id === edge.fromComponentId,
+      )!.netId,
+      toNetId: components.find(
+        (component) => component.id === edge.toComponentId,
+      )!.netId,
+      ...(graph.sourceNetId ? { sourceNetId: graph.sourceNetId } : {}),
       from: edge.from.endpoint,
       to: edge.to.endpoint,
       fromPoint: edge.from.point,

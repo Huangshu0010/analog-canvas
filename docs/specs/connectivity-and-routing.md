@@ -81,11 +81,13 @@ label evidence for their visible connectivity.
 
 ## Imported routing guidance
 
-SPICE import creates electrical membership before drawing. Only a Net whose
-persisted `origin.kind` is `spice-import` is eligible for derived routing
-guidance. `deriveRoutingGuidance` is a pure, device-neutral minimum-spanning
-tree over current visible components supplied by the connectivity adapter: it
-does not read symbols, MOS/Bulk semantics, SPICE records, labels, or editor
+SPICE import creates electrical membership before drawing and persists one
+`spice-source` provenance record per imported Base Net. Source provenance is
+not an electrical equivalence rule. When a cut partitions that Base Net, every
+surviving component retains the same source identity while remaining a
+separate electrical Base Net. `deriveRoutingGuidance` is a pure,
+device-neutral minimum-spanning tree over current visible components grouped
+by source identity: it does not read MOS/Bulk semantics, labels, or editor
 state. Symbol pin visibility, implicit terminals, and named-global-Net
 exemptions are adapter policy before this calculation.
 
@@ -95,11 +97,14 @@ or transform edits cannot dismiss guidance; the current graph simply yields a
 new result. `remove_route_geometry` retains Net membership and therefore
 re-exposes unresolved imported components. A normal connection cut splits all
 physical components, including imported and global Base Nets; only the primary
-component retains source/equivalence Evidence, while owner-addressed markers
-follow their surviving component. The editor may show
-focused, all, or hidden imported guides; Net highlight suppresses only the
-highlighted Net's guides. Unplaced endpoints remain in the Placement Tray and
-do not receive invented page coordinates.
+component retains non-source electrical Evidence such as explicit equivalence,
+while owner-addressed markers follow their surviving component and source
+provenance is copied to every component. The editor may show
+focused, all, or hidden imported guides; each guide carries the actual Base
+Net at both endpoints, so clicking it uses the ordinary Wire merge path. Net
+highlight suppresses guides incident to the highlighted Net. Unplaced
+endpoints remain in the Placement Tray and do not receive invented page
+coordinates.
 
 ## Derived read models
 

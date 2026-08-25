@@ -1467,12 +1467,17 @@ export function App({
           endpointKey(selectedHighlightEndpoint))),
   );
   const flightlines = useMemo(
-    () =>
-      [
-        ...(projectConnectivityIndex.documents
-          .get(document.id)
-          ?.logicalNets.values() ?? []),
-      ].flatMap((net) => net.routingGuidance),
+    () => [
+      ...new Map(
+        [
+          ...(projectConnectivityIndex.documents
+            .get(document.id)
+            ?.logicalNets.values() ?? []),
+        ]
+          .flatMap((net) => net.routingGuidance)
+          .map((line) => [line.id, line] as const),
+      ).values(),
+    ],
     [document.id, document.nets, projectConnectivityIndex],
   );
   const displayedFlightlines = useMemo(() => {
@@ -1490,11 +1495,20 @@ export function App({
     const scoped =
       routingGuidanceView === "focused" && focusedNetIds.size > 0
         ? flightlines.filter((flightline) =>
-            focusedNetIds.has(flightline.netId),
+            [flightline.netId, flightline.fromNetId, flightline.toNetId].some(
+              (netId) => focusedNetIds.has(netId),
+            ),
           )
         : flightlines;
     return highlightedNetId
-      ? scoped.filter((flightline) => flightline.netId !== highlightedNetId)
+      ? scoped.filter(
+          (flightline) =>
+            ![
+              flightline.netId,
+              flightline.fromNetId,
+              flightline.toNetId,
+            ].includes(highlightedNetId),
+        )
       : scoped;
   }, [
     flightlines,

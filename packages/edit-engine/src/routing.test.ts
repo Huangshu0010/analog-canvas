@@ -6,7 +6,9 @@ import { parseProject } from "@icm/project-protocol";
 import {
   deriveCrossings,
   deriveFlightlines,
+  deriveImportedRoutingGuidance,
   resolveRouteGeometry,
+  resolveDocumentLogicalNets,
 } from "@icm/derived";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
@@ -2378,7 +2380,7 @@ describe("routing Edit Engine", () => {
     );
   });
 
-  it("physically splits a partially routed imported Net and keeps source Evidence on the primary component", () => {
+  it("physically splits an imported Net while preserving non-electrical source provenance on every component", () => {
     const document = documentFixture();
     document.connectivityEvidence.push({
       id: "source-net-h",
@@ -2420,14 +2422,33 @@ describe("routing Edit Engine", () => {
         )
         .map((net) => net.terminals.map((terminal) => terminal.instanceId)),
     ).toEqual([["A"], ["B"], ["E"]]);
+    const splitNetIds = result.document.nets
+      .filter((candidate) =>
+        candidate.terminals.some((terminal) =>
+          ["A", "B", "E"].includes(terminal.instanceId),
+        ),
+      )
+      .map((candidate) => candidate.id)
+      .sort();
     expect(
-      result.document.connectivityEvidence.filter(
-        (evidence) => evidence.kind === "spice-source",
+      result.document.connectivityEvidence
+        .flatMap((evidence) =>
+          evidence.kind === "spice-source" &&
+          evidence.sourceNetId === "source-horizontal"
+            ? [evidence.netId]
+            : [],
+        )
+        .sort(),
+    ).toEqual(splitNetIds);
+    expect(
+      resolveDocumentLogicalNets(result.document).groups.filter((group) =>
+        group.sourceNetIds.includes("source-horizontal"),
       ),
-    ).toEqual(
-      expect.arrayContaining([expect.objectContaining({ netId: "net-h" })]),
-    );
+    ).toHaveLength(3);
     expect(deriveFlightlines(result.document, resolver)).toHaveLength(1);
+    expect(
+      deriveImportedRoutingGuidance(result.document, resolver),
+    ).toHaveLength(2);
     expect(result.document.sourceStatus).toBe("connectivity-modified");
   });
 
