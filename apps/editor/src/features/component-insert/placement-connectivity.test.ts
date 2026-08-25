@@ -1,4 +1,4 @@
-import { executeTransaction } from "@icm/edit-engine";
+import { executeTransaction, planInstanceDeletion } from "@icm/edit-engine";
 import { resolveDocumentLogicalNets } from "@icm/derived";
 import { createEmptyDocument, transformPoint } from "@icm/model";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
@@ -325,6 +325,132 @@ describe("component placement electrical contacts", () => {
         scope: "global",
       }),
     ]);
+  });
+
+  it("reuses a deleted VDD designator without reusing its surviving Base Net ID", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.instances.push(
+      {
+        id: "VDD2",
+        symbolId: "vdd-port",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+      {
+        id: "R1",
+        symbolId: "resistor",
+        placement: {
+          position: { x: 100, y: 200 },
+          rotation: 90,
+          mirror: "none",
+        },
+      },
+    );
+    document.nets.push({
+      id: "net-power-vdd2",
+      terminals: [
+        { instanceId: "VDD2", pinName: "P" },
+        { instanceId: "R1", pinName: "1" },
+      ],
+    });
+    document.routes.push({
+      id: "route-vdd2-r1",
+      netId: "net-power-vdd2",
+      from: { kind: "terminal", instanceId: "VDD2", pinName: "P" },
+      to: { kind: "terminal", instanceId: "R1", pinName: "1" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+    document.connectivityEvidence.push({
+      id: "claim-vdd2",
+      kind: "name-claim",
+      netId: "net-power-vdd2",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      owner: { kind: "power-marker", objectId: "VDD2" },
+    });
+
+    const removed = executeTransaction(
+      document,
+      transaction(0, planInstanceDeletion(document, resolver, ["VDD2"], 9)),
+      context,
+    );
+    expect(removed.ok).toBe(true);
+    if (!removed.ok) return;
+    expect(removed.document.instances.map((instance) => instance.id)).toEqual([
+      "R1",
+    ]);
+    expect(removed.document.routes[0]?.from).toEqual({
+      kind: "junction",
+      junctionId: "junction-lifecycle-9-1",
+    });
+    expect(removed.document.connectivityEvidence).toEqual([]);
+
+    const vddPort = {
+      id: "VDD2",
+      symbolId: "vdd-port",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+    };
+
+    const proposal = proposedStandalonePowerConnection(
+      removed.document,
+      vddPort,
+    );
+
+    expect(proposal.powerNetId).toBe("net-power-vdd2-2");
+    expect(proposal.edits).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "connect_endpoints",
+          newNetId: "net-power-vdd2-2",
+        }),
+        expect.objectContaining({
+          kind: "upsert_connectivity_evidence",
+          evidence: expect.objectContaining({
+            netId: "net-power-vdd2-2",
+            name: "VDD",
+          }),
+        }),
+      ]),
+    );
+
+    const connected = executeTransaction(
+      removed.document,
+      transaction(removed.document.revision, [
+        { kind: "add_instance", instance: vddPort },
+        ...proposal.edits,
+      ]),
+      context,
+    );
+    expect(connected.ok).toBe(true);
+    if (!connected.ok) return;
+    expect(
+      connected.document.nets.find((net) => net.id === "net-power-vdd2"),
+    ).toMatchObject({ terminals: [{ instanceId: "R1", pinName: "1" }] });
+    expect(
+      connected.document.nets.find((net) => net.id === "net-power-vdd2-2"),
+    ).toMatchObject({
+      terminals: [{ instanceId: "VDD2", pinName: "P" }],
+    });
+    const logicalNets = resolveDocumentLogicalNets(connected.document);
+    expect(logicalNets.byBaseNetId.get("net-power-vdd2")).toMatchObject({
+      baseNetIds: ["net-power-vdd2"],
+      powerDomain: "none",
+    });
+    expect(logicalNets.byBaseNetId.get("net-power-vdd2")?.name).toBeUndefined();
+    expect(logicalNets.byBaseNetId.get("net-power-vdd2-2")).toMatchObject({
+      baseNetIds: ["net-power-vdd2-2"],
+      name: "VDD",
+      powerDomain: "vdd",
+    });
   });
 
   it("does not merge a VDD marker into a distinct AVDD supply", () => {

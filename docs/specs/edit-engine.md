@@ -94,9 +94,9 @@ is not another `SchematicEdit` member.
 `patch_instance_netlist_parameters` are the ordinary field writers for an
 existing netlist record. `set_instance_schematic_reference` changes the visible
 Reference for any non-formal Instance, including a non-emitting Port, without
-changing netlist output; formal Cell Ports use their terminal name and reject
+changing netlist output; Cell Pins use their terminal name and reject
 this edit. `set_instance_schematic_name` instead changes the user-owned
-RichText label shown on an ordinary schematic instance. Free Net Port and Net
+RichText label shown on an ordinary schematic instance. Net
 Label character edits update their owner-addressed name claim; formal Port
 character edits rename `CellTerminal.name`. A formatting-only edit
 upserts the same-text `Annotation.formatOverride`. A Cell-terminal character
@@ -143,18 +143,24 @@ Document revision once and is restored by one Undo. The retired Agent product
 categorizes these guarded UI lifecycle edits as unsupported.
 
 `upsert_connectivity_evidence` and `remove_connectivity_evidence` are the only
-atomic writers for the schema-23 evidence list. Upsert replaces evidence with
+atomic writers for the schema-24 evidence list. Upsert replaces evidence with
 the same ID or inserts a new record after checking the shared Document object
 namespace; final Document validation checks every Net and owner reference.
 Removing an Instance, Net Label, Junction, or Route also removes only
-`name-claim` evidence that names that object as its owner. Explicit Net-property
-claims, SPICE-source assertions, and explicit equivalence remain until an
-explicit evidence edit removes them. Evidence is Net reachability: local-Net
-cleanup cannot remove a referenced Base Net, but re-runs after owner/evidence
-deletion so an actually unreachable final Net disappears in the same Undoable
-transaction. Reset Cell Body previews and removes non-interface evidence while
-retaining assertions whose complete Net and owner closure survives. The
-retired Agent surface classifies both evidence edits as unsupported.
+`name-claim` evidence that names that object as its owner. A source-unbacked
+legacy Net-property projection shadowed by that owner retires with it; an
+imported node name remains while its Base Net still has structural reachability.
+Evidence describes a Base Net but is not itself Net reachability. When the last
+terminal, Route/Junction, formal interface, Annotation, layout reference, or
+materialized MOS binding disappears, cleanup removes the Base Net together with
+its Net-property and SPICE-source evidence and trims explicit-equivalence
+membership. The Document source binding remains as import provenance. Cleanup
+of evidence-bearing candidates is deferred to the transaction boundary so
+ordered edits can still remove or replace their evidence atomically; evidence
+explicitly upserted by that transaction remains subject to final validation.
+Reset Cell Body previews and removes non-interface evidence while retaining
+assertions whose complete Net and owner closure survives. The retired Agent
+surface classifies both evidence edits as unsupported.
 
 `hierarchy-planner.ts` is the shared pure orchestration boundary above these
 edits. It constructs canonical subcircuit Instances and plans Cell

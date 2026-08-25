@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 23 and has
+geometric, and presentation facts. The current model is strict schema 24 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -31,9 +31,8 @@ migration. Invalid coordinates are rejected with their data path.
 - `Instance` selects one exact canonical symbol and optional visual variant.
   `Instance.schematicReference` is its canvas-facing Reference when the
   Instance has one, independent of the optional emitted
-  `Instance.netlist.reference`. A free Net Port projects its owner-addressed
-  name claim; a formal Cell Pin projects `CellTerminal.name`. Neither Port role
-  has a visible schematic reference.
+  `Instance.netlist.reference`. A Cell Pin instead projects
+  `CellTerminal.name` and has no visible schematic reference.
 - A Base Net owns physical terminal membership only. A terminal is
   `{instanceId, pinName}` and belongs to at most one Base Net.
 - `ConnectivityEvidence` records owner-addressed names, SPICE source identity,
@@ -46,24 +45,26 @@ migration. Invalid coordinates are rejected with their data path.
 - `NoConnect` targets one terminal only and cannot overlap Net membership.
 - `Document.netlist.terminals` is the ordered formal Cell interface. Each
   terminal has a stable ID, name, direction, Net ID, and a non-empty
-  `interfaceInstanceIds` array pointing to its ordinary canvas Port marker
-  Instances. Its interface name may differ from its internal Logical-Net name.
-  Repeated markers are views of one terminal, not duplicate formal pins.
+  `interfaceInstanceIds` array pointing to one or more ordinary canvas Cell
+  Pin Instances. Its interface name may differ from its internal Logical-Net
+  name.
 
-Canvas interface markers `port` and `port-filled` are ordinary single-pin
-Instances with pin `P`; their electrical membership and Route endpoints are
-represented exactly like every other component terminal. The model has no
-separate canvas Port collection or Port-specific Net membership.
+Canvas `port` and `port-filled` artwork has exactly one meaning: a Cell Pin.
+Each is an ordinary single-pin Instance with pin `P`, owns exactly one ordered
+Cell terminal, and uses ordinary Net membership and Route endpoints. The model
+has no free-Port branch or separate Port collection; repeated markers belong
+to one formal CellTerminal rather than defining another interface,
+or Port-specific Net membership.
 
-VDD, Ground, Free Port, route Net Label, and Power Rail all author the same
+VDD, Ground, route Net Label, and Power Rail all author the same
 `name-claim`. Power Rail is editable Route/Junction presentation rather than a
 separate electrical object. A marker claim owns its scope and optional supply
-role. Power markers default global; ordinary Net Labels and Free Ports default
-local. `AVDD` and `DVDD` are separate Logical Nets because their names differ,
+role. Power markers default global; ordinary Net Labels default local. `AVDD`
+and `DVDD` are separate Logical Nets because their names differ,
 even though both may carry the `vdd` role. Ground uses global SPICE node `0`.
 
-High-level GUI naming starts from an existing candidate Base Net plus a stable
-Label or Free-Port owner. It writes or updates that owner's `name-claim`; it
+High-level GUI Net naming starts from an existing candidate Base Net plus a
+stable Net Label owner. It writes or updates that owner's `name-claim`; it
 never emits `merge_nets` or creates a new `Net.name` projection. Matching
 claims join only in the derived Logical-Net view. Physical contact alone uses
 the internal Base-Net merge primitive.
@@ -150,6 +151,6 @@ ordinary Schematic edits inside one Project structural transaction. The
 Project's `structureRevision` protects this cross-Document boundary and the
 editor records it as one undoable structural commit.
 
-Persistence writes only schema 23. The rolling reader accepts schema 22 at the
+Persistence writes only schema 24. The rolling reader accepts schema 23 at the
 file boundary, then supplies the current model only; no
 compatibility shape enters runtime electrical derivation.

@@ -5,7 +5,7 @@ The top Cell is the export root; other Cells may be instantiated any number of
 times or kept unreferenced while they are being authored.
 
 Use **Manage Cells…** in the hierarchy row to manage the Project's definitions in one place. It shows each
-Cell's formal port and caller counts, opens or renames a definition, and lists
+Cell's formal Pin and caller counts, opens or renames a definition, and lists
 each caller with **Jump to caller**. A referenced Cell's delete control is
 disabled; delete its caller Instances normally before deleting the now
 unreferenced definition.
@@ -23,17 +23,13 @@ more than one path reaches it, which is reported in the status bar.
 
 The top Cell is the Project export root and is not instantiated as a symbol,
 but it is still emitted as a reusable structural subcircuit. **Port** and
-**Filled Port** therefore offer the same two explicit roles in every Cell:
-
-- **Formal Cell Pin** defines an ordered Cell interface terminal. Use it for
-  top-level `INP`/`INN`/`OUT` ports and child-Cell pins.
-- **Free Net Port** names or joins a Net without changing the Cell interface.
-  It is an electrical marker and emits no device line.
+**Filled Port** are hollow and filled artwork for the same **Cell Pin** concept.
+A Cell Pin defines one ordered interface terminal; use Net Label instead when
+you only need to name or repeat an internal Net.
 
 To define a real Cell port:
 
-1. Place the ordinary **Port** or **Filled Port** from the Library and choose
-   **Formal Cell Pin**.
+1. Press `P`, or place **Port** / **Filled Port** from the Library.
 2. Click an exact existing electrical contact to attach to its Net, or click
    empty grid space to create a new local Net.
 3. Double-click its default annotation to edit the interface name; use normal
@@ -46,16 +42,17 @@ other directions are balanced automatically. The symbol body and pin placement
 adapt without a separate interface editor.
 
 Each visible marker remains an ordinary Instance for selection, move, wiring,
-copy, and deletion. Copying a marker creates another view of the same formal
-terminal on the same Net; it does not add a second interface pin. Every marker
-projects the same terminal-name annotation. The formal terminal adds stable
+copy, and deletion. Copying a Cell Pin, or placing the same Pin name again,
+creates another visual marker for the same formal terminal and Net. The
+`.subckt` interface still contains that Pin exactly once. Repeated names that
+only name an internal Net use Net Labels instead. The Cell terminal adds stable
 identity, ordering, and the Net binding used by parent blocks and netlist
 export.
 
 Renaming that annotation updates all connected parent Instances atomically.
-Ordinary Delete removes only the selected marker while another marker remains.
-Deleting the final marker also removes the formal terminal; that final removal
-is rejected while a parent still electrically references the interface pin.
+Deleting a Cell Pin removes its terminal and automatically detaches every child
+and caller wire endpoint to an editable Junction in the same undoable Project
+transaction; users never have to clear callers first.
 **Delete Cell** removes only a non-top, unreferenced Cell definition and can be undone or redone.
 Deleting a hierarchical Instance with the normal Delete command never deletes
 its reusable child Cell.
@@ -74,8 +71,8 @@ the Properties values remain the precise fallback. These are definition operatio
 not top-level drawing tools.
 
 Hierarchy presentation is saved as definition-level size and pin-placement
-intent in current Project schema 23. Schema-22 projects open through the
-bounded upgrade; schema-21 and older files remain unsupported. The block uses
+intent in current Project schema 24. Schema-23 projects open through the
+bounded upgrade; schema-22 and older files remain unsupported. The block uses
 a closed polygon body and the shared Razavi rich-text renderer for pin and Cell
 names; it is compatible with that visual grammar rather than a pixel-for-pixel
 textbook symbol asset.

@@ -208,9 +208,15 @@ header buys nothing. Without such a session every admin route answers
 - `GET /api/gallery/maintenance/schema-backup` — download a full-fidelity
   administrator backup of entries, saved versions, and workspace slots.
 - `POST /api/gallery/maintenance/schema23` — validate or transactionally
-  converge every stored Project to schema 23. The request body is
+  converge every stored Project to the current schema 24. The request body is
   `{ "apply": false }` for a dry run and `{ "apply": true }` to commit only
-  when every record is valid.
+  when every record is valid. The response reports each Free-Port-to-Cell-Pin
+  conversion, Base-Net merge, and before/after VDD, Power Rail, Route, and
+  Junction inventory.
+- `POST /api/gallery/maintenance/schema-restore` — atomically restore the three
+  Project-bearing tables from an unmodified `schema-backup` payload supplied as
+  `{ "backup": ... }`. This same-origin endpoint is an emergency rollback
+  operation, not a general import surface.
 
 ## Retention and privacy
 

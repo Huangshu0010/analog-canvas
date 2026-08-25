@@ -54,6 +54,31 @@ export interface PlacementContactProposal {
   netId?: string;
 }
 
+function standalonePowerNetId(
+  document: SchematicDocument,
+  instanceId: string,
+): string {
+  const preferred = `net-power-${instanceId.toLowerCase()}`;
+  const occupied = new Set([
+    ...document.instances.map((instance) => instance.id),
+    ...document.nets.map((net) => net.id),
+    ...document.routes.map((route) => route.id),
+    ...document.junctions.map((junction) => junction.id),
+    ...document.noConnects.map((noConnect) => noConnect.id),
+    ...document.annotations.map((annotation) => annotation.id),
+    ...document.connectivityEvidence.map((evidence) => evidence.id),
+    ...document.layoutGroups.map((group) => group.id),
+    ...document.constraints.map((constraint) => constraint.id),
+    ...(document.drafting?.objects.map((object) => object.id) ?? []),
+    ...(document.netlist?.terminals.map((terminal) => terminal.id) ?? []),
+  ]);
+  if (!occupied.has(preferred)) return preferred;
+
+  let suffix = 2;
+  while (occupied.has(`${preferred}-${suffix}`)) suffix += 1;
+  return `${preferred}-${suffix}`;
+}
+
 function newInstanceEndpoints(
   resolver: SymbolResolver,
   instance: Instance,
@@ -272,7 +297,11 @@ export function proposedStandalonePowerConnection(
     instanceId: instance.id,
     pinName: power.pinName,
   };
-  const netId = `net-power-${instance.id.toLowerCase()}`;
+  // Instance designators are deliberately reusable after deletion, while a
+  // Base Net may remain alive because its wire/Junction topology remains.
+  // Keep those lifetimes independent instead of assuming that VDD2 becoming
+  // available also makes net-power-vdd2 available.
+  const netId = standalonePowerNetId(document, instance.id);
   const plan = planEnsurePowerNet(document, {
     candidateNetId: netId,
     candidateState: "pending-connection",

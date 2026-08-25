@@ -23,7 +23,7 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("schematic clipboard", () => {
-  it("copies a formal Port marker onto its existing terminal and Net", () => {
+  it("copies a Cell Pin as another marker of the same interface and Net", () => {
     const document = createEmptyDocument("document-main", "Clipboard");
     document.instances.push({
       id: "P1",
@@ -69,14 +69,10 @@ describe("schematic clipboard", () => {
     );
 
     if (!result.ok) throw new Error(JSON.stringify(result, null, 2));
-    expect(result.document.netlist?.terminals[0]?.interfaceInstanceIds).toEqual(
-      ["P1", "P1-copy-1"],
-    );
-    expect(result.document.nets).toHaveLength(1);
-    expect(result.document.nets[0]?.terminals).toEqual([
-      { instanceId: "P1", pinName: "P" },
-      { instanceId: "P1-copy-1", pinName: "P" },
+    expect(result.document.netlist?.terminals).toMatchObject([
+      { interfaceInstanceIds: ["P1", "P1-copy-1"], name: "VIN" },
     ]);
+    expect(result.document.nets).toHaveLength(1);
 
     const preview = clipboardPreviewDocument(
       document,
@@ -815,7 +811,7 @@ describe("a copy stands on its own", () => {
     expect(copy.schematicReference).not.toMatch(/copy/u);
   });
 
-  it("does not carry a copied Port back onto the original's Net", () => {
+  it("copies a Cell Pin as another marker of the same interface and Net", () => {
     const document = createEmptyDocument("document-main", "Copy");
     document.instances.push({
       id: "P1",
@@ -827,14 +823,19 @@ describe("a copy stands on its own", () => {
 
       terminals: [{ instanceId: "P1", pinName: "P" }],
     });
-    document.connectivityEvidence.push({
-      id: "claim-p12",
-      kind: "name-claim",
-      netId: "net-p12",
-      name: "P12",
-      owner: { kind: "free-port", instanceId: "P1" },
-      scope: "local",
-    });
+    document.netlist = {
+      name: "Copy",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-p12",
+          name: "P12",
+          netId: "net-p12",
+          direction: "passive",
+          interfaceInstanceIds: ["P1"],
+        },
+      ],
+    };
 
     const clipboard = copySelection(document, ["P1"]);
     expect(clipboard).not.toBeNull();
@@ -857,18 +858,11 @@ describe("a copy stands on its own", () => {
       result.document.nets.find((net) =>
         net.terminals.some((terminal) => terminal.instanceId === instanceId),
       );
-    // Sharing the Net is what made renaming one Port rename its twin: the
-    // name belongs to the Net, so a copy has to bring its own.
-    expect(netOf("P1")?.id).not.toBe(netOf(copyId)?.id);
-    // The copy brings its own, unnamed Net rather than joining the source's,
-    // so naming one of them cannot rename the other.
-    const names = new Map(
-      [...resolveDocumentLogicalNets(result.document).groups].map((group) => [
-        group.id,
-        group.name,
-      ]),
-    );
-    expect(names.get(netOf(copyId)?.id ?? "")).toBeUndefined();
-    expect(names.get(netOf("P1")?.id ?? "")).toBe("P12");
+    expect(netOf("P1")?.id).toBe(netOf(copyId)?.id);
+    expect(
+      result.document.netlist?.terminals.find((terminal) =>
+        terminal.interfaceInstanceIds.includes(copyId),
+      )?.name,
+    ).toBe("P12");
   });
 });

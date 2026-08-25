@@ -18,7 +18,7 @@ export type EditorCommandRequest =
   | { id: "transform.mirror"; direction: ScreenFlip }
   | { id: "insert.start"; launch: InsertLaunch }
   | { id: "insert.open" }
-  | { id: "insert.free-net-port" }
+  | { id: "insert.cell-pin" }
   | { id: "tool.activate"; tool: EditorTool }
   | { id: "drafting.add-text" }
   | { id: "properties.open" }
@@ -76,7 +76,7 @@ export interface EditorCommandOperations {
   mirrorSelection(direction: ScreenFlip): void;
   startInsert(launch: InsertLaunch): void;
   openInsert(): void;
-  placeFreeNetPort(): void;
+  placeCellPin(): void;
   activateTool(tool: EditorTool): void;
   addText(): void;
   openProperties(): void;
@@ -211,7 +211,7 @@ export function createEditorCommandRouter(
       }
       case "insert.start":
       case "insert.open":
-      case "insert.free-net-port":
+      case "insert.cell-pin":
         return enabled(
           context.interactionMode === "placing-component" ||
             context.interactionMode === "placing-vdd-rail",
@@ -338,11 +338,11 @@ export function createEditorCommandRouter(
         }
         options.operations.openInsert();
         break;
-      case "insert.free-net-port":
+      case "insert.cell-pin":
         if (context.interactionMode !== "idle") {
           options.operations.cancelInteraction(context.interactionMode);
         }
-        options.operations.placeFreeNetPort();
+        options.operations.placeCellPin();
         break;
       case "tool.activate":
         // Tool owners arbitrate their own re-entry and transition semantics.

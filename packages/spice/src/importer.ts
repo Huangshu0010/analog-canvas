@@ -355,7 +355,7 @@ function importDocument(
   }));
   const formalTerminals = cell.ports.map((port, index) => {
     const interfaceInstanceId = deriveStableId(
-      "cell-port",
+      "cell-pin",
       documentId,
       String(index),
       port.name,

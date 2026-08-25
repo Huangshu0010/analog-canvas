@@ -65,7 +65,7 @@ export function proposeConnectedInstanceDeletion(
 
 /**
  * One shared delete proposal for an arbitrary visual selection. Structural
- * workflows (such as formal Cell Port removal) use this instead of falling
+ * workflows (such as Cell Pin removal) use this instead of falling
  * back to a separate Document transaction and changing deletion semantics.
  */
 export function proposeVisualSelectionDeletion(

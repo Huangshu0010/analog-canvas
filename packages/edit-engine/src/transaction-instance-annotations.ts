@@ -104,8 +104,8 @@ function isCanonicalVddPowerLabel(
   );
 }
 
-/** A free Port label is the same upright reference-row placement, bound to a Net. */
-function isCanonicalPortNetLabel(
+/** A Cell Pin name uses the canonical upright reference-row placement. */
+function isCanonicalCellPinLabel(
   annotation: Annotation,
   instance: SchematicDocument["instances"][number],
   resolved: NonNullable<ReturnType<SymbolResolver["resolve"]>>,
@@ -115,8 +115,8 @@ function isCanonicalPortNetLabel(
 ): boolean {
   if (
     (instance.symbolId !== "port" && instance.symbolId !== "port-filled") ||
-    annotation.kind !== "net-label" ||
-    annotation.binding?.kind !== "net-name" ||
+    annotation.kind !== "instance-label" ||
+    annotation.binding?.kind !== "cell-terminal-name" ||
     annotation.anchor.kind !== "object" ||
     annotation.anchor.objectId !== instance.id
   ) {
@@ -388,7 +388,7 @@ export function followAttachedAnnotations(
     if (
       instance &&
       resolved &&
-      isCanonicalPortNetLabel(
+      isCanonicalCellPinLabel(
         annotation,
         instance,
         resolved,

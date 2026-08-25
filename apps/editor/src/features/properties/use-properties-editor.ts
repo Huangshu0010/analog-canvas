@@ -135,8 +135,8 @@ export interface UsePropertiesEditorOptions {
     instanceIds: readonly string[],
     visible: boolean,
   ) => SchematicEdit[];
-  isCellPortAnnotation?: (annotation: Annotation) => boolean;
-  commitCellPortAnnotation?: (annotation: Annotation, name: string) => boolean;
+  isCellPinAnnotation?: (annotation: Annotation) => boolean;
+  commitCellPinAnnotation?: (annotation: Annotation, name: string) => boolean;
 }
 
 /** Flat owner for property drafts, Net Labels, and canvas text sessions. */
@@ -592,9 +592,9 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
             (annotation) => annotation.id === textEditing.id,
           )
         : undefined;
-    if (editedAnnotation && options.isCellPortAnnotation?.(editedAnnotation)) {
+    if (editedAnnotation && options.isCellPinAnnotation?.(editedAnnotation)) {
       options.setStatus(
-        "Cell Port name cannot be empty or deleted independently",
+        "Cell Pin name cannot be empty or deleted independently",
       );
       return;
     }
@@ -734,7 +734,7 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
         case "cell-terminal-name":
           if (name !== currentName) {
             if (
-              !options.commitCellPortAnnotation?.(
+              !options.commitCellPinAnnotation?.(
                 presentationEdit.annotation,
                 name,
               )
@@ -789,8 +789,8 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
       const annotation = options.document.annotations.find(
         (candidate) => candidate.id === textEditing.id,
       );
-      if (annotation && options.isCellPortAnnotation?.(annotation)) {
-        options.setStatus("Cell Port name cannot be empty");
+      if (annotation && options.isCellPinAnnotation?.(annotation)) {
+        options.setStatus("Cell Pin name cannot be empty");
         return;
       }
     }
@@ -801,15 +801,15 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     if (
       proposal.kind === "update" &&
       proposal.edit.kind === "upsert_schematic_annotation" &&
-      options.commitCellPortAnnotation &&
-      options.isCellPortAnnotation?.(proposal.edit.annotation) &&
+      options.commitCellPinAnnotation &&
+      options.isCellPinAnnotation?.(proposal.edit.annotation) &&
       proposal.edit.annotation.kind === "instance-label" &&
       proposal.edit.annotation.anchor.kind === "object"
     ) {
       const content = proposal.edit.annotation.content ?? { runs: [] };
       const name = flattenRichText(content).trim();
       if (!name) return;
-      if (!options.commitCellPortAnnotation(proposal.edit.annotation, name))
+      if (!options.commitCellPinAnnotation(proposal.edit.annotation, name))
         return;
       setTextEditing(null);
       return;

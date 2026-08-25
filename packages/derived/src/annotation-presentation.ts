@@ -35,7 +35,7 @@ export interface AnnotationPresentation {
  * Shared canvas/export visibility policy for persisted annotations. A retained
  * Instance keeps its object-anchored labels for a later re-placement, but its
  * labels are not floating drawing objects while the Instance is in the Tray.
- * Formal Cell Ports use their terminal name as their sole visible identity.
+ * Formal Cell Pins use their terminal name as their sole visible identity.
  */
 export function isSchematicAnnotationVisible(
   document: SchematicDocument,

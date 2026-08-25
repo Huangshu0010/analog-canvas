@@ -5,11 +5,13 @@ import { createEmptyDocument, createEmptyProject } from "@icm/model";
 import {
   createExternalSubcircuitInstance,
   createHierarchyInstance,
-  planAttachCellPortMarker,
-  planCreateCellPort,
+  planAttachCellPinMarker,
+  planCreateCellPin,
   planDeleteCell,
   planPlaceCellInstance,
+  planRemoveCellTerminalMarkers,
   planReorderCellTerminal,
+  planRenameCellTerminal,
   planSetMosModelTarget,
 } from "./hierarchy-planner.js";
 import { executeProjectTransaction } from "./project-transaction.js";
@@ -112,7 +114,7 @@ describe("hierarchy domain planners", () => {
       projectId: project.id,
       expectedStructureRevision: 0,
       actor: { kind: "human", id: "test" },
-      edits: planCreateCellPort(project, project.topDocumentId, {
+      edits: planCreateCellPin(project, project.topDocumentId, {
         instance,
         connectionEdits: [
           {
@@ -146,7 +148,7 @@ describe("hierarchy domain planners", () => {
     });
   });
 
-  it("adds a second marker to an existing terminal instead of a second terminal", () => {
+  it("attaches a repeated Cell Pin name as another marker of the same interface", () => {
     const project = createEmptyProject("project", "Project");
     const port = (id: string, x: number) => ({
       id,
@@ -162,7 +164,7 @@ describe("hierarchy domain planners", () => {
       projectId: project.id,
       expectedStructureRevision: 0,
       actor: { kind: "human", id: "test" },
-      edits: planCreateCellPort(project, project.topDocumentId, {
+      edits: planCreateCellPin(project, project.topDocumentId, {
         instance: port("P1", 40),
         connectionEdits: [
           {
@@ -183,12 +185,13 @@ describe("hierarchy domain planners", () => {
     });
     expect(first.ok).toBe(true);
 
+    if (!first.ok) throw new Error(first.error.message);
     const second = executeProjectTransaction(first.project, {
-      transactionId: "add-second-marker",
+      transactionId: "attach-port-marker",
       projectId: project.id,
-      expectedStructureRevision: first.structureRevision,
+      expectedStructureRevision: first.project.structureRevision,
       actor: { kind: "human", id: "test" },
-      edits: planAttachCellPortMarker(first.project, project.topDocumentId, {
+      edits: planAttachCellPinMarker(first.project, project.topDocumentId, {
         instance: port("P2", 200),
         connectionEdits: [
           {
@@ -202,26 +205,66 @@ describe("hierarchy domain planners", () => {
         markerNetId: "net-marker-p2",
       }),
     });
-
-    expect(second.ok).toBe(true);
-    const document = second.project.documents.find(
-      (candidate) => candidate.id === project.topDocumentId,
-    )!;
-    // One formal terminal, two markers: the interface a parent resolves
-    // against stays single-valued.
-    expect(document.netlist!.terminals).toHaveLength(1);
-    expect(document.netlist!.terminals[0]).toMatchObject({
-      id: "terminal-in",
-      name: "IN",
-      interfaceInstanceIds: ["P1", "P2"],
+    expect(second).toMatchObject({
+      ok: true,
+      project: {
+        documents: [
+          {
+            netlist: {
+              terminals: [
+                {
+                  id: "terminal-in",
+                  name: "IN",
+                  interfaceInstanceIds: ["P1", "P2"],
+                  netId: "net-in",
+                },
+              ],
+            },
+            nets: [
+              {
+                id: "net-in",
+                terminals: [
+                  { instanceId: "P1", pinName: "P" },
+                  { instanceId: "P2", pinName: "P" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
     });
-    // Both markers share the terminal's Net.
-    expect(document.nets.filter((net) => net.id === "net-in")).toHaveLength(1);
-    const net = document.nets.find((candidate) => candidate.id === "net-in")!;
-    expect(net.terminals.map((terminal) => terminal.instanceId).sort()).toEqual(
-      ["P1", "P2"],
-    );
-    expect(document.nets.some((n) => n.id === "net-marker-p2")).toBe(false);
+    if (!second.ok) throw new Error(second.error.message);
+    const removedCopy = executeProjectTransaction(second.project, {
+      transactionId: "remove-port-marker",
+      projectId: project.id,
+      expectedStructureRevision: second.project.structureRevision,
+      actor: { kind: "human", id: "test" },
+      edits: planRemoveCellTerminalMarkers(
+        second.project,
+        project.topDocumentId,
+        ["P2"],
+        [
+          {
+            kind: "disconnect_endpoint",
+            endpoint: { kind: "terminal", instanceId: "P2", pinName: "P" },
+          },
+          { kind: "remove_instance", instanceId: "P2" },
+        ],
+      ),
+    });
+    expect(removedCopy).toMatchObject({
+      ok: true,
+      project: {
+        documents: [
+          {
+            instances: [{ id: "P1" }],
+            netlist: {
+              terminals: [{ id: "terminal-in", interfaceInstanceIds: ["P1"] }],
+            },
+          },
+        ],
+      },
+    });
   });
 
   it("returns no reorder transaction at an interface boundary", () => {
@@ -241,6 +284,83 @@ describe("hierarchy domain planners", () => {
         -1,
       ),
     ).toEqual([]);
+  });
+
+  it("merges an existing Cell Pin onto a case-insensitive matching name", () => {
+    const project = createEmptyProject("project", "Project");
+    const document = project.documents[0]!;
+    document.instances.push(
+      { id: "P1", symbolId: "port", placement: null },
+      { id: "P2", symbolId: "port", placement: null },
+    );
+    document.nets.push(
+      {
+        id: "net-in-a",
+        terminals: [{ instanceId: "P1", pinName: "P" }],
+      },
+      {
+        id: "net-in-b",
+        terminals: [{ instanceId: "P2", pinName: "P" }],
+      },
+    );
+    document.netlist!.terminals.push(
+      {
+        id: "terminal-in",
+        name: "IN",
+        netId: "net-in-a",
+        direction: "input",
+        interfaceInstanceIds: ["P1"],
+      },
+      {
+        id: "terminal-alias",
+        name: "ALIAS",
+        netId: "net-in-b",
+        direction: "input",
+        interfaceInstanceIds: ["P2"],
+      },
+    );
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "merge-cell-pins",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "test" },
+      edits: planRenameCellTerminal(
+        project,
+        document.id,
+        "terminal-alias",
+        "in",
+      ),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      project: {
+        documents: [
+          {
+            netlist: {
+              terminals: [
+                {
+                  id: "terminal-in",
+                  name: "IN",
+                  netId: "net-in-a",
+                  interfaceInstanceIds: ["P1", "P2"],
+                },
+              ],
+            },
+            nets: [
+              {
+                id: "net-in-a",
+                terminals: [
+                  { instanceId: "P1", pinName: "P" },
+                  { instanceId: "P2", pinName: "P" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
   });
 });
 

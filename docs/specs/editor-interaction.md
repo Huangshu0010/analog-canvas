@@ -16,50 +16,37 @@ uses the same cursor preview, grid snap, rotation, mirror, and cancellation
 state as a Symbol; its commit factory alone differs, creating one typed
 subcircuit Instance through a Project structural transaction. `Xn` remains the
 internal netlist reference; the canvas has one object-anchored Cell-name
-annotation in the ordinary reference-label position. Both `port` and `port-filled`
-remain ordinary manually reachable components. Choosing either requires an
-explicit **Free Net Port** or **Formal Cell Pin** role in every Document,
-including the top Document. Terminal `P` participates in ordinary snap, wire,
-move/stretch, and selection behavior. A Free Net Port atomically creates or
-joins one named Net and is a non-emitting electrical marker. A Formal Cell Pin
-also creates one stable ordered Cell terminal through the Project structural
-transaction and contributes the `.subckt` interface without emitting an
-instance line. Every parent block therefore observes a child Cell interface
-revision without a later expose step.
+annotation in the ordinary reference-label position. Both `port` and
+`port-filled` remain manually reachable artwork for one concept: **Cell Pin**.
+Terminal `P` participates in ordinary snap, wire, move/stretch, and selection
+behavior. Placement atomically creates the Instance, Base Net membership, and
+one stable ordered Cell terminal through a Project structural transaction. It
+contributes the `.subckt` interface without emitting an instance line. Every
+parent block therefore observes a child Cell interface revision without a
+later expose step.
 
 Library, the `I` shortcut, and **Place Cell** are entry views over one
 editor-local insert controller. Their request is either an `all` picker (the
 full component catalog, Cells, and supported external masters), a `cells`
 picker, or a quick request for an already chosen Symbol. The controller clears
 the previous picker scope before it starts placement, then delegates to the
-existing component, Cell, Port, external-master, or VDD-rail planner. This is
+existing component, Cell, Cell-Pin, external-master, or VDD-rail planner. This is
 an editor interaction boundary only: it does not add a persisted project type,
 an Edit Engine operation, or an Agent API endpoint.
 
-Port entry carries its role in the chosen Library entry rather than in a setup
-dialog. **Port** and **Filled Port** place a Free Net Port; the separate
-**Cell Pin** entry places a Formal Cell Pin. `P` and selecting either Port
-symbol from full Insert take the Free Net Port entry. Both roles therefore stay
-explicitly selected in every Document, including the top Document, and neither
-is inferred from hierarchy position, artwork, or a matching name.
-
-Placement never blocks on naming. An isolated Free Port receives the first
-unused `NET<n>` name and an isolated Formal Pin the first unused `P<n>`
-terminal name, while a named contact or explicit text takes precedence; a
-Formal Pin defaults to the `passive` direction. Both names are ordinary bound
-canvas displays, so they are renamed in place by editing the label — the same
-typed Port planners run either way.
-
-The default RichText projection of every Free Port Net name and Formal Cell Pin
-name uses the Razavi mathematical base (bold italic), including identifiers
-such as `CLK` and generated `NET1`; conventional `Vout`/`Iref` and explicit
-underscore subscripts retain their existing semantic decomposition.
+**Port** and **Filled Port** are hollow and filled visual variants of Cell Pin.
+`P`, the Library, and full Insert all enter the same placement planner. An
+isolated Pin receives the first unused `Vin`, `Vin2`, … interface name and the
+`passive` direction; a named contact or explicit text takes precedence.
+Duplicate interface names are rejected with guidance to use a Net Label for
+repeated internal Net naming. The bound name is edited in place and its Razavi
+RichText projection retains conventional subscripts.
 
 Rectangle-to-Cell is likewise a convenience
 gesture that commits an ordinary hierarchical Instance; rectangles remain
 visual-only drafting objects.
 
-There is no separate Cell Interface authoring surface. A child Cell Port shows
+There is no separate Cell Interface authoring surface. A child Cell Pin shows
 only its object-anchored terminal-name annotation in the normal Reference slot;
 its stable Instance ID is not drawn and it has no schematic Reference. Normal
 Properties own direction. Annotation rename reconciles callers by stable
@@ -76,7 +63,7 @@ with **Place all** into a deterministic starter grid in the current view.
 **Return to tray** and **Return all** use the same lifecycle planner and retain
 electrical facts; permanent Delete remains a separate action. Object-anchored
 labels are retained with an unplaced Instance but are neither rendered nor
-hit-testable until re-placement. Formal Cell Ports use the same return path:
+hit-testable until re-placement. Cell Pins use the same return path:
 the Cell interface remains present while the Port is retained in the Tray.
 Definition-level pin placement data remains compatible, while
 new interfaces use deterministic direction-aware automatic layout.
@@ -300,16 +287,15 @@ insertion uses one default-display policy: ordinary instances receive an
 `instance-schematic-name` label, which uses RichText `schematicName` and
 otherwise falls back only to `schematicReference` or `netlist.reference`.
 Internal Cells and external subcircuits additionally receive their
-Cell/master presentation; a free Net Port receives an object-anchored
-`net-name` label and a formal Cell Pin receives only `cell-terminal-name`; and
-parameter values use `instance-value` when requested and displayable.
+Cell/master presentation; a Cell Pin receives only an object-anchored
+`cell-terminal-name`; and parameter values use `instance-value` when requested
+and displayable.
 `instance-designator` is an explicitly requested, read-only network-ID
 projection, never the default editable label. Properties exposes one
 Schematic label field; RichText canvas editing materializes `schematicName`.
-For either Port role, a character edit renames the bound Net or terminal while
-a formatting-only edit persists a same-text annotation `formatOverride`.
-Properties exposes `Net name` for a free Port and `Terminal name` plus
-direction for a formal Pin.
+For a Cell Pin, a character edit renames the terminal while a formatting-only
+edit persists a same-text annotation `formatOverride`. Properties exposes the
+Cell Pin name and direction. Net naming remains a Net Label operation.
 The renderer never synthesizes text from Instance IDs and no empty suppressor
 label exists. Reference label display is a Properties toggle for one or many
 selected components: hiding sets the annotation's optional `visible: false`
@@ -340,8 +326,8 @@ no electrical meaning.
 Open, demo load, restore, and human-approved staged import replace the entire
 Project through one replacement boundary; they are not Edit Engine
 transactions. Replacement cancels pending recovery for the outgoing Project
-and terminates its Agent session. A complete schema-22 Project may be upgraded
-at the read boundary and then enters the editor only as schema-23; migrated
+and terminates its Agent session. A complete schema-23 Project may be upgraded
+at the read boundary and then enters the editor only as schema-24; migrated
 files are marked as needing save.
 
 Selection, viewport, active tool, previews, Agent tokens, and approval UI are

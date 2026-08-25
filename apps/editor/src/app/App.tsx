@@ -43,7 +43,6 @@ import {
   planInstanceUnplacement,
   proposeSetCellFormalParameters,
   proposeUpsertExternalSubcircuitDefinition,
-  findCellTerminalCaller,
   type ProjectStructureEdit,
   type EditTransactionResult,
   type ConnectivityIntent,
@@ -1285,7 +1284,7 @@ export function App({
     instancePropertyEdits,
     referenceLabelVisibilityEdits,
     valueVisibilityEdits,
-    isCellPortAnnotation: (annotation) => {
+    isCellPinAnnotation: (annotation) => {
       const anchor = annotation.anchor;
       if (anchor.kind !== "object") return false;
       const interfaceInstanceId = anchor.objectId;
@@ -1295,7 +1294,7 @@ export function App({
         ) === true
       );
     },
-    commitCellPortAnnotation: (annotation, name) => {
+    commitCellPinAnnotation: (annotation, name) => {
       if (annotation.anchor.kind !== "object") return false;
       const interfaceInstanceId = annotation.anchor.objectId;
       const terminal = document.netlist?.terminals.find((candidate) =>
@@ -1331,15 +1330,15 @@ export function App({
           name,
         );
         if (edits.length === 0) {
-          setStatus(`Cell Port ${terminal.name} is already current`);
+          setStatus(`Cell Pin ${terminal.name} is already current`);
           return true;
         }
-        const committed = commitStructure("edit-cell-port-label", edits);
+        const committed = commitStructure("edit-cell-pin-label", edits);
         if (committed) {
           setStatus(
             renamed
-              ? `Renamed formal port to ${name}`
-              : `Formatted Cell Port ${name}`,
+              ? `Renamed Cell Pin to ${name}`
+              : `Formatted Cell Pin ${name}`,
           );
         }
         return committed;
@@ -2307,7 +2306,7 @@ export function App({
     setStatus("Choose a Cell, then place it on the canvas");
   }
 
-  function updateCellPortDirection(
+  function updateCellPinDirection(
     terminalId: string,
     direction: "input" | "output" | "inout" | "passive",
     targetDocumentId = document.id,
@@ -2318,7 +2317,7 @@ export function App({
     if (!targetDocument?.netlist) return;
     if (
       commitStructure(
-        "update-cell-port-direction",
+        "update-cell-pin-direction",
         planUpdateCellTerminalDirection(
           project,
           targetDocumentId,
@@ -2356,7 +2355,7 @@ export function App({
           ),
         )
       ) {
-        setStatus(`Renamed formal port to ${nextName}`);
+        setStatus(`Renamed Cell Pin to ${nextName}`);
       }
     } catch (error) {
       setStatus(
@@ -2586,16 +2585,12 @@ export function App({
         terminal.interfaceInstanceIds.includes(selectedInstance.id),
       )
     : undefined;
-  // A supply marker is nameable for the same reason a Net Port is: a design
-  // routinely carries VDDH and VDDL, or VDD1 and VDD2, at once, and until
-  // this field existed every marker was stuck on the one Net named VDD.
+  // A design routinely carries VDDH and VDDL, or VDD1 and VDD2, at once, so a
+  // supply marker keeps its explicit Global-Net name.
   const selectedSupplyMarker =
     selectedInstance?.symbolId === "vdd-port" ? selectedInstance : undefined;
   const selectedPortNet =
-    selectedInstance &&
-    (selectedInstance.symbolId === "port" ||
-      selectedInstance.symbolId === "port-filled" ||
-      selectedInstance.symbolId === "vdd-port")
+    selectedInstance && selectedInstance.symbolId === "vdd-port"
       ? document.nets.find((net) =>
           net.terminals.some(
             (terminal) => terminal.instanceId === selectedInstance.id,
@@ -2631,8 +2626,8 @@ export function App({
         selectedFormalTerminal.id,
         name,
       );
-      if (commitStructure("rename-cell-port", edits)) {
-        setStatus(`Renamed formal port to ${name}`);
+      if (commitStructure("rename-cell-pin", edits)) {
+        setStatus(`Renamed Cell Pin to ${name}`);
       }
     } catch (error) {
       setStatus(
@@ -2655,13 +2650,9 @@ export function App({
           ++uniqueSuffixCounter.current,
         ),
       );
-      if (commitStructure("delete-cell-port", edits)) {
+      if (commitStructure("delete-cell-pin", edits)) {
         resetSelection();
-        setStatus(
-          selectedFormalTerminal.interfaceInstanceIds.length > 1
-            ? `Deleted formal port marker ${selectedFormalTerminal.name}`
-            : `Deleted formal port ${selectedFormalTerminal.name}`,
-        );
+        setStatus(`Deleted Cell Pin ${selectedFormalTerminal.name}`);
       }
     } catch (error) {
       setStatus(
@@ -2681,110 +2672,40 @@ export function App({
       deleteSelectionFromSelection();
       return;
     }
-    const protectedTerminalIds = new Set(
-      formalTerminals
-        .filter(
-          (terminal) =>
-            terminal.interfaceInstanceIds.every((instanceId) =>
-              visualSelection.instanceIds.includes(instanceId),
-            ) &&
-            Boolean(
-              findCellTerminalCaller(project, document.id, terminal.name),
-            ),
-        )
-        .map((terminal) => terminal.id),
-    );
     const selectedFormalMarkerIds = formalTerminals.flatMap((terminal) =>
       terminal.interfaceInstanceIds.filter((instanceId) =>
         visualSelection.instanceIds.includes(instanceId),
       ),
     );
-    const protectedInstanceIds = new Set(
-      formalTerminals
-        .filter((terminal) => protectedTerminalIds.has(terminal.id))
-        .flatMap((terminal) => terminal.interfaceInstanceIds),
-    );
-    const removableMarkerIds = selectedFormalMarkerIds.filter(
-      (instanceId) => !protectedInstanceIds.has(instanceId),
-    );
-    const deletionSelection = {
-      ...visualSelection,
-      instanceIds: visualSelection.instanceIds.filter(
-        (instanceId) => !protectedInstanceIds.has(instanceId),
-      ),
-      annotationIds: visualSelection.annotationIds.filter((annotationId) => {
-        const annotation = document.annotations.find(
-          (candidate) => candidate.id === annotationId,
-        );
-        return !(
-          annotation?.anchor.kind === "object" &&
-          protectedInstanceIds.has(annotation.anchor.objectId)
-        );
-      }),
-    };
     try {
       const deletionEdits = proposeVisualSelectionDeletion(
         document,
         resolver,
-        deletionSelection,
+        visualSelection,
         ++uniqueSuffixCounter.current,
       );
-      if (removableMarkerIds.length > 0) {
+      if (selectedFormalMarkerIds.length > 0) {
         if (
           commitStructure(
-            "delete-cell-port-selection",
+            "delete-cell-pin-selection",
             planRemoveCellTerminalMarkers(
               project,
               document.id,
-              removableMarkerIds,
+              selectedFormalMarkerIds,
               deletionEdits,
             ),
           )
         ) {
-          if (protectedInstanceIds.size > 0) {
-            replaceSelection({
-              ...visualSelection,
-              instanceIds: [...protectedInstanceIds],
-              annotationIds: visualSelection.annotationIds.filter(
-                (annotationId) =>
-                  document.annotations.some(
-                    (annotation) =>
-                      annotation.id === annotationId &&
-                      annotation.anchor.kind === "object" &&
-                      protectedInstanceIds.has(annotation.anchor.objectId),
-                  ),
-              ),
-            });
-          } else {
-            resetSelection();
-          }
-          setStatus(
-            protectedInstanceIds.size > 0
-              ? `Deleted selection; kept ${protectedInstanceIds.size} Cell Port${protectedInstanceIds.size === 1 ? "" : "s"} with parent wiring`
-              : "Deleted selected schematic objects",
-          );
+          resetSelection();
+          setStatus("Deleted selected schematic objects");
         }
         return;
       }
       if (deletionEdits.length > 0 && transact(deletionEdits).ok) {
-        replaceSelection({
-          ...visualSelection,
-          instanceIds: [...protectedInstanceIds],
-          annotationIds: visualSelection.annotationIds.filter((annotationId) =>
-            document.annotations.some(
-              (annotation) =>
-                annotation.id === annotationId &&
-                annotation.anchor.kind === "object" &&
-                protectedInstanceIds.has(annotation.anchor.objectId),
-            ),
-          ),
-        });
-        setStatus(
-          "Deleted selected objects; kept Cell Ports with parent wiring",
-        );
+        resetSelection();
+        setStatus("Deleted selected schematic objects");
         return;
       }
-      setStatus("Cell Port is kept because it is still wired in a parent Cell");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Delete failed");
     }
@@ -4531,26 +4452,12 @@ export function App({
     const formalName = document.netlist?.terminals.find((terminal) =>
       terminal.interfaceInstanceIds.includes(instance.id),
     )?.name;
-    const netPortName =
-      instance.symbolId === "port" || instance.symbolId === "port-filled"
-        ? (() => {
-            const net = document.nets.find((candidate) =>
-              candidate.terminals.some(
-                (terminal) => terminal.instanceId === instance.id,
-              ),
-            );
-            return net
-              ? resolveDocumentLogicalNets(document).byBaseNetId.get(net.id)
-                  ?.name
-              : undefined;
-          })()
-        : undefined;
     const schematicName = flattenRichText(
       instance.schematicName ?? { runs: [] },
     );
     const reference =
       instance.schematicReference ?? instance.netlist?.reference ?? null;
-    const secondary = formalName ?? netPortName ?? schematicName;
+    const secondary = formalName ?? schematicName;
     const identity =
       reference && secondary && reference !== secondary
         ? `${reference} · ${secondary}`
@@ -5177,7 +5084,7 @@ export function App({
       mirrorSelection: mirrorSelected,
       startInsert: startInsertFromHook,
       openInsert: () => startInsertFromHook(fullInsertLaunch()),
-      placeFreeNetPort: () => {
+      placeCellPin: () => {
         const request = quickPlaceRequest(
           document.presentation.styleProfileId,
           "port",
@@ -6320,13 +6227,6 @@ export function App({
     const instance = document.instances.find(
       (candidate) => candidate.id === ownerObjectId,
     );
-    const isFreePort = Boolean(
-      instance &&
-      (instance.symbolId === "port" || instance.symbolId === "port-filled") &&
-      !document.netlist?.terminals.some((terminal) =>
-        terminal.interfaceInstanceIds.includes(instance.id),
-      ),
-    );
     const powerClaim = document.connectivityEvidence.find(
       (
         evidence,
@@ -6336,7 +6236,7 @@ export function App({
         (evidence.owner.objectId === ownerObjectId ||
           evidence.owner.objectId === annotation.id),
     );
-    if (!isFreePort && annotation.kind !== "power-label") return undefined;
+    if (annotation.kind !== "power-label") return undefined;
     const net = document.nets.find(
       (candidate) => candidate.id === binding.netId,
     );
@@ -6348,37 +6248,22 @@ export function App({
     const namedNetPlan = planEnsureNamedNet(document, {
       candidateNetId: net.id,
       name,
-      evidenceId: isFreePort
-        ? (document.connectivityEvidence.find(
-            (evidence) =>
-              evidence.kind === "name-claim" &&
-              evidence.owner.kind === "free-port" &&
-              evidence.owner.instanceId === instance!.id,
-          )?.id ??
-          deriveStableId(
-            "connectivity-evidence",
-            document.id,
-            "free-port",
-            net.id,
-            instance!.id,
-          ))
-        : (powerClaim?.id ??
-          deriveStableId(
-            "connectivity-evidence",
-            document.id,
-            "power-marker",
-            net.id,
-            annotation.id,
-          )),
-      owner: isFreePort
-        ? { kind: "free-port", instanceId: instance!.id }
-        : {
-            kind: "power-marker",
-            objectId:
-              powerClaim?.owner.kind === "power-marker"
-                ? powerClaim.owner.objectId
-                : annotation.id,
-          },
+      evidenceId:
+        powerClaim?.id ??
+        deriveStableId(
+          "connectivity-evidence",
+          document.id,
+          "power-marker",
+          net.id,
+          annotation.id,
+        ),
+      owner: {
+        kind: "power-marker",
+        objectId:
+          powerClaim?.owner.kind === "power-marker"
+            ? powerClaim.owner.objectId
+            : annotation.id,
+      },
       ...(powerClaim
         ? {
             scope: powerClaim.scope,
@@ -8638,7 +8523,7 @@ export function App({
           renameCellTerminal(terminalId, name, documentId)
         }
         onSetTerminalDirection={(documentId, terminalId, direction) =>
-          updateCellPortDirection(terminalId, direction, documentId)
+          updateCellPinDirection(terminalId, direction, documentId)
         }
         onMoveTerminal={(documentId, terminalId, delta) =>
           moveCellTerminal(terminalId, delta, documentId)
@@ -9038,13 +8923,13 @@ export function App({
                   {selectedFormalTerminal ? (
                     <div
                       className="formal-port-properties"
-                      aria-label="Cell Port properties"
+                      aria-label="Cell Pin properties"
                     >
                       <label>
                         <span>Terminal name</span>
                         <input
                           key={`${selectedFormalTerminal.id}-${document.revision}-terminal-name`}
-                          aria-label="Cell Port terminal name"
+                          aria-label="Cell Pin name"
                           defaultValue={selectedFormalTerminal.name}
                           onBlur={(event) =>
                             renameSelectedFormalPort(event.currentTarget.value)
@@ -9054,10 +8939,10 @@ export function App({
                       <label>
                         <span>Direction</span>
                         <select
-                          aria-label="Cell Port direction"
+                          aria-label="Cell Pin direction"
                           value={selectedFormalTerminal.direction}
                           onChange={(event) =>
-                            updateCellPortDirection(
+                            updateCellPinDirection(
                               selectedFormalTerminal.id,
                               event.currentTarget
                                 .value as typeof selectedFormalTerminal.direction,
@@ -9229,7 +9114,7 @@ export function App({
                               aria-label={
                                 selectedSupplyMarker
                                   ? "Supply name"
-                                  : "Net Port name"
+                                  : "Supply Net name"
                               }
                               defaultValue={selectedPortLogicalName ?? ""}
                               onBlur={(event) =>

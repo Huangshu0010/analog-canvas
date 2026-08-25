@@ -397,7 +397,6 @@
             },
             "rotation": 180
           },
-          "schematicReference": "P1",
           "symbolId": "port"
         },
         {
@@ -414,7 +413,6 @@
             },
             "rotation": 0
           },
-          "schematicReference": "P2",
           "symbolId": "port"
         }
       ],
@@ -452,7 +450,22 @@
       "netlist": {
         "formalParameters": [],
         "name": "Main",
-        "terminals": []
+        "terminals": [
+          {
+            "direction": "passive",
+            "id": "cell-terminal-p12",
+            "interfaceInstanceIds": ["P12"],
+            "name": "P1",
+            "netId": "net-contact-p13"
+          },
+          {
+            "direction": "passive",
+            "id": "cell-terminal-p13",
+            "interfaceInstanceIds": ["P13"],
+            "name": "P2",
+            "netId": "net-contact-p13"
+          }
+        ]
       },
       "nets": [
         {
@@ -696,7 +709,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 23,
+  "schemaVersion": 24,
   "source": {
     "dialect": "none",
     "entry": null,

@@ -239,19 +239,19 @@ Q2 collector base emitter QPREF
       ),
     ).toEqual([]);
     const document = imported.project!.documents[0]!;
-    const interfaceInstanceIds = new Set(
+    const cellPinInstanceIds = new Set(
       document.netlist!.terminals.flatMap(
         (terminal) => terminal.interfaceInstanceIds,
       ),
     );
     expect(
       document.instances
-        .filter((instance) => interfaceInstanceIds.has(instance.id))
+        .filter((instance) => cellPinInstanceIds.has(instance.id))
         .every((instance) => instance.schematicReference === undefined),
     ).toBe(true);
     expect(
       document.instances
-        .filter((instance) => !interfaceInstanceIds.has(instance.id))
+        .filter((instance) => !cellPinInstanceIds.has(instance.id))
         .every(
           (instance) =>
             instance.netlist?.binding?.kind === "external-subcircuit",
@@ -259,7 +259,7 @@ Q2 collector base emitter QPREF
     ).toBe(true);
     expect(
       document.instances
-        .filter((instance) => !interfaceInstanceIds.has(instance.id))
+        .filter((instance) => !cellPinInstanceIds.has(instance.id))
         .map((instance) => instance.symbolId)
         .filter(
           (symbolId, index, symbols) => symbols.indexOf(symbolId) === index,

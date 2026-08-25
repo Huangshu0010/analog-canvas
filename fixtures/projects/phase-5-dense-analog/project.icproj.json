@@ -115,7 +115,6 @@
             },
             "rotation": 0
           },
-          "schematicReference": "P1",
           "symbolId": "port"
         },
         {
@@ -154,7 +153,6 @@
             },
             "rotation": 180
           },
-          "schematicReference": "P2",
           "symbolId": "port-filled"
         },
         {
@@ -187,7 +185,26 @@
       "netlist": {
         "formalParameters": [],
         "name": "DifferentialStage",
-        "terminals": []
+        "terminals": [
+          {
+            "direction": "passive",
+            "id": "cell-terminal-vinp",
+            "interfaceInstanceIds": [
+              "VINP"
+            ],
+            "name": "VINP",
+            "netId": "net-vinp"
+          },
+          {
+            "direction": "passive",
+            "id": "cell-terminal-vout",
+            "interfaceInstanceIds": [
+              "VOUT"
+            ],
+            "name": "VOUT",
+            "netId": "net-vout"
+          }
+        ]
       },
       "nets": [
         {
@@ -359,7 +376,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-phase-5-dense-analog",
   "name": "Current Differential Stage",
-  "schemaVersion": 23,
+  "schemaVersion": 24,
   "source": {
     "dialect": "none",
     "entry": null,

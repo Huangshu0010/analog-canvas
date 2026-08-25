@@ -45,14 +45,6 @@ function fixture() {
   child.nets.push({ id: "net-body", terminals: [] });
   child.connectivityEvidence.push(
     {
-      id: "claim-interface",
-      kind: "name-claim",
-      netId: "net-in",
-      name: "IN",
-      owner: { kind: "free-port", instanceId: "P1" },
-      scope: "local",
-    },
-    {
       id: "source-interface",
       kind: "spice-source",
       netId: "net-in",
@@ -215,6 +207,6 @@ describe("Cell reset lifecycle planner", () => {
     expect(history.document.drafting?.objects).toEqual([]);
     expect(
       history.document.connectivityEvidence.map((item) => item.id),
-    ).toEqual(["claim-interface", "source-interface"]);
+    ).toEqual(["source-interface"]);
   });
 });

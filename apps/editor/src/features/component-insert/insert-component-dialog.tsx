@@ -372,7 +372,7 @@ export function InsertComponentDialog({
         showReference: false,
         referenceText: null,
         showValue: false,
-        portRole: "net-port",
+        portDirection: "passive",
       });
       return;
     }

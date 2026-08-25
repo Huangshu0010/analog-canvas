@@ -1,7 +1,6 @@
 import { razaviProductSymbols } from "@icm/symbols";
 import type { SymbolDefinition } from "@icm/symbols";
 
-import { cellPinPreviewSymbol } from "./cell-pin-preview-symbol";
 import { vddRailPreviewSymbol } from "./vdd-rail-preview-symbol";
 
 /**
@@ -79,25 +78,18 @@ export function symbolCategory(symbolId: string): string {
  * Library display names, where the catalog's own name does not say what the
  * entry is *for*.
  *
- * "Cell Pin" and "Port" are the same drawing with different meanings, and the
- * names did not say which was which — the difference is whether the terminal
- * appears on the cell's interface, so the names say that now. The model keeps
- * its terms (ADR 0034's Formal Cell Pin and Free Net Port); this is what the
- * Library calls them.
+ * Port artwork has one meaning: a formal Cell Pin. Hollow and filled entries
+ * are presentation variants of that same interface object.
  */
 const LIBRARY_DISPLAY_NAMES: Readonly<Record<string, string>> = {
-  "cell-pin": "Interface Pin",
-  port: "Net Label",
-  "port-filled": "Net Label (filled)",
+  port: "Cell Pin",
+  "port-filled": "Cell Pin (filled)",
 };
 
 /** One line saying what an entry does, where the name alone leaves a doubt. */
 const LIBRARY_DESCRIPTIONS: Readonly<Record<string, string>> = {
-  "cell-pin":
-    "A terminal on this cell's interface — the parent circuit connects to it",
-  port: "Names a net on this sheet; not part of the cell's interface",
-  "port-filled":
-    "Names a net on this sheet, drawn solid; not part of the cell's interface",
+  port: "A terminal on this Cell interface — the parent circuit connects to it",
+  "port-filled": "The same Cell interface terminal, drawn solid",
 };
 
 export function libraryDisplayName(symbolId: string, fallback: string): string {
@@ -109,7 +101,7 @@ export function libraryDescription(symbolId: string): string | undefined {
 }
 
 export function paletteSymbols(_styleProfileId: string): SymbolDefinition[] {
-  return [vddRailPreviewSymbol, cellPinPreviewSymbol, ...razaviProductSymbols];
+  return [vddRailPreviewSymbol, ...razaviProductSymbols];
 }
 
 /**

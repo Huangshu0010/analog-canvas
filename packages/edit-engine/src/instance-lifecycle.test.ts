@@ -110,7 +110,7 @@ function transaction(documentId: string, edits: readonly SchematicEdit[]) {
 }
 
 describe("Instance lifecycle planning", () => {
-  it("returns a formal Cell Port without removing its exported interface", () => {
+  it("returns a formal Cell Pin without removing its exported interface", () => {
     const document = createEmptyDocument("document-child", "Child");
     document.instances.push({
       id: "P1",
@@ -260,7 +260,7 @@ describe("Instance lifecycle planning", () => {
     });
   });
 
-  it("prunes the final unreferenced local Free Port Net with its Port", () => {
+  it("prunes the final unreferenced local Cell Pin Net with its marker", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "P1",
@@ -307,8 +307,16 @@ describe("Instance lifecycle planning", () => {
     });
   });
 
-  it("retains imported Net provenance after deleting its final Port marker", () => {
+  it("retires imported Net provenance after deleting its final electrical owner", () => {
     const document = createEmptyDocument("document-main", "Main");
+    document.sourceBinding = {
+      cellName: "Main",
+      sourceRef: {
+        fileId: "main.spi",
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 1, line: 1, column: 2 },
+      },
+    };
     document.instances.push({
       id: "P1",
       symbolId: "port",
@@ -359,14 +367,10 @@ describe("Instance lifecycle planning", () => {
       document: {
         instances: [],
         annotations: [],
-        nets: [{ id: "net-port-p1", terminals: [] }],
-        connectivityEvidence: [
-          expect.objectContaining({
-            kind: "spice-source",
-            netId: "net-port-p1",
-            sourceNetId: "source-bus",
-          }),
-        ],
+        nets: [],
+        connectivityEvidence: [],
+        sourceBinding: { cellName: "Main" },
+        sourceStatus: "connectivity-modified",
       },
     });
   });

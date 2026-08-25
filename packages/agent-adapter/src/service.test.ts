@@ -400,7 +400,7 @@ describe("current Agent Circuit API service", () => {
     expect(fixture.getDocument().sourceStatus).toBe("connectivity-modified");
   });
 
-  it("places an ordinary Port symbol through the standard Agent instance contract", () => {
+  it("places a Cell Pin through one coordinated Agent transaction", () => {
     const fixture = serviceFixture();
     const response = fixture.service.handle({
       apiVersion: "2.0",
@@ -409,25 +409,56 @@ describe("current Agent Circuit API service", () => {
       documentId: fixture.getDocument().id,
       transactionId: "place-port-symbol",
       expectedRevision: fixture.getDocument().revision,
-      edits: [
+      expectedStructureRevision: fixture.getProject().structureRevision,
+      structureEdits: [
         {
-          kind: "add_instance",
-          instance: {
-            id: "PORT-OUT",
-            symbolId: "port",
-            placement: {
-              position: { x: 620, y: 300 },
-              rotation: 0,
-              mirror: "none",
+          kind: "transact_document",
+          documentId: fixture.getDocument().id,
+          expectedRevision: fixture.getDocument().revision,
+          edits: [
+            {
+              kind: "add_instance",
+              instance: {
+                id: "PORT-OUT",
+                symbolId: "port",
+                placement: {
+                  position: { x: 620, y: 300 },
+                  rotation: 0,
+                  mirror: "none",
+                },
+              },
             },
-          },
+            {
+              kind: "connect_endpoints",
+              from: { kind: "terminal", instanceId: "PORT-OUT", pinName: "P" },
+              to: { kind: "terminal", instanceId: "PORT-OUT", pinName: "P" },
+              newNetId: "net-port-out",
+            },
+            {
+              kind: "add_cell_terminal",
+              terminal: {
+                id: "terminal-port-out",
+                name: "OUT",
+                netId: "net-port-out",
+                direction: "output",
+                interfaceInstanceIds: ["PORT-OUT"],
+              },
+            },
+          ],
         },
       ],
     });
 
+    if (!response.ok) throw new Error(JSON.stringify(response, null, 2));
     expect(response).toMatchObject({ ok: true, applied: true, revision: 1 });
     expect(fixture.getDocument().instances).toContainEqual(
       expect.objectContaining({ id: "PORT-OUT", symbolId: "port" }),
+    );
+    expect(fixture.getDocument().netlist?.terminals).toContainEqual(
+      expect.objectContaining({
+        name: "OUT",
+        interfaceInstanceIds: ["PORT-OUT"],
+      }),
     );
     expect(resolver.resolve("port")?.definition.pins).toEqual([
       expect.objectContaining({ name: "P" }),

@@ -618,20 +618,18 @@ test("command move turns a component while locally stretching its boundary wire"
   expect(await terminalBridge.getAttribute("d")).toBe(bridgePreview);
 });
 
-test("Port shortcut starts ordinary component placement", async ({ page }) => {
+test("P shortcut starts Cell Pin placement", async ({ page }) => {
   await page.goto("/editor");
   const canvas = page.getByTestId("schematic-canvas");
   await page.keyboard.press("p");
   // No setup dialog: the shortcut goes straight to the placement cursor.
   await expect(
-    page.getByRole("dialog", { name: "Place Net Port" }),
+    page.getByRole("dialog", { name: "Place Cell Pin" }),
   ).toHaveCount(0);
   await canvas.hover({ position: { x: 320, y: 180 } });
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 320, y: 180 } });
-  await expect(page.getByTestId("status")).toContainText(
-    "Added Free Net Port Vin",
-  );
+  await expect(page.getByTestId("status")).toContainText("Added Cell Pin Vin");
   await expect(page.getByTestId("hit-P1")).toBeVisible();
   await expect(
     page.locator(
@@ -645,7 +643,7 @@ test("Port shortcut starts ordinary component placement", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("Free Net Ports share logical identity and release their Base Net lifecycle", async ({
+test("Cell Pin deletion releases its interface and Base Net lifecycle", async ({
   page,
 }) => {
   await page.goto("/editor");
@@ -659,13 +657,12 @@ test("Free Net Ports share logical identity and release their Base Net lifecycle
     await canvas.click({ position });
     await page.keyboard.press("Escape");
     await openSelectionShelf(page);
-    const nameField = page.getByLabel("Net Port name");
+    const nameField = page.getByLabel("Cell Pin name");
     await nameField.fill(name);
     await nameField.blur();
   };
 
   await placeNamedPort("BUS", { x: 260, y: 180 });
-  await placeNamedPort("bus", { x: 460, y: 180 });
 
   let saved = JSON.parse(
     (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
@@ -682,45 +679,30 @@ test("Free Net Ports share logical identity and release their Base Net lifecycle
         name?: string;
         owner?: { kind: string; instanceId?: string };
       }>;
+      netlist: {
+        terminals: Array<{ name: string; interfaceInstanceIds: [string] }>;
+      };
     }>;
   };
   expect(saved.documents[0]!.nets).toEqual([
     expect.objectContaining({
-      id: "net-port-p1",
+      id: "net-cell-pin-p1",
       terminals: [{ instanceId: "P1", pinName: "P" }],
     }),
-    expect.objectContaining({
-      id: "net-port-p2",
-      terminals: [{ instanceId: "P2", pinName: "P" }],
-    }),
   ]);
-  expect(saved.documents[0]!.connectivityEvidence).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        kind: "name-claim",
-        netId: "net-port-p1",
-        name: "BUS",
-        owner: expect.objectContaining({ kind: "free-port", instanceId: "P1" }),
-      }),
-      expect.objectContaining({
-        kind: "name-claim",
-        netId: "net-port-p2",
-        name: "bus",
-        owner: expect.objectContaining({ kind: "free-port", instanceId: "P2" }),
-      }),
-    ]),
-  );
+  expect(saved.documents[0]!.connectivityEvidence).toEqual([]);
+  expect(saved.documents[0]!.netlist.terminals).toEqual([
+    expect.objectContaining({ name: "BUS", interfaceInstanceIds: ["P1"] }),
+  ]);
 
   await page.getByTestId("hit-P1").click();
   await page.keyboard.press("Delete");
-  await page.getByTestId("hit-P2").click();
-  await page.keyboard.press("Delete");
-
   saved = JSON.parse(
     (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
   ) as typeof saved;
   expect(saved.documents[0]!.nets).toEqual([]);
   expect(saved.documents[0]!.connectivityEvidence).toEqual([]);
+  expect(saved.documents[0]!.netlist.terminals).toEqual([]);
 
   await placeNamedPort("BUS", { x: 360, y: 260 });
   await expect(page.getByTestId("hit-P1")).toBeVisible();
@@ -754,7 +736,7 @@ test("Ctrl+R mirrors a selected component instead of refreshing", async ({
   });
 });
 
-test("treats hollow and filled Ports as ordinary wired components", async ({
+test("treats hollow and filled Cell Pins as equivalent interface variants", async ({
   page,
 }) => {
   await page.goto("/editor");

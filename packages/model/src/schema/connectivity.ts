@@ -22,10 +22,6 @@ export const ConnectivityNameClaimOwnerSchema = z.discriminatedUnion("kind", [
     annotationId: StableIdSchema,
   }),
   z.strictObject({
-    kind: z.literal("free-port"),
-    instanceId: StableIdSchema,
-  }),
-  z.strictObject({
     kind: z.literal("power-marker"),
     objectId: StableIdSchema,
   }),

@@ -689,7 +689,7 @@
                             "netId": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/$defs/__schema0"
+                                  "$ref": "#/$defs/__schema10"
                                 },
                                 {
                                   "type": "null"
@@ -906,7 +906,7 @@
                     "type": "object",
                     "properties": {
                       "id": {
-                        "$ref": "#/$defs/__schema0"
+                        "$ref": "#/$defs/__schema10"
                       },
                       "name": {
                         "anyOf": [
@@ -989,13 +989,13 @@
                         "$ref": "#/$defs/__schema0"
                       },
                       "netId": {
-                        "$ref": "#/$defs/__schema0"
+                        "$ref": "#/$defs/__schema10"
                       },
                       "from": {
-                        "$ref": "#/$defs/__schema10"
+                        "$ref": "#/$defs/__schema11"
                       },
                       "to": {
-                        "$ref": "#/$defs/__schema10"
+                        "$ref": "#/$defs/__schema11"
                       },
                       "waypoints": {
                         "type": "array",
@@ -1060,7 +1060,7 @@
                         "$ref": "#/$defs/__schema0"
                       },
                       "netId": {
-                        "$ref": "#/$defs/__schema0"
+                        "$ref": "#/$defs/__schema10"
                       },
                       "position": {
                         "$ref": "#/$defs/__schema7"
@@ -1132,40 +1132,40 @@
                         "$ref": "#/$defs/__schema0"
                       },
                       "kind": {
-                        "$ref": "#/$defs/__schema11"
-                      },
-                      "content": {
                         "$ref": "#/$defs/__schema12"
                       },
-                      "binding": {
-                        "$ref": "#/$defs/__schema135"
+                      "content": {
+                        "$ref": "#/$defs/__schema13"
                       },
-                      "formatOverride": {
+                      "binding": {
                         "$ref": "#/$defs/__schema136"
                       },
-                      "anchor": {
+                      "formatOverride": {
                         "$ref": "#/$defs/__schema137"
                       },
-                      "netId": {
+                      "anchor": {
                         "$ref": "#/$defs/__schema138"
                       },
-                      "alignment": {
+                      "netId": {
                         "$ref": "#/$defs/__schema139"
+                      },
+                      "alignment": {
+                        "$ref": "#/$defs/__schema140"
                       },
                       "rotation": {
                         "$ref": "#/$defs/__schema8"
                       },
                       "locked": {
-                        "$ref": "#/$defs/__schema140"
-                      },
-                      "sizeScale": {
                         "$ref": "#/$defs/__schema141"
                       },
-                      "markerKind": {
+                      "sizeScale": {
                         "$ref": "#/$defs/__schema142"
                       },
-                      "visible": {
+                      "markerKind": {
                         "$ref": "#/$defs/__schema143"
+                      },
+                      "visible": {
+                        "$ref": "#/$defs/__schema144"
                       }
                     },
                     "required": [
@@ -1196,23 +1196,23 @@
                                     "$ref": "#/$defs/__schema0"
                                   },
                                   "locked": {
-                                    "$ref": "#/$defs/__schema144"
-                                  },
-                                  "zIndex": {
                                     "$ref": "#/$defs/__schema145"
                                   },
+                                  "zIndex": {
+                                    "$ref": "#/$defs/__schema146"
+                                  },
                                   "anchor": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   },
                                   "styleOverride": {
-                                    "$ref": "#/$defs/__schema146"
+                                    "$ref": "#/$defs/__schema147"
                                   },
                                   "kind": {
                                     "type": "string",
                                     "const": "text"
                                   },
                                   "content": {
-                                    "$ref": "#/$defs/__schema13"
+                                    "$ref": "#/$defs/__schema14"
                                   },
                                   "alignment": {
                                     "type": "string",
@@ -1253,26 +1253,26 @@
                                     "$ref": "#/$defs/__schema0"
                                   },
                                   "locked": {
-                                    "$ref": "#/$defs/__schema144"
-                                  },
-                                  "zIndex": {
                                     "$ref": "#/$defs/__schema145"
                                   },
+                                  "zIndex": {
+                                    "$ref": "#/$defs/__schema146"
+                                  },
                                   "anchor": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   },
                                   "styleOverride": {
-                                    "$ref": "#/$defs/__schema146"
+                                    "$ref": "#/$defs/__schema147"
                                   },
                                   "kind": {
                                     "type": "string",
                                     "const": "arrow"
                                   },
                                   "from": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   },
                                   "to": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   },
                                   "waypoints": {
                                     "type": "array",
@@ -1312,23 +1312,23 @@
                                     "$ref": "#/$defs/__schema0"
                                   },
                                   "locked": {
-                                    "$ref": "#/$defs/__schema144"
-                                  },
-                                  "zIndex": {
                                     "$ref": "#/$defs/__schema145"
                                   },
+                                  "zIndex": {
+                                    "$ref": "#/$defs/__schema146"
+                                  },
                                   "anchor": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   },
                                   "styleOverride": {
-                                    "$ref": "#/$defs/__schema146"
+                                    "$ref": "#/$defs/__schema147"
                                   },
                                   "kind": {
                                     "type": "string",
                                     "const": "leader"
                                   },
                                   "target": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   }
                                 },
                                 "required": [
@@ -1348,23 +1348,23 @@
                                     "$ref": "#/$defs/__schema0"
                                   },
                                   "locked": {
-                                    "$ref": "#/$defs/__schema144"
-                                  },
-                                  "zIndex": {
                                     "$ref": "#/$defs/__schema145"
                                   },
+                                  "zIndex": {
+                                    "$ref": "#/$defs/__schema146"
+                                  },
                                   "anchor": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   },
                                   "styleOverride": {
-                                    "$ref": "#/$defs/__schema146"
+                                    "$ref": "#/$defs/__schema147"
                                   },
                                   "kind": {
                                     "type": "string",
                                     "const": "callout"
                                   },
                                   "content": {
-                                    "$ref": "#/$defs/__schema13"
+                                    "$ref": "#/$defs/__schema14"
                                   },
                                   "alignment": {
                                     "type": "string",
@@ -1386,7 +1386,7 @@
                                     ]
                                   },
                                   "target": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   }
                                 },
                                 "required": [
@@ -1409,16 +1409,16 @@
                                     "$ref": "#/$defs/__schema0"
                                   },
                                   "locked": {
-                                    "$ref": "#/$defs/__schema144"
-                                  },
-                                  "zIndex": {
                                     "$ref": "#/$defs/__schema145"
                                   },
+                                  "zIndex": {
+                                    "$ref": "#/$defs/__schema146"
+                                  },
                                   "anchor": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   },
                                   "styleOverride": {
-                                    "$ref": "#/$defs/__schema146"
+                                    "$ref": "#/$defs/__schema147"
                                   },
                                   "kind": {
                                     "type": "string",
@@ -1471,16 +1471,16 @@
                                     "$ref": "#/$defs/__schema0"
                                   },
                                   "locked": {
-                                    "$ref": "#/$defs/__schema144"
-                                  },
-                                  "zIndex": {
                                     "$ref": "#/$defs/__schema145"
                                   },
+                                  "zIndex": {
+                                    "$ref": "#/$defs/__schema146"
+                                  },
                                   "anchor": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   },
                                   "styleOverride": {
-                                    "$ref": "#/$defs/__schema146"
+                                    "$ref": "#/$defs/__schema147"
                                   },
                                   "kind": {
                                     "type": "string",
@@ -1534,16 +1534,16 @@
                                     "$ref": "#/$defs/__schema0"
                                   },
                                   "locked": {
-                                    "$ref": "#/$defs/__schema144"
-                                  },
-                                  "zIndex": {
                                     "$ref": "#/$defs/__schema145"
                                   },
+                                  "zIndex": {
+                                    "$ref": "#/$defs/__schema146"
+                                  },
                                   "anchor": {
-                                    "$ref": "#/$defs/__schema137"
+                                    "$ref": "#/$defs/__schema138"
                                   },
                                   "styleOverride": {
-                                    "$ref": "#/$defs/__schema146"
+                                    "$ref": "#/$defs/__schema147"
                                   },
                                   "kind": {
                                     "type": "string",
@@ -1592,7 +1592,7 @@
                                     "const": "text"
                                   },
                                   "position": {
-                                    "$ref": "#/$defs/__schema147"
+                                    "$ref": "#/$defs/__schema148"
                                   },
                                   "rotation": {
                                     "$ref": "#/$defs/__schema8"
@@ -1603,7 +1603,7 @@
                                   "diagnostics": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema148"
+                                      "$ref": "#/$defs/__schema149"
                                     }
                                   }
                                 },
@@ -1624,21 +1624,21 @@
                                     "const": "arrow"
                                   },
                                   "from": {
-                                    "$ref": "#/$defs/__schema147"
+                                    "$ref": "#/$defs/__schema148"
                                   },
                                   "to": {
-                                    "$ref": "#/$defs/__schema147"
+                                    "$ref": "#/$defs/__schema148"
                                   },
                                   "points": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema147"
+                                      "$ref": "#/$defs/__schema148"
                                     }
                                   },
                                   "vertices": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema147"
+                                      "$ref": "#/$defs/__schema148"
                                     }
                                   },
                                   "curveControls": {
@@ -1646,7 +1646,7 @@
                                     "items": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/$defs/__schema147"
+                                          "$ref": "#/$defs/__schema148"
                                         },
                                         {
                                           "type": "null"
@@ -1655,7 +1655,7 @@
                                     }
                                   },
                                   "center": {
-                                    "$ref": "#/$defs/__schema147"
+                                    "$ref": "#/$defs/__schema148"
                                   },
                                   "bounds": {
                                     "$ref": "#/$defs/__schema4"
@@ -1663,7 +1663,7 @@
                                   "diagnostics": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema148"
+                                      "$ref": "#/$defs/__schema149"
                                     }
                                   }
                                 },
@@ -1688,10 +1688,10 @@
                                     "const": "leader"
                                   },
                                   "anchor": {
-                                    "$ref": "#/$defs/__schema147"
+                                    "$ref": "#/$defs/__schema148"
                                   },
                                   "target": {
-                                    "$ref": "#/$defs/__schema147"
+                                    "$ref": "#/$defs/__schema148"
                                   },
                                   "bounds": {
                                     "$ref": "#/$defs/__schema4"
@@ -1699,7 +1699,7 @@
                                   "diagnostics": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema148"
+                                      "$ref": "#/$defs/__schema149"
                                     }
                                   }
                                 },
@@ -1720,10 +1720,10 @@
                                     "const": "callout"
                                   },
                                   "textPosition": {
-                                    "$ref": "#/$defs/__schema147"
+                                    "$ref": "#/$defs/__schema148"
                                   },
                                   "target": {
-                                    "$ref": "#/$defs/__schema147"
+                                    "$ref": "#/$defs/__schema148"
                                   },
                                   "rotation": {
                                     "$ref": "#/$defs/__schema8"
@@ -1737,7 +1737,7 @@
                                   "diagnostics": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema148"
+                                      "$ref": "#/$defs/__schema149"
                                     }
                                   }
                                 },
@@ -1762,13 +1762,13 @@
                                   "points": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema147"
+                                      "$ref": "#/$defs/__schema148"
                                     }
                                   },
                                   "vertices": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema147"
+                                      "$ref": "#/$defs/__schema148"
                                     }
                                   },
                                   "curveControls": {
@@ -1776,7 +1776,7 @@
                                     "items": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/$defs/__schema147"
+                                          "$ref": "#/$defs/__schema148"
                                         },
                                         {
                                           "type": "null"
@@ -1790,7 +1790,7 @@
                                   "diagnostics": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema148"
+                                      "$ref": "#/$defs/__schema149"
                                     }
                                   }
                                 },
@@ -1812,7 +1812,7 @@
                                     "const": "rectangle"
                                   },
                                   "center": {
-                                    "$ref": "#/$defs/__schema147"
+                                    "$ref": "#/$defs/__schema148"
                                   },
                                   "width": {
                                     "type": "number",
@@ -1830,7 +1830,7 @@
                                     "maxItems": 4,
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema147"
+                                      "$ref": "#/$defs/__schema148"
                                     }
                                   },
                                   "bounds": {
@@ -1839,7 +1839,7 @@
                                   "diagnostics": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema148"
+                                      "$ref": "#/$defs/__schema149"
                                     }
                                   }
                                 },
@@ -1863,7 +1863,7 @@
                                     "const": "floating-symbol"
                                   },
                                   "position": {
-                                    "$ref": "#/$defs/__schema147"
+                                    "$ref": "#/$defs/__schema148"
                                   },
                                   "rotation": {
                                     "$ref": "#/$defs/__schema8"
@@ -1874,7 +1874,7 @@
                                   "diagnostics": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema148"
+                                      "$ref": "#/$defs/__schema149"
                                     }
                                   }
                                 },
@@ -1892,7 +1892,7 @@
                           "diagnostics": {
                             "type": "array",
                             "items": {
-                              "$ref": "#/$defs/__schema148"
+                              "$ref": "#/$defs/__schema149"
                             }
                           }
                         },
@@ -1988,7 +1988,7 @@
                 "diagnostics": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema149"
+                    "$ref": "#/$defs/__schema150"
                   }
                 }
               },
@@ -2026,7 +2026,7 @@
         "diagnostics": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema149"
+            "$ref": "#/$defs/__schema150"
           }
         }
       },
@@ -2114,7 +2114,7 @@
         "diagnostics": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema149"
+            "$ref": "#/$defs/__schema150"
           }
         },
         "diagnosticDelta": {
@@ -2123,13 +2123,13 @@
             "added": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/__schema149"
+                "$ref": "#/$defs/__schema150"
               }
             },
             "removed": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/__schema149"
+                "$ref": "#/$defs/__schema150"
               }
             }
           },
@@ -2303,7 +2303,7 @@
         "diagnostics": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema149"
+            "$ref": "#/$defs/__schema150"
           }
         }
       },
@@ -2366,7 +2366,7 @@
         "diagnostics": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema149"
+            "$ref": "#/$defs/__schema150"
           }
         }
       },
@@ -2601,6 +2601,10 @@
       ]
     },
     "__schema10": {
+      "description": "Resolved Logical-Net representative valid only for this Snapshot Document revision; refresh after any committed edit",
+      "$ref": "#/$defs/__schema0"
+    },
+    "__schema11": {
       "oneOf": [
         {
           "type": "object",
@@ -2643,7 +2647,7 @@
         }
       ]
     },
-    "__schema11": {
+    "__schema12": {
       "type": "string",
       "enum": [
         "instance-label",
@@ -2653,10 +2657,10 @@
         "route-marker"
       ]
     },
-    "__schema12": {
-      "$ref": "#/$defs/__schema13"
-    },
     "__schema13": {
+      "$ref": "#/$defs/__schema14"
+    },
+    "__schema14": {
       "type": "object",
       "properties": {
         "runs": {
@@ -2664,7 +2668,7 @@
           "maxItems": 64,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema14"
+            "$ref": "#/$defs/__schema15"
           }
         }
       },
@@ -2672,124 +2676,6 @@
         "runs"
       ],
       "additionalProperties": false
-    },
-    "__schema14": {
-      "anyOf": [
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "text"
-            },
-            "value": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            }
-          },
-          "required": [
-            "kind",
-            "value"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "line-break"
-            }
-          },
-          "required": [
-            "kind"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema15"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema55"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema95"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
-        }
-      ]
     },
     "__schema15": {
       "anyOf": [
@@ -2873,7 +2759,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema29"
+                    "$ref": "#/$defs/__schema56"
                   }
                 }
               },
@@ -2890,7 +2776,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema42"
+                    "$ref": "#/$defs/__schema96"
                   }
                 }
               },
@@ -2991,7 +2877,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema21"
+                    "$ref": "#/$defs/__schema30"
                   }
                 }
               },
@@ -3008,7 +2894,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema25"
+                    "$ref": "#/$defs/__schema43"
                   }
                 }
               },
@@ -3109,7 +2995,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema19"
+                    "$ref": "#/$defs/__schema22"
                   }
                 }
               },
@@ -3126,7 +3012,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema20"
+                    "$ref": "#/$defs/__schema26"
                   }
                 }
               },
@@ -3176,6 +3062,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema19"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema20"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema21"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -3286,88 +3254,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema22"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema23"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema24"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -3402,6 +3288,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema23"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema24"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema25"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -3512,88 +3480,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema26"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema27"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema28"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -3628,6 +3514,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema27"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema28"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema29"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -3738,88 +3706,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema30"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema34"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema38"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -3905,7 +3791,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema32"
+                    "$ref": "#/$defs/__schema35"
                   }
                 }
               },
@@ -3922,7 +3808,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema33"
+                    "$ref": "#/$defs/__schema39"
                   }
                 }
               },
@@ -3972,6 +3858,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema32"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema33"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema34"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -4082,88 +4050,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema35"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema36"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema37"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -4198,6 +4084,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema36"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema37"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema38"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -4308,88 +4276,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema39"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema40"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema41"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -4424,6 +4310,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema40"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema41"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema42"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -4534,88 +4502,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema43"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema47"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema51"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -4701,7 +4587,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema45"
+                    "$ref": "#/$defs/__schema48"
                   }
                 }
               },
@@ -4718,7 +4604,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema46"
+                    "$ref": "#/$defs/__schema52"
                   }
                 }
               },
@@ -4768,6 +4654,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema45"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema46"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema47"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -4878,88 +4846,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema48"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema49"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema50"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -4994,6 +4880,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema49"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema50"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema51"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -5104,88 +5072,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema52"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema53"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema54"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -5220,6 +5106,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema53"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema54"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema55"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -5330,88 +5298,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema56"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema69"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema82"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -5497,7 +5383,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema61"
+                    "$ref": "#/$defs/__schema70"
                   }
                 }
               },
@@ -5514,7 +5400,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema65"
+                    "$ref": "#/$defs/__schema83"
                   }
                 }
               },
@@ -5615,7 +5501,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema59"
+                    "$ref": "#/$defs/__schema62"
                   }
                 }
               },
@@ -5632,7 +5518,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema60"
+                    "$ref": "#/$defs/__schema66"
                   }
                 }
               },
@@ -5682,6 +5568,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema59"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema60"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema61"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -5792,88 +5760,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema62"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema63"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema64"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -5908,6 +5794,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema63"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema64"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema65"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -6018,88 +5986,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema66"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema67"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema68"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -6134,6 +6020,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema67"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema68"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema69"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -6244,88 +6212,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema70"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema74"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema78"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -6411,7 +6297,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema72"
+                    "$ref": "#/$defs/__schema75"
                   }
                 }
               },
@@ -6428,7 +6314,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema73"
+                    "$ref": "#/$defs/__schema79"
                   }
                 }
               },
@@ -6478,6 +6364,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema72"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema73"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema74"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -6588,88 +6556,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema75"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema76"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema77"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -6704,6 +6590,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema76"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema77"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema78"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -6814,88 +6782,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema79"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema80"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema81"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -6930,6 +6816,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema80"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema81"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema82"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -7040,88 +7008,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema83"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema87"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema91"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -7207,7 +7093,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema85"
+                    "$ref": "#/$defs/__schema88"
                   }
                 }
               },
@@ -7224,7 +7110,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema86"
+                    "$ref": "#/$defs/__schema92"
                   }
                 }
               },
@@ -7274,6 +7160,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema85"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema86"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema87"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -7384,88 +7352,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema88"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema89"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema90"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -7500,6 +7386,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema89"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema90"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema91"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -7610,88 +7578,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema92"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema93"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema94"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -7726,6 +7612,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema93"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema94"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema95"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -7836,88 +7804,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema96"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema109"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema122"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -8003,7 +7889,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema101"
+                    "$ref": "#/$defs/__schema110"
                   }
                 }
               },
@@ -8020,7 +7906,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema105"
+                    "$ref": "#/$defs/__schema123"
                   }
                 }
               },
@@ -8121,7 +8007,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema99"
+                    "$ref": "#/$defs/__schema102"
                   }
                 }
               },
@@ -8138,7 +8024,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema100"
+                    "$ref": "#/$defs/__schema106"
                   }
                 }
               },
@@ -8188,6 +8074,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema99"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema100"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema101"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -8298,88 +8266,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema102"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema103"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema104"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -8414,6 +8300,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema103"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema104"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema105"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -8524,88 +8492,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema106"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema107"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema108"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -8640,6 +8526,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema107"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema108"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema109"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -8750,88 +8718,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema110"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema114"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema118"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -8917,7 +8803,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema112"
+                    "$ref": "#/$defs/__schema115"
                   }
                 }
               },
@@ -8934,7 +8820,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema113"
+                    "$ref": "#/$defs/__schema119"
                   }
                 }
               },
@@ -8984,6 +8870,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema112"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema113"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema114"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -9094,88 +9062,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema115"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema116"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema117"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -9210,6 +9096,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema116"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema117"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema118"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -9320,88 +9288,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema119"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema120"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema121"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -9436,6 +9322,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema120"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema121"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema122"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -9546,88 +9514,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema123"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema127"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema131"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -9713,7 +9599,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema125"
+                    "$ref": "#/$defs/__schema128"
                   }
                 }
               },
@@ -9730,7 +9616,7 @@
                   "maxItems": 64,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema126"
+                    "$ref": "#/$defs/__schema132"
                   }
                 }
               },
@@ -9780,6 +9666,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema125"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema126"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema127"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -9890,88 +9858,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema128"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema129"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema130"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -10006,6 +9892,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema129"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema130"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema131"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -10116,88 +10084,6 @@
             "kind"
           ],
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "span"
-            },
-            "style": {
-              "type": "string",
-              "enum": [
-                "italic",
-                "bold",
-                "subscript",
-                "superscript",
-                "overbar"
-              ]
-            },
-            "children": {
-              "minItems": 1,
-              "maxItems": 64,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema132"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "style",
-            "children"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "fraction"
-            },
-            "numerator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema133"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            },
-            "denominator": {
-              "type": "object",
-              "properties": {
-                "runs": {
-                  "minItems": 1,
-                  "maxItems": 64,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/__schema134"
-                  }
-                }
-              },
-              "required": [
-                "runs"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "numerator",
-            "denominator"
-          ],
-          "additionalProperties": false
         }
       ]
     },
@@ -10232,6 +10118,88 @@
           },
           "required": [
             "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "italic",
+                "bold",
+                "subscript",
+                "superscript",
+                "overbar"
+              ]
+            },
+            "children": {
+              "minItems": 1,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema133"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "style",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fraction"
+            },
+            "numerator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema134"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            },
+            "denominator": {
+              "type": "object",
+              "properties": {
+                "runs": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema135"
+                  }
+                }
+              },
+              "required": [
+                "runs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "numerator",
+            "denominator"
           ],
           "additionalProperties": false
         }
@@ -10310,6 +10278,42 @@
       ]
     },
     "__schema135": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "text"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "line-break"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema136": {
       "oneOf": [
         {
           "type": "object",
@@ -10415,10 +10419,10 @@
         }
       ]
     },
-    "__schema136": {
-      "$ref": "#/$defs/__schema13"
-    },
     "__schema137": {
+      "$ref": "#/$defs/__schema14"
+    },
+    "__schema138": {
       "oneOf": [
         {
           "type": "object",
@@ -10517,10 +10521,10 @@
         }
       ]
     },
-    "__schema138": {
+    "__schema139": {
       "$ref": "#/$defs/__schema0"
     },
-    "__schema139": {
+    "__schema140": {
       "type": "string",
       "enum": [
         "start",
@@ -10528,32 +10532,32 @@
         "end"
       ]
     },
-    "__schema140": {
+    "__schema141": {
       "type": "boolean"
     },
-    "__schema141": {
+    "__schema142": {
       "type": "number",
       "exclusiveMinimum": 0
     },
-    "__schema142": {
+    "__schema143": {
       "type": "string",
       "enum": [
         "current",
         "voltage"
       ]
     },
-    "__schema143": {
-      "type": "boolean"
-    },
     "__schema144": {
       "type": "boolean"
     },
     "__schema145": {
+      "type": "boolean"
+    },
+    "__schema146": {
       "type": "integer",
       "minimum": 0,
       "maximum": 9007199254740991
     },
-    "__schema146": {
+    "__schema147": {
       "type": "object",
       "properties": {
         "sizeScale": {
@@ -10629,7 +10633,7 @@
       },
       "additionalProperties": false
     },
-    "__schema147": {
+    "__schema148": {
       "type": "object",
       "properties": {
         "x": {
@@ -10645,7 +10649,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema148": {
+    "__schema149": {
       "type": "object",
       "properties": {
         "code": {
@@ -10695,7 +10699,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema149": {
+    "__schema150": {
       "type": "object",
       "properties": {
         "code": {
@@ -10794,7 +10798,7 @@
           "additionalProperties": false
         },
         "point": {
-          "$ref": "#/$defs/__schema147"
+          "$ref": "#/$defs/__schema148"
         },
         "parameters": {
           "type": "object",

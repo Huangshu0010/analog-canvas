@@ -198,6 +198,26 @@ describe("current rendering contract", () => {
         { instanceId: "VOUT", pinName: "P" },
       ],
     });
+    document.netlist = {
+      name: "Ports",
+      formalParameters: [],
+      terminals: [
+        {
+          id: "terminal-vin",
+          name: "VIN",
+          netId: "signal",
+          direction: "input",
+          interfaceInstanceIds: ["VIN"],
+        },
+        {
+          id: "terminal-vout",
+          name: "VOUT",
+          netId: "signal",
+          direction: "output",
+          interfaceInstanceIds: ["VOUT"],
+        },
+      ],
+    };
     document.annotations.push({
       id: "label-vin",
       kind: "instance-label",

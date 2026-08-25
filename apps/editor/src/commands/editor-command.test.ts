@@ -48,7 +48,7 @@ function fixture(overrides: Partial<EditorCommandContext> = {}) {
     mirrorSelection: vi.fn(),
     startInsert: vi.fn(),
     openInsert: vi.fn(),
-    placeFreeNetPort: vi.fn(),
+    placeCellPin: vi.fn(),
     activateTool: vi.fn<(tool: EditorTool) => void>(),
     addText: vi.fn(),
     openProperties: vi.fn(),

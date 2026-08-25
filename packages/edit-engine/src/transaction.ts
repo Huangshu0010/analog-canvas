@@ -167,8 +167,6 @@ function connectivityEvidenceOwnerId(
   switch (evidence.owner.kind) {
     case "net-label":
       return evidence.owner.annotationId;
-    case "free-port":
-      return evidence.owner.instanceId;
     case "power-marker":
       return evidence.owner.objectId;
     case "explicit-net-property":
@@ -182,9 +180,43 @@ function removeConnectivityEvidenceOwnedBy(
   changedObjectIds: Set<string>,
 ): readonly string[] {
   const affectedNetIds = new Set<string>();
+  const sourceBackedNetIds = new Set(
+    draft.connectivityEvidence.flatMap((evidence) =>
+      evidence.kind === "spice-source" ? [evidence.netId] : [],
+    ),
+  );
+  const removedOwnedClaims = draft.connectivityEvidence.filter((evidence) => {
+    const ownerId = connectivityEvidenceOwnerId(evidence);
+    return Boolean(ownerId && objectIds.has(ownerId));
+  });
+  const shadowedProjectionIds = new Set(
+    draft.connectivityEvidence.flatMap((evidence) => {
+      if (
+        evidence.kind !== "name-claim" ||
+        evidence.owner.kind !== "explicit-net-property" ||
+        sourceBackedNetIds.has(evidence.netId)
+      ) {
+        return [];
+      }
+      const shadowed = removedOwnedClaims.some(
+        (candidate) =>
+          candidate.kind === "name-claim" &&
+          candidate.netId === evidence.netId &&
+          foldNetName(candidate.name) === foldNetName(evidence.name) &&
+          candidate.scope === evidence.scope &&
+          candidate.powerDomain === evidence.powerDomain,
+      );
+      return shadowed ? [evidence.id] : [];
+    }),
+  );
   draft.connectivityEvidence = draft.connectivityEvidence.filter((evidence) => {
     const ownerId = connectivityEvidenceOwnerId(evidence);
-    if (!ownerId || !objectIds.has(ownerId)) return true;
+    if (
+      (!ownerId || !objectIds.has(ownerId)) &&
+      !shadowedProjectionIds.has(evidence.id)
+    ) {
+      return true;
+    }
     changedObjectIds.add(evidence.id);
     for (const netId of connectivityEvidenceNetIds(evidence)) {
       affectedNetIds.add(netId);
@@ -237,15 +269,7 @@ function retargetOwnerEvidenceAfterSplit(
       continue;
     }
     let targetNetId: string | undefined;
-    if (evidence.owner.kind === "free-port") {
-      targetNetId = netIdByEndpoint.get(
-        endpointKey({
-          kind: "terminal",
-          instanceId: evidence.owner.instanceId,
-          pinName: "P",
-        }),
-      );
-    } else if (evidence.owner.kind === "net-label") {
+    if (evidence.owner.kind === "net-label") {
       const annotationId = evidence.owner.annotationId;
       const annotation = draft.annotations.find(
         (candidate) => candidate.id === annotationId,
@@ -290,19 +314,23 @@ function ensureDraftingLayer(draft: SchematicDocument): void {
  * immediately after the final endpoint is disconnected so a later
  * `remove_instance` cannot retain a stale Port designator through its Net.
  *
- * Deliberately retain imported provenance, named labels, geometry, formal
- * interfaces, layout references, global Nets, and materialized MOS bindings.
- * Those are all durable authoring intent even when the Net currently has no
- * ordinary terminal. A cell bulk default by itself is not reachability: when
- * its final power-marker owner disappears, retaining that pointer would keep
- * an unobservable Net ID alive and block placement from reusing the released
- * marker ID.
+ * Evidence describes a live Base Net; it cannot make an otherwise unreachable
+ * Base Net live by referring back to it. Visible labels/markers are already
+ * counted through their Annotation, Instance, Route, or Junction owners.
+ * Imported source/name evidence and explicit equivalence are retired or
+ * trimmed with the Base Net, while the Document source binding remains the
+ * durable provenance record.
  */
 function pruneUnreachableLocalNet(
   draft: SchematicDocument,
   netId: string,
   changedObjectIds: Set<string>,
+  options: {
+    deferInto?: Set<string>;
+    protectedEvidenceIds?: ReadonlySet<string>;
+  } = {},
 ): void {
+  options.deferInto?.add(netId);
   const net = draft.nets.find((candidate) => candidate.id === netId);
   if (!net || net.terminals.length > 0) {
     return;
@@ -321,15 +349,45 @@ function pruneUnreachableLocalNet(
     draft.constraints.some((constraint) =>
       constraint.objectIds.includes(netId),
     ) ||
-    draft.instances.some(
-      (instance) => instance.mosBulkBinding?.netId === netId,
-    ) ||
-    draft.connectivityEvidence.some((evidence) =>
-      connectivityEvidenceNetIds(evidence).includes(netId),
-    )
+    draft.instances.some((instance) => instance.mosBulkBinding?.netId === netId)
   ) {
     return;
   }
+  const referencedEvidence = draft.connectivityEvidence.filter((evidence) =>
+    connectivityEvidenceNetIds(evidence).includes(netId),
+  );
+  if (
+    referencedEvidence.some((evidence) =>
+      options.protectedEvidenceIds?.has(evidence.id),
+    ) ||
+    (options.deferInto && referencedEvidence.length > 0)
+  ) {
+    return;
+  }
+  const retainedEvidence: typeof draft.connectivityEvidence = [];
+  for (const evidence of draft.connectivityEvidence) {
+    if (evidence.kind === "explicit-equivalence") {
+      if (!evidence.memberNetIds.includes(netId)) {
+        retainedEvidence.push(evidence);
+        continue;
+      }
+      const memberNetIds = evidence.memberNetIds.filter(
+        (memberNetId) => memberNetId !== netId,
+      );
+      changedObjectIds.add(evidence.id);
+      if (memberNetIds.length >= 2) {
+        evidence.memberNetIds = memberNetIds;
+        retainedEvidence.push(evidence);
+      }
+      continue;
+    }
+    if (evidence.netId === netId) {
+      changedObjectIds.add(evidence.id);
+      continue;
+    }
+    retainedEvidence.push(evidence);
+  }
+  draft.connectivityEvidence = retainedEvidence;
   let clearedBulkDefault = false;
   if (draft.mosBulkDefaults?.nmosNetId === netId) {
     delete draft.mosBulkDefaults.nmosNetId;
@@ -367,6 +425,7 @@ function revokeInvalidatedSupplyBulkDefaults(
   before: SchematicDocument,
   draft: SchematicDocument,
   changedObjectIds: Set<string>,
+  deferNetPrune: (netId: string) => void,
 ): boolean {
   const beforeLogical = resolveDocumentLogicalNets(before);
   const afterLogical = resolveDocumentLogicalNets(draft);
@@ -442,7 +501,7 @@ function revokeInvalidatedSupplyBulkDefaults(
     changedObjectIds.add(draft.id);
     changed = true;
     for (const netId of affectedNetIds) {
-      pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+      deferNetPrune(netId);
     }
   }
 
@@ -507,6 +566,16 @@ export function executeTransaction(
     ),
   );
   const changedObjectIds = new Set<string>();
+  const deferredNetPruneIds = new Set<string>();
+  const protectedEvidenceIds = new Set(
+    transaction.edits.flatMap((edit) =>
+      edit.kind === "upsert_connectivity_evidence" ? [edit.evidence.id] : [],
+    ),
+  );
+  const deferNetPrune = (netId: string): void =>
+    pruneUnreachableLocalNet(draft, netId, changedObjectIds, {
+      deferInto: deferredNetPruneIds,
+    });
   const resolver = context.symbolResolver;
   const originalRouteStates = new Map(
     resolver
@@ -600,7 +669,7 @@ export function executeTransaction(
         draft.routes = [];
         draft.drafting = { objects: [] };
         for (const netId of ownerNetIds) {
-          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+          deferNetPrune(netId);
         }
         if (ownerNetIds.length > 0) connectivityChanged = true;
         geometryChanged = true;
@@ -626,14 +695,14 @@ export function executeTransaction(
         draft.layoutGroups = [];
         draft.constraints = [];
         for (const netId of ownerNetIds) {
-          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+          deferNetPrune(netId);
         }
         if (ownerNetIds.length > 0) connectivityChanged = true;
         geometryChanged = true;
         break;
       }
       case "reset_cell_body": {
-        const interfaceInstanceIds = new Set(
+        const cellPinInstanceIds = new Set(
           draft.netlist?.terminals.flatMap(
             (terminal) => terminal.interfaceInstanceIds,
           ) ?? [],
@@ -642,20 +711,20 @@ export function executeTransaction(
           draft.netlist?.terminals.map((terminal) => terminal.netId) ?? [],
         );
         const retainedInstances = draft.instances.filter((instance) =>
-          interfaceInstanceIds.has(instance.id),
+          cellPinInstanceIds.has(instance.id),
         );
         const retainedNets = draft.nets
           .filter((net) => interfaceNetIds.has(net.id))
           .map((net) => ({
             ...net,
             terminals: net.terminals.filter((terminal) =>
-              interfaceInstanceIds.has(terminal.instanceId),
+              cellPinInstanceIds.has(terminal.instanceId),
             ),
           }));
         const retainedAnnotations = draft.annotations.filter(
           (annotation) =>
             annotation.anchor.kind === "object" &&
-            interfaceInstanceIds.has(annotation.anchor.objectId),
+            cellPinInstanceIds.has(annotation.anchor.objectId),
         );
         const retainedAnnotationIds = new Set(
           retainedAnnotations.map((annotation) => annotation.id),
@@ -674,11 +743,9 @@ export function executeTransaction(
                 return true;
               case "net-label":
                 return retainedAnnotationIds.has(evidence.owner.annotationId);
-              case "free-port":
-                return interfaceInstanceIds.has(evidence.owner.instanceId);
               case "power-marker":
                 return (
-                  interfaceInstanceIds.has(evidence.owner.objectId) ||
+                  cellPinInstanceIds.has(evidence.owner.objectId) ||
                   retainedAnnotationIds.has(evidence.owner.objectId)
                 );
             }
@@ -808,7 +875,7 @@ export function executeTransaction(
         draft.instances.splice(index, 1);
         changedObjectIds.add(edit.instanceId);
         for (const netId of ownerNetIds) {
-          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+          deferNetPrune(netId);
         }
         connectivityChanged = true;
         break;
@@ -889,6 +956,16 @@ export function executeTransaction(
         const targetPins = new Set(
           resolved.definition.pins.map((pin) => pin.name),
         );
+        const pinMap = edit.pinMap ?? {};
+        if (
+          instance.netlist?.binding?.kind === "subcircuit" &&
+          instance.importProvenance?.terminalMapping
+        ) {
+          instance.importProvenance.terminalMapping =
+            instance.importProvenance.terminalMapping.filter((terminal) =>
+              targetPins.has(pinMap[terminal.pinName] ?? terminal.pinName),
+            );
+        }
         const currentPins = new Set(
           draft.nets.flatMap((net) =>
             net.terminals
@@ -915,7 +992,6 @@ export function executeTransaction(
           []) {
           currentPins.add(terminal.pinName);
         }
-        const pinMap = edit.pinMap ?? {};
         for (const sourcePin of Object.keys(pinMap)) {
           if (!currentPins.has(sourcePin)) {
             return rejectAt(
@@ -935,10 +1011,24 @@ export function executeTransaction(
           }
           const previousSource = mappedPins.get(targetPin);
           if (previousSource && previousSource !== sourcePin) {
-            return rejectAt(
-              "EDIT_PRECONDITION",
-              `Pin map aliases ${previousSource} and ${sourcePin} to ${targetPin}`,
+            const ownerNetIds = new Set(
+              draft.nets.flatMap((net) =>
+                net.terminals.some(
+                  (terminal) =>
+                    terminal.instanceId === edit.instanceId &&
+                    (terminal.pinName === previousSource ||
+                      terminal.pinName === sourcePin),
+                )
+                  ? [net.id]
+                  : [],
+              ),
             );
+            if (ownerNetIds.size > 1) {
+              return rejectAt(
+                "EDIT_PRECONDITION",
+                `Pin map aliases ${previousSource} and ${sourcePin} to ${targetPin} before their Nets are merged`,
+              );
+            }
           }
           mappedPins.set(targetPin, sourcePin);
         }
@@ -950,6 +1040,16 @@ export function executeTransaction(
             changed = true;
           }
           if (changed) changedObjectIds.add(net.id);
+          if (changed) {
+            net.terminals = net.terminals.filter(
+              (terminal, index, terminals) =>
+                terminals.findIndex(
+                  (candidate) =>
+                    candidate.instanceId === terminal.instanceId &&
+                    candidate.pinName === terminal.pinName,
+                ) === index,
+            );
+          }
         }
         for (const route of draft.routes) {
           let changed = false;
@@ -1363,7 +1463,7 @@ export function executeTransaction(
         ) {
           return rejectAt(
             "EDIT_PRECONDITION",
-            "A formal Cell Port is identified by its Cell terminal name, not a schematic reference",
+            "A formal Cell Pin is identified by its Cell terminal name, not a schematic reference",
             [],
             [instance.id],
           );
@@ -1709,7 +1809,7 @@ export function executeTransaction(
             `Cell terminal does not exist: ${edit.terminalId}`,
           );
         }
-        draft.netlist.terminals.splice(index, 1);
+        const [removedTerminal] = draft.netlist.terminals.splice(index, 1);
         if (draft.presentation.cellSymbol?.pinPlacements) {
           const retained = draft.presentation.cellSymbol.pinPlacements.filter(
             (placement) => placement.terminalId !== edit.terminalId,
@@ -1728,6 +1828,9 @@ export function executeTransaction(
           }
         }
         changedObjectIds.add(edit.terminalId);
+        if (removedTerminal) {
+          deferNetPrune(removedTerminal.netId);
+        }
         connectivityChanged = true;
         break;
       }
@@ -2122,7 +2225,7 @@ export function executeTransaction(
         draft.junctions.splice(junctionIndex, 1);
         changedObjectIds.add(edit.junctionId);
         for (const netId of new Set([junction.netId, ...ownerNetIds])) {
-          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+          deferNetPrune(netId);
         }
         connectivityChanged = true;
         break;
@@ -2211,7 +2314,7 @@ export function executeTransaction(
         draft.routes.splice(routeIndex, 1);
         changedObjectIds.add(edit.routeId);
         for (const netId of new Set([route.netId, ...ownerNetIds])) {
-          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+          deferNetPrune(netId);
         }
         if (ownerNetIds.length > 0) connectivityChanged = true;
         break;
@@ -2260,10 +2363,12 @@ export function executeTransaction(
             endpoint.kind === "junction" ? [endpoint.junctionId] : [],
           ),
         );
-        const ownerNetIds = removeConnectivityEvidenceOwnedBy(
-          draft,
-          new Set([route.id]),
-          changedObjectIds,
+        const ownerNetIds = new Set(
+          removeConnectivityEvidenceOwnedBy(
+            draft,
+            new Set([route.id]),
+            changedObjectIds,
+          ),
         );
         draft.routes.splice(routeIndex, 1);
         changedObjectIds.add(route.id);
@@ -2293,6 +2398,13 @@ export function executeTransaction(
               !preservedObjectIds.has(junction.id),
           )
           .map((junction) => junction.id);
+        for (const netId of removeConnectivityEvidenceOwnedBy(
+          draft,
+          new Set(removedJunctionIds),
+          changedObjectIds,
+        )) {
+          ownerNetIds.add(netId);
+        }
         draft.junctions = draft.junctions.filter(
           (junction) => !removedJunctionIds.includes(junction.id),
         );
@@ -2303,7 +2415,7 @@ export function executeTransaction(
         const groups = netEndpointGroups(draft, net.id, context.symbolResolver);
         if (groups.length === 0) {
           for (const netId of new Set([net.id, ...ownerNetIds])) {
-            pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+            deferNetPrune(netId);
           }
           if (!draft.nets.some((candidate) => candidate.id === net.id)) {
             if (draft.mosBulkDefaults?.nmosNetId === net.id) {
@@ -2384,6 +2496,30 @@ export function executeTransaction(
               terminals: terminalsFor(groupNetId),
             });
             changedObjectIds.add(groupNetId);
+          }
+          for (const cellTerminal of draft.netlist?.terminals ?? []) {
+            if (cellTerminal.netId !== net.id) continue;
+            const groupNetIds = new Set(
+              cellTerminal.interfaceInstanceIds.flatMap((instanceId) => {
+                const groupNetId = netIdByEndpoint.get(
+                  endpointKey({ kind: "terminal", instanceId, pinName: "P" }),
+                );
+                return groupNetId ? [groupNetId] : [];
+              }),
+            );
+            if (groupNetIds.size > 1) {
+              return rejectAt(
+                "EDIT_PRECONDITION",
+                `Cut would separate repeated Cell Pin ${cellTerminal.name}; remove or reconnect a marker first`,
+                [],
+                [...cellTerminal.interfaceInstanceIds],
+              );
+            }
+            const groupNetId = [...groupNetIds][0];
+            if (groupNetId && groupNetId !== cellTerminal.netId) {
+              cellTerminal.netId = groupNetId;
+              changedObjectIds.add(cellTerminal.id);
+            }
           }
           for (const junction of draft.junctions.filter(
             (candidate) => candidate.netId === net.id,
@@ -2771,7 +2907,7 @@ export function executeTransaction(
           ? connectivityEvidenceNetIds(previous)
           : []) {
           if (!connectivityEvidenceNetIds(evidence).includes(netId)) {
-            pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+            deferNetPrune(netId);
           }
         }
         connectivityChanged = true;
@@ -2792,7 +2928,7 @@ export function executeTransaction(
         draft.connectivityEvidence.splice(evidenceIndex, 1);
         changedObjectIds.add(evidence.id);
         for (const netId of affectedNetIds) {
-          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+          deferNetPrune(netId);
         }
         connectivityChanged = true;
         break;
@@ -2943,7 +3079,7 @@ export function executeTransaction(
           }
         }
         changedObjectIds.add(owner.id);
-        pruneUnreachableLocalNet(draft, owner.id, changedObjectIds);
+        deferNetPrune(owner.id);
         connectivityChanged = true;
         break;
       }
@@ -3022,7 +3158,7 @@ export function executeTransaction(
         draft.annotations.splice(index, 1);
         changedObjectIds.add(annotation.id);
         for (const netId of ownerNetIds) {
-          pruneUnreachableLocalNet(draft, netId, changedObjectIds);
+          deferNetPrune(netId);
         }
         if (ownerNetIds.length > 0) connectivityChanged = true;
         break;
@@ -3262,8 +3398,19 @@ export function executeTransaction(
     document,
     draft,
     changedObjectIds,
+    deferNetPrune,
   );
   connectivityChanged ||= invalidatedBulkDefault;
+  const netCountBeforeDeferredPrune = draft.nets.length;
+  const evidenceCountBeforeDeferredPrune = draft.connectivityEvidence.length;
+  for (const netId of deferredNetPruneIds) {
+    pruneUnreachableLocalNet(draft, netId, changedObjectIds, {
+      protectedEvidenceIds,
+    });
+  }
+  connectivityChanged ||=
+    draft.nets.length !== netCountBeforeDeferredPrune ||
+    draft.connectivityEvidence.length !== evidenceCountBeforeDeferredPrune;
 
   const introducedNetContractIssue = validateLogicalNetContract(draft).find(
     (issue) =>

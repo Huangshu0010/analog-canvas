@@ -16,13 +16,11 @@ import {
 
 /**
  * A tile is 40px wide, so its label is an abbreviation — "Cap", "Res", "NPN".
- * Interface Pin and Net Label shorten to "Pin" and "Net"; the full name and
- * the line explaining the difference travel in the tooltip and the Insert
- * dialog, where there is room to read them.
+ * Cell Pins shorten to "Pin"; the full name remains in the tooltip and Insert
+ * dialog, where there is room to read it.
  */
 const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   capacitor: "Cap",
-  "cell-pin": "Pin",
   "closed-switch": "Closed",
   "current-source": "I Src",
   "ideal-switch": "Open",
@@ -41,8 +39,8 @@ const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   "xnor-gate": "XNOR",
   "xor-gate": "XOR",
   pnp: "PNP",
-  port: "Net",
-  "port-filled": "Net \u2022",
+  port: "Pin",
+  "port-filled": "Pin \u2022",
   resistor: "Res",
   "variable-capacitor": "Var Cap",
   "variable-inductor": "Var Ind",
@@ -77,23 +75,6 @@ export function quickPlaceRequest(
       netName: "VDD",
     };
   }
-  // ADR 0034 keeps both Port roles explicit. The Library entry carries that
-  // choice, so placement starts immediately and the generated name is edited
-  // on the canvas instead of in a setup dialog.
-  if (symbolId === "cell-pin") {
-    return {
-      kind: "symbol",
-      symbolId: "port",
-      symbolName: symbol.name,
-      parameters: {},
-      initialRotation: 0,
-      showReference: false,
-      referenceText: null,
-      showValue: false,
-      portRole: "cell-terminal",
-      portDirection: "passive",
-    };
-  }
   if (symbolId === "port" || symbolId === "port-filled") {
     return {
       kind: "symbol",
@@ -104,7 +85,7 @@ export function quickPlaceRequest(
       showReference: false,
       referenceText: null,
       showValue: false,
-      portRole: "net-port",
+      portDirection: "passive",
     };
   }
   return {

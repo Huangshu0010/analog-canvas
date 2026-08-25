@@ -1061,7 +1061,9 @@ export function useSelectionInteraction(
     );
     const edits = [...proposal.edits, ...orientationEdits];
     const editsCellInterface = edits.some(
-      (edit) => edit.kind === "update_cell_terminal",
+      (edit) =>
+        edit.kind === "add_cell_terminal" ||
+        edit.kind === "update_cell_terminal",
     );
     let result: TransactionResult;
     if (editsCellInterface) {
@@ -1078,10 +1080,7 @@ export function useSelectionInteraction(
         options.setStatus(gate.message);
         result = { ok: false, revision: options.document.revision };
       } else {
-        result = options.transactProjectDocument(
-          "copy-formal-port-marker",
-          gate.edits,
-        );
+        result = options.transactProjectDocument("copy-cell-pin", gate.edits);
       }
     } else {
       result = transactConnectivity("connect_without_wire", edits, proposal, {

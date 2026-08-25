@@ -245,7 +245,7 @@ export function resolveEditorShortcut(
     return { kind: "run-command", command: { id: "insert.open" } };
   }
   if (plain && key === "p") {
-    return { kind: "run-command", command: { id: "insert.free-net-port" } };
+    return { kind: "run-command", command: { id: "insert.cell-pin" } };
   }
   if (plain && key === "r") {
     if (event.shiftKey) {

@@ -77,10 +77,8 @@ export function resolveAnnotationText(
           ((evidence.owner.kind === "net-label" &&
             evidence.owner.annotationId === annotation.id) ||
             (annotation.anchor.kind === "object" &&
-              ((evidence.owner.kind === "free-port" &&
-                evidence.owner.instanceId === annotation.anchor.objectId) ||
-                (evidence.owner.kind === "power-marker" &&
-                  evidence.owner.objectId === annotation.anchor.objectId)))),
+              evidence.owner.kind === "power-marker" &&
+              evidence.owner.objectId === annotation.anchor.objectId)),
       );
       const logicalName = resolveDocumentLogicalNets(document).byBaseNetId.get(
         binding.netId,

@@ -33,7 +33,7 @@ describe("Project Connectivity Index logical aliases", () => {
         kind: "name-claim",
         netId: "net-a",
         name: "BIAS",
-        owner: { kind: "free-port", instanceId: "P1" },
+        owner: { kind: "explicit-net-property" },
         scope: "local",
       },
       {
@@ -41,7 +41,7 @@ describe("Project Connectivity Index logical aliases", () => {
         kind: "name-claim",
         netId: "net-b",
         name: "bias",
-        owner: { kind: "free-port", instanceId: "P2" },
+        owner: { kind: "explicit-net-property" },
         scope: "local",
       },
     );

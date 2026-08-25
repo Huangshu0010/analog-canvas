@@ -60,7 +60,7 @@ function resistorProject(parameters: Record<string, string>) {
 }
 
 describe("current formal cell interface", () => {
-  it("maps formal Cell Port Instances to the ordered exported interface", () => {
+  it("maps formal Cell Pin Instances to the ordered exported interface", () => {
     const project = createEmptyProject("project", "Project");
     const document = project.documents[0]!;
     document.netlist = {
@@ -110,32 +110,6 @@ describe("current formal cell interface", () => {
       "VIN",
       "VOUT",
     ]);
-  });
-
-  it("treats a Free Net Port as a connected non-emitting Net marker", () => {
-    const project = createEmptyProject("project", "Project");
-    const document = project.documents[0]!;
-    document.instances.push({
-      id: "P1",
-      symbolId: "port",
-      placement: null,
-    });
-    document.nets.push({
-      id: "net-vin",
-
-      terminals: [{ instanceId: "P1", pinName: "P" }],
-    });
-    claimNet(document, "net-vin", "VIN");
-
-    const result = analyzeDesignNetlist(project);
-
-    expect(result.diagnostics).toEqual([]);
-    expect(result.ir?.cells[0]?.instances).toEqual([]);
-    expect(result.ir?.cells[0]?.nets).toContainEqual({
-      id: "net-vin",
-      name: "VIN",
-      scope: "local",
-    });
   });
 
   it("exports evidence-equivalent Base Nets as one logical node", () => {
@@ -191,25 +165,6 @@ describe("current formal cell interface", () => {
       { pinName: "1", netName: "BIAS" },
       { pinName: "2", netName: "BIAS" },
     ]);
-  });
-
-  it("blocks an unconnected Free Net Port", () => {
-    const project = createEmptyProject("project", "Project");
-    project.documents[0]!.instances.push({
-      id: "P1",
-      symbolId: "port-filled",
-      placement: null,
-    });
-
-    const result = analyzeDesignNetlist(project);
-
-    expect(result.ir).toBeNull();
-    expect(result.diagnostics).toContainEqual(
-      expect.objectContaining({
-        code: "MISSING_PIN_NET",
-        objectIds: ["P1"],
-      }),
-    );
   });
 
   it("exports explicit NoConnect terminals through deterministic floating nodes", () => {

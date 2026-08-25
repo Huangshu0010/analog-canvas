@@ -370,7 +370,6 @@ describe("routing Edit Engine", () => {
       segmentModes: ["manual"],
       presentation: "power-rail",
     });
-
     const proposal = proposePowerRailEndpointResize(
       document,
       resolver,
@@ -419,6 +418,15 @@ describe("routing Edit Engine", () => {
       waypoints: [],
       segmentModes: ["manual"],
       presentation: "power-rail",
+    });
+    document.connectivityEvidence.push({
+      id: "claim-VDD",
+      kind: "name-claim",
+      netId: "VDD",
+      name: "VDD",
+      owner: { kind: "power-marker", objectId: "vdd-end" },
+      scope: "global",
+      powerDomain: "vdd",
     });
     document.annotations.push({
       id: "label-VDD",
@@ -482,6 +490,9 @@ describe("routing Edit Engine", () => {
     if (!deleted.ok) throw new Error(deleted.error.message);
     expect(deleted.document.annotations).toHaveLength(0);
     expect(deleted.document.routes).toHaveLength(0);
+    expect(deleted.document.junctions).toHaveLength(0);
+    expect(deleted.document.connectivityEvidence).toHaveLength(0);
+    expect(deleted.document.nets).toHaveLength(0);
   });
 
   it("attaches a real terminal to a Route interior and lets both halves follow it", () => {
@@ -2152,16 +2163,6 @@ describe("routing Edit Engine", () => {
 
   it("cuts a fully routed electrical branch and partitions its Net", () => {
     const document = documentFixture();
-    for (const instanceId of ["C", "D"] as const) {
-      document.connectivityEvidence.push({
-        id: `claim-${instanceId.toLowerCase()}`,
-        kind: "name-claim",
-        netId: "net-v",
-        name: instanceId,
-        owner: { kind: "free-port", instanceId },
-        scope: "local",
-      });
-    }
     document.routes = [
       {
         id: "route-v",
@@ -2202,15 +2203,82 @@ describe("routing Edit Engine", () => {
       ),
     ).toEqual([]);
     expect(result.document.sourceStatus).toBe("connectivity-modified");
-    for (const instanceId of ["C", "D"] as const) {
-      const ownerNet = result.document.nets.find((net) =>
-        net.terminals.some((terminal) => terminal.instanceId === instanceId),
-      )?.id;
-      expect(
-        result.document.connectivityEvidence.find(
-          (evidence) => evidence.id === `claim-${instanceId.toLowerCase()}`,
+  });
+
+  it("retargets each Cell Pin interface when a Wire cut partitions its Base Net", () => {
+    const document = createEmptyDocument("cell-pin-cut", "Cell pin cut");
+    document.instances.push(
+      {
+        id: "P1",
+        symbolId: "port",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+      {
+        id: "P2",
+        symbolId: "port",
+        placement: {
+          position: { x: 300, y: 100 },
+          rotation: 180,
+          mirror: "none",
+        },
+      },
+    );
+    document.nets.push({
+      id: "net-interface",
+      terminals: [
+        { instanceId: "P1", pinName: "P" },
+        { instanceId: "P2", pinName: "P" },
+      ],
+    });
+    document.netlist!.terminals.push(
+      {
+        id: "terminal-in",
+        name: "IN",
+        netId: "net-interface",
+        direction: "input",
+        interfaceInstanceIds: ["P1"],
+      },
+      {
+        id: "terminal-out",
+        name: "OUT",
+        netId: "net-interface",
+        direction: "output",
+        interfaceInstanceIds: ["P2"],
+      },
+    );
+    document.routes.push({
+      id: "route-interface",
+      netId: "net-interface",
+      from: { kind: "terminal", instanceId: "P1", pinName: "P" },
+      to: { kind: "terminal", instanceId: "P2", pinName: "P" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        { kind: "cut_connection", routeId: "route-interface" },
+      ]),
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.nets).toHaveLength(2);
+    for (const cellTerminal of result.document.netlist!.terminals) {
+      const markerNet = result.document.nets.find((net) =>
+        net.terminals.some(
+          (terminal) =>
+            cellTerminal.interfaceInstanceIds.includes(terminal.instanceId) &&
+            terminal.pinName === "P",
         ),
-      ).toMatchObject({ netId: ownerNet });
+      );
+      expect(cellTerminal.netId).toBe(markerNet?.id);
     }
   });
 

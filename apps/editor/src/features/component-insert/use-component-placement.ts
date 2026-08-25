@@ -7,11 +7,10 @@ import type {
   WireSource,
 } from "@icm/edit-engine";
 import {
-  planEnsureNamedNet,
   createHierarchyInstance,
   createExternalSubcircuitInstance,
-  planAttachCellPortMarker,
-  planCreateCellPort,
+  planAttachCellPinMarker,
+  planCreateCellPin,
   planPlaceExternalSubcircuitInstance,
   planPlaceCellInstance,
 } from "@icm/edit-engine";
@@ -63,35 +62,16 @@ import type { PendingComponentPlacement } from "../../interaction/interaction-st
 
 type TransactionResult = { ok: boolean; revision: number };
 
-/**
- * A Net Port names a signal, so it starts from the conventional input name
- * rather than a bare ordinal. The first one is plain `Vin`; later ones take
- * the next free ordinal.
- */
-function nextFreePortNetName(document: SchematicDocument): string {
-  const logicalNets = resolveDocumentLogicalNets(document);
+function nextCellPinName(document: SchematicDocument): string {
   const occupiedNames = new Set(
-    document.nets.flatMap((net) =>
-      logicalNets.byBaseNetId.get(net.id)?.name?.trim()
-        ? [logicalNets.byBaseNetId.get(net.id)!.name!.trim().toLowerCase()]
-        : [],
+    (document.netlist?.terminals ?? []).map((terminal) =>
+      terminal.name.trim().toLowerCase(),
     ),
   );
   if (!occupiedNames.has("vin")) return "Vin";
   let ordinal = 2;
   while (occupiedNames.has(`vin${ordinal}`)) ordinal += 1;
   return `Vin${ordinal}`;
-}
-
-function nextFreeCellTerminalName(document: SchematicDocument): string {
-  const occupiedNames = new Set(
-    (document.netlist?.terminals ?? []).map((terminal) =>
-      terminal.name.trim().toLowerCase(),
-    ),
-  );
-  let ordinal = 1;
-  while (occupiedNames.has(`p${ordinal}`)) ordinal += 1;
-  return `P${ordinal}`;
 }
 
 export interface UseComponentPlacementOptions {
@@ -469,13 +449,13 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     );
   };
 
-  const placeNewCellPort = (
+  const placeNewCellPin = (
     symbolId: "port" | "port-filled",
     position: Point,
     placementRequest: PendingComponentPlacement,
   ): void => {
     const id = nextInstanceDesignator(options.document, symbolId);
-    if (placementRequest.kind !== "cell-port" || !placementRequest.direction)
+    if (placementRequest.kind !== "cell-pin" || !placementRequest.direction)
       return;
     const instance = {
       id,
@@ -486,13 +466,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         mirror: options.componentPlacementMirror,
       },
     };
-    const annotations = defaultInstanceDisplayAnnotations(
-      options.document,
-      instance,
-      options.resolver,
-      options.styleProfile,
-      { formalTerminalId: `terminal-${id.toLowerCase()}` },
-    );
     const contact = proposePlacementContact(
       options.document,
       options.resolver,
@@ -513,26 +486,22 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
           connectedNet.id,
         )
       : undefined;
-    const terminalOnConnectedNet = connectedLogicalNet
-      ? options.document.netlist?.terminals.find((terminal) =>
-          connectedLogicalNet.baseNetIds.includes(terminal.netId),
-        )
-      : undefined;
-    // Placement never blocks on naming: an unnamed Cell Pin takes the first
-    // free ordinal terminal name and is renamed on the canvas like any other
-    // bound display.
+    const occupiedTerminalNames = new Set(
+      (options.document.netlist?.terminals ?? []).map((terminal) =>
+        terminal.name.toLowerCase(),
+      ),
+    );
+    const connectedName = connectedLogicalNet?.name?.trim();
     const formalName =
       placementRequest.portName?.trim() ||
-      terminalOnConnectedNet?.name ||
-      connectedLogicalNet?.name?.trim() ||
-      nextFreeCellTerminalName(options.document);
-    // Repeating an interface name places another marker for the terminal that
-    // already owns it rather than a second terminal, so the same pin can be
-    // drawn wherever it is needed on the sheet.
+      (connectedName && !occupiedTerminalNames.has(connectedName.toLowerCase())
+        ? connectedName
+        : undefined) ||
+      nextCellPinName(options.document);
     const existingTerminal = options.document.netlist?.terminals.find(
       (terminal) => terminal.name.toLowerCase() === formalName.toLowerCase(),
     );
-    const baseNetId = `net-cell-port-${id.toLowerCase()}`;
+    const baseNetId = `net-cell-pin-${id.toLowerCase()}`;
     let netId = contact.netId ?? baseNetId;
     let netSuffix = 2;
     while (
@@ -563,18 +532,28 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
             },
           ]),
     ];
+    const annotations = defaultInstanceDisplayAnnotations(
+      options.document,
+      instance,
+      options.resolver,
+      options.styleProfile,
+      {
+        formalTerminalId:
+          existingTerminal?.id ?? `terminal-${id.toLowerCase()}`,
+      },
+    );
     const annotation = annotations[0] ? { ...annotations[0] } : undefined;
     const committed = options.transactProject(
-      "place-cell-port",
+      "place-cell-pin",
       existingTerminal
-        ? planAttachCellPortMarker(options.project, options.document.id, {
+        ? planAttachCellPinMarker(options.project, options.document.id, {
             instance,
             connectionEdits,
             terminalId: existingTerminal.id,
             markerNetId: netId,
             ...(annotation ? { annotation } : {}),
           })
-        : planCreateCellPort(options.project, options.document.id, {
+        : planCreateCellPin(options.project, options.document.id, {
             instance,
             connectionEdits,
             terminal: {
@@ -592,137 +571,8 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     options.setComponentPreviewPoint(position);
     options.setStatus(
       existingTerminal
-        ? `Added another marker for Cell port ${formalName} · click to place another · Esc exits`
-        : `Added Cell port ${formalName} · click to place another · Esc exits`,
-    );
-  };
-
-  const placeNewNetPort = (
-    symbolId: "port" | "port-filled",
-    position: Point,
-    placementRequest: PendingComponentPlacement,
-  ): void => {
-    if (placementRequest.kind !== "net-port") return;
-    const id = nextInstanceDesignator(options.document, symbolId);
-    const instance = {
-      id,
-      symbolId,
-      placement: {
-        position,
-        rotation: options.componentPlacementRotation,
-        mirror: options.componentPlacementMirror,
-      },
-    };
-    const contact = proposePlacementContact(
-      options.document,
-      options.resolver,
-      instance,
-      options.visibleEndpoints,
-    );
-    if (contact.rejected || contact.ambiguous) {
-      options.setStatus(
-        contact.rejected ?? "Port overlaps multiple Nets; choose one contact",
-      );
-      return;
-    }
-    const connectedNet = contact.netId
-      ? options.document.nets.find((net) => net.id === contact.netId)
-      : undefined;
-    const name =
-      placementRequest.portName?.trim() ||
-      (connectedNet
-        ? resolveDocumentLogicalNets(options.document)
-            .byBaseNetId.get(connectedNet.id)
-            ?.name?.trim()
-        : undefined) ||
-      nextFreePortNetName(options.document);
-    const baseNetId = `net-port-${id.toLowerCase()}`;
-    let candidateNetId = contact.netId ?? baseNetId;
-    let netSuffix = 2;
-    while (
-      !contact.netId &&
-      options.document.nets.some(
-        (net) => net.id.toLowerCase() === candidateNetId,
-      )
-    ) {
-      candidateNetId = `${baseNetId}-${netSuffix}`;
-      netSuffix += 1;
-    }
-    // The contact planner can reserve a Net that does not exist yet. Model
-    // that pending candidate before asking the name-first planner whether an
-    // existing same-name Net should absorb it.
-    const namedNetDocument = structuredClone(options.document);
-    if (!namedNetDocument.nets.some((net) => net.id === candidateNetId)) {
-      namedNetDocument.nets.push({
-        id: candidateNetId,
-        terminals: [],
-      });
-    }
-    const namedNetPlan = planEnsureNamedNet(namedNetDocument, {
-      candidateNetId,
-      name,
-      evidenceId: deriveStableId(
-        "connectivity-evidence",
-        options.document.id,
-        "free-port",
-        candidateNetId,
-        id,
-      ),
-      owner: { kind: "free-port", instanceId: id },
-    });
-    if (!namedNetPlan.ok) {
-      options.setStatus(namedNetPlan.message);
-      return;
-    }
-    const netId = namedNetPlan.netId;
-    const label = defaultInstanceDisplayAnnotations(
-      options.document,
-      instance,
-      options.resolver,
-      options.styleProfile,
-    )[0];
-    if (!label) {
-      options.setStatus("Port style has no label placement");
-      return;
-    }
-    const edits: SchematicEdit[] = [
-      { kind: "add_instance", instance },
-      ...contact.edits,
-      ...(contact.matched
-        ? []
-        : [
-            {
-              kind: "connect_endpoints" as const,
-              from: {
-                kind: "terminal" as const,
-                instanceId: id,
-                pinName: "P",
-              },
-              to: {
-                kind: "terminal" as const,
-                instanceId: id,
-                pinName: "P",
-              },
-              newNetId: candidateNetId,
-            },
-          ]),
-      ...namedNetPlan.edits,
-      {
-        kind: "upsert_schematic_annotation",
-        annotation: {
-          ...label,
-          kind: "net-label",
-          binding: { kind: "net-name", netId },
-          netId,
-        },
-      },
-    ];
-    const result = options.transact(edits);
-    if (!result.ok) return;
-    options.selectOnly("instance", [id]);
-    options.setComponentPreviewPoint(position);
-    options.setStatus(
-      `Added Free Net Port ${name} · click to place another · Esc exits`,
+        ? `Added another marker for Cell Pin ${formalName} · click to place another · Esc exits`
+        : `Added Cell Pin ${formalName} · click to place another · Esc exits`,
     );
   };
 
@@ -821,28 +671,17 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     const pendingRequest: PendingComponentPlacement =
       request.kind === "symbol" &&
       (request.symbolId === "port" || request.symbolId === "port-filled")
-        ? request.portRole === "cell-terminal"
-          ? {
-              kind: "cell-port",
-              symbolId: request.symbolId,
-              parameters: {},
-              initialRotation: request.initialRotation,
-              showReference: false,
-              referenceText: null,
-              showValue: false,
-              direction: request.portDirection ?? "passive",
-              ...(request.portName ? { portName: request.portName } : {}),
-            }
-          : {
-              kind: "net-port",
-              symbolId: request.symbolId,
-              parameters: {},
-              initialRotation: request.initialRotation,
-              showReference: false,
-              referenceText: null,
-              showValue: false,
-              ...(request.portName ? { portName: request.portName } : {}),
-            }
+        ? {
+            kind: "cell-pin",
+            symbolId: request.symbolId,
+            parameters: {},
+            initialRotation: request.initialRotation,
+            showReference: false,
+            referenceText: null,
+            showValue: false,
+            direction: request.portDirection ?? "passive",
+            ...(request.portName ? { portName: request.portName } : {}),
+          }
         : request;
     options.beginComponentPlacement(pendingRequest);
     options.setStatus(
@@ -911,14 +750,8 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     if (options.pendingComponentPlacement.kind === "retained-instance") {
       const instanceId = options.pendingComponentPlacement.instanceId;
       if (instanceId) placeRetainedInstance(instanceId, point);
-    } else if (options.pendingComponentPlacement.kind === "cell-port") {
-      placeNewCellPort(
-        options.pendingSymbolId as "port" | "port-filled",
-        point,
-        options.pendingComponentPlacement,
-      );
-    } else if (options.pendingComponentPlacement.kind === "net-port") {
-      placeNewNetPort(
+    } else if (options.pendingComponentPlacement.kind === "cell-pin") {
+      placeNewCellPin(
         options.pendingSymbolId as "port" | "port-filled",
         point,
         options.pendingComponentPlacement,
