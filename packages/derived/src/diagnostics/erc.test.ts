@@ -507,6 +507,42 @@ describe("ERC engine", () => {
     expect(codes(project)).not.toContain("ERC_MISSING_MODEL");
   });
 
+  it("reports a missing X-call master separately from a missing device model", () => {
+    const project = emptyProject();
+    const document = project.documents[0]!;
+    document.instances = [
+      {
+        ...instance("I1"),
+        netlist: {
+          reference: "XI1",
+          binding: {
+            kind: "external-subcircuit",
+            definitionId: "external-missing",
+          },
+          parameters: {},
+        },
+        importProvenance: {
+          kind: "opaque",
+          name: "missing_external_master",
+          sourceTarget: "external-subcircuit:missing_external_master",
+          status: "missing",
+        },
+      },
+    ];
+    document.nets = [
+      {
+        id: "net-1",
+        terminals: [
+          { instanceId: "I1", pinName: "L" },
+          { instanceId: "I1", pinName: "R" },
+        ],
+      },
+    ];
+
+    expect(codes(project)).toContain("ERC_MISSING_EXTERNAL_MASTER");
+    expect(codes(project)).not.toContain("ERC_MISSING_MODEL");
+  });
+
   it("diagnoses only persisted imported pin facts that drift from a symbol", () => {
     const project = emptyProject();
     const document = project.documents[0]!;

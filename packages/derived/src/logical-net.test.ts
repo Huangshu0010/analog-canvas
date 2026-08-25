@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { resolveDocumentLogicalNets } from "./logical-net.js";
 
 describe("resolved logical Nets", () => {
-  it("unions scoped names, source identity, and explicit equivalence deterministically", () => {
+  it("keeps source provenance non-electrical while resolving explicit identity deterministically", () => {
     const document = createEmptyDocument("document", "Document");
     document.nets.push(
       { id: "net-d", terminals: [] },
@@ -52,14 +52,20 @@ describe("resolved logical Nets", () => {
     expect(resolved.groups).toEqual([
       expect.objectContaining({
         id: "net-a",
-        baseNetIds: ["net-a", "net-b", "net-c", "net-d"],
+        baseNetIds: ["net-a", "net-b"],
         name: "Bias",
         scope: "local",
         sourceNetIds: ["source-shared"],
         conflicts: [],
       }),
+      expect.objectContaining({
+        id: "net-c",
+        baseNetIds: ["net-c", "net-d"],
+        sourceNetIds: ["source-shared"],
+        conflicts: [],
+      }),
     ]);
-    expect(resolved.byBaseNetId.get("net-d")?.id).toBe("net-a");
+    expect(resolved.byBaseNetId.get("net-d")?.id).toBe("net-c");
   });
 
   it("keeps conflicting explicit equivalence inspectable without choosing a name", () => {

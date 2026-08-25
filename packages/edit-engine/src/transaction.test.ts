@@ -979,6 +979,12 @@ describe("Edit Transaction envelope", () => {
     );
     document.connectivityEvidence.push(
       {
+        id: "source-target",
+        kind: "spice-source",
+        netId: "net-target",
+        sourceNetId: "spice-source",
+      },
+      {
         id: "claim-source",
         kind: "name-claim",
         netId: "net-source",
@@ -1017,17 +1023,31 @@ describe("Edit Transaction envelope", () => {
 
     expect(result).toMatchObject({
       ok: true,
-      document: {
-        connectivityEvidence: [
-          { id: "claim-source", netId: "net-target" },
-          { id: "source-origin", netId: "net-target" },
-          {
-            id: "equivalence-retained",
-            memberNetIds: ["net-target", "net-peer"],
-          },
-        ],
-      },
     });
+    if (!result.ok) return;
+    expect(result.document.connectivityEvidence).toEqual(
+      expect.arrayContaining([
+        {
+          id: "source-target",
+          kind: "spice-source",
+          netId: "net-target",
+          sourceNetId: "spice-source",
+        },
+        expect.objectContaining({ id: "claim-source", netId: "net-target" }),
+        expect.objectContaining({
+          id: "equivalence-retained",
+          memberNetIds: ["net-target", "net-peer"],
+        }),
+      ]),
+    );
+    expect(
+      result.document.connectivityEvidence.filter(
+        (evidence) =>
+          evidence.kind === "spice-source" &&
+          evidence.netId === "net-target" &&
+          evidence.sourceNetId === "spice-source",
+      ),
+    ).toHaveLength(1);
   });
 
   it("upserts and removes explicit Connectivity Evidence with final-Net GC", () => {

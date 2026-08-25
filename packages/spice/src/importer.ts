@@ -513,9 +513,12 @@ function bindImportedChildDocuments(documents: readonly SchematicDocument[]): {
         ...referencedInstance,
         importProvenance: {
           ...instance.importProvenance,
-          status: childDocumentId
-            ? ("resolved" as const)
-            : ("missing" as const),
+          status:
+            childDocumentId ||
+            (isImportedExternal &&
+              Boolean(instance.importProvenance?.symbolMappingRegistryId))
+              ? ("resolved" as const)
+              : ("missing" as const),
         } as NonNullable<Instance["importProvenance"]>,
         netlist: instance.netlist
           ? {

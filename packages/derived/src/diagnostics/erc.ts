@@ -83,15 +83,23 @@ export function runErcChecks(
     // ERC_UNRESOLVED_SYMBOL and hierarchy interface checks. These run before
     // pin connectivity checks so unknown symbols never get silently skipped.
     for (const instance of document.instances) {
+      const missingExternalMaster =
+        instance.netlist?.binding?.kind === "external-subcircuit" ||
+        instance.netlist?.binding?.kind === "unresolved-subcircuit";
       if (instance.importProvenance?.status === "missing") {
+        const code = missingExternalMaster
+          ? "ERC_MISSING_EXTERNAL_MASTER"
+          : "ERC_MISSING_MODEL";
         diagnostics.push({
-          id: `erc:missing-model:${document.id}:${instance.id}`,
+          id: `erc:${missingExternalMaster ? "missing-external-master" : "missing-model"}:${document.id}:${instance.id}`,
           domain: "erc",
-          code: "ERC_MISSING_MODEL",
+          code,
           severity: "error",
           confidence: "high",
           gateEligible: true,
-          message: `Instance ${instance.id} binding ${instance.importProvenance.kind}:${instance.importProvenance.name} is missing`,
+          message: missingExternalMaster
+            ? `Instance ${instance.id} external master ${instance.importProvenance.name} is missing`
+            : `Instance ${instance.id} binding ${instance.importProvenance.kind}:${instance.importProvenance.name} is missing`,
           primary: directObjectLocator(document.id, "instance", instance.id),
           related: [],
           parameters: {

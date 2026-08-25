@@ -269,7 +269,7 @@ Q2 collector base emitter QPREF
     expect(document.instances[0]!.importProvenance).toMatchObject({
       kind: "opaque",
       name: "sky130_fd_pr__nfet_01v8",
-      status: "missing",
+      status: "resolved",
       sourceTarget: "external-subcircuit:sky130_fd_pr__nfet_01v8",
       symbolMappingRegistryId: "sky130-nfet-four-terminal",
       terminalMapping: [

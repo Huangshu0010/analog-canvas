@@ -147,6 +147,8 @@ function normalizeRoutingGuidance(line: RoutingGuide): RoutingGuide {
   const to = swap ? line.from : line.to;
   const fromPoint = swap ? line.toPoint : line.fromPoint;
   const toPoint = swap ? line.fromPoint : line.toPoint;
+  const fromNetId = swap ? line.toNetId : line.fromNetId;
+  const toNetId = swap ? line.fromNetId : line.toNetId;
   return {
     id: deriveStableId(
       "routing-guidance",
@@ -155,6 +157,9 @@ function normalizeRoutingGuidance(line: RoutingGuide): RoutingGuide {
       endpointKey(to),
     ),
     netId: line.netId,
+    fromNetId,
+    toNetId,
+    ...(line.sourceNetId ? { sourceNetId: line.sourceNetId } : {}),
     from,
     to,
     fromPoint,
@@ -180,9 +185,12 @@ function buildDocumentIndex(
 
   const routingGuidanceByNet = new Map<string, RoutingGuide[]>();
   for (const line of deriveImportedRoutingGuidance(document, resolver)) {
-    const lines = routingGuidanceByNet.get(line.netId) ?? [];
-    lines.push(normalizeRoutingGuidance(line));
-    routingGuidanceByNet.set(line.netId, lines);
+    const normalized = normalizeRoutingGuidance(line);
+    for (const netId of new Set([line.fromNetId, line.toNetId])) {
+      const lines = routingGuidanceByNet.get(netId) ?? [];
+      lines.push(normalized);
+      routingGuidanceByNet.set(netId, lines);
+    }
   }
 
   const baseRecords = new Map<string, NetConnectivityRecord>();
@@ -214,7 +222,9 @@ function buildDocumentIndex(
       routes: uniqueStrings(records.flatMap((record) => record.routes)),
       junctions: uniqueStrings(records.flatMap((record) => record.junctions)),
       virtualEdges: records.flatMap((record) => record.virtualEdges),
-      routingGuidance: routingGuidanceByNet.get(group.id) ?? [],
+      routingGuidance: uniqueRoutingGuidance(
+        records.flatMap((record) => record.routingGuidance),
+      ),
     };
     logicalNets.set(group.id, aggregate);
     for (const baseNetId of group.baseNetIds) {
@@ -251,6 +261,14 @@ function uniqueEndpoints(values: readonly EndpointRef[]): EndpointRef[] {
     ).values(),
   ].sort((left, right) =>
     endpointKey(left).localeCompare(endpointKey(right), "en"),
+  );
+}
+
+function uniqueRoutingGuidance(
+  values: readonly RoutingGuide[],
+): RoutingGuide[] {
+  return [...new Map(values.map((line) => [line.id, line])).values()].sort(
+    (left, right) => left.id.localeCompare(right.id, "en"),
   );
 }
 

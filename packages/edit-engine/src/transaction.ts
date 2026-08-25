@@ -148,7 +148,17 @@ function retargetConnectivityEvidence(
     }
     retainedEvidence.push(evidence);
   }
-  draft.connectivityEvidence = retainedEvidence;
+  const seenSpiceSources = new Set<string>();
+  draft.connectivityEvidence = retainedEvidence.filter((evidence) => {
+    if (evidence.kind !== "spice-source") return true;
+    const key = `${evidence.netId}\u0000${evidence.sourceNetId}`;
+    if (!seenSpiceSources.has(key)) {
+      seenSpiceSources.add(key);
+      return true;
+    }
+    changedObjectIds.add(evidence.id);
+    return false;
+  });
 }
 
 function connectivityEvidenceNetIds(
@@ -292,6 +302,46 @@ function retargetOwnerEvidenceAfterSplit(
     if (targetNetId && targetNetId !== evidence.netId) {
       evidence.netId = targetNetId;
       changedObjectIds.add(evidence.id);
+    }
+  }
+}
+
+function propagateSpiceSourceEvidenceAfterSplit(
+  draft: SchematicDocument,
+  originalNetId: string,
+  splitNetIds: readonly string[],
+  changedObjectIds: Set<string>,
+): void {
+  const sourceNetIds = draft.connectivityEvidence.flatMap((evidence) =>
+    evidence.kind === "spice-source" && evidence.netId === originalNetId
+      ? [evidence.sourceNetId]
+      : [],
+  );
+  for (const sourceNetId of new Set(sourceNetIds)) {
+    for (const netId of splitNetIds) {
+      if (
+        draft.connectivityEvidence.some(
+          (evidence) =>
+            evidence.kind === "spice-source" &&
+            evidence.netId === netId &&
+            evidence.sourceNetId === sourceNetId,
+        )
+      ) {
+        continue;
+      }
+      const id = deriveStableId(
+        "connectivity-evidence",
+        "spice-source",
+        sourceNetId,
+        netId,
+      );
+      draft.connectivityEvidence.push({
+        id,
+        kind: "spice-source",
+        netId,
+        sourceNetId,
+      });
+      changedObjectIds.add(id);
     }
   }
 }
@@ -2553,6 +2603,12 @@ export function executeTransaction(
             draft,
             net.id,
             netIdByEndpoint,
+            changedObjectIds,
+          );
+          propagateSpiceSourceEvidenceAfterSplit(
+            draft,
+            net.id,
+            [...new Set(netIdByEndpoint.values())],
             changedObjectIds,
           );
           connectivityChanged = true;

@@ -978,7 +978,7 @@ test("keeps Wire active for consecutive independent routes until Escape", async 
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
-test("physically cuts an imported Route and retires detached source guidance", async ({
+test("physically cuts an imported Route and restores source guidance for every detached component", async ({
   page,
 }) => {
   const project = createRoutingDemoProject();
@@ -1020,7 +1020,7 @@ test("physically cuts an imported Route and retires detached source guidance", a
   await expect(page.getByTestId("source-status")).toHaveText(
     "connectivity-modified",
   );
-  await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await expect(page.getByTestId("flightline")).toHaveCount(3);
 });
 
 test("keeps remaining imported flightlines after routing one guided connection", async ({
