@@ -158,6 +158,16 @@ export interface VisualRouteDeletion {
   edits: SchematicEdit[];
 }
 
+export interface VisualRouteDeletionContext {
+  /**
+   * Instance owners removed by the same transaction. Their lifecycle planner
+   * already disconnects every terminal, so route deletion must not append a
+   * second terminal disconnect or MOS bulk reconciliation after the Instance
+   * has gone.
+   */
+  instanceIdsScheduledForDeletion?: readonly string[];
+}
+
 /** The exact edit payload and preview produced by one routed interaction. */
 export interface RouteEditPlan {
   routeId: string;
@@ -562,7 +572,11 @@ export function proposeVisualRouteDeletion(
   document: SchematicDocument,
   routeIds: readonly string[],
   junctionIds: readonly string[],
+  context: VisualRouteDeletionContext = {},
 ): VisualRouteDeletion {
+  const instanceIdsScheduledForDeletion = new Set(
+    context.instanceIdsScheduledForDeletion ?? [],
+  );
   const routesToRemove = new Set(routeIds);
   const junctionsToRemove = new Set(junctionIds);
   let changed = true;
@@ -680,6 +694,10 @@ export function proposeVisualRouteDeletion(
             endpoint,
           ): endpoint is Extract<RouteEndpoint, { kind: "terminal" }> =>
             isMosBulkTerminal(document, endpoint),
+        )
+        .filter(
+          (endpoint) =>
+            !instanceIdsScheduledForDeletion.has(endpoint.instanceId),
         )
         .filter(
           (endpoint) =>
