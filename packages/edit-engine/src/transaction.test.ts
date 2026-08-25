@@ -643,6 +643,112 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
+  it("adopts an imported hidden bulk already connected to the configured default", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: null,
+      sourceRef: {
+        fileId: "main-spi",
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 1, line: 1, column: 2 },
+      },
+    });
+    document.nets.push({
+      id: "net-vss",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+    document.mosBulkDefaults = { nmosNetId: "net-vss" };
+
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [{ kind: "reconcile_mos_bulk", instanceIds: ["M1"] }],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.instances[0]?.mosBulkBinding).toEqual({
+      origin: "cell-default",
+      netId: "net-vss",
+    });
+    expect(result.document.nets[0]?.terminals).toEqual([
+      { instanceId: "M1", pinName: "B" },
+    ]);
+  });
+
+  it("repairs a legacy imported B-only split using shared source provenance", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: null,
+      sourceRef: {
+        fileId: "main-spi",
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 1, line: 1, column: 2 },
+      },
+    });
+    document.nets.push(
+      { id: "net-vss", terminals: [] },
+      {
+        id: "net-split-bulk",
+        terminals: [{ instanceId: "M1", pinName: "B" }],
+      },
+    );
+    document.connectivityEvidence.push(
+      {
+        id: "source-vss",
+        kind: "spice-source",
+        netId: "net-vss",
+        sourceNetId: "source-vss",
+      },
+      {
+        id: "source-vss-split",
+        kind: "spice-source",
+        netId: "net-split-bulk",
+        sourceNetId: "source-vss",
+      },
+    );
+    document.mosBulkDefaults = { nmosNetId: "net-vss" };
+
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [{ kind: "reconcile_mos_bulk", instanceIds: ["M1"] }],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.instances[0]?.mosBulkBinding).toEqual({
+      origin: "cell-default",
+      netId: "net-vss",
+    });
+    expect(result.document.nets).toEqual([
+      {
+        id: "net-vss",
+        terminals: [{ instanceId: "M1", pinName: "B" }],
+      },
+    ]);
+    expect(result.document.connectivityEvidence).toEqual([
+      {
+        id: "source-vss",
+        kind: "spice-source",
+        netId: "net-vss",
+        sourceNetId: "source-vss",
+      },
+    ]);
+  });
+
   it("leaves unconfigured bulk unresolved and permits an explicit connection", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({

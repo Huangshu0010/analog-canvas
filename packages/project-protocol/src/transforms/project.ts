@@ -161,9 +161,9 @@ function migrateDocumentPorts(
 
   let mergedBaseNets = 0;
   const convertedAnnotationIds = new Set<string>();
-  for (const port of ports) {
+  const legacyPortFacts = ports.flatMap((port) => {
     const markerId = stringValue(port.id);
-    if (!markerId || terminalByMarkerId.has(markerId)) continue;
+    if (!markerId || terminalByMarkerId.has(markerId)) return [];
     const markerNet = nets.find((net) => netOwnsPort(net, markerId));
     const markerNetId = markerNet ? stringValue(markerNet.id) : undefined;
     if (!markerNetId) {
@@ -172,11 +172,30 @@ function migrateDocumentPorts(
         `Port ${markerId} must belong to one Base Net`,
       );
     }
-    const name =
-      freePortClaimName(evidence, markerId) ??
-      anchoredAnnotationText(annotations, markerId) ??
-      stringValue(port.schematicReference) ??
-      markerId;
+    return [
+      {
+        port,
+        markerId,
+        markerNetId,
+        explicitName:
+          freePortClaimName(evidence, markerId) ??
+          anchoredAnnotationText(annotations, markerId) ??
+          stringValue(port.schematicReference),
+      },
+    ];
+  });
+  const explicitNamesByNet = new Map<string, Map<string, string>>();
+  for (const fact of legacyPortFacts) {
+    if (!fact.explicitName) continue;
+    const names = explicitNamesByNet.get(fact.markerNetId) ?? new Map();
+    names.set(fact.explicitName.toLowerCase(), fact.explicitName);
+    explicitNamesByNet.set(fact.markerNetId, names);
+  }
+  for (const { port, markerId, markerNetId, explicitName } of legacyPortFacts) {
+    const peerNames = explicitNamesByNet.get(markerNetId);
+    const uniquePeerName =
+      peerNames?.size === 1 ? [...peerNames.values()][0] : undefined;
+    const name = explicitName ?? uniquePeerName ?? markerId;
     let terminal = terminalByName.get(name.toLowerCase());
     if (terminal) {
       const targetNetId = stringValue(terminal.netId)!;

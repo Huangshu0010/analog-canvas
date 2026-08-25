@@ -2452,6 +2452,117 @@ describe("routing Edit Engine", () => {
     expect(result.document.sourceStatus).toBe("connectivity-modified");
   });
 
+  it("keeps a default-bound hidden bulk with the supply authority after an imported Net split", () => {
+    const document = createEmptyDocument("bulk-split", "Bulk Split");
+    document.instances.push(
+      {
+        id: "M1",
+        symbolId: "nmos",
+        symbolVariantId: "textbook-3terminal",
+        placement: {
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          mirror: "none",
+        },
+        mosBulkBinding: { origin: "cell-default", netId: "net-vss" },
+      },
+      {
+        id: "GND1",
+        symbolId: "ground",
+        placement: {
+          position: { x: 200, y: 0 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+      {
+        id: "A",
+        symbolId: "resistor",
+        placement: {
+          position: { x: 400, y: 0 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+      {
+        id: "B",
+        symbolId: "resistor",
+        placement: {
+          position: { x: 600, y: 0 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+    );
+    document.nets.push({
+      id: "net-vss",
+      terminals: [
+        { instanceId: "M1", pinName: "B" },
+        { instanceId: "GND1", pinName: "P" },
+        { instanceId: "A", pinName: "1" },
+        { instanceId: "B", pinName: "1" },
+      ],
+    });
+    document.routes.push({
+      id: "route-a-b",
+      netId: "net-vss",
+      from: { kind: "terminal", instanceId: "A", pinName: "1" },
+      to: { kind: "terminal", instanceId: "B", pinName: "1" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+    document.connectivityEvidence.push(
+      {
+        id: "claim-ground",
+        kind: "name-claim",
+        netId: "net-vss",
+        name: "0",
+        scope: "global",
+        powerDomain: "ground",
+        owner: { kind: "power-marker", objectId: "GND1" },
+      },
+      {
+        id: "source-vss",
+        kind: "spice-source",
+        netId: "net-vss",
+        sourceNetId: "source-vss",
+      },
+    );
+    document.mosBulkDefaults = { nmosNetId: "net-vss" };
+
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        { kind: "cut_connection", routeId: "route-a-b" },
+      ]),
+      context,
+    );
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    const defaultNetId = result.document.mosBulkDefaults?.nmosNetId;
+    const defaultNet = result.document.nets.find(
+      (net) => net.id === defaultNetId,
+    );
+    expect(defaultNet?.terminals).toEqual(
+      expect.arrayContaining([
+        { instanceId: "GND1", pinName: "P" },
+        { instanceId: "M1", pinName: "B" },
+      ]),
+    );
+    expect(
+      result.document.instances.find((instance) => instance.id === "M1")
+        ?.mosBulkBinding,
+    ).toEqual({ origin: "cell-default", netId: defaultNetId });
+    expect(
+      result.document.nets.filter((net) =>
+        net.terminals.some(
+          (item) => item.instanceId === "M1" && item.pinName === "B",
+        ),
+      ),
+    ).toHaveLength(1);
+  });
+
   it("physically splits a global-Net Route instead of hiding the cut behind global Evidence", () => {
     const document = documentFixture();
     const net = document.nets.find((candidate) => candidate.id === "net-v")!;

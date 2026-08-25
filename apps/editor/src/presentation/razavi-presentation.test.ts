@@ -58,6 +58,79 @@ describe("Razavi hidden bulk policy", () => {
     ]);
   });
 
+  it("adopts an imported hidden body already on the configured default at entry", () => {
+    const project = createEmptyProject("project-imported", "Imported");
+    const document = project.documents[0]!;
+    document.instances.push({
+      ...manualMos("XDN", "nmos"),
+      sourceRef: {
+        fileId: "source-spi",
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 1, line: 1, column: 2 },
+      },
+    });
+    document.nets.push({
+      id: "net-vss",
+      terminals: [{ instanceId: "XDN", pinName: "B" }],
+    });
+    document.mosBulkDefaults = { nmosNetId: "net-vss" };
+
+    const prepared = materializeRazaviProjectBulkConnections(project);
+
+    expect(prepared.instanceCount).toBe(1);
+    expect(prepared.project.documents[0]!.instances[0]?.mosBulkBinding).toEqual(
+      { origin: "cell-default", netId: "net-vss" },
+    );
+    expect(prepared.project.documents[0]!.nets[0]?.terminals).toEqual([
+      { instanceId: "XDN", pinName: "B" },
+    ]);
+  });
+
+  it("repairs a detached imported hidden body at the Project entry boundary", () => {
+    const project = createEmptyProject("project-imported", "Imported");
+    const document = project.documents[0]!;
+    document.instances.push({
+      ...manualMos("XDN", "nmos"),
+      sourceRef: {
+        fileId: "source-spi",
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 1, line: 1, column: 2 },
+      },
+    });
+    document.nets.push(
+      { id: "net-vss", terminals: [] },
+      {
+        id: "net-split-bulk",
+        terminals: [{ instanceId: "XDN", pinName: "B" }],
+      },
+    );
+    document.connectivityEvidence.push(
+      {
+        id: "source-vss",
+        kind: "spice-source",
+        netId: "net-vss",
+        sourceNetId: "source-vss",
+      },
+      {
+        id: "source-vss-split",
+        kind: "spice-source",
+        netId: "net-split-bulk",
+        sourceNetId: "source-vss",
+      },
+    );
+    document.mosBulkDefaults = { nmosNetId: "net-vss" };
+
+    const prepared = materializeRazaviProjectBulkConnections(project);
+
+    expect(prepared.instanceCount).toBe(1);
+    expect(prepared.project.documents[0]!.nets).toEqual([
+      {
+        id: "net-vss",
+        terminals: [{ instanceId: "XDN", pinName: "B" }],
+      },
+    ]);
+  });
+
   it("does not infer bulk from an unconfigured VDD Net", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push(manualMos("M4", "pmos"));

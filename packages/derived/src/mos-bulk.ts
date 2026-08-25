@@ -140,6 +140,69 @@ export function resolveMosBulkConnection(
   };
 }
 
+/**
+ * Recognize the narrow legacy failure produced when an imported source Net was
+ * physically split around hidden body terminals. SPICE source Evidence is
+ * provenance, never electrical union; it is used here only as repair evidence
+ * when the detached Net contains MOS B terminals and no authored geometry.
+ */
+export function resolveDetachedMosBulkDefault(
+  document: SchematicDocument,
+  instanceOrId: Instance | string,
+): Net | undefined {
+  const instance =
+    typeof instanceOrId === "string"
+      ? document.instances.find((candidate) => candidate.id === instanceOrId)
+      : instanceOrId;
+  const kind = instance ? mosBulkKind(instance) : undefined;
+  if (!instance || !kind) return undefined;
+  const configuredNetId =
+    kind === "nmos"
+      ? document.mosBulkDefaults?.nmosNetId
+      : document.mosBulkDefaults?.pmosNetId;
+  const configuredNet = configuredNetId
+    ? document.nets.find((net) => net.id === configuredNetId)
+    : undefined;
+  const connectedNet = document.nets.find((net) =>
+    net.terminals.some(
+      (terminal) =>
+        terminal.instanceId === instance.id && terminal.pinName === "B",
+    ),
+  );
+  if (
+    !configuredNet ||
+    !connectedNet ||
+    connectedNet.id === configuredNet.id ||
+    connectedNet.terminals.length === 0 ||
+    connectedNet.terminals.some((terminal) => {
+      if (terminal.pinName !== "B") return true;
+      const peer = document.instances.find(
+        (candidate) => candidate.id === terminal.instanceId,
+      );
+      return !peer || !mosBulkKind(peer);
+    }) ||
+    document.routes.some((route) => route.netId === connectedNet.id) ||
+    document.junctions.some((junction) => junction.netId === connectedNet.id)
+  ) {
+    return undefined;
+  }
+  const sourceIds = (netId: string) =>
+    new Set(
+      document.connectivityEvidence.flatMap((evidence) =>
+        evidence.kind === "spice-source" && evidence.netId === netId
+          ? [evidence.sourceNetId]
+          : [],
+      ),
+    );
+  const connectedSourceIds = sourceIds(connectedNet.id);
+  const configuredSourceIds = sourceIds(configuredNet.id);
+  return [...connectedSourceIds].some((sourceId) =>
+    configuredSourceIds.has(sourceId),
+  )
+    ? configuredNet
+    : undefined;
+}
+
 export function mosBulkShouldBeVisible(
   document: SchematicDocument,
   instanceOrId: Instance | string,
