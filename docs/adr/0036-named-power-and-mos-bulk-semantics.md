@@ -1,6 +1,6 @@
 # ADR 0036: Named Power Nets and Explicit MOS Bulk Policy
 
-Status: accepted; VDD Port Instance portion superseded 2026-08-25
+Status: accepted
 
 Date: 2026-08-21
 
@@ -18,11 +18,9 @@ not authored.
   Same-folded names select the same Net; `VDD`, `AVDD`, and `DVDD` are distinct.
 - `Net.powerDomain` is classification metadata, not identity. Multiple Nets may
   carry `powerDomain: "vdd"`.
-- A Rail named `VDD` creates a Route/Junction projection and an owner-addressed
-  name claim on its Base Net. An explicitly loaded/imported global Net of that
-  name is preserved and may also be reused; authoring does not silently change
-  scope. The former `vdd-port` device Instance has been retired: VDD has no
-  device, pin, or netlist-record representation.
+- A manually placed VDD Port and a Rail named `VDD` create or reuse the same
+  Document-local Net. An explicitly loaded/imported global Net of that name is
+  preserved and may also be reused; authoring does not silently change scope.
 - `add_power_rail` carries `netName`, `scope`, and `powerDomain: "vdd"`.
   Its label is a `net-name` binding, so rendering and later rename share the
   existing RichText/Razavi text system.
@@ -40,11 +38,11 @@ remain the authority.
 
 ## Consequences
 
-The editor can draw any number of same- or differently-named power projections.
-Power Rails with the same name resolve to one Logical Net without physically
-merging their Base Nets, and deleting the last projection allows the ordinary
-orphan-Net lifecycle to remove its unused local Net. Bulk policy is now visible
-configuration rather than an implicit global supply side effect.
+The editor can draw any number of same- or differently-named power projections,
+VDD Port and VDD Rail coexist without duplicate Nets, and deleting the last
+projection allows the ordinary orphan-Net lifecycle to remove its unused local
+Net. Bulk policy is now visible configuration rather than an implicit global
+supply side effect.
 
 ## Non-goals
 

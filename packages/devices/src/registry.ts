@@ -14,6 +14,7 @@ import {
   variableCapacitorDevice,
   variableInductorDevice,
   variableResistorDevice,
+  vddPortDevice,
   voltageSourceDevice,
 } from "./descriptors/index.js";
 import { validateDeviceDescriptors } from "./validation.js";
@@ -56,6 +57,7 @@ export const deviceRegistry = defineDeviceRegistry([
   voltageSourceDevice,
   currentSourceDevice,
   groundDevice,
+  vddPortDevice,
 ]);
 
 export const builtInDeviceDescriptors: readonly DeviceDescriptor[] =

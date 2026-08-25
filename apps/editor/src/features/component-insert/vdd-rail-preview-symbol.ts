@@ -5,9 +5,10 @@ import type { SymbolDefinition } from "@icm/symbols";
  * is deliberately absent from the product Symbol Resolver: it may be rendered
  * in the picker and placement preview, but it can never become an Instance.
  *
- * The drawing previews the sole VDD authoring primitive: a named conductor
- * drawn between two clicks. It is not registered in the product resolver and
- * therefore cannot create a fake device Instance or netlist terminal.
+ * The drawing is a long rail with taps hanging off it, not the single stem
+ * of a supply Port. The two entries do different things — one places a point,
+ * the other draws a conductor between two clicks — so they must not read as
+ * the same tool in the Library.
  */
 export const vddRailPreviewSymbol = {
   schemaVersion: 1,

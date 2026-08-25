@@ -25,6 +25,12 @@ const POWER_CONNECTION_BY_SYMBOL = {
     domain: "ground",
     scope: "global",
   },
+  "vdd-port": {
+    name: "VDD",
+    pinName: "P",
+    domain: "vdd",
+    scope: "global",
+  },
 } as const;
 
 export type SymbolPowerConnection =
@@ -46,6 +52,31 @@ export interface PlacementContactProposal {
   powerNetId?: string;
   powerEndpoint?: RouteEndpoint;
   netId?: string;
+}
+
+function standalonePowerNetId(
+  document: SchematicDocument,
+  instanceId: string,
+): string {
+  const preferred = `net-power-${instanceId.toLowerCase()}`;
+  const occupied = new Set([
+    ...document.instances.map((instance) => instance.id),
+    ...document.nets.map((net) => net.id),
+    ...document.routes.map((route) => route.id),
+    ...document.junctions.map((junction) => junction.id),
+    ...document.noConnects.map((noConnect) => noConnect.id),
+    ...document.annotations.map((annotation) => annotation.id),
+    ...document.connectivityEvidence.map((evidence) => evidence.id),
+    ...document.layoutGroups.map((group) => group.id),
+    ...document.constraints.map((constraint) => constraint.id),
+    ...(document.drafting?.objects.map((object) => object.id) ?? []),
+    ...(document.netlist?.terminals.map((terminal) => terminal.id) ?? []),
+  ]);
+  if (!occupied.has(preferred)) return preferred;
+
+  let suffix = 2;
+  while (occupied.has(`${preferred}-${suffix}`)) suffix += 1;
+  return `${preferred}-${suffix}`;
 }
 
 function newInstanceEndpoints(
@@ -266,7 +297,11 @@ export function proposedStandalonePowerConnection(
     instanceId: instance.id,
     pinName: power.pinName,
   };
-  const netId = `net-power-${instance.id.toLowerCase()}`;
+  // Instance designators are deliberately reusable after deletion, while a
+  // Base Net may remain alive because its wire/Junction topology remains.
+  // Keep those lifetimes independent instead of assuming that VDD2 becoming
+  // available also makes net-power-vdd2 available.
+  const netId = standalonePowerNetId(document, instance.id);
   const plan = planEnsurePowerNet(document, {
     candidateNetId: netId,
     candidateState: "pending-connection",
@@ -304,5 +339,106 @@ export function proposedStandalonePowerConnection(
     ambiguous: false,
     powerNetId: plan.netId,
     powerEndpoint: endpoint,
+  };
+}
+
+/**
+ * Put one supply marker on a supply of its own.
+ *
+ * Every VDD marker joins the Net named VDD, which is right: two markers
+ * carrying the same name are the same supply, and renaming that Net renames
+ * the supply everywhere it is used. What was missing is the other intent —
+ * "this one is a different rail" — because a design routinely carries VDDH
+ * and VDDL, or VDD1 and VDD2, at once.
+ *
+ * So a new name detaches rather than renames: the marker leaves the shared
+ * Net, takes a Net of its own, and claims the new name there. The supply it
+ * left keeps its name and every other marker on it. Naming it back to VDD
+ * rejoins the shared Net by the same rule, because that is what the name
+ * means.
+ */
+export function proposedSupplyPortRename(
+  document: SchematicDocument,
+  instance: Instance,
+  name: string,
+): { edits: SchematicEdit[]; netId?: string; rejected?: string } {
+  const power = powerConnectionForSymbol(instance.symbolId);
+  if (!power) return { edits: [], rejected: "Not a supply marker" };
+  const requested = name.trim();
+  if (!requested) return { edits: [], rejected: "A supply needs a name" };
+
+  const endpoint: RouteEndpoint = {
+    kind: "terminal",
+    instanceId: instance.id,
+    pinName: power.pinName,
+  };
+  // A fresh Net per name, so renaming twice cannot land back on a Net the
+  // marker already left behind.
+  const candidateNetId = deriveStableId(
+    "net",
+    document.id,
+    "power",
+    instance.id,
+    requested.toLowerCase(),
+  );
+  const plan = planEnsurePowerNet(document, {
+    candidateNetId,
+    candidateState: "pending-connection",
+    domain: power.domain,
+    name: requested,
+    scope: power.scope,
+    evidenceId: deriveStableId(
+      "connectivity-evidence",
+      document.id,
+      "power-marker",
+      instance.id,
+      candidateNetId,
+    ),
+    owner: { kind: "power-marker", objectId: instance.id },
+  });
+  if (!plan.ok) return { edits: [], rejected: plan.message };
+
+  // The claim this marker used to make on its old supply has to go, or it
+  // keeps that Net named after a marker that is no longer on it.
+  const staleClaims = document.connectivityEvidence.filter(
+    (evidence) =>
+      evidence.kind === "name-claim" &&
+      evidence.owner.kind === "power-marker" &&
+      evidence.owner.objectId === instance.id,
+  );
+
+  // The marker's own label reads the Net it names. Left pointing at the Net
+  // the marker just left, it resolves to nothing and the label goes blank.
+  const boundLabels = document.annotations.filter(
+    (annotation) =>
+      annotation.binding?.kind === "net-name" &&
+      annotation.anchor.kind === "object" &&
+      annotation.anchor.objectId === instance.id,
+  );
+
+  return {
+    edits: [
+      { kind: "disconnect_endpoint", endpoint },
+      ...staleClaims.map((evidence): SchematicEdit => ({
+        kind: "remove_connectivity_evidence",
+        evidenceId: evidence.id,
+      })),
+      {
+        kind: "connect_endpoints",
+        from: endpoint,
+        to: endpoint,
+        newNetId: candidateNetId,
+      },
+      ...plan.edits,
+      ...boundLabels.map((annotation): SchematicEdit => ({
+        kind: "upsert_schematic_annotation",
+        annotation: {
+          ...annotation,
+          netId: plan.netId,
+          binding: { kind: "net-name", netId: plan.netId },
+        },
+      })),
+    ],
+    netId: plan.netId,
   };
 }

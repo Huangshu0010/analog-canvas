@@ -189,6 +189,12 @@ import {
   constrainedPowerRailEndpoint,
   constructVddRailEdits,
 } from "../features/component-insert/vdd-rail";
+import { vddPowerLabelAnnotation } from "../features/component-insert/vdd-power-label";
+import {
+  powerConnectionForSymbol,
+  proposePlacementContact,
+  proposedStandalonePowerConnection,
+} from "../features/component-insert/placement-connectivity";
 import {
   componentParameters,
   externalMosComponentParameters,
@@ -1234,6 +1240,7 @@ export function App({
     beginDraftingTextEditing,
     beginNetLabelEditing,
     commitInstancePropertyDraft,
+    commitElectricalMarkerName,
     commitNetLabelEditing,
     commitPendingNetLabelDraft,
     commitTextEditing,
@@ -2578,6 +2585,23 @@ export function App({
         (terminal) => terminal.interfaceInstanceId === selectedInstance.id,
       )
     : undefined;
+  // A design routinely carries VDDH and VDDL, or VDD1 and VDD2, at once, so a
+  // supply marker keeps its explicit Global-Net name.
+  const selectedSupplyMarker =
+    selectedInstance?.symbolId === "vdd-port" ? selectedInstance : undefined;
+  const selectedPortNet =
+    selectedInstance && selectedInstance.symbolId === "vdd-port"
+      ? document.nets.find((net) =>
+          net.terminals.some(
+            (terminal) => terminal.instanceId === selectedInstance.id,
+          ),
+        )
+      : undefined;
+  const selectedPortLogicalName = selectedPortNet
+    ? resolveDocumentLogicalNets(document).byBaseNetId.get(selectedPortNet.id)
+        ?.name
+    : undefined;
+
   function commitProjectName(): void {
     const next = (projectNameDraft ?? "").trim();
     setProjectNameDraft(null);
@@ -9075,7 +9099,30 @@ export function App({
                   >
                     <div className="property-section-heading">Identity</div>
                     <dl className="component-readonly-fields">
-                      {!selectedFormalTerminal ? (
+                      {selectedPortNet && !selectedFormalTerminal ? (
+                        <div>
+                          <dt>
+                            {selectedSupplyMarker ? "Supply" : "Net name"}
+                          </dt>
+                          <dd>
+                            <input
+                              key={`${selectedPortNet.id}-${document.revision}-net-port-name`}
+                              aria-label={
+                                selectedSupplyMarker
+                                  ? "Supply name"
+                                  : "Supply Net name"
+                              }
+                              defaultValue={selectedPortLogicalName ?? ""}
+                              onBlur={(event) =>
+                                commitElectricalMarkerName(
+                                  selectedInstance.id,
+                                  event.currentTarget.value,
+                                )
+                              }
+                            />
+                          </dd>
+                        </div>
+                      ) : !selectedFormalTerminal ? (
                         <div>
                           <dt>Schematic label</dt>
                           <dd>

@@ -933,6 +933,28 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
   },
   {
+    symbolId: "vdd-port",
+    name: "VDD Power Port",
+    category: "power",
+    reviewStatus: "reviewed",
+    pinOrder: ["P"],
+    palette: true,
+    automaticMappings: [],
+    assetPath: "vdd-port.symbol.json",
+    assetHash:
+      "4df004c2c020a7d969eca39479393980fc83fec2ecc5901d4ba1667996493320",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/vdd-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/vdd-geometry.json",
+    },
+  },
+  {
     symbolId: "voltage-amplifier",
     name: "Voltage Amplifier",
     category: "analog-block",
@@ -5456,6 +5478,75 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "vdd-port",
+    name: "VDD Power Port",
+    viewBox: {
+      x: -12,
+      y: -2,
+      width: 24,
+      height: 26,
+    },
+    pins: [
+      {
+        name: "P",
+        role: "power",
+        at: {
+          x: 0,
+          y: 20,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 20,
+        },
+        to: {
+          x: 0,
+          y: 1.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -10,
+            y: -0.88,
+          },
+          {
+            x: 10,
+            y: -0.88,
+          },
+          {
+            x: 10,
+            y: 2.36,
+          },
+          {
+            x: -10,
+            y: 2.36,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+      },
+    ],
+    variants: [],
+    labelVisibility: "hidden",
   },
   {
     schemaVersion: 1,

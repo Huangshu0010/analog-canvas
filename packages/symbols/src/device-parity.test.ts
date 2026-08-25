@@ -39,6 +39,15 @@ describe("built-in device/Symbol parity", () => {
     expect(deviceDescriptor("vdd")).toBeUndefined();
   });
 
+  it("defines the VDD power port as a non-emitting Net marker", () => {
+    expect(deviceDescriptor("vdd-port")).toMatchObject({
+      deviceClass: "net-marker",
+      referencePrefix: null,
+      pinOrder: ["P"],
+      targetPolicy: "none",
+    });
+  });
+
   it("leaves unsupported catalog blocks explicit instead of guessing", () => {
     for (const symbolId of [
       "opamp",

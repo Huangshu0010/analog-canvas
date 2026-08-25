@@ -92,11 +92,17 @@ describe("built-in device registry", () => {
     );
   });
 
-  it("keeps the reviewed Ground net marker non-emitting", () => {
+  it("keeps reviewed net markers non-emitting", () => {
     expect(deviceDescriptor("ground")).toMatchObject({
       deviceClass: "net-marker",
       referencePrefix: null,
       pinOrder: ["0"],
+      targetPolicy: "none",
+    });
+    expect(deviceDescriptor("vdd-port")).toMatchObject({
+      deviceClass: "net-marker",
+      referencePrefix: null,
+      pinOrder: ["P"],
       targetPolicy: "none",
     });
   });

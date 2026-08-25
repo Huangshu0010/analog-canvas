@@ -690,6 +690,22 @@ export const agentRazaviAuthoringCatalog = {
       variants: [],
     },
     {
+      symbolId: "vdd-port",
+      name: "VDD Power Port",
+      category: "power",
+      defaultVariantId: null,
+      labelVisibility: "hidden",
+      pins: [
+        {
+          name: "P",
+          role: "power",
+          direction: "south",
+          visibility: "visible",
+        },
+      ],
+      variants: [],
+    },
+    {
       symbolId: "voltage-amplifier",
       name: "Voltage Amplifier",
       category: "analog-block",

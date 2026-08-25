@@ -241,15 +241,21 @@ describe("ERC engine", () => {
     );
   });
 
-  it("reports a Net with conflicting VDD and ground domain claims", () => {
+  it("reports a Net that shorts reviewed VDD and ground symbols", () => {
     const project = emptyProject();
     const document = project.documents[0]!;
-    document.instances = [{ id: "GND1", symbolId: "ground", placement: null }];
+    document.instances = [
+      { id: "VDD1", symbolId: "vdd-port", placement: null },
+      { id: "GND1", symbolId: "ground", placement: null },
+    ];
     document.nets = [
       {
         id: "net-short",
 
-        terminals: [{ instanceId: "GND1", pinName: "0" }],
+        terminals: [
+          { instanceId: "VDD1", pinName: "P" },
+          { instanceId: "GND1", pinName: "0" },
+        ],
       },
     ];
     document.connectivityEvidence = [

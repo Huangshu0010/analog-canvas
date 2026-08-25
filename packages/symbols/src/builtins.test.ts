@@ -34,6 +34,7 @@ const PRODUCT_IDS = [
   "variable-capacitor",
   "variable-inductor",
   "variable-resistor",
+  "vdd-port",
   "voltage-amplifier",
   "voltage-source",
   "xnor-gate",

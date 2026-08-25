@@ -157,9 +157,9 @@ hint/example/help, and display role). Required export fields are derived from
 
 Pin order names canonical Symbol pins. Hidden or implicit pins remain present.
 Canonical MOS ordering is D/G/S/B. Ground is a Net marker that verifies the
-explicit global Logical Net `0` and emits no instance line. A named VDD Power
-Rail is Route/Junction geometry plus a global name claim with
-`powerDomain: vdd`; it has no Instance or device descriptor. Only
+explicit global Logical Net `0` and emits no instance line. A VDD Port is a
+non-emitting global marker claim with `powerDomain: vdd`. A named Power Rail
+uses the same claim and has no Instance. Only
 an explicitly global Net is emitted through the dialect's global declaration.
 Decorative symbols never have a device definition. An unsupported electrical
 Symbol blocks export.

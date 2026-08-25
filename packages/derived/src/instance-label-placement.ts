@@ -84,6 +84,32 @@ function transformedBounds(
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
+/**
+ * Canonical upright Net-name label for the reviewed VDD Port artwork. The
+ * label stays on the world-right side after rotation or mirror, so the glyph
+ * never follows the symbol into its bar or stem.
+ */
+export function defaultVddPowerLabelPlacement(
+  instance: SchematicDocument["instances"][number],
+  resolved: ResolvedSymbol,
+  grid: number,
+): InstanceLabelPlacement | null {
+  if (instance.symbolId !== "vdd-port" || !instance.placement) return null;
+  const bounds = transformedBounds(visibleSymbolInkBounds(resolved), instance);
+  if (!bounds) return null;
+  // Project coordinates are grid-aligned. Reviewed Symbol artwork may use
+  // fractional geometry, so quantize the derived optical centre only at this
+  // persistence boundary instead of leaking off-grid annotation anchors.
+  const projectCoordinate = (value: number) => Math.round(value / grid) * grid;
+  return {
+    position: {
+      x: projectCoordinate(bounds.x + bounds.width + grid / 2),
+      y: projectCoordinate(bounds.y + bounds.height / 2),
+    },
+    alignment: "start",
+  };
+}
+
 export function inferInstanceLabelSide(
   localAnchor: Point,
   localBounds: Rect,

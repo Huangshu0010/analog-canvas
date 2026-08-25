@@ -106,10 +106,16 @@ export function paletteSymbols(_styleProfileId: string): SymbolDefinition[] {
 
 /**
  * Reach order inside a category. Alphabetical order separated devices that are
- * used together — notably NMOS from PMOS — so the frequently placed group
- * leads and the rest keep alphabetical order after it.
+ * used together — NMOS from PMOS, the supply Port from its Rail — so the
+ * frequently placed pair leads and the rest keep alphabetical order after it.
  */
-const SYMBOL_ORDER: readonly string[] = ["nmos", "pmos", "vdd", "ground"];
+const SYMBOL_ORDER: readonly string[] = [
+  "nmos",
+  "pmos",
+  "vdd-port",
+  "vdd",
+  "ground",
+];
 
 function symbolRank(symbolId: string): number {
   const index = SYMBOL_ORDER.indexOf(symbolId);

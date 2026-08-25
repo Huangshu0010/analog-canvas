@@ -100,9 +100,10 @@ describe("reach order inside a category", () => {
         .find((group) => group.category === category)!
         .symbols.map((symbol) => symbol.id);
 
-    // Alphabetical order separated NMOS from PMOS with a bipolar between them.
+    // Alphabetical order separated NMOS from PMOS with a bipolar between them,
+    // and the supply Port from its Rail.
     expect(ids("Transistors").slice(0, 2)).toEqual(["nmos", "pmos"]);
     const power = ids("Power and Ports");
-    expect(power.filter((id) => id === "vdd")).toEqual(["vdd"]);
+    expect(power.indexOf("vdd-port")).toBeLessThan(power.indexOf("vdd"));
   });
 });
