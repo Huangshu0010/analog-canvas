@@ -666,20 +666,6 @@
           "symbolId": "resistor"
         },
         {
-          "id": "VDD4",
-          "netlist": {
-            "binding": {
-              "deviceClass": "net-marker",
-              "kind": "primitive"
-            },
-            "parameters": {},
-            "reference": "PWR1"
-          },
-          "placement": null,
-          "schematicReference": "PWR1",
-          "symbolId": "vdd-port"
-        },
-        {
           "id": "GND5",
           "netlist": {
             "binding": {
@@ -800,32 +786,9 @@
           },
           "schematicReference": "V1",
           "symbolId": "voltage-source"
-        },
-        {
-          "id": "VDD7",
-          "netlist": {
-            "binding": {
-              "deviceClass": "net-marker",
-              "kind": "primitive"
-            },
-            "parameters": {},
-            "reference": "PWR6"
-          },
-          "placement": null,
-          "schematicReference": "PWR6",
-          "symbolId": "vdd-port"
         }
       ],
       "junctions": [
-        {
-          "id": "junction-vdd4-end",
-          "netId": "net-power-vdd7",
-          "position": {
-            "x": 540,
-            "y": 160
-          },
-          "role": "route-anchor"
-        },
         {
           "id": "junction-ui-10",
           "netId": "net-split-1143160ec6fc8d88",
@@ -987,14 +950,6 @@
         {
           "id": "net-power-vdd7",
           "terminals": [
-            {
-              "instanceId": "VDD7",
-              "pinName": "P"
-            },
-            {
-              "instanceId": "VDD4",
-              "pinName": "P"
-            },
             {
               "instanceId": "R3",
               "pinName": "1"

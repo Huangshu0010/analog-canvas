@@ -1154,7 +1154,7 @@ test("opens named full-width Project examples from the toolbar", async ({
   );
   await canvas.click({ position: { x: 520, y: 320 } });
   await expect(page.getByTestId("status")).toContainText(
-    "Copied 12 components",
+    "Copied 10 components",
   );
   await page.keyboard.press("Escape");
   // The example joined the drawing: the resistor that was already there stays.

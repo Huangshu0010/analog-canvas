@@ -60,6 +60,23 @@ describe("bundled Library Project examples", () => {
     }
   });
 
+  it("ships only visible instances and models VDD through rail geometry", () => {
+    for (const example of libraryProjectExamples) {
+      for (const document of example.project.documents) {
+        expect(
+          document.instances.filter((instance) => !instance.placement),
+          `${example.id}:${document.id}:unplaced instances`,
+        ).toEqual([]);
+        expect(
+          document.instances.filter(
+            (instance) => instance.symbolId === "vdd-port",
+          ),
+          `${example.id}:${document.id}:legacy VDD instances`,
+        ).toEqual([]);
+      }
+    }
+  });
+
   it("upgrades stored VDD rails into current Logical-Net power semantics", () => {
     for (const example of libraryProjectExamples) {
       for (const document of example.project.documents) {
