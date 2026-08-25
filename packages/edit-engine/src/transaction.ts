@@ -24,6 +24,8 @@ import {
   endpointKey,
   isMosBulkRoute,
   logicalNetContractIssueKey,
+  mosBulkKind,
+  resolveDetachedMosBulkDefault,
   resolveDocumentLogicalNets,
   resolveEndpointConnection,
   resolveMosBulkConnection,
@@ -561,6 +563,162 @@ function revokeInvalidatedSupplyBulkDefaults(
   ) {
     delete draft.mosBulkDefaults;
   }
+  return changed;
+}
+
+function implicitBulkPresentation(
+  instance: SchematicDocument["instances"][number],
+  resolver: SymbolResolver | undefined,
+): boolean {
+  const resolved = resolver?.resolve(
+    instance.symbolId,
+    instance.symbolVariantId,
+  );
+  return Boolean(
+    resolved?.variant?.hiddenPinNames.includes("B") ||
+    resolved?.definition.pins.find((pin) => pin.name === "B")?.presentation
+      .visibility === "implicit",
+  );
+}
+
+/**
+ * A materialized cell-default body is policy-owned, not route-owned.  Route
+ * splitting may temporarily place its terminal on a detached Base Net, but it
+ * must converge back to the currently configured default before validation.
+ * An explicit disconnect first removes mosBulkBinding, so explicit four-pin
+ * body editing remains outside this invariant.
+ */
+function reconcileMaterializedMosBulkBindings(
+  draft: SchematicDocument,
+  changedObjectIds: Set<string>,
+  deferNetPrune: (netId: string) => void,
+): boolean {
+  let changed = false;
+  for (const instance of draft.instances) {
+    if (instance.mosBulkBinding?.origin !== "cell-default") continue;
+    const kind = mosBulkKind(instance);
+    const targetNetId =
+      kind === "nmos"
+        ? draft.mosBulkDefaults?.nmosNetId
+        : kind === "pmos"
+          ? draft.mosBulkDefaults?.pmosNetId
+          : undefined;
+    const currentNets = draft.nets.filter((net) =>
+      net.terminals.some(
+        (terminal) =>
+          terminal.instanceId === instance.id && terminal.pinName === "B",
+      ),
+    );
+    const target = targetNetId
+      ? draft.nets.find((net) => net.id === targetNetId)
+      : undefined;
+
+    if (!target) {
+      for (const net of currentNets) {
+        net.terminals = net.terminals.filter(
+          (terminal) =>
+            terminal.instanceId !== instance.id || terminal.pinName !== "B",
+        );
+        changedObjectIds.add(net.id);
+        deferNetPrune(net.id);
+      }
+      delete instance.mosBulkBinding;
+      changedObjectIds.add(instance.id);
+      changed = true;
+      continue;
+    }
+
+    for (const net of currentNets) {
+      if (net.id === target.id) continue;
+      net.terminals = net.terminals.filter(
+        (terminal) =>
+          terminal.instanceId !== instance.id || terminal.pinName !== "B",
+      );
+      changedObjectIds.add(net.id);
+      deferNetPrune(net.id);
+      changed = true;
+    }
+    if (
+      !target.terminals.some(
+        (terminal) =>
+          terminal.instanceId === instance.id && terminal.pinName === "B",
+      )
+    ) {
+      target.terminals.push({ instanceId: instance.id, pinName: "B" });
+      changedObjectIds.add(target.id);
+      changed = true;
+    }
+    if (instance.mosBulkBinding.netId !== target.id) {
+      instance.mosBulkBinding.netId = target.id;
+      changedObjectIds.add(instance.id);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+interface BulkDefaultIdentity {
+  name?: string;
+  scope?: "local" | "global";
+  powerDomain?: "ground" | "vdd";
+}
+
+function retargetMosBulkDefaultsAfterSplit(
+  draft: SchematicDocument,
+  originalNetId: string,
+  splitNetIds: readonly string[],
+  identity: BulkDefaultIdentity | undefined,
+  changedObjectIds: Set<string>,
+): boolean {
+  if (!identity || (!identity.name && !identity.powerDomain)) return false;
+  const resolution = resolveDocumentLogicalNets(draft);
+  const matchingGroups = [
+    ...new Map(
+      splitNetIds.flatMap((netId) => {
+        const group = resolution.byBaseNetId.get(netId);
+        if (!group) return [];
+        if (
+          identity.name &&
+          (!group.name ||
+            foldNetName(group.name) !== foldNetName(identity.name))
+        ) {
+          return [];
+        }
+        if (identity.scope && group.scope !== identity.scope) return [];
+        if (
+          identity.powerDomain &&
+          group.powerDomain !== identity.powerDomain
+        ) {
+          return [];
+        }
+        return [[group.id, group] as const];
+      }),
+    ).values(),
+  ];
+  if (matchingGroups.length !== 1) return false;
+
+  const matchingBaseNetIds = matchingGroups[0]!.baseNetIds
+    .filter((netId) => splitNetIds.includes(netId))
+    .sort((left, right) => left.localeCompare(right, "en"));
+  const targetNetId = matchingBaseNetIds[0];
+  if (!targetNetId) return false;
+
+  let changed = false;
+  if (
+    draft.mosBulkDefaults?.nmosNetId === originalNetId &&
+    targetNetId !== originalNetId
+  ) {
+    draft.mosBulkDefaults.nmosNetId = targetNetId;
+    changed = true;
+  }
+  if (
+    draft.mosBulkDefaults?.pmosNetId === originalNetId &&
+    targetNetId !== originalNetId
+  ) {
+    draft.mosBulkDefaults.pmosNetId = targetNetId;
+    changed = true;
+  }
+  if (changed) changedObjectIds.add(draft.id);
   return changed;
 }
 
@@ -2405,6 +2563,26 @@ export function executeTransaction(
             `Route Net does not exist: ${route.netId}`,
           );
         }
+        const bulkDefaultBeforeCut =
+          draft.mosBulkDefaults?.nmosNetId === net.id ||
+          draft.mosBulkDefaults?.pmosNetId === net.id
+            ? resolveDocumentLogicalNets(draft).byBaseNetId.get(net.id)
+            : undefined;
+        const bulkDefaultIdentity: BulkDefaultIdentity | undefined =
+          bulkDefaultBeforeCut
+            ? {
+                ...(bulkDefaultBeforeCut.name
+                  ? { name: bulkDefaultBeforeCut.name }
+                  : {}),
+                ...(bulkDefaultBeforeCut.scope
+                  ? { scope: bulkDefaultBeforeCut.scope }
+                  : {}),
+                ...(bulkDefaultBeforeCut.powerDomain === "ground" ||
+                bulkDefaultBeforeCut.powerDomain === "vdd"
+                  ? { powerDomain: bulkDefaultBeforeCut.powerDomain }
+                  : {}),
+              }
+            : undefined;
         const candidateOrphanJunctionIds = new Set(
           [route.from, route.to].flatMap((endpoint) =>
             endpoint.kind === "junction" ? [endpoint.junctionId] : [],
@@ -2609,6 +2787,13 @@ export function executeTransaction(
             draft,
             net.id,
             [...new Set(netIdByEndpoint.values())],
+            changedObjectIds,
+          );
+          retargetMosBulkDefaultsAfterSplit(
+            draft,
+            net.id,
+            [...new Set(netIdByEndpoint.values())],
+            bulkDefaultIdentity,
             changedObjectIds,
           );
           connectivityChanged = true;
@@ -3016,6 +3201,84 @@ export function executeTransaction(
         const selected = edit.instanceIds ? new Set(edit.instanceIds) : null;
         for (const instance of draft.instances) {
           if (selected && !selected.has(instance.id)) continue;
+          const kind = mosBulkKind(instance);
+          if (!kind) continue;
+          const configuredNetId =
+            kind === "nmos"
+              ? draft.mosBulkDefaults?.nmosNetId
+              : draft.mosBulkDefaults?.pmosNetId;
+          const configuredNet = configuredNetId
+            ? draft.nets.find((net) => net.id === configuredNetId)
+            : undefined;
+          const connectedNet = draft.nets.find((net) =>
+            net.terminals.some(
+              (terminal) =>
+                terminal.instanceId === instance.id && terminal.pinName === "B",
+            ),
+          );
+
+          // Imported four-node MOS data already carries a real B terminal.
+          // When the three-terminal presentation hides that terminal and it
+          // is already on the explicitly configured default, adopt the policy
+          // binding instead of leaving an order-sensitive "explicit" orphan.
+          if (
+            configuredNet &&
+            connectedNet?.id === configuredNet.id &&
+            implicitBulkPresentation(instance, resolver)
+          ) {
+            if (
+              instance.mosBulkBinding?.origin !== "cell-default" ||
+              instance.mosBulkBinding.netId !== configuredNet.id
+            ) {
+              instance.mosBulkBinding = {
+                origin: "cell-default",
+                netId: configuredNet.id,
+              };
+              changedObjectIds.add(instance.id);
+            }
+            continue;
+          }
+
+          // Older imported projects may already contain the failure this
+          // invariant prevents: a hidden B-only split Net and the configured
+          // default retain the same SPICE source provenance. Provenance is not
+          // electrical union, but here it is unambiguous repair evidence.
+          if (
+            configuredNet &&
+            connectedNet &&
+            connectedNet.id !== configuredNet.id &&
+            implicitBulkPresentation(instance, resolver) &&
+            resolveDetachedMosBulkDefault(draft, instance)?.id ===
+              configuredNet.id
+          ) {
+            connectedNet.terminals = connectedNet.terminals.filter(
+              (terminal) =>
+                terminal.instanceId !== instance.id || terminal.pinName !== "B",
+            );
+            if (
+              !configuredNet.terminals.some(
+                (terminal) =>
+                  terminal.instanceId === instance.id &&
+                  terminal.pinName === "B",
+              )
+            ) {
+              configuredNet.terminals.push({
+                instanceId: instance.id,
+                pinName: "B",
+              });
+            }
+            instance.mosBulkBinding = {
+              origin: "cell-default",
+              netId: configuredNet.id,
+            };
+            changedObjectIds.add(instance.id);
+            changedObjectIds.add(connectedNet.id);
+            changedObjectIds.add(configuredNet.id);
+            deferNetPrune(connectedNet.id);
+            connectivityChanged = true;
+            continue;
+          }
+
           const resolution = resolveMosBulkConnection(draft, instance);
           if (
             !resolution ||
@@ -3454,6 +3717,12 @@ export function executeTransaction(
     deferNetPrune,
   );
   connectivityChanged ||= invalidatedBulkDefault;
+  const reconciledBulkBinding = reconcileMaterializedMosBulkBindings(
+    draft,
+    changedObjectIds,
+    deferNetPrune,
+  );
+  connectivityChanged ||= reconciledBulkBinding;
   const netCountBeforeDeferredPrune = draft.nets.length;
   const evidenceCountBeforeDeferredPrune = draft.connectivityEvidence.length;
   for (const netId of deferredNetPruneIds) {

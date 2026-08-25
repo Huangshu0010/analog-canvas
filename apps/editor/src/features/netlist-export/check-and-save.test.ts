@@ -125,4 +125,17 @@ describe("check-time MOS bulk defaults", () => {
     expect(plan.edits).toEqual([]);
     expect(plan.ambiguous).toEqual({ nmos: false, pmos: false });
   });
+
+  it("reconciles an imported hidden body already on the configured default", () => {
+    const plan = planCheckBulkDefaults(
+      documentWith({
+        nets: [{ id: "n-gnd", powerDomain: "ground" }],
+        instances: [{ id: "M1", symbolId: "nmos", bound: true }],
+        defaults: { nmosNetId: "n-gnd" },
+      }),
+    );
+
+    expect(plan.edits).toEqual([{ kind: "reconcile_mos_bulk" }]);
+    expect(plan.ambiguous).toEqual({ nmos: false, pmos: false });
+  });
 });

@@ -148,11 +148,6 @@ export function createEndpointConnectivityClassifier(
             ?.role.toLowerCase() !== "bulk"
         );
       });
-      const sourceBacked = Boolean(
-        assessment.baseNetId &&
-        logicalResolution.byBaseNetId.get(assessment.baseNetId)?.sourceNetIds
-          .length,
-      );
       return {
         ...assessment,
         peerEndpoints: externalPeers,
@@ -163,7 +158,6 @@ export function createEndpointConnectivityClassifier(
             : "singleton",
         electricallySatisfied:
           configuredDefault ||
-          sourceBacked ||
           externalPeers.length > 0 ||
           assessment.intent.explicitNoConnect ||
           assessment.intent.formalBoundary ||

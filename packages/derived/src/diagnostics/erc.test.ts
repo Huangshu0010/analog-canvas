@@ -330,6 +330,29 @@ describe("ERC engine", () => {
     ).toHaveLength(2);
   });
 
+  it("does not treat SPICE source provenance as an electrical bulk connection", () => {
+    const project = emptyProject();
+    const document = project.documents[0]!;
+    document.instances = [roleInstance("three-terminal")];
+    connectDrainAndSource(project);
+    document.nets.push({
+      id: "net-source-bulk",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+    document.connectivityEvidence.push({
+      id: "source-bulk",
+      kind: "spice-source",
+      netId: "net-source-bulk",
+      sourceNetId: "source-vss",
+    });
+
+    expect(
+      roleRun(project).filter(
+        (diagnostic) => diagnostic.code === "ERC_BULK_UNRESOLVED",
+      ),
+    ).toHaveLength(1);
+  });
+
   it("flags two instances sharing a normalized netlist reference", () => {
     const project = emptyProject();
     project.documents[0]!.instances = [

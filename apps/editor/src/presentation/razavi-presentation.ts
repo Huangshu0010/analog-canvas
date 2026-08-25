@@ -1,5 +1,9 @@
 import { executeTransaction, type SchematicEdit } from "@icm/edit-engine";
-import { mosBulkShouldBeVisible, resolveMosBulkConnection } from "@icm/derived";
+import {
+  mosBulkShouldBeVisible,
+  resolveDetachedMosBulkDefault,
+  resolveMosBulkConnection,
+} from "@icm/derived";
 import { replaceProjectDocument } from "../document/editor-session";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
 import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
@@ -35,10 +39,21 @@ export function razaviManualBulkConnectionEdits(
   const instanceIds = instances
     .filter((instance) => {
       const resolution = resolveMosBulkConnection(document, instance);
+      const configuredNetId =
+        instance.symbolId === "nmos"
+          ? document.mosBulkDefaults?.nmosNetId
+          : instance.symbolId === "pmos"
+            ? document.mosBulkDefaults?.pmosNetId
+            : undefined;
       return Boolean(
         resolution &&
-        !resolution.materialized &&
-        resolution.status === "cell-default",
+        ((!resolution.materialized && resolution.status === "cell-default") ||
+          (resolution.materialized &&
+            resolution.status === "explicit" &&
+            configuredNetId &&
+            (configuredNetId === resolution.net.id ||
+              resolveDetachedMosBulkDefault(document, instance)?.id ===
+                configuredNetId))),
       );
     })
     .map((instance) => instance.id);

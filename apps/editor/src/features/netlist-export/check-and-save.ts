@@ -1,6 +1,7 @@
 import type { SchematicEdit } from "@icm/edit-engine";
 import {
   resolveDocumentLogicalNets,
+  resolveDetachedMosBulkDefault,
   resolveMosBulkConnection,
 } from "@icm/derived";
 import type { SchematicDocument } from "@icm/model";
@@ -51,15 +52,25 @@ function pendingDefaultCount(
   document: SchematicDocument,
   symbolId: "nmos" | "pmos",
 ): number {
+  const configuredNetId =
+    symbolId === "nmos"
+      ? document.mosBulkDefaults?.nmosNetId
+      : document.mosBulkDefaults?.pmosNetId;
   return document.instances.filter((instance) => {
     if (instance.symbolId !== symbolId || instance.placement === null)
       return false;
     const resolution = resolveMosBulkConnection(document, instance);
     return Boolean(
       resolution &&
-      !resolution.materialized &&
-      (resolution.status === "cell-default" ||
-        resolution.status === "supply-default"),
+      ((!resolution.materialized &&
+        (resolution.status === "cell-default" ||
+          resolution.status === "supply-default")) ||
+        (resolution.materialized &&
+          resolution.status === "explicit" &&
+          configuredNetId &&
+          (resolution.net.id === configuredNetId ||
+            resolveDetachedMosBulkDefault(document, instance)?.id ===
+              configuredNetId))),
     );
   }).length;
 }
