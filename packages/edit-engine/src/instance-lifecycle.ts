@@ -1,4 +1,4 @@
-import { endpointKey, resolveEndpointPoint } from "@icm/derived";
+import { endpointKey, resolveEndpointConnection } from "@icm/derived";
 import type { RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -133,7 +133,10 @@ function planRoutedEndpointDetachment(
   matches: (endpoint: { instanceId: string; pinName: string }) => boolean,
   sequence: number,
 ): SchematicEdit[] {
-  const replacements = new Map<string, RouteEndpoint>();
+  const replacements = new Map<
+    string,
+    { endpoint: RouteEndpoint; gridLanding: { x: number; y: number } }
+  >();
   const junctionEdits: SchematicEdit[] = [];
   const occupiedIds = new Set(
     [
@@ -161,8 +164,12 @@ function planRoutedEndpointDetachment(
       );
       if (!usedByRoute) continue;
 
-      const position = resolveEndpointPoint(document, resolver, endpoint);
-      if (!position) {
+      const connection = resolveEndpointConnection(
+        document,
+        resolver,
+        endpoint,
+      );
+      if (!connection) {
         throw new Error(`Cannot preserve unresolved endpoint ${key}`);
       }
       let junctionId: string;
@@ -171,20 +178,43 @@ function planRoutedEndpointDetachment(
         junctionId = `junction-lifecycle-${sequence}-${junctionCounter}`;
       } while (occupiedIds.has(junctionId));
       occupiedIds.add(junctionId);
-      replacements.set(key, { kind: "junction", junctionId });
+      replacements.set(key, {
+        endpoint: { kind: "junction", junctionId },
+        gridLanding: connection.gridLanding,
+      });
       junctionEdits.push({
         kind: "add_junction",
         junctionId,
         netId: net.id,
-        position,
+        position: connection.gridLanding,
       });
     }
   }
 
   const routeEdits = document.routes.flatMap((route): SchematicEdit[] => {
-    const from = replacements.get(endpointKey(route.from)) ?? route.from;
-    const to = replacements.get(endpointKey(route.to)) ?? route.to;
-    if (from === route.from && to === route.to) return [];
+    const fromReplacement = replacements.get(endpointKey(route.from));
+    const toReplacement = replacements.get(endpointKey(route.to));
+    if (!fromReplacement && !toReplacement) return [];
+    const from = fromReplacement?.endpoint ?? route.from;
+    const to = toReplacement?.endpoint ?? route.to;
+    const waypoints = route.waypoints.map((point) => ({ ...point }));
+    const segmentModes = [...route.segmentModes];
+    if (
+      fromReplacement &&
+      waypoints[0]?.x === fromReplacement.gridLanding.x &&
+      waypoints[0]?.y === fromReplacement.gridLanding.y
+    ) {
+      waypoints.shift();
+      segmentModes.shift();
+    }
+    if (
+      toReplacement &&
+      waypoints.at(-1)?.x === toReplacement.gridLanding.x &&
+      waypoints.at(-1)?.y === toReplacement.gridLanding.y
+    ) {
+      waypoints.pop();
+      segmentModes.pop();
+    }
     return [
       {
         kind: "set_route_points",
@@ -192,8 +222,8 @@ function planRoutedEndpointDetachment(
         netId: route.netId,
         from,
         to,
-        waypoints: route.waypoints.map((point) => ({ ...point })),
-        segmentModes: [...route.segmentModes],
+        waypoints,
+        segmentModes,
         ...(route.presentation ? { presentation: route.presentation } : {}),
       },
     ];

@@ -17,7 +17,13 @@ function source(
 ): WireSource {
   return {
     endpoint,
-    point,
+    connection: {
+      endpoint,
+      contactPoint: point,
+      gridLanding: point,
+      escapePath: [],
+      outward: null,
+    },
     netId,
     preludeEdits: [],
     ...(routePresentation ? { routePresentation } : {}),
@@ -25,6 +31,51 @@ function source(
 }
 
 describe("wire editing proposals", () => {
+  it("persists a grid landing and marks only the artwork lead as escape", () => {
+    const endpoint = {
+      kind: "terminal" as const,
+      instanceId: "M1",
+      pinName: "B",
+    };
+    const from: WireSource = {
+      endpoint,
+      netId: null,
+      preludeEdits: [],
+      routePresentation: "bulk-dashed",
+      connection: {
+        endpoint,
+        contactPoint: { x: 96, y: 100 },
+        gridLanding: { x: 100, y: 100 },
+        escapePath: [
+          { x: 96, y: 100 },
+          { x: 100, y: 100 },
+        ],
+        outward: { x: 1, y: 0 },
+      },
+    };
+    const to = createFreeWireAnchor({ x: 180, y: 140 }, "net-bulk", true, 31);
+    const proposal = proposeWireCommit(from, to, [], 32);
+    const route = proposal.edits.find(
+      (edit) => edit.kind === "set_route_points",
+    );
+
+    expect(route).toMatchObject({
+      kind: "set_route_points",
+      waypoints: [
+        { x: 100, y: 100 },
+        { x: 180, y: 100 },
+      ],
+      segmentModes: ["escape", "manual", "manual"],
+      presentation: "bulk-dashed",
+    });
+    expect(
+      route?.kind === "set_route_points" &&
+        route.waypoints.every(
+          (point) => point.x % 10 === 0 && point.y % 10 === 0,
+        ),
+    ).toBe(true);
+  });
+
   it("orders anchor preludes before merging existing nets", () => {
     const from = createFreeWireAnchor({ x: 0, y: 0 }, "net-a", false, 3);
     const to = createFreeWireAnchor({ x: 40, y: 0 }, "net-b", false, 4);

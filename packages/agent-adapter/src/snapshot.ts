@@ -1,6 +1,7 @@
 import {
   electricalTopologyHash,
   resolveDocumentLogicalNets,
+  resolveEndpointConnection,
   resolveMosBulkConnection,
   resolveDraftingObjectGeometry,
   resolveDocumentRoutingGeometry,
@@ -280,26 +281,42 @@ function documentSnapshot(
         bounds: placedInstanceBounds(document, instance.id, resolver),
         pins: [...pinByName.entries()]
           .sort(([left], [right]) => left.localeCompare(right, "en"))
-          .map(([name, pin]) => ({
-            name,
-            role: pin?.role ?? null,
-            direction: pin?.direction ?? null,
-            visibility: pin
-              ? hidden.has(name)
-                ? ("conditional" as const)
-                : pin.presentation.visibility
-              : ("unknown" as const),
-            localPosition: pin ? { ...pin.at } : null,
-            pagePosition:
-              pin && instance.placement
-                ? transformPoint(
-                    pin.at,
-                    instance.placement.position,
-                    instance.placement,
-                  )
+          .map(([name, pin]) => {
+            const effectivePin =
+              resolved?.variant?.auxiliaryPins?.find(
+                (candidate) => candidate.name === name,
+              ) ?? pin;
+            const connection = resolveEndpointConnection(document, resolver, {
+              kind: "terminal",
+              instanceId: instance.id,
+              pinName: name,
+            });
+            return {
+              name,
+              role: pin?.role ?? null,
+              direction: effectivePin?.direction ?? null,
+              visibility: pin
+                ? hidden.has(name)
+                  ? ("conditional" as const)
+                  : pin.presentation.visibility
+                : ("unknown" as const),
+              localPosition: effectivePin ? { ...effectivePin.at } : null,
+              connection: connection
+                ? {
+                    contactPoint: { ...connection.contactPoint },
+                    gridLanding: { ...connection.gridLanding },
+                    escapePath: connection.escapePath.map((point) => ({
+                      ...point,
+                    })),
+                    outward: connection.outward
+                      ? { ...connection.outward }
+                      : null,
+                  }
                 : null,
-            netId: terminalNetByKey.get(`${instance.id}\u0000${name}`) ?? null,
-          })),
+              netId:
+                terminalNetByKey.get(`${instance.id}\u0000${name}`) ?? null,
+            };
+          }),
         ...(mosBulk
           ? {
               mosBulk: {

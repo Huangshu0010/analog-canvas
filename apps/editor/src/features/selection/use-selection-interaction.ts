@@ -909,6 +909,7 @@ export function useSelectionInteraction(
         options.document,
         [...initialRouteIds],
         [...selectedJunctionIds],
+        { instanceIdsScheduledForDeletion: options.selectedIds },
       );
       try {
         const instanceEdits =

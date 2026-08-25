@@ -25,6 +25,22 @@ function geometry(
           : ("bend" as const),
     })),
     endpointJoins: [],
+    endpointConnections: {
+      from: {
+        endpoint: { kind: "junction", junctionId: "from" },
+        contactPoint: points[0]!,
+        gridLanding: points[0]!,
+        escapePath: [],
+        outward: null,
+      },
+      to: {
+        endpoint: { kind: "junction", junctionId: "to" },
+        contactPoint: points.at(-1)!,
+        gridLanding: points.at(-1)!,
+        escapePath: [],
+        outward: null,
+      },
+    },
   };
 }
 

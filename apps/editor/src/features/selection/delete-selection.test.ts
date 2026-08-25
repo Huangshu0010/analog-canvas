@@ -199,6 +199,74 @@ describe("connected instance deletion", () => {
       },
     });
   });
+
+  it("deletes a MOS and its selected bulk route without scheduling bulk cleanup twice", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+    });
+    document.nets.push({
+      id: "net-body",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+    document.junctions.push({
+      id: "junction-body",
+      netId: "net-body",
+      position: { x: 180, y: 100 },
+    });
+    document.routes.push({
+      id: "route-body",
+      netId: "net-body",
+      from: { kind: "terminal", instanceId: "M1", pinName: "B" },
+      to: { kind: "junction", junctionId: "junction-body" },
+      waypoints: [{ x: 100, y: 100 }],
+      segmentModes: ["escape", "manual"],
+      presentation: "bulk-dashed",
+    });
+
+    const edits = proposeVisualSelectionDeletion(
+      document,
+      resolver,
+      {
+        instanceIds: ["M1"],
+        routeIds: ["route-body"],
+        junctionIds: ["junction-body"],
+        annotationIds: [],
+        draftingIds: [],
+      },
+      1,
+    );
+    expect(edits).not.toContainEqual({
+      kind: "reconcile_mos_bulk",
+      instanceIds: ["M1"],
+    });
+
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "delete-mos-and-bulk-route",
+        documentId: document.id,
+        expectedRevision: 0,
+        actor: { kind: "human", id: "test" },
+        edits,
+      },
+      { symbolResolver: resolver },
+    );
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.document).toMatchObject({
+      instances: [],
+      nets: [],
+      routes: [],
+      junctions: [],
+    });
+  });
 });
 
 function documentWithJunctionRoute() {

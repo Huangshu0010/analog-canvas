@@ -6,8 +6,7 @@ import type {
 } from "@icm/model";
 import {
   polylineSatisfiesConstraint,
-  resolveEndpointOutwardDirection,
-  resolveEndpointPoint,
+  resolveEndpointConnection,
 } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -237,10 +236,10 @@ export function applyInstancesRouteFollow(
       originalRoute,
     );
     const newFrom = route
-      ? resolveEndpointPoint(draft, resolver, route.from)
+      ? resolveEndpointConnection(draft, resolver, route.from)
       : null;
     const newTo = route
-      ? resolveEndpointPoint(draft, resolver, route.to)
+      ? resolveEndpointConnection(draft, resolver, route.to)
       : null;
     if (!route || !original || !newFrom || !newTo) continue;
 
@@ -254,8 +253,8 @@ export function applyInstancesRouteFollow(
           modes,
           "from",
           original.points[0]!,
-          newFrom,
-          resolveEndpointOutwardDirection(draft, resolver, route.from),
+          newFrom.contactPoint,
+          newFrom.outward,
         );
       }
       if (movesTo) {
@@ -265,8 +264,8 @@ export function applyInstancesRouteFollow(
           modes,
           "to",
           original.points.at(-1)!,
-          newTo,
-          resolveEndpointOutwardDirection(draft, resolver, route.to),
+          newTo.contactPoint,
+          newTo.outward,
         );
       }
     } catch {
@@ -277,15 +276,19 @@ export function applyInstancesRouteFollow(
       continue;
     }
 
-    if (points.length === 2 && newFrom.x !== newTo.x && newFrom.y !== newTo.y) {
+    if (
+      points.length === 2 &&
+      newFrom.contactPoint.x !== newTo.contactPoint.x &&
+      newFrom.contactPoint.y !== newTo.contactPoint.y
+    ) {
       const originallyVertical =
         original.points[0]!.x === original.points[1]!.x;
       points.splice(
         1,
         0,
         originallyVertical
-          ? { x: newFrom.x, y: newTo.y }
-          : { x: newTo.x, y: newFrom.y },
+          ? { x: newFrom.contactPoint.x, y: newTo.contactPoint.y }
+          : { x: newTo.contactPoint.x, y: newFrom.contactPoint.y },
       );
       const mode = modes[0] ?? "manual";
       modes.splice(0, 1, mode, mode);

@@ -78,6 +78,7 @@ export function proposeVisualSelectionDeletion(
     document,
     selection.routeIds,
     selection.routeIds.length > 0 ? [] : selection.junctionIds,
+    { instanceIdsScheduledForDeletion: selection.instanceIds },
   );
   const instanceEdits =
     selection.instanceIds.length > 0

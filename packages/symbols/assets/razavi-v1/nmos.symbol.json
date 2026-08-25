@@ -238,7 +238,14 @@
             "x": -4,
             "y": 0
           },
-          "direction": "east"
+          "direction": "east",
+          "routing": {
+            "escape": "outward",
+            "preferredLanding": {
+              "x": 0,
+              "y": 0
+            }
+          }
         }
       ],
       "hiddenPrimitiveParts": ["bulk-lead", "source-arrow-host"],

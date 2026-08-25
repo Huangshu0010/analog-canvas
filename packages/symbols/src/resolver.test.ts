@@ -69,6 +69,33 @@ describe("Symbol Resolver boundary", () => {
     expect(hidden.pins.map((pin) => pin.name)).toEqual(["1", "2"]);
   });
 
+  it("rejects a preferred landing outside the pin's outward axis", () => {
+    const result = SymbolDefinitionSchema.safeParse({
+      ...resistor,
+      pins: [
+        {
+          ...resistor.pins[0],
+          routing: {
+            escape: "outward",
+            preferredLanding: { x: 0, y: 10 },
+          },
+        },
+        resistor.pins[1],
+      ],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            message:
+              "Preferred routing landing must lie on the pin's outward axis",
+          }),
+        ]),
+      );
+    }
+  });
+
   it("does not generate a compatibility block for an unknown symbol", () => {
     const resolver = new InMemorySymbolResolver([resistor]);
     expect(resolver.resolve("generic-block-5")).toBeUndefined();

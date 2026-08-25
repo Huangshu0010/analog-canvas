@@ -27,7 +27,7 @@ export function capabilitiesResponse(requestId: string): AgentCircuitResponse {
     ok: true,
     capabilities: {
       apiVersions: ["2.0"],
-      snapshotVersions: ["1.0"],
+      snapshotVersions: ["2.0"],
       operations: ["capabilities", "snapshot", "transact", "render"],
       editKinds: ["add_instance", "move_instance", "connect_endpoints"],
       permissions: {

@@ -75,7 +75,7 @@ import {
   isMosBulkTerminal,
   isSchematicAnnotationVisible,
   isVisibleEndpoint,
-  resolveEndpointPoint,
+  resolveEndpointConnection,
   resolveDraftingObjectGeometry,
   resolveElectricalContactTargets,
   displayableInstanceValue,
@@ -1537,27 +1537,30 @@ export function App({
               pinName: pin.name,
             }),
           )
-          .map((pin): WireSource => {
+          .flatMap((pin): WireSource[] => {
             const endpoint: RouteEndpoint = {
               kind: "terminal",
               instanceId: instance.id,
               pinName: pin.name,
             };
-            return {
+            const connection = resolveEndpointConnection(
+              document,
+              resolver,
               endpoint,
-              netId: endpointNetId(document, endpoint),
-              point:
-                resolveEndpointPoint(document, resolver, endpoint) ??
-                transformPoint(
-                  pin.at,
-                  instance.placement!.position,
-                  instance.placement!,
-                ),
-              preludeEdits: [],
-              ...(isMosBulkTerminal(document, endpoint)
-                ? { routePresentation: "bulk-dashed" as const }
-                : {}),
-            };
+            );
+            return connection
+              ? [
+                  {
+                    endpoint,
+                    connection,
+                    netId: endpointNetId(document, endpoint),
+                    preludeEdits: [],
+                    ...(isMosBulkTerminal(document, endpoint)
+                      ? { routePresentation: "bulk-dashed" as const }
+                      : {}),
+                  },
+                ]
+              : [];
           });
       }),
       ...document.junctions
@@ -1565,12 +1568,27 @@ export function App({
           const role = junction.role ?? "branch";
           return role === "branch" || role === "route-anchor";
         })
-        .map((junction): WireSource => ({
-          endpoint: { kind: "junction", junctionId: junction.id },
-          netId: junction.netId,
-          point: junction.position,
-          preludeEdits: [],
-        })),
+        .flatMap((junction): WireSource[] => {
+          const endpoint: RouteEndpoint = {
+            kind: "junction",
+            junctionId: junction.id,
+          };
+          const connection = resolveEndpointConnection(
+            document,
+            resolver,
+            endpoint,
+          );
+          return connection
+            ? [
+                {
+                  endpoint,
+                  connection,
+                  netId: junction.netId,
+                  preludeEdits: [],
+                },
+              ]
+            : [];
+        }),
     ],
     [document, resolver],
   );
@@ -1580,32 +1598,27 @@ export function App({
         if (!instance.placement || bulkDrawInstanceId !== instance.id) {
           return [];
         }
-        const resolved = resolver.resolve(
-          instance.symbolId,
-          instance.symbolVariantId,
-        );
-        const anchor = resolved?.variant?.auxiliaryPins?.find(
-          (pin) => pin.name === "B",
-        );
-        if (!anchor) return [];
         const endpoint: RouteEndpoint = {
           kind: "terminal",
           instanceId: instance.id,
           pinName: "B",
         };
-        return [
-          {
-            endpoint,
-            netId: endpointNetId(document, endpoint),
-            point: transformPoint(
-              anchor.at,
-              instance.placement.position,
-              instance.placement,
-            ),
-            preludeEdits: [],
-            routePresentation: "bulk-dashed",
-          },
-        ];
+        const connection = resolveEndpointConnection(
+          document,
+          resolver,
+          endpoint,
+        );
+        return connection
+          ? [
+              {
+                endpoint,
+                connection,
+                netId: endpointNetId(document, endpoint),
+                preludeEdits: [],
+                routePresentation: "bulk-dashed",
+              },
+            ]
+          : [];
       }),
     [bulkDrawInstanceId, document, resolver],
   );
@@ -1913,7 +1926,14 @@ export function App({
     wireSource && wirePreviewPoint
       ? compileWireDraft(
           wireSource,
-          { point: wirePreviewPoint },
+          {
+            connection: {
+              contactPoint: wirePreviewPoint,
+              gridLanding: wirePreviewPoint,
+              escapePath: [],
+              outward: null,
+            },
+          },
           wireDraftSteps,
           wireRoutingMode,
           wireCornerOrder,
@@ -2763,35 +2783,15 @@ export function App({
             )?.endpoint
           : undefined;
     if (endpoint) {
-      const point =
-        endpoint.kind === "terminal"
-          ? (() => {
-              const instance = opened.instances.find(
-                (candidate) => candidate.id === endpoint.instanceId,
-              );
-              const resolved = instance
-                ? resolver.resolve(instance.symbolId, instance.symbolVariantId)
-                : undefined;
-              const pin = resolved?.definition.pins.find(
-                (candidate) => candidate.name === endpoint.pinName,
-              );
-              return instance?.placement && pin
-                ? transformPoint(
-                    pin.at,
-                    instance.placement.position,
-                    instance.placement,
-                  )
-                : null;
-            })()
-          : null;
-      if (point) {
+      const connection = resolveEndpointConnection(opened, resolver, endpoint);
+      if (connection) {
         setSelectedEndpoint({
           endpoint,
           netId: endpointNetId(opened, endpoint),
-          point,
+          connection,
           preludeEdits: [],
         });
-        focusPoint(point);
+        focusPoint(connection.contactPoint);
       }
     } else if (locator.kind === "instance") {
       const instance = opened.instances.find(
@@ -3991,11 +3991,19 @@ export function App({
     ambiguous?: boolean;
     guides: SnapGuideLine[];
   } {
-    if (suppressSnap) return { point, guides: [] };
+    if (suppressSnap) {
+      return {
+        point: {
+          x: snapCoordinate(point.x, document.presentation.grid),
+          y: snapCoordinate(point.y, document.presentation.grid),
+        },
+        guides: [],
+      };
+    }
     // A wire already under way arrives from its last authored point, so a tap
     // on a conductor can land exactly where that run reaches it.
     const arrival = wireSource
-      ? (wireWaypoints.at(-1) ?? wireSource.point)
+      ? (wireWaypoints.at(-1) ?? wireSource.connection.contactPoint)
       : null;
     const routeTargets = routeGeometryRecords.flatMap(({ route, geometry }) =>
       geometry.centerline.slice(0, -1).map((from, segmentIndex) => ({
@@ -4193,7 +4201,7 @@ export function App({
     if (resolved.endpoint) {
       if (!wireSource) {
         setWireSource(resolved.endpoint, document.revision);
-        setWirePreviewPoint(resolved.endpoint.point);
+        setWirePreviewPoint(resolved.endpoint.connection.contactPoint);
         setWireDraftSteps([]);
       } else if (
         endpointKey(wireSource.endpoint) !==
@@ -4213,7 +4221,7 @@ export function App({
       );
       if (!wireSource) {
         setWireSource(anchor, document.revision);
-        setWirePreviewPoint(anchor.point);
+        setWirePreviewPoint(anchor.connection.contactPoint);
         setWireDraftSteps([]);
       } else {
         commitWire(anchor);
@@ -4590,27 +4598,30 @@ export function App({
                   pinName: pin.name,
                 }),
               )
-              .map((pin): WireSource => {
+              .flatMap((pin): WireSource[] => {
                 const endpoint: RouteEndpoint = {
                   kind: "terminal",
                   instanceId: instance.id,
                   pinName: pin.name,
                 };
-                return {
+                const connection = resolveEndpointConnection(
+                  sourceDocument,
+                  resolver,
                   endpoint,
-                  netId: endpointNetId(sourceDocument, endpoint),
-                  point:
-                    resolveEndpointPoint(sourceDocument, resolver, endpoint) ??
-                    transformPoint(
-                      pin.at,
-                      instance.placement!.position,
-                      instance.placement!,
-                    ),
-                  preludeEdits: [],
-                  ...(isMosBulkTerminal(sourceDocument, endpoint)
-                    ? { routePresentation: "bulk-dashed" as const }
-                    : {}),
-                };
+                );
+                return connection
+                  ? [
+                      {
+                        endpoint,
+                        connection,
+                        netId: endpointNetId(sourceDocument, endpoint),
+                        preludeEdits: [],
+                        ...(isMosBulkTerminal(sourceDocument, endpoint)
+                          ? { routePresentation: "bulk-dashed" as const }
+                          : {}),
+                      },
+                    ]
+                  : [];
               });
           }),
           ...sourceDocument.junctions
@@ -4618,12 +4629,27 @@ export function App({
               const role = junction.role ?? "branch";
               return role === "branch" || role === "route-anchor";
             })
-            .map((junction): WireSource => ({
-              endpoint: { kind: "junction", junctionId: junction.id },
-              netId: junction.netId,
-              point: junction.position,
-              preludeEdits: [],
-            })),
+            .flatMap((junction): WireSource[] => {
+              const endpoint: RouteEndpoint = {
+                kind: "junction",
+                junctionId: junction.id,
+              };
+              const connection = resolveEndpointConnection(
+                sourceDocument,
+                resolver,
+                endpoint,
+              );
+              return connection
+                ? [
+                    {
+                      endpoint,
+                      connection,
+                      netId: junction.netId,
+                      preludeEdits: [],
+                    },
+                  ]
+                : [];
+            }),
         ]
       : visibleEndpoints;
     const sourceRouteGeometryRecords = projectedDocument
@@ -10471,8 +10497,8 @@ export function App({
               if (
                 wireSource &&
                 wireDraftSteps.length === 0 &&
-                wireSource.point.x === resolved.point.x &&
-                wireSource.point.y === resolved.point.y
+                wireSource.connection.contactPoint.x === resolved.point.x &&
+                wireSource.connection.contactPoint.y === resolved.point.y
               ) {
                 completeWire();
                 setStatus("Wire finished · Esc exits");
@@ -10483,8 +10509,8 @@ export function App({
                 wireSource.preludeEdits.some(
                   (edit) => edit.kind === "add_junction" && edit.createNet,
                 ) &&
-                wireSource.point.x === resolved.point.x &&
-                wireSource.point.y === resolved.point.y
+                wireSource.connection.contactPoint.x === resolved.point.x &&
+                wireSource.connection.contactPoint.y === resolved.point.y
               ) {
                 setStatus("Wire finished · Esc exits");
                 completeWire();
@@ -10659,18 +10685,18 @@ export function App({
                     />
                   ))}
                 {highlightedNet.visibleEndpoints.flatMap((endpoint) => {
-                  const point = resolveEndpointPoint(
+                  const connection = resolveEndpointConnection(
                     document,
                     resolver,
                     endpoint,
                   );
-                  if (!point) return [];
+                  if (!connection) return [];
                   return [
                     <circle
                       key={`endpoint:${endpointKey(endpoint)}`}
                       className="net-highlight-endpoint"
-                      cx={point.x}
-                      cy={point.y}
+                      cx={connection.contactPoint.x}
+                      cy={connection.contactPoint.y}
                       r="5.5"
                     />,
                   ];
@@ -11079,8 +11105,8 @@ export function App({
                         ? "endpoint-hit active"
                         : "endpoint-hit"
                     }
-                    cx={candidate.point.x}
-                    cy={candidate.point.y}
+                    cx={candidate.connection.contactPoint.x}
+                    cy={candidate.connection.contactPoint.y}
                     r={4}
                     onClick={(event) => event.stopPropagation()}
                     onContextMenu={(event) => {

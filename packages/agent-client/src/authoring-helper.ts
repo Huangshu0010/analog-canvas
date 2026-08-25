@@ -59,7 +59,10 @@ interface SnapshotInstance {
   symbolId: string;
   pins: readonly {
     name: string;
-    pagePosition: { x: number; y: number } | null;
+    connection: {
+      contactPoint: { x: number; y: number };
+      gridLanding: { x: number; y: number };
+    } | null;
   }[];
   netlist?: {
     reference: string;
@@ -104,7 +107,7 @@ function resolvedDocument(snapshot: AgentSessionSnapshot): ResolvedDocument {
       symbolId: instance.symbolId,
       pins: instance.pins.map((pin) => ({
         name: pin.name,
-        pagePosition: pin.pagePosition,
+        connection: pin.connection,
       })),
       ...(instance.netlist
         ? {
@@ -698,14 +701,14 @@ function compileConnect(
       const pin = instance.pins.find(
         (candidate) => candidate.name === pinSide.pin,
       );
-      if (!pin?.pagePosition) {
+      if (!pin?.connection) {
         throw new ActionCompileError(
           index,
           action.kind,
-          `pin ${pinSide.instance}.${pinSide.pin} has no resolved page position`,
+          `pin ${pinSide.instance}.${pinSide.pin} has no resolved grid landing`,
         );
       }
-      return pin.pagePosition;
+      return pin.connection.gridLanding;
     }
     const geometric = from.kind === "net" ? to : from;
     if (geometric.kind === "point") {
@@ -895,8 +898,11 @@ function compileAddLabel(
       const pin = instance?.pins.find(
         (candidate) => terminal && candidate.name === terminal.pinName,
       );
-      if (pin?.pagePosition) {
-        position = { x: pin.pagePosition.x, y: pin.pagePosition.y - 20 };
+      if (pin?.connection) {
+        position = {
+          x: pin.connection.gridLanding.x,
+          y: pin.connection.gridLanding.y - 20,
+        };
       }
     }
   }

@@ -56,7 +56,7 @@ export function endpointSnapAnchor(source: WireSource): SnapAnchor {
       : source.endpoint.junctionId;
   return {
     id: `endpoint:${source.endpoint.kind}:${endpointId}`,
-    point: source.point,
+    point: source.connection.contactPoint,
     kind: endpointKind(source),
     electrical: {
       kind: "endpoint",

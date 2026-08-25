@@ -1,4 +1,4 @@
-import type { Point, SchematicDocument } from "@icm/model";
+import type { DraftingObject, Point, VisualAnchor } from "@icm/model";
 import { z } from "zod";
 
 import type { SchematicEdit } from "./edit-schema.js";
@@ -18,35 +18,128 @@ export function schemaDiagnostics(
   }));
 }
 
+type LocatedPoint = {
+  point: Point;
+  path: ReadonlyArray<string | number>;
+};
+
+function anchorPoints(
+  anchor: VisualAnchor,
+  path: ReadonlyArray<string | number>,
+): LocatedPoint[] {
+  switch (anchor.kind) {
+    case "free":
+      return [{ point: anchor.position, path: [...path, "position"] }];
+    case "object":
+      return [
+        { point: anchor.localOffset, path: [...path, "localOffset"] },
+        { point: anchor.fallbackPosition, path: [...path, "fallbackPosition"] },
+      ];
+    case "route":
+      return [
+        { point: anchor.fallbackPosition, path: [...path, "fallbackPosition"] },
+      ];
+  }
+}
+
+function draftingPoints(object: DraftingObject): LocatedPoint[] {
+  const points = anchorPoints(object.anchor, ["object", "anchor"]);
+  switch (object.kind) {
+    case "text":
+    case "floating-symbol":
+      return points;
+    case "leader":
+    case "callout":
+      return [...points, ...anchorPoints(object.target, ["object", "target"])];
+    case "arrow":
+      return [
+        ...points,
+        ...anchorPoints(object.from, ["object", "from"]),
+        ...anchorPoints(object.to, ["object", "to"]),
+        ...(object.waypoints ?? []).map((point, index) => ({
+          point,
+          path: ["object", "waypoints", index],
+        })),
+        ...(object.curveControls ?? []).flatMap((point, index) =>
+          point ? [{ point, path: ["object", "curveControls", index] }] : [],
+        ),
+      ];
+    case "construction-line":
+      return [
+        ...points,
+        ...object.points.map((point, index) => ({
+          point,
+          path: ["object", "points", index],
+        })),
+        ...(object.curveControls ?? []).flatMap((point, index) =>
+          point ? [{ point, path: ["object", "curveControls", index] }] : [],
+        ),
+      ];
+    case "rectangle":
+      return [...points, { point: object.center, path: ["object", "center"] }];
+  }
+}
+
+/** Extract only persisted Document-page coordinates from an Edit. */
+export function gridPointsOfEdit(edit: SchematicEdit): LocatedPoint[] {
+  switch (edit.kind) {
+    case "add_instance":
+      return edit.instance.placement
+        ? [
+            {
+              point: edit.instance.placement.position,
+              path: ["instance", "placement", "position"],
+            },
+          ]
+        : [];
+    case "place_instance":
+      return [
+        { point: edit.placement.position, path: ["placement", "position"] },
+      ];
+    case "move_instance":
+    case "move_junction":
+      return [{ point: edit.position, path: ["position"] }];
+    case "set_route_points":
+      return edit.waypoints.map((point, index) => ({
+        point,
+        path: ["waypoints", index],
+      }));
+    case "add_junction":
+      return [{ point: edit.position, path: ["position"] }];
+    case "attach_endpoint_to_route":
+      return [{ point: edit.point, path: ["point"] }];
+    case "add_power_rail":
+      return [
+        { point: edit.start, path: ["start"] },
+        { point: edit.end, path: ["end"] },
+      ];
+    case "upsert_schematic_annotation":
+      return anchorPoints(edit.annotation.anchor, ["annotation", "anchor"]);
+    case "upsert_drafting_object":
+      return draftingPoints(edit.object);
+    default:
+      return [];
+  }
+}
+
 export function gridAlignmentDiagnostics(
-  value: unknown,
+  edit: SchematicEdit,
   grid: number,
-  path: ReadonlyArray<string | number> = [],
 ): EditDiagnostic[] {
-  if (Array.isArray(value)) {
-    return value.flatMap((item, index) =>
-      gridAlignmentDiagnostics(item, grid, [...path, index]),
-    );
-  }
-  if (!value || typeof value !== "object") return [];
-  const record = value as Record<string, unknown>;
-  const diagnostics: EditDiagnostic[] = [];
-  if (typeof record.x === "number" && typeof record.y === "number") {
-    for (const axis of ["x", "y"] as const) {
-      const coordinate = record[axis] as number;
-      if (coordinate % grid === 0) continue;
-      diagnostics.push({
-        code: "GRID_ALIGNMENT",
-        severity: "error",
-        message: `Document page coordinates must align to grid ${grid}`,
-        path: [...path, axis],
-      });
-    }
-  }
-  for (const [key, child] of Object.entries(record)) {
-    diagnostics.push(...gridAlignmentDiagnostics(child, grid, [...path, key]));
-  }
-  return diagnostics;
+  return gridPointsOfEdit(edit).flatMap(({ point, path }) =>
+    (["x", "y"] as const).flatMap((axis) =>
+      point[axis] % grid === 0
+        ? []
+        : [
+            {
+              code: "GRID_ALIGNMENT",
+              severity: "error" as const,
+              message: `Document page coordinates must align to grid ${grid}`,
+              path: [...path, axis],
+            },
+          ],
+    ),
+  );
 }
 
 export function snapPointToDocumentGrid(point: Point, grid: number): Point {

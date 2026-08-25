@@ -31,7 +31,13 @@ describe("editor interaction state", () => {
     const source = {
       endpoint: { kind: "junction" as const, junctionId: "J1" },
       netId: "n1",
-      point: { x: 10, y: 20 },
+      connection: {
+        endpoint: { kind: "junction" as const, junctionId: "J1" },
+        contactPoint: { x: 10, y: 20 },
+        gridLanding: { x: 10, y: 20 },
+        escapePath: [],
+        outward: null,
+      },
       preludeEdits: [],
     };
     let state = activateInteractionTool("wire");
@@ -133,7 +139,13 @@ describe("editor interaction state", () => {
       source: {
         endpoint: { kind: "junction", junctionId: "j1" },
         netId: "n1",
-        point: { x: 10, y: 20 },
+        connection: {
+          endpoint: { kind: "junction", junctionId: "j1" },
+          contactPoint: { x: 10, y: 20 },
+          gridLanding: { x: 10, y: 20 },
+          escapePath: [],
+          outward: null,
+        },
         preludeEdits: [],
       },
       sourceRevision: 7,

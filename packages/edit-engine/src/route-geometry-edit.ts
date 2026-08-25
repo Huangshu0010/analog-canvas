@@ -9,8 +9,9 @@ export interface RouteEditPath {
 }
 
 export interface RoutedEndpointGeometry {
-  point: Point;
-  outward?: Point | null;
+  contactPoint: Point;
+  gridLanding: Point;
+  outward: Point | null;
 }
 
 export interface OrthogonalEscapeRoute {
@@ -111,7 +112,7 @@ export function buildOrthogonalEscapeRoute(
   }
   const snapToConnectionGrid = (value: number) =>
     Math.round(value / connectionGrid) * connectionGrid;
-  const rawPoints: Point[] = [{ ...from.point }];
+  const rawPoints: Point[] = [{ ...from.contactPoint }];
   const rawModes: SegmentMode[] = [];
   const append = (point: Point, mode: SegmentMode) => {
     const previous = rawPoints.at(-1)!;
@@ -120,27 +121,30 @@ export function buildOrthogonalEscapeRoute(
     rawModes.push(mode);
   };
 
-  const fromOutward = from.outward ?? null;
-  const toOutward = to.outward ?? null;
+  const fromOutward = from.outward;
+  const toOutward = to.outward;
+  if (!samePoint(from.contactPoint, from.gridLanding)) {
+    append(from.gridLanding, "escape");
+  }
   const fromEscape = fromOutward
-    ? offsetPoint(from.point, fromOutward, escapeLength)
-    : from.point;
+    ? offsetPoint(from.gridLanding, fromOutward, escapeLength)
+    : from.gridLanding;
   const toEscape = toOutward
-    ? offsetPoint(to.point, toOutward, escapeLength)
-    : to.point;
+    ? offsetPoint(to.gridLanding, toOutward, escapeLength)
+    : to.gridLanding;
   if (fromOutward) append(fromEscape, "escape");
 
   const current = rawPoints.at(-1)!;
   const aligned = current.x === toEscape.x || current.y === toEscape.y;
   const fromWouldReverse =
     fromOutward !== null &&
-    (toEscape.x - from.point.x) * fromOutward.x +
-      (toEscape.y - from.point.y) * fromOutward.y <=
+    (toEscape.x - from.contactPoint.x) * fromOutward.x +
+      (toEscape.y - from.contactPoint.y) * fromOutward.y <=
       0;
   const toWouldReverse =
     toOutward !== null &&
-    (current.x - to.point.x) * toOutward.x +
-      (current.y - to.point.y) * toOutward.y <=
+    (current.x - to.contactPoint.x) * toOutward.x +
+      (current.y - to.contactPoint.y) * toOutward.y <=
       0;
   if (
     fromOutward &&
@@ -189,7 +193,10 @@ export function buildOrthogonalEscapeRoute(
     append(bend, "auto");
   }
   append(toEscape, "auto");
-  if (toOutward) append(to.point, "escape");
+  if (!samePoint(toEscape, to.gridLanding)) append(to.gridLanding, "escape");
+  if (!samePoint(to.gridLanding, to.contactPoint)) {
+    append(to.contactPoint, "escape");
+  }
 
   const normalized = normalizeRouteGeometry(rawPoints, rawModes);
   return {

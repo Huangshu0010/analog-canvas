@@ -185,7 +185,9 @@ Cell/caller summaries are derived data owned by `@icm/derived`.
 - GUI and Agent callers cannot bypass Document validation.
 - Every typed-edit page Point is validated against the target Document grid;
   schema-valid integers that are not grid-aligned reject atomically with their
-  edit path. The Edit Engine never silently snaps an Agent or import payload.
+  edit path. Page points are enumerated by edit kind rather than found by a
+  recursive `{x,y}` scan, so derived and symbol geometry are not mutation
+  coordinates. The Edit Engine never silently snaps an Agent or import payload.
 - Locked annotation and layout-intent records cannot be replaced or removed.
 - Moving or aligning an instance translates its attached annotations by the
   same delta in the same atomic transaction.

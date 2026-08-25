@@ -26,11 +26,11 @@ import {
   derivePowerRailComponent,
   endpointKey,
   isMosBulkTerminal,
+  resolveEndpointConnection,
   resolveElectricalContactTargets,
   resolveRouteTap,
 } from "@icm/derived";
 import { snapCoordinate } from "../../snap/engine";
-import { transformPoint } from "@icm/model";
 import type { Flightline } from "@icm/derived";
 import type { Point, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
@@ -230,7 +230,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     options.setTool("wire");
     if (!options.wireSource) {
       options.setWireSource(candidate, options.document.revision);
-      options.setWirePreviewPoint(candidate.point);
+      options.setWirePreviewPoint(candidate.connection.contactPoint);
       options.setWireDraftSteps([]);
       options.setStatus(`Wire source: ${endpointKey(candidate.endpoint)}`);
       return;
@@ -250,10 +250,24 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     flightline: Flightline,
   ): void => {
     event.stopPropagation();
+    const fromConnection = resolveEndpointConnection(
+      options.document,
+      options.resolver,
+      flightline.from,
+    );
+    const toConnection = resolveEndpointConnection(
+      options.document,
+      options.resolver,
+      flightline.to,
+    );
+    if (!fromConnection || !toConnection) {
+      options.setStatus("Flightline endpoint has no routable grid landing");
+      return;
+    }
     const from: WireSource = {
       endpoint: flightline.from,
       netId: flightline.netId,
-      point: flightline.fromPoint,
+      connection: fromConnection,
       preludeEdits: [],
       ...(isMosBulkTerminal(options.document, flightline.from)
         ? { routePresentation: "bulk-dashed" as const }
@@ -262,7 +276,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     const to: WireSource = {
       endpoint: flightline.to,
       netId: flightline.netId,
-      point: flightline.toPoint,
+      connection: toConnection,
       preludeEdits: [],
       ...(isMosBulkTerminal(options.document, flightline.to)
         ? { routePresentation: "bulk-dashed" as const }
@@ -283,7 +297,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
       return;
     }
     options.setWireSource(from, options.document.revision);
-    options.setWirePreviewPoint(to.point);
+    options.setWirePreviewPoint(to.connection.contactPoint);
     options.setWireDraftSteps([]);
     options.setStatus(`Wire source: flightline on ${flightline.netId}`);
   };
@@ -291,32 +305,26 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
   const drawSelectedMosBulk = (): void => {
     const instance = options.selectedInstance;
     if (!instance?.placement) return;
-    const resolved = options.resolver.resolve(
-      instance.symbolId,
-      instance.symbolVariantId,
-    );
-    const anchor = resolved?.variant?.auxiliaryPins?.find(
-      (pin) => pin.name === "B",
-    );
-    if (!anchor) {
-      options.setStatus("Selected instance has no Razavi bulk anchor");
-      return;
-    }
     const endpoint: RouteEndpoint = {
       kind: "terminal",
       instanceId: instance.id,
       pinName: "B",
     };
+    const connection = resolveEndpointConnection(
+      options.document,
+      options.resolver,
+      endpoint,
+    );
+    if (!connection) {
+      options.setStatus("Selected instance has no routable Razavi bulk anchor");
+      return;
+    }
     const source: WireSource = {
       endpoint,
       netId: instance.mosBulkBinding
         ? null
         : endpointNetId(options.document, endpoint),
-      point: transformPoint(
-        anchor.at,
-        instance.placement.position,
-        instance.placement,
-      ),
+      connection,
       preludeEdits: options.document.noConnects.flatMap((noConnect) =>
         noConnect.endpoint.kind === "terminal" &&
         noConnect.endpoint.instanceId === instance.id &&
@@ -329,7 +337,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     options.setBulkDrawInstanceId(instance.id);
     options.setTool("wire");
     options.setWireSource(source, options.document.revision);
-    options.setWirePreviewPoint(source.point);
+    options.setWirePreviewPoint(source.connection.contactPoint);
     options.setWireDraftSteps([]);
     options.setStatus(`Drawing ${instance.id}.B bulk connection`);
   };
@@ -678,7 +686,8 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
       segment.to,
       options.document.presentation.grid,
       options.wireSource
-        ? (options.wireWaypoints.at(-1) ?? options.wireSource.point)
+        ? (options.wireWaypoints.at(-1) ??
+            options.wireSource.connection.gridLanding)
         : null,
     );
     const overlappingTargets = options.routeGeometryRecords.flatMap(

@@ -265,7 +265,15 @@ function symbol(polarity, measurement, threeTerminal, bodyMeasurement) {
             // Context-gated Razavi body connection. This names the canonical
             // electrical B pin without modifying calibrated symbol artwork.
             auxiliaryPins: [
-              { name: "B", at: { x: -4, y: 0 }, direction: "east" },
+              {
+                name: "B",
+                at: { x: -4, y: 0 },
+                direction: "east",
+                routing: {
+                  escape: "outward",
+                  preferredLanding: { x: 0, y: 0 },
+                },
+              },
             ],
             hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],
             additionalPrimitives: sourceArrowPrimitives(measurement, polarity),

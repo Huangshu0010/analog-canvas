@@ -14,7 +14,7 @@
    and diagnostics. Never infer supply identity from a label, symbol, or Net
    ID. Load only the circuit-knowledge pages relevant to the observed evidence.
 4. After creating new instances, request a fresh Snapshot before wiring so all
-   instance IDs, resolved pins, page positions, and MOS bulk facts come from
+   instance IDs, resolved pins, endpoint connections, and MOS bulk facts come from
    the browser. For ordinary wiring, submit one high-level `wireIntent`; for other work,
    prepare generic typed edits. In both cases use the Snapshot revision as
    `expectedRevision` and dry-run any non-trivial transaction.

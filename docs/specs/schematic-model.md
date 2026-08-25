@@ -140,7 +140,8 @@ An Instance has three lifecycle states: retained in the Placement Tray
 to the Tray retains every electrical, netlist, and object-anchored annotation
 fact, but retained-instance annotations are not rendered or hit-testable until
 the Instance is re-placed. Any visible Route endpoint is first detached to a
-Junction at the resolved pin position. Deletion is a separate atomic composition
+Junction at the endpoint's grid landing; its derived artwork-to-grid escape
+disappears with the Instance. Deletion is a separate atomic composition
 that clears membership, NoConnect, owned annotation, and unlocked layout
 references before removing the Instance.
 
