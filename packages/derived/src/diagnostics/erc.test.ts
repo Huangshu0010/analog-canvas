@@ -169,6 +169,28 @@ describe("ERC engine", () => {
     });
   });
 
+  it("accepts an otherwise-singleton pin explicitly declared by imported SPICE", () => {
+    const project = emptyProject();
+    const document = project.documents[0]!;
+    document.instances = [instance("I1")];
+    document.nets.push({
+      id: "net-imported-singleton",
+      terminals: [{ instanceId: "I1", pinName: "L" }],
+    });
+    document.connectivityEvidence.push({
+      id: "source-singleton",
+      kind: "spice-source",
+      netId: "net-imported-singleton",
+      sourceNetId: "source-nbit",
+    });
+    document.noConnects.push({
+      id: "nc-right",
+      endpoint: { kind: "terminal", instanceId: "I1", pinName: "R" },
+    });
+
+    expect(run(project)).toEqual([]);
+  });
+
   it("does not flag an implicit pin even when unconnected", () => {
     const implicitResolver = new InMemorySymbolResolver([
       {

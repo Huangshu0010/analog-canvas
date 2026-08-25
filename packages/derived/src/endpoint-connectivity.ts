@@ -13,6 +13,8 @@ export interface EndpointConnectivityIntent {
   implicit: boolean;
   formalBoundary: boolean;
   globalSupply: boolean;
+  /** The imported source explicitly declared this otherwise-singleton node. */
+  sourceDeclared: boolean;
 }
 
 /**
@@ -78,6 +80,7 @@ export function createEndpointConnectivityClassifier(
       (logicalGroup.powerDomain === "vdd" ||
         logicalGroup.powerDomain === "ground"),
     );
+    const sourceDeclared = Boolean(logicalGroup?.sourceNetIds.length);
     let implicit = false;
     if (endpoint.kind === "terminal") {
       const instance = document.instances.find(
@@ -96,6 +99,7 @@ export function createEndpointConnectivityClassifier(
       implicit,
       formalBoundary,
       globalSupply,
+      sourceDeclared,
     };
     return {
       endpoint,
@@ -109,7 +113,8 @@ export function createEndpointConnectivityClassifier(
         intent.explicitNoConnect ||
         intent.implicit ||
         intent.formalBoundary ||
-        intent.globalSupply,
+        intent.globalSupply ||
+        intent.sourceDeclared,
     };
   };
 
