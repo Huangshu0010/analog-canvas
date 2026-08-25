@@ -15,10 +15,7 @@ const ENTRY = {
   schemaVersion: 23,
 };
 
-/**
- * The feed asks for `/api/gallery?seed=…`, so a mock has to match on the path
- * rather than on a glob that assumes no query.
- */
+/** Match the list path with or without filters and a paging cursor. */
 const galleryListUrl = (url: URL): boolean => url.pathname === "/api/gallery";
 
 async function mockGallery(page: Page, entries: object[]): Promise<void> {
@@ -125,7 +122,6 @@ test("the feed pages through the cursor as the sentinel comes into view", async 
           schemaVersion: 23,
         })),
         nextCursor: second ? null : "c1",
-        total: 5,
       },
     });
   });
@@ -150,12 +146,11 @@ test("the feed pages through the cursor as the sentinel comes into view", async 
   expect(cursors.every((cursor) => cursor === null || cursor === "c1")).toBe(
     true,
   );
-  // Every request carries this visit's shuffle, so its pages are one order.
-  const seeds = new Set(
-    listRequests.map((query) => new URLSearchParams(query).get("seed")),
-  );
-  expect(seeds.size).toBe(1);
-  expect([...seeds][0]).toMatch(/^[0-9a-f]{16}$/u);
+  expect(
+    listRequests.every(
+      (query) => new URLSearchParams(query).get("seed") === null,
+    ),
+  ).toBe(true);
 });
 
 test("the feed scrolls inside its shell despite the locked app root", async ({
@@ -687,34 +682,29 @@ test("Check and Save shelves the circuit and the shelf reopens it", async ({
   await expect(page.getByTestId("status")).toContainText("Opened");
 });
 
-test("keeps the wall scrolling past its last circuit, in a new order", async ({
+test("keeps newest-first order and stops after the last circuit", async ({
   page,
 }) => {
-  // Big enough that coming back around lands the repeat off-screen.
   const wall = Array.from({ length: 10 }, (_, index) => ({
     ...ENTRY,
     id: `g-${index}`,
     name: `Circuit ${index}`,
+    createdAt: new Date(Date.UTC(2026, 7, 21, 10, 0, 10 - index)).toISOString(),
   }));
-  const seeds: string[] = [];
-  await page.route("**/api/gallery?*", (route) => {
+  const listRequests: string[] = [];
+  await page.route("**/api/gallery**", (route) => {
     const url = new URL(route.request().url());
-    const seed = url.searchParams.get("seed") ?? "";
+    if (url.pathname !== "/api/gallery") return route.fallback();
+    listRequests.push(url.search);
     const offset = Number(url.searchParams.get("cursor") ?? "0");
-    if (!seeds.includes(seed)) seeds.push(seed);
-    // Each seed orders the wall its own way; three at a time.
-    const ordered = [...wall].sort((left, right) =>
-      `${seed}${left.id}`.localeCompare(`${seed}${right.id}`),
-    );
-    const slice = ordered.slice(offset, offset + 3);
+    const slice = wall.slice(offset, offset + 3);
     return route.fulfill({
       json: {
         entries: slice,
         nextCursor:
-          offset + slice.length < ordered.length
+          offset + slice.length < wall.length
             ? String(offset + slice.length)
             : null,
-        total: ordered.length,
       },
     });
   });
@@ -729,15 +719,23 @@ test("keeps the wall scrolling past its last circuit, in a new order", async ({
   const tiles = page.locator('[data-testid^="gallery-tile-"]');
   await expect(tiles.first()).toBeVisible();
 
-  // The wall keeps filling as long as the bottom stays in view, and past the
-  // sixth circuit it comes back around under a different shuffle rather than
-  // stopping — which is the whole point of a wall smaller than the scroll.
+  // The wall fills through its cursor chain, then remains at exactly one copy
+  // of each circuit no matter how often the exhausted sentinel is exposed.
   for (let scroll = 0; scroll < 6; scroll += 1) {
     await page.mouse.wheel(0, 4000);
     await page.waitForTimeout(250);
   }
-  expect(await tiles.count()).toBeGreaterThan(wall.length);
-  expect(seeds.length).toBeGreaterThan(1);
+  await expect(tiles).toHaveCount(wall.length);
+  expect(
+    await tiles.evaluateAll((items) =>
+      items.map((item) => item.getAttribute("data-testid")),
+    ),
+  ).toEqual(wall.map((entry) => `gallery-tile-${entry.id}`));
+  expect(
+    listRequests.every(
+      (query) => new URLSearchParams(query).get("seed") === null,
+    ),
+  ).toBe(true);
 });
 
 test("stars the circuits that extract and counts thumbs on every card", async ({

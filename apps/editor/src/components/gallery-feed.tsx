@@ -28,43 +28,12 @@ export interface GalleryFeedEntry {
 export interface GalleryFeedPage {
   entries: GalleryFeedEntry[];
   nextCursor: string | null;
-  /** How many circuits this round covers; 0 means there is nothing to loop. */
-  total: number;
 }
 
 export interface GalleryFeedState {
   status: "loading" | "ready" | "unavailable";
   entries: GalleryFeedEntry[];
   nextCursor: string | null;
-  /** The shuffle this round is ordered by. */
-  seed: string;
-  /** Which pass over the wall these entries came from, counting from 0. */
-  round: number;
-  /** Circuits in the round; 0 means there is nothing to come back to. */
-  total: number;
-}
-
-/**
- * A fresh shuffle. The wall is browsed rather than read newest-first, so each
- * visit gets its own order, and each pass over it gets another one — which is
- * what keeps scrolling worthwhile once the wall is smaller than the scroll.
- */
-/**
- * How many circuits a round needs before the feed comes back around.
- *
- * Repeating is only invisible when the repeat lands well off-screen. A wall of
- * two circuits looped would stack the same two down the page, which reads as
- * a fault rather than as more to look at, so a small wall simply ends. Roughly
- * a screenful of tiles is the point where a second pass reads as more feed.
- */
-const ENDLESS_MIN_ROUND = 8;
-
-function newFeedSeed(): string {
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
-    "",
-  );
 }
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
@@ -129,8 +98,6 @@ export async function loadGalleryFeed(
     cursor?: string | null;
     author?: string | null;
     tags?: readonly string[];
-    /** Asks for a shuffled round instead of newest-first. */
-    seed?: string | null;
   } = {},
 ): Promise<GalleryFeedPage | null> {
   const params = new URLSearchParams();
@@ -139,7 +106,6 @@ export async function loadGalleryFeed(
     params.set("tags", options.tags.join(","));
   }
   if (options.cursor) params.set("cursor", options.cursor);
-  if (options.seed) params.set("seed", options.seed);
   const query = params.toString();
   try {
     const response = await fetchLike(
@@ -150,14 +116,11 @@ export async function loadGalleryFeed(
     const payload = (await response.json()) as {
       entries?: GalleryFeedEntry[];
       nextCursor?: unknown;
-      total?: unknown;
     };
-    const entries = payload.entries ?? [];
     return {
-      entries,
+      entries: payload.entries ?? [],
       nextCursor:
         typeof payload.nextCursor === "string" ? payload.nextCursor : null,
-      total: typeof payload.total === "number" ? payload.total : entries.length,
     };
   } catch {
     return null;
@@ -207,21 +170,11 @@ export function GalleryFeed() {
       cancelled = true;
     };
   }, []);
-  /**
-   * The shuffle a reload starts from. Held here rather than made inside the
-   * effect so that running the effect twice — as StrictMode does — reloads
-   * the same order instead of throwing the first one away. Rounds advance
-   * `state.seed`, which deliberately does not feed back into the reload.
-   */
-  const [reloadSeed, setReloadSeed] = useState(newFeedSeed);
-  const [state, setState] = useState<GalleryFeedState>(() => ({
+  const [state, setState] = useState<GalleryFeedState>({
     status: "loading",
     entries: [],
     nextCursor: null,
-    seed: reloadSeed,
-    round: 0,
-    total: 0,
-  }));
+  });
   const loadingMoreRef = useRef(false);
 
   /**
@@ -267,60 +220,45 @@ export function GalleryFeed() {
 
   useEffect(() => {
     let cancelled = false;
-    const seed = reloadSeed;
+    loadingMoreRef.current = false;
     setState({
       status: "loading",
       entries: [],
       nextCursor: null,
-      seed,
-      round: 0,
-      total: 0,
     });
-    void loadGalleryFeed(fetch, { author, tags: selectedTags, seed }).then(
-      (page) => {
-        if (cancelled) return;
-        setState(
-          page
-            ? { status: "ready", seed, round: 0, ...page }
-            : {
-                status: "unavailable",
-                entries: [],
-                nextCursor: null,
-                seed,
-                round: 0,
-                total: 0,
-              },
-        );
-      },
-    );
+    void loadGalleryFeed(fetch, { author, tags: selectedTags }).then((page) => {
+      if (cancelled) return;
+      setState(
+        page
+          ? { status: "ready", ...page }
+          : {
+              status: "unavailable",
+              entries: [],
+              nextCursor: null,
+            },
+      );
+    });
     return () => {
       cancelled = true;
     };
-  }, [author, selectedTags, reloadSeed]);
+  }, [author, selectedTags]);
 
-  // Endless scroll: the sentinel below the wall appends the next page as it
-  // comes into view, and when a round runs out it starts another one under a
-  // fresh shuffle rather than stopping. The wall is smaller than the scroll,
-  // so ending at the last upload would end the browsing too; coming back
-  // around in a different order is the point. A wall too small for a repeat
-  // to land off-screen ends instead — see ENDLESS_MIN_ROUND.
-  const { nextCursor, seed, round, total } = state;
-  const exhausted = nextCursor === null;
+  // The sentinel appends the next newest-first page as it comes into view.
+  // Once the server returns no cursor, the wall is complete and stops.
+  const { nextCursor } = state;
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
-    if (exhausted && total < ENDLESS_MIN_ROUND) return;
+    if (nextCursor === null) return;
     if (typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver((observed) => {
       if (!observed.some((entry) => entry.isIntersecting)) return;
       if (loadingMoreRef.current) return;
       loadingMoreRef.current = true;
-      const nextRoundSeed = exhausted ? newFeedSeed() : seed;
       void loadGalleryFeed(fetch, {
         author,
         tags: selectedTags,
-        seed: nextRoundSeed,
-        cursor: exhausted ? null : nextCursor,
+        cursor: nextCursor,
       }).then((page) => {
         loadingMoreRef.current = false;
         if (!page) return;
@@ -330,9 +268,6 @@ export function GalleryFeed() {
                 ...previous,
                 entries: [...previous.entries, ...page.entries],
                 nextCursor: page.nextCursor,
-                seed: nextRoundSeed,
-                round: exhausted ? previous.round + 1 : previous.round,
-                total: page.total,
               }
             : previous,
         );
@@ -340,7 +275,7 @@ export function GalleryFeed() {
     });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [nextCursor, exhausted, seed, round, total, author, selectedTags]);
+  }, [nextCursor, author, selectedTags]);
 
   function syncQuery(nextAuthor: string | null, nextTags: string[]): void {
     const url = new URL(window.location.href);
@@ -352,13 +287,11 @@ export function GalleryFeed() {
   }
 
   function selectAuthor(next: string | null): void {
-    setReloadSeed(newFeedSeed());
     setAuthor(next);
     syncQuery(next, selectedTags);
   }
 
   function toggleTag(tag: string): void {
-    setReloadSeed(newFeedSeed());
     setSelectedTags((previous) => {
       const next = previous.includes(tag)
         ? previous.filter((candidate) => candidate !== tag)
@@ -428,11 +361,8 @@ export function GalleryFeed() {
           <Masonry
             aria-label="Published circuits"
             items={[
-              // A circuit can come round again in a later shuffle, so the key
-              // is its place in the feed rather than its id. Entries are only
-              // ever appended, so the index is stable.
-              ...entries.map((entry, feedIndex) => ({
-                key: `${feedIndex}-${entry.id}`,
+              ...entries.map((entry) => ({
+                key: entry.id,
                 node: (
                   <a
                     className="gallery-tile"
