@@ -458,7 +458,7 @@ export function planCreateCellPin(
   const document = requireDocument(project, documentId);
   if (!document.netlist)
     throw new Error(`Cell has no interface: ${documentId}`);
-  if (input.terminal.interfaceInstanceId !== input.instance.id) {
+  if (!input.terminal.interfaceInstanceIds.includes(input.instance.id)) {
     throw new Error("Cell terminal must reference the placed Port Instance");
   }
   if (
@@ -484,6 +484,72 @@ export function planCreateCellPin(
       { kind: "add_instance", instance: input.instance },
       ...input.connectionEdits,
       { kind: "add_cell_terminal", terminal: input.terminal },
+      ...(input.annotation
+        ? [
+            {
+              kind: "upsert_schematic_annotation" as const,
+              annotation: input.annotation,
+            },
+          ]
+        : []),
+    ]),
+  ];
+}
+
+/**
+ * Add another drawing marker for an existing Cell Pin. The ordered interface
+ * terminal remains singular; every marker projects the same name, direction,
+ * and electrical Net.
+ */
+export function planAttachCellPinMarker(
+  project: CircuitProject,
+  documentId: string,
+  input: {
+    instance: SchematicDocument["instances"][number];
+    connectionEdits: DocumentEdits;
+    terminalId: string;
+    markerNetId: string;
+    annotation?: Annotation;
+  },
+): ProjectStructureEdit[] {
+  const document = requireDocument(project, documentId);
+  if (!document.netlist)
+    throw new Error(`Cell has no interface: ${documentId}`);
+  if (
+    input.instance.symbolId !== "port" &&
+    input.instance.symbolId !== "port-filled"
+  ) {
+    throw new Error(
+      `Cell interface marker must be a Port: ${input.instance.symbolId}`,
+    );
+  }
+  const terminal = document.netlist.terminals.find(
+    (candidate) => candidate.id === input.terminalId,
+  );
+  if (!terminal) {
+    throw new Error(`Cell terminal does not exist: ${input.terminalId}`);
+  }
+  return [
+    transactDocument(project, documentId, [
+      { kind: "add_instance", instance: input.instance },
+      ...input.connectionEdits,
+      ...(input.markerNetId === terminal.netId
+        ? []
+        : [
+            {
+              kind: "merge_nets" as const,
+              targetNetId: terminal.netId,
+              sourceNetId: input.markerNetId,
+            },
+          ]),
+      {
+        kind: "update_cell_terminal",
+        terminalId: terminal.id,
+        interfaceInstanceIds: [
+          ...terminal.interfaceInstanceIds,
+          input.instance.id,
+        ],
+      },
       ...(input.annotation
         ? [
             {
@@ -797,6 +863,118 @@ export function planRenameCellTerminal(
       `Cell terminal does not exist: ${childDocumentId}.${terminalId}`,
     );
   }
+  const mergeTarget = child.netlist.terminals.find(
+    (candidate) =>
+      candidate.id !== terminalId &&
+      candidate.name.toLowerCase() === newName.toLowerCase(),
+  );
+  if (mergeTarget) {
+    const childEdits: DocumentEdits = [
+      ...(terminal.netId === mergeTarget.netId
+        ? []
+        : [
+            {
+              kind: "merge_nets" as const,
+              targetNetId: mergeTarget.netId,
+              sourceNetId: terminal.netId,
+            },
+          ]),
+      {
+        kind: "update_cell_terminal",
+        terminalId: mergeTarget.id,
+        interfaceInstanceIds: [
+          ...mergeTarget.interfaceInstanceIds,
+          ...terminal.interfaceInstanceIds,
+        ],
+      },
+      ...child.annotations
+        .filter(
+          (annotation) =>
+            annotation.binding?.kind === "cell-terminal-name" &&
+            annotation.binding.terminalId === terminal.id,
+        )
+        .map((annotation) => {
+          const { formatOverride: _formatOverride, ...rest } = annotation;
+          return {
+            kind: "upsert_schematic_annotation" as const,
+            annotation: {
+              ...rest,
+              binding: {
+                kind: "cell-terminal-name" as const,
+                terminalId: mergeTarget.id,
+              },
+            },
+          };
+        }),
+      { kind: "remove_cell_terminal", terminalId: terminal.id },
+    ];
+    const edits: ProjectStructureEdit[] = [
+      transactDocument(project, child.id, childEdits),
+    ];
+    for (const parent of project.documents) {
+      const callerEdits: DocumentEdits = [];
+      for (const instance of parent.instances) {
+        const binding = instance.netlist?.binding;
+        if (
+          binding?.kind !== "subcircuit" ||
+          binding.childDocumentId !== child.id
+        ) {
+          continue;
+        }
+        const sourceNet = parent.nets.find((net) =>
+          net.terminals.some(
+            (reference) =>
+              reference.instanceId === instance.id &&
+              reference.pinName === terminal.name,
+          ),
+        );
+        const targetNet = parent.nets.find((net) =>
+          net.terminals.some(
+            (reference) =>
+              reference.instanceId === instance.id &&
+              reference.pinName === mergeTarget.name,
+          ),
+        );
+        if (sourceNet && targetNet && sourceNet.id !== targetNet.id) {
+          callerEdits.push({
+            kind: "merge_nets",
+            targetNetId: targetNet.id,
+            sourceNetId: sourceNet.id,
+          });
+        }
+        const sourceReferenced =
+          sourceNet !== undefined ||
+          parent.routes.some((route) =>
+            [route.from, route.to].some(
+              (endpoint) =>
+                endpoint.kind === "terminal" &&
+                endpoint.instanceId === instance.id &&
+                endpoint.pinName === terminal.name,
+            ),
+          ) ||
+          parent.noConnects.some(
+            (noConnect) =>
+              noConnect.endpoint.instanceId === instance.id &&
+              noConnect.endpoint.pinName === terminal.name,
+          ) ||
+          (instance.importProvenance?.terminalMapping ?? []).some(
+            (reference) => reference.pinName === terminal.name,
+          );
+        callerEdits.push({
+          kind: "set_instance_symbol",
+          instanceId: instance.id,
+          symbolId: hierarchicalSymbolId(child.netlist.name),
+          ...(sourceReferenced
+            ? { pinMap: { [terminal.name]: mergeTarget.name } }
+            : {}),
+        });
+      }
+      if (callerEdits.length > 0) {
+        edits.push(transactDocument(project, parent.id, callerEdits));
+      }
+    }
+    return edits;
+  }
   if (
     child.netlist.terminals.some(
       (candidate) => candidate.id !== terminalId && candidate.name === newName,
@@ -818,7 +996,7 @@ export function planRenameCellTerminal(
       (annotation) =>
         annotation.kind === "instance-label" &&
         annotation.anchor.kind === "object" &&
-        terminal.interfaceInstanceId === annotation.anchor.objectId,
+        terminal.interfaceInstanceIds.includes(annotation.anchor.objectId),
     )
     .flatMap((annotation) => {
       if (annotation.binding?.kind === "cell-terminal-name") {
@@ -968,7 +1146,7 @@ export function planExposePortInstance(
     name: string;
     netId: string;
     direction: "input" | "output" | "inout" | "passive";
-    interfaceInstanceId: string;
+    interfaceInstanceIds: string[];
   },
 ): ProjectStructureEdit[] {
   const document = project.documents.find((item) => item.id === documentId);
@@ -1008,22 +1186,44 @@ export function planRemoveCellTerminalMarkers(
     throw new Error(`Cell has no interface: ${documentId}`);
   const selected = new Set(markerInstanceIds);
   if (selected.size === 0) return [];
-  const terminals = document.netlist.terminals.filter((terminal) =>
-    selected.has(terminal.interfaceInstanceId),
-  );
-  const matched = new Set(
-    terminals.map((terminal) => terminal.interfaceInstanceId),
-  );
+  const matched = new Set<string>();
+  const retainedTerminalEdits: DocumentEdits = [];
+  const removedTerminalIds: string[] = [];
+  for (const terminal of document.netlist.terminals) {
+    const removed = terminal.interfaceInstanceIds.filter((instanceId) =>
+      selected.has(instanceId),
+    );
+    if (removed.length === 0) continue;
+    removed.forEach((instanceId) => matched.add(instanceId));
+    const remaining = terminal.interfaceInstanceIds.filter(
+      (instanceId) => !selected.has(instanceId),
+    );
+    if (remaining.length > 0) {
+      retainedTerminalEdits.push({
+        kind: "update_cell_terminal",
+        terminalId: terminal.id,
+        interfaceInstanceIds: remaining,
+      });
+    } else {
+      removedTerminalIds.push(terminal.id);
+    }
+  }
   const unknown = [...selected].find((instanceId) => !matched.has(instanceId));
   if (unknown) {
     throw new Error(`Cell Pin marker does not exist: ${unknown}`);
   }
-  return planRemoveCellTerminals(
-    project,
-    documentId,
-    terminals.map((terminal) => terminal.id),
-    instanceDeletionEdits,
-  );
+  if (removedTerminalIds.length === 0) {
+    return [
+      transactDocument(project, documentId, [
+        ...retainedTerminalEdits,
+        ...instanceDeletionEdits,
+      ]),
+    ];
+  }
+  return planRemoveCellTerminals(project, documentId, removedTerminalIds, [
+    ...retainedTerminalEdits,
+    ...instanceDeletionEdits,
+  ]);
 }
 
 /**
@@ -1053,7 +1253,7 @@ export function planRemoveCellTerminals(
     return terminal;
   });
   const terminalInstanceIds = new Set(
-    terminals.map((terminal) => terminal.interfaceInstanceId),
+    terminals.flatMap((terminal) => terminal.interfaceInstanceIds),
   );
   const resolver = createProjectSymbolResolver(project, builtInSymbols);
   const lifecycleEdits =

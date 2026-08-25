@@ -90,8 +90,8 @@ export function planCellReset(
     summary = `Return ${placedInstances.length} Instances to the tray and remove ${document.routes.length} Route geometries; retain devices, Nets, and formal interface`;
   } else {
     const cellPinInstanceIds = new Set(
-      document.netlist?.terminals.map(
-        (terminal) => terminal.interfaceInstanceId,
+      document.netlist?.terminals.flatMap(
+        (terminal) => terminal.interfaceInstanceIds,
       ) ?? [],
     );
     const interfaceNetIds = new Set(

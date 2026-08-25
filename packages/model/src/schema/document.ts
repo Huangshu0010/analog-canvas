@@ -34,7 +34,7 @@ export const CellNetlistTerminalSchema = z.strictObject({
   name: NetlistIdentifierSchema,
   netId: StableIdSchema,
   direction: z.enum(["input", "output", "inout", "passive"]),
-  interfaceInstanceId: StableIdSchema,
+  interfaceInstanceIds: z.array(StableIdSchema).min(1),
 });
 export const CellNetlistFormalParameterSchema = z.strictObject({
   name: NetlistIdentifierSchema,
@@ -269,20 +269,25 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
           });
         }
         terminalNames.add(normalizedName);
-        const interfaceInstanceId = terminal.interfaceInstanceId;
-        if (cellPinInstanceIds.has(interfaceInstanceId)) {
-          context.addIssue({
-            code: "custom",
-            message: `Cell interface Instance is assigned to multiple terminals: ${interfaceInstanceId}`,
-            path: [
-              "netlist",
-              "terminals",
-              terminalIndex,
-              "interfaceInstanceId",
-            ],
-          });
+        for (const [
+          markerIndex,
+          interfaceInstanceId,
+        ] of terminal.interfaceInstanceIds.entries()) {
+          if (cellPinInstanceIds.has(interfaceInstanceId)) {
+            context.addIssue({
+              code: "custom",
+              message: `Cell interface Instance is assigned to multiple terminals: ${interfaceInstanceId}`,
+              path: [
+                "netlist",
+                "terminals",
+                terminalIndex,
+                "interfaceInstanceIds",
+                markerIndex,
+              ],
+            });
+          }
+          cellPinInstanceIds.add(interfaceInstanceId);
         }
-        cellPinInstanceIds.add(interfaceInstanceId);
         if (!document.nets.some((net) => net.id === terminal.netId)) {
           context.addIssue({
             code: "custom",
@@ -293,42 +298,49 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
         const terminalNet = document.nets.find(
           (net) => net.id === terminal.netId,
         );
-        const interfaceInstance = document.instances.find(
-          (instance) => instance.id === interfaceInstanceId,
-        );
-        if (
-          !interfaceInstance ||
-          !["port", "port-filled"].includes(interfaceInstance.symbolId)
-        ) {
-          context.addIssue({
-            code: "custom",
-            message: `Cell terminal requires a port or port-filled interface Instance: ${interfaceInstanceId}`,
-            path: [
-              "netlist",
-              "terminals",
-              terminalIndex,
-              "interfaceInstanceId",
-            ],
-          });
-        }
-        if (
-          terminalNet &&
-          !terminalNet.terminals.some(
-            (candidate) =>
-              candidate.instanceId === interfaceInstanceId &&
-              candidate.pinName === "P",
-          )
-        ) {
-          context.addIssue({
-            code: "custom",
-            message: `Cell terminal interface Instance ${interfaceInstanceId}.P is not connected to Net ${terminal.netId}`,
-            path: [
-              "netlist",
-              "terminals",
-              terminalIndex,
-              "interfaceInstanceId",
-            ],
-          });
+        for (const [
+          markerIndex,
+          interfaceInstanceId,
+        ] of terminal.interfaceInstanceIds.entries()) {
+          const interfaceInstance = document.instances.find(
+            (instance) => instance.id === interfaceInstanceId,
+          );
+          if (
+            !interfaceInstance ||
+            !["port", "port-filled"].includes(interfaceInstance.symbolId)
+          ) {
+            context.addIssue({
+              code: "custom",
+              message: `Cell terminal requires a port or port-filled interface Instance: ${interfaceInstanceId}`,
+              path: [
+                "netlist",
+                "terminals",
+                terminalIndex,
+                "interfaceInstanceIds",
+                markerIndex,
+              ],
+            });
+          }
+          if (
+            terminalNet &&
+            !terminalNet.terminals.some(
+              (candidate) =>
+                candidate.instanceId === interfaceInstanceId &&
+                candidate.pinName === "P",
+            )
+          ) {
+            context.addIssue({
+              code: "custom",
+              message: `Cell terminal interface Instance ${interfaceInstanceId}.P is not connected to Net ${terminal.netId}`,
+              path: [
+                "netlist",
+                "terminals",
+                terminalIndex,
+                "interfaceInstanceIds",
+                markerIndex,
+              ],
+            });
+          }
         }
       }
     }
@@ -404,8 +416,8 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
     }
     const schematicReferences = new Set<string>();
     const formalPortInstanceIds = new Set(
-      (document.netlist?.terminals ?? []).map(
-        (terminal) => terminal.interfaceInstanceId,
+      (document.netlist?.terminals ?? []).flatMap(
+        (terminal) => terminal.interfaceInstanceIds,
       ),
     );
     for (const [instanceIndex, instance] of document.instances.entries()) {

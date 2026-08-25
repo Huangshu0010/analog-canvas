@@ -40,14 +40,14 @@ function structuralProject(): CircuitProject {
         name: "VIN",
         netId: "top-net-vin",
         direction: "input",
-        interfaceInstanceId: "top-port-vin",
+        interfaceInstanceIds: ["top-port-vin"],
       },
       {
         id: "top-terminal-vout",
         name: "VOUT",
         netId: "top-net-vout",
         direction: "output",
-        interfaceInstanceId: "top-port-vout",
+        interfaceInstanceIds: ["top-port-vout"],
       },
     ],
   };
@@ -133,14 +133,14 @@ function structuralProject(): CircuitProject {
         name: "A",
         netId: "leaf-net-a",
         direction: "input",
-        interfaceInstanceId: "leaf-port-a",
+        interfaceInstanceIds: ["leaf-port-a"],
       },
       {
         id: "leaf-terminal-b",
         name: "B",
         netId: "leaf-net-b",
         direction: "output",
-        interfaceInstanceId: "leaf-port-b",
+        interfaceInstanceIds: ["leaf-port-b"],
       },
     ],
   };

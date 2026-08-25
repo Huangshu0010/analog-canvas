@@ -64,8 +64,8 @@ describe("connected instance deletion", () => {
       edits: planRemoveCellTerminalMarkers(
         project,
         document.id,
-        document.netlist!.terminals.map(
-          (terminal) => terminal.interfaceInstanceId,
+        document.netlist!.terminals.flatMap(
+          (terminal) => terminal.interfaceInstanceIds,
         ),
         deletionEdits,
       ),

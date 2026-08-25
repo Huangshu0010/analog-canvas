@@ -240,8 +240,8 @@ Q2 collector base emitter QPREF
     ).toEqual([]);
     const document = imported.project!.documents[0]!;
     const cellPinInstanceIds = new Set(
-      document.netlist!.terminals.map(
-        (terminal) => terminal.interfaceInstanceId,
+      document.netlist!.terminals.flatMap(
+        (terminal) => terminal.interfaceInstanceIds,
       ),
     );
     expect(

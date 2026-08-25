@@ -164,7 +164,7 @@ describe("resolved logical Nets", () => {
           name: "P1",
           netId: "net-port",
           direction: "input",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
         },
       ],
     };

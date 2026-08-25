@@ -68,7 +68,7 @@ describe("Project persistence", () => {
     }
   });
 
-  it("upgrades the singular schema-23 Cell Pin marker contract", () => {
+  it("retains repeated schema-23 Cell Pin markers", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     ) as Record<string, any>;
@@ -95,8 +95,78 @@ describe("Project persistence", () => {
     });
     expect(migrated.project.documents[0]!.netlist?.terminals[0]).toMatchObject({
       name: "IN",
-      interfaceInstanceId: "P1",
+      interfaceInstanceIds: ["P1"],
     });
+  });
+
+  it("promotes same-named schema-23 Free Ports into one Cell Pin and Net", () => {
+    const source = JSON.parse(
+      serializeProject(createEmptyProject("project-test", "Test Project")),
+    ) as Record<string, any>;
+    source.schemaVersion = 23;
+    const document = source.documents[0];
+    document.instances.push(
+      {
+        id: "P1",
+        symbolId: "port",
+        schematicReference: "VIN",
+        placement: null,
+      },
+      {
+        id: "P2",
+        symbolId: "port-filled",
+        schematicReference: "VIN",
+        placement: null,
+      },
+    );
+    document.nets.push(
+      {
+        id: "net-vin-a",
+        terminals: [{ instanceId: "P1", pinName: "P" }],
+      },
+      {
+        id: "net-vin-b",
+        terminals: [{ instanceId: "P2", pinName: "P" }],
+      },
+    );
+    document.connectivityEvidence.push(
+      {
+        id: "claim-p1",
+        kind: "name-claim",
+        netId: "net-vin-a",
+        name: "VIN",
+        owner: { kind: "free-port", instanceId: "P1" },
+        scope: "local",
+      },
+      {
+        id: "claim-p2",
+        kind: "name-claim",
+        netId: "net-vin-b",
+        name: "VIN",
+        owner: { kind: "free-port", instanceId: "P2" },
+        scope: "local",
+      },
+    );
+
+    const migrated = parseProjectWithMetadata(JSON.stringify(source));
+    const migratedDocument = migrated.project.documents[0]!;
+    expect(migratedDocument.netlist?.terminals).toMatchObject([
+      {
+        name: "VIN",
+        netId: "net-vin-a",
+        interfaceInstanceIds: ["P1", "P2"],
+      },
+    ]);
+    expect(migratedDocument.nets).toMatchObject([
+      {
+        id: "net-vin-a",
+        terminals: [
+          { instanceId: "P1", pinName: "P" },
+          { instanceId: "P2", pinName: "P" },
+        ],
+      },
+    ]);
+    expect(migratedDocument.connectivityEvidence).toEqual([]);
   });
 
   it("rejects schemas outside the current-and-previous window", () => {

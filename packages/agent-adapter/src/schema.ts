@@ -488,7 +488,7 @@ export const AgentSnapshotDocumentSchema = z.strictObject({
           name: z.string().min(1),
           netId: StableIdSchema,
           direction: z.enum(["input", "output", "inout", "passive"]),
-          interfaceInstanceId: StableIdSchema,
+          interfaceInstanceIds: z.array(StableIdSchema).min(1),
         }),
       ),
     })

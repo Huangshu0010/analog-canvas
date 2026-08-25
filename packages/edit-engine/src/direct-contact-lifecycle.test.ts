@@ -46,7 +46,7 @@ function fixture(): SchematicDocument {
     name: instanceId,
     netId: "net-contact",
     direction: "passive" as const,
-    interfaceInstanceId: instanceId,
+    interfaceInstanceIds: [instanceId],
   }));
   document.connectivityEvidence = [];
   document.instances.find((instance) => instance.id === "B")!.placement = {

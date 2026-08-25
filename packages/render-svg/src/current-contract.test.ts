@@ -21,7 +21,7 @@ describe("current rendering contract", () => {
       name: "VGS1",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceId: "P1",
+      interfaceInstanceIds: ["P1"],
     });
     top.instances.push({
       id: "X1",
@@ -70,14 +70,14 @@ describe("current rendering contract", () => {
         name: "TOP",
         netId: "net-top",
         direction: "input",
-        interfaceInstanceId: "P1",
+        interfaceInstanceIds: ["P1"],
       },
       {
         id: "terminal-bottom",
         name: "BOTTOM",
         netId: "net-bottom",
         direction: "output",
-        interfaceInstanceId: "P2",
+        interfaceInstanceIds: ["P2"],
       },
     );
     child.presentation.cellSymbol = {
@@ -207,14 +207,14 @@ describe("current rendering contract", () => {
           name: "VIN",
           netId: "signal",
           direction: "input",
-          interfaceInstanceId: "VIN",
+          interfaceInstanceIds: ["VIN"],
         },
         {
           id: "terminal-vout",
           name: "VOUT",
           netId: "signal",
           direction: "output",
-          interfaceInstanceId: "VOUT",
+          interfaceInstanceIds: ["VOUT"],
         },
       ],
     };

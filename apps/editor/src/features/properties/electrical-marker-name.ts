@@ -25,8 +25,8 @@ export function planElectricalMarkerName(
     return { status: "rejected", message: "Electrical marker is unavailable" };
   }
   if (
-    document.netlist?.terminals.some(
-      (terminal) => terminal.interfaceInstanceId === instanceId,
+    document.netlist?.terminals.some((terminal) =>
+      terminal.interfaceInstanceIds.includes(instanceId),
     )
   ) {
     return { status: "rejected", message: "Formal Cell Pins use Cell naming" };

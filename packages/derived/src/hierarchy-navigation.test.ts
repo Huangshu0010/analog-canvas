@@ -85,14 +85,14 @@ describe("hierarchy navigation", () => {
           name: "L",
           netId: "child-l",
           direction: "passive",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
         },
         {
           id: "cell-terminal-r",
           name: "R",
           netId: "child-r",
           direction: "passive",
-          interfaceInstanceId: "P2",
+          interfaceInstanceIds: ["P2"],
         },
       ],
     };

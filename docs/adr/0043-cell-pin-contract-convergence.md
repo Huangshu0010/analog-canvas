@@ -19,8 +19,8 @@ say whether it changed the `.subckt` interface.
 
 `port` and `port-filled` are hollow and filled visual variants of one electrical
 object: **Cell Pin**. Every such Instance owns exactly one ordered
-`CellNetlistTerminal`, and every terminal owns exactly one marker through
-`interfaceInstanceId`. Its `CellTerminal.name` is the only interface name and
+`CellNetlistTerminal`, while one terminal may own several visual markers through
+`interfaceInstanceIds`. Its `CellTerminal.name` is the only interface name and
 the only name emitted in the `.subckt` terminal list.
 
 Net Label remains the sole local Net-naming marker. VDD and Ground remain
@@ -30,15 +30,17 @@ Cell Pin and explicitly names it `VDD`, `0`, or another interface name.
 
 The `P` shortcut, Library, full Insert, snap/contact placement, label editing,
 direction editing, copy, move, and delete all use the Cell-Pin planner. Copying
-a standalone Pin creates a uniquely named Pin and Base Net. Deleting a Pin is a
-Project transaction: child and caller wire endpoints are first detached to
-Junctions, the interface is removed, caller symbols are reconciled, and the
-whole operation remains undoable.
+a Pin, or placing the same interface name again, adds another marker to the
+existing terminal and Net; netlist export still emits that terminal once.
+Deleting one marker retains the interface while another marker survives.
+Deleting the final marker is a Project transaction: child and caller wire
+endpoints are first detached to Junctions, the interface is removed, caller
+symbols are reconciled, and the whole operation remains undoable.
 
-Schema 24 removes the free-Port Evidence owner and repeated-marker array.
-Schema 23 is the only accepted previous version; it migrates only an
-unambiguous one-marker formal terminal. Retired free Ports are rejected rather
-than retained behind an adapter.
+Schema 24 removes the free-Port Evidence owner but retains the repeated-marker
+array. Schema 23 is the only accepted previous version; repeated formal markers
+remain intact and retired Free Ports are promoted into Cell Pins, grouping the
+same semantic name into one terminal and Net rather than retaining an adapter.
 
 ## Consequences
 
@@ -46,20 +48,22 @@ than retained behind an adapter.
 - Net naming and Cell interfaces no longer share an editing protocol.
 - SPICE import/export, hierarchy, GUI, clipboard, and Agent structure edits
   consume the same ordered interface contract.
-- Repeated visual names on an internal Net use Net Labels; repeated formal
-  interface names are invalid.
+- Repeated internal Net names use Net Labels; repeated Cell Pin markers are
+  projections of one formal interface terminal.
 - Existing schema-22 and older Projects require an external conversion.
 
 ## Supersedes
 
 - [ADR 0033](0033-port-semantic-name-and-richtext-presentation.md)
 - [ADR 0034](0034-top-cell-formal-port-and-free-port-export.md)
-- [ADR 0037](0037-repeated-formal-port-markers.md)
 - The Free-Port portions of [ADR 0040](0040-connectivity-evidence.md)
+
+ADR 0037 remains the marker-cardinality contract; this ADR removes only its
+former coexistence with Free Port.
 
 ## Validation
 
-- strict schema tests cover the one-to-one marker invariant;
+- strict schema tests cover one-terminal/many-marker ownership;
 - hierarchy tests cover automatic caller detachment and reconciliation;
 - clipboard tests cover independent Cell-Pin identity and preview validity;
 - netlist tests cover ordered interface emission and non-emitting artwork;

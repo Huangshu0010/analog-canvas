@@ -680,7 +680,7 @@ test("Cell Pin deletion releases its interface and Base Net lifecycle", async ({
         owner?: { kind: string; instanceId?: string };
       }>;
       netlist: {
-        terminals: Array<{ name: string; interfaceInstanceId: string }>;
+        terminals: Array<{ name: string; interfaceInstanceIds: [string] }>;
       };
     }>;
   };
@@ -692,7 +692,7 @@ test("Cell Pin deletion releases its interface and Base Net lifecycle", async ({
   ]);
   expect(saved.documents[0]!.connectivityEvidence).toEqual([]);
   expect(saved.documents[0]!.netlist.terminals).toEqual([
-    expect.objectContaining({ name: "BUS", interfaceInstanceId: "P1" }),
+    expect.objectContaining({ name: "BUS", interfaceInstanceIds: ["P1"] }),
   ]);
 
   await page.getByTestId("hit-P1").click();

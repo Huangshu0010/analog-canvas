@@ -101,35 +101,45 @@
           {
             "direction": "passive",
             "id": "cell-terminal-a",
-            "interfaceInstanceId": "A",
+            "interfaceInstanceIds": [
+              "A"
+            ],
             "name": "HORIZONTAL",
             "netId": "net-h"
           },
           {
             "direction": "passive",
             "id": "cell-terminal-b",
-            "interfaceInstanceId": "B",
+            "interfaceInstanceIds": [
+              "B"
+            ],
             "name": "P2",
             "netId": "net-h"
           },
           {
             "direction": "passive",
             "id": "cell-terminal-c",
-            "interfaceInstanceId": "C",
+            "interfaceInstanceIds": [
+              "C"
+            ],
             "name": "VERTICAL",
             "netId": "net-v"
           },
           {
             "direction": "passive",
             "id": "cell-terminal-d",
-            "interfaceInstanceId": "D",
+            "interfaceInstanceIds": [
+              "D"
+            ],
             "name": "P4",
             "netId": "net-v"
           },
           {
             "direction": "passive",
             "id": "cell-terminal-e",
-            "interfaceInstanceId": "E",
+            "interfaceInstanceIds": [
+              "E"
+            ],
             "name": "P5",
             "netId": "net-h"
           }

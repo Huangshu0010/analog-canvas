@@ -395,9 +395,14 @@ export function copySelection(
   return structuredClone({
     instances,
     cellTerminals:
-      document.netlist?.terminals.filter((terminal) =>
-        selectedIds.has(terminal.interfaceInstanceId),
-      ) ?? [],
+      document.netlist?.terminals.flatMap((terminal) => {
+        const interfaceInstanceIds = terminal.interfaceInstanceIds.filter(
+          (instanceId) => selectedIds.has(instanceId),
+        );
+        return interfaceInstanceIds.length > 0
+          ? [{ ...terminal, interfaceInstanceIds }]
+          : [];
+      }) ?? [],
     nets: document.nets.filter((net) => netIds.has(net.id)),
     boundaryNets: document.nets
       .filter(
@@ -609,6 +614,7 @@ export function proposePaste(
       ...document.layoutGroups,
       ...document.constraints,
       ...document.connectivityEvidence,
+      ...(document.netlist?.terminals ?? []),
     ].map((object) => object.id),
   );
   const referenceIndex = createReferenceIndex(document);
@@ -730,32 +736,40 @@ export function proposePaste(
   );
   const existingAnchors = new Map<string, RouteEndpoint>();
   const errors: string[] = [];
-  const copiedCellTerminals = clipboard.cellTerminals;
+  const targetTerminalBySourceId = new Map(
+    clipboard.cellTerminals.flatMap((terminal) => {
+      const existing = document.netlist?.terminals.find(
+        (candidate) =>
+          candidate.id === terminal.id ||
+          candidate.name.toLowerCase() === terminal.name.toLowerCase(),
+      );
+      return existing ? [[terminal.id, existing] as const] : [];
+    }),
+  );
   const terminalIds = new Map(
-    copiedCellTerminals.map((terminal) => [
+    clipboard.cellTerminals.map((terminal) => [
       terminal.id,
-      uniqueCopyId(terminal.id, sequence, occupied),
+      targetTerminalBySourceId.get(terminal.id)?.id ??
+        uniqueCopyId(terminal.id, sequence, occupied),
     ]),
   );
-  const occupiedTerminalNames = new Set(
-    (document.netlist?.terminals ?? []).map((terminal) =>
-      terminal.name.toLowerCase(),
-    ),
-  );
-  const terminalNames = new Map<string, string>();
-  for (const terminal of copiedCellTerminals) {
-    const base = `${terminal.name}_copy`;
-    let name = base;
-    let suffix = 2;
-    while (occupiedTerminalNames.has(name.toLowerCase())) {
-      name = `${base}${suffix}`;
-      suffix += 1;
-    }
-    occupiedTerminalNames.add(name.toLowerCase());
-    terminalNames.set(terminal.id, name);
-  }
   for (const net of clipboard.nets) {
-    netIds.set(net.id, uniqueCopyId(net.id, sequence, occupied));
+    const formalTerminal = clipboard.cellTerminals.find(
+      (terminal) => terminal.netId === net.id,
+    );
+    const existingTerminal = formalTerminal
+      ? targetTerminalBySourceId.get(formalTerminal.id)
+      : undefined;
+    if (existingTerminal) {
+      netIds.set(net.id, existingTerminal.netId);
+      const existingNet = document.nets.find(
+        (candidate) => candidate.id === existingTerminal.netId,
+      );
+      const anchor = existingNet ? firstNetEndpoint(existingNet) : null;
+      if (anchor) existingAnchors.set(net.id, anchor);
+    } else {
+      netIds.set(net.id, uniqueCopyId(net.id, sequence, occupied));
+    }
   }
   const objectIds = new Map<string, string>([
     ...instanceIds,
@@ -802,19 +816,35 @@ export function proposePaste(
     }),
   );
 
-  for (const terminal of copiedCellTerminals) {
-    const copiedMarkerId = instanceIds.get(terminal.interfaceInstanceId);
-    if (!copiedMarkerId) continue;
-    edits.push({
-      kind: "add_cell_terminal",
-      terminal: {
-        ...terminal,
-        id: terminalIds.get(terminal.id)!,
-        name: terminalNames.get(terminal.id)!,
-        netId: netIds.get(terminal.netId) ?? terminal.netId,
-        interfaceInstanceId: copiedMarkerId,
+  for (const terminal of clipboard.cellTerminals) {
+    const copiedMarkerIds = terminal.interfaceInstanceIds.flatMap(
+      (instanceId) => {
+        const copiedId = instanceIds.get(instanceId);
+        return copiedId ? [copiedId] : [];
       },
-    });
+    );
+    if (copiedMarkerIds.length === 0) continue;
+    const existingTerminal = targetTerminalBySourceId.get(terminal.id);
+    edits.push(
+      existingTerminal
+        ? {
+            kind: "update_cell_terminal",
+            terminalId: existingTerminal.id,
+            interfaceInstanceIds: [
+              ...existingTerminal.interfaceInstanceIds,
+              ...copiedMarkerIds,
+            ],
+          }
+        : {
+            kind: "add_cell_terminal",
+            terminal: {
+              ...terminal,
+              id: terminalIds.get(terminal.id)!,
+              netId: netIds.get(terminal.netId) ?? terminal.netId,
+              interfaceInstanceIds: copiedMarkerIds,
+            },
+          },
+    );
   }
 
   for (const net of clipboard.nets) {

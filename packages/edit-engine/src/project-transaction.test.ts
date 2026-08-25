@@ -57,7 +57,7 @@ describe("Project structural transaction", () => {
       name: "IN",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceId: "P1",
+      interfaceInstanceIds: ["P1"],
     });
     project.documents.push(child);
     project.documents[0]!.instances.push(
@@ -140,7 +140,7 @@ describe("Project structural transaction", () => {
       name: "IN",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceId: "P1",
+      interfaceInstanceIds: ["P1"],
     });
     project.documents.push(child);
     const parent = project.documents[0]!;
@@ -399,7 +399,7 @@ describe("Project structural transaction", () => {
       name: "IN",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceId: "port-in",
+      interfaceInstanceIds: ["port-in"],
     });
     project.documents.push(child);
     const caller = {
@@ -469,7 +469,7 @@ describe("Project structural transaction", () => {
       name: "Vout",
       netId: "net-vout",
       direction: "output",
-      interfaceInstanceId: "port-vout",
+      interfaceInstanceIds: ["port-vout"],
     });
     child.annotations.push({
       id: "instance-label-port-vout",
@@ -553,7 +553,7 @@ describe("Project structural transaction", () => {
       name: "UNUSED",
       netId: "net-unused",
       direction: "passive",
-      interfaceInstanceId: "port-unused",
+      interfaceInstanceIds: ["port-unused"],
     });
     project.documents.push(child);
     project.documents[0]!.instances.push(
@@ -613,14 +613,14 @@ describe("Project structural transaction", () => {
         name: "A",
         netId: "net-a",
         direction: "input",
-        interfaceInstanceId: "port-a",
+        interfaceInstanceIds: ["port-a"],
       },
       {
         id: "terminal-b",
         name: "B",
         netId: "net-b",
         direction: "output",
-        interfaceInstanceId: "port-b",
+        interfaceInstanceIds: ["port-b"],
       },
     );
     project.documents.push(child);
@@ -697,7 +697,7 @@ describe("Project structural transaction", () => {
       name: "IN",
       netId: "net-in",
       direction: "input",
-      interfaceInstanceId: "P1",
+      interfaceInstanceIds: ["P1"],
     });
     project.documents.push(child);
     const parent = project.documents[0]!;

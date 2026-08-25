@@ -1731,6 +1731,18 @@ describe("gallery administration", () => {
         gallery_entry_versions: { "23": 1 },
         workspace_slots: { "23": 1 },
       },
+      migrationReports: expect.arrayContaining([
+        expect.objectContaining({
+          table: "gallery_entries",
+          id,
+          report: expect.objectContaining({
+            vddMarkersBefore: expect.any(Number),
+            vddMarkersAfter: expect.any(Number),
+            powerRailsBefore: expect.any(Number),
+            powerRailsAfter: expect.any(Number),
+          }),
+        }),
+      ]),
     });
     expect(
       env.gallerySql
@@ -1779,6 +1791,40 @@ describe("gallery administration", () => {
           expect(Object.keys(net).sort()).toEqual(["id", "terminals"]);
         }
       }
+    }
+
+    const restored = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/maintenance/schema-restore`, {
+        method: "POST",
+        headers: {
+          ...cookieHeaders(adminCookie),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ backup: backupPayload }),
+      }),
+    );
+    expect(await restored.json()).toMatchObject({
+      restored: true,
+      records: 3,
+      tables: {
+        galleryEntries: 1,
+        galleryEntryVersions: 1,
+        workspaceSlots: 1,
+      },
+    });
+    for (const table of [
+      "gallery_entries",
+      "gallery_entry_versions",
+      "workspace_slots",
+    ]) {
+      expect(
+        env.gallerySql
+          .exec<{ schema_version: number }>(
+            `SELECT schema_version FROM ${table}`,
+          )
+          .one().schema_version,
+      ).toBe(23);
     }
   });
 });

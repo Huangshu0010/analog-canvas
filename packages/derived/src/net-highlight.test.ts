@@ -150,7 +150,7 @@ describe("Net highlight", () => {
           name: "P",
           netId: "child-net",
           direction: "passive",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
         },
       ],
     };
@@ -233,7 +233,7 @@ describe("Net highlight", () => {
           name: "P",
           netId: "child-net",
           direction: "passive",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
         },
       ],
     };

@@ -30,7 +30,7 @@ in-memory Project, and writes only schema 24. Older project files are rejected.
   `Instance.importProvenance`; there is no persisted property bag.
 - Hierarchy is an acyclic graph of ordinary Instances whose typed subcircuit
   bindings resolve to child Documents; orphan Cell definitions are allowed.
-- Canvas `port` and `port-filled` objects are one-to-one Cell Pin Instances
+- Canvas `port` and `port-filled` objects are Cell Pin marker Instances
   with terminal `P`; their connectivity is stored in `Net.terminals` and
   ordinary terminal Route endpoints.
 - Base `Net.terminals` is the physical membership authority.

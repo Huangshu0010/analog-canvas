@@ -63,7 +63,7 @@ describe("electrical marker name planning", () => {
           id: "formal-in",
           name: "IN",
           netId: "net-p1",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
           direction: "input",
         },
       ],

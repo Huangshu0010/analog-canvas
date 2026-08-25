@@ -98,7 +98,7 @@ function fixture() {
         name: "IN",
         netId: "net-in",
         direction: "input",
-        interfaceInstanceId: "P1",
+        interfaceInstanceIds: ["P1"],
       },
     ],
   };

@@ -23,7 +23,7 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("schematic clipboard", () => {
-  it("copies a Cell Pin with a new interface and Base Net", () => {
+  it("copies a Cell Pin as another marker of the same interface and Net", () => {
     const document = createEmptyDocument("document-main", "Clipboard");
     document.instances.push({
       id: "P1",
@@ -47,7 +47,7 @@ describe("schematic clipboard", () => {
           name: "VIN",
           netId: "net-input",
           direction: "input",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
         },
       ],
       formalParameters: [],
@@ -70,10 +70,9 @@ describe("schematic clipboard", () => {
 
     if (!result.ok) throw new Error(JSON.stringify(result, null, 2));
     expect(result.document.netlist?.terminals).toMatchObject([
-      { interfaceInstanceId: "P1", name: "VIN" },
-      { interfaceInstanceId: "P1-copy-1", name: "VIN_copy" },
+      { interfaceInstanceIds: ["P1", "P1-copy-1"], name: "VIN" },
     ]);
-    expect(result.document.nets).toHaveLength(2);
+    expect(result.document.nets).toHaveLength(1);
 
     const preview = clipboardPreviewDocument(
       document,
@@ -812,7 +811,7 @@ describe("a copy stands on its own", () => {
     expect(copy.schematicReference).not.toMatch(/copy/u);
   });
 
-  it("copies a Cell Pin as an independent interface and Net", () => {
+  it("copies a Cell Pin as another marker of the same interface and Net", () => {
     const document = createEmptyDocument("document-main", "Copy");
     document.instances.push({
       id: "P1",
@@ -833,7 +832,7 @@ describe("a copy stands on its own", () => {
           name: "P12",
           netId: "net-p12",
           direction: "passive",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
         },
       ],
     };
@@ -859,11 +858,11 @@ describe("a copy stands on its own", () => {
       result.document.nets.find((net) =>
         net.terminals.some((terminal) => terminal.instanceId === instanceId),
       );
-    expect(netOf("P1")?.id).not.toBe(netOf(copyId)?.id);
+    expect(netOf("P1")?.id).toBe(netOf(copyId)?.id);
     expect(
-      result.document.netlist?.terminals.find(
-        (terminal) => terminal.interfaceInstanceId === copyId,
+      result.document.netlist?.terminals.find((terminal) =>
+        terminal.interfaceInstanceIds.includes(copyId),
       )?.name,
-    ).toBe("P12_copy");
+    ).toBe("P12");
   });
 });

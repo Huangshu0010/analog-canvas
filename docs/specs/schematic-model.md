@@ -45,13 +45,15 @@ migration. Invalid coordinates are rejected with their data path.
 - `NoConnect` targets one terminal only and cannot overlap Net membership.
 - `Document.netlist.terminals` is the ordered formal Cell interface. Each
   terminal has a stable ID, name, direction, Net ID, and a non-empty
-  singular `interfaceInstanceId` pointing to its ordinary canvas Cell Pin
-  Instance. Its interface name may differ from its internal Logical-Net name.
+  `interfaceInstanceIds` array pointing to one or more ordinary canvas Cell
+  Pin Instances. Its interface name may differ from its internal Logical-Net
+  name.
 
 Canvas `port` and `port-filled` artwork has exactly one meaning: a Cell Pin.
 Each is an ordinary single-pin Instance with pin `P`, owns exactly one ordered
 Cell terminal, and uses ordinary Net membership and Route endpoints. The model
-has no free-Port branch, repeated-marker interface, separate Port collection,
+has no free-Port branch or separate Port collection; repeated markers belong
+to one formal CellTerminal rather than defining another interface,
 or Port-specific Net membership.
 
 VDD, Ground, route Net Label, and Power Rail all author the same

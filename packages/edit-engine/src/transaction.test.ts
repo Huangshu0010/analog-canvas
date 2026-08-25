@@ -76,7 +76,7 @@ function defineCellPin(
     name,
     netId,
     direction: "passive",
-    interfaceInstanceId: instanceId,
+    interfaceInstanceIds: [instanceId],
   });
 }
 
@@ -142,7 +142,7 @@ describe("Edit Transaction envelope", () => {
           name: "Vout",
           netId: "net-vout",
           direction: "output",
-          interfaceInstanceId: "port-object",
+          interfaceInstanceIds: ["port-object"],
         },
       ],
     };
@@ -185,7 +185,7 @@ describe("Edit Transaction envelope", () => {
           name: "Vout",
           netId: "net-vout",
           direction: "output",
-          interfaceInstanceId: "port-object",
+          interfaceInstanceIds: ["port-object"],
         },
       ],
     };

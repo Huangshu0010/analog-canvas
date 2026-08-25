@@ -1289,16 +1289,16 @@ export function App({
       if (anchor.kind !== "object") return false;
       const interfaceInstanceId = anchor.objectId;
       return (
-        document.netlist?.terminals.some(
-          (terminal) => terminal.interfaceInstanceId === interfaceInstanceId,
+        document.netlist?.terminals.some((terminal) =>
+          terminal.interfaceInstanceIds.includes(interfaceInstanceId),
         ) === true
       );
     },
     commitCellPinAnnotation: (annotation, name) => {
       if (annotation.anchor.kind !== "object") return false;
       const interfaceInstanceId = annotation.anchor.objectId;
-      const terminal = document.netlist?.terminals.find(
-        (candidate) => candidate.interfaceInstanceId === interfaceInstanceId,
+      const terminal = document.netlist?.terminals.find((candidate) =>
+        candidate.interfaceInstanceIds.includes(interfaceInstanceId),
       );
       if (!terminal) return false;
       try {
@@ -2581,8 +2581,8 @@ export function App({
   }
 
   const selectedFormalTerminal = selectedInstance
-    ? document.netlist?.terminals.find(
-        (terminal) => terminal.interfaceInstanceId === selectedInstance.id,
+    ? document.netlist?.terminals.find((terminal) =>
+        terminal.interfaceInstanceIds.includes(selectedInstance.id),
       )
     : undefined;
   // A design routinely carries VDDH and VDDL, or VDD1 and VDD2, at once, so a
@@ -2664,14 +2664,18 @@ export function App({
   function deleteCurrentSelection(): void {
     const formalTerminals = (document.netlist?.terminals ?? []).filter(
       (terminal) =>
-        visualSelection.instanceIds.includes(terminal.interfaceInstanceId),
+        terminal.interfaceInstanceIds.some((instanceId) =>
+          visualSelection.instanceIds.includes(instanceId),
+        ),
     );
     if (formalTerminals.length === 0) {
       deleteSelectionFromSelection();
       return;
     }
-    const selectedFormalMarkerIds = formalTerminals.map(
-      (terminal) => terminal.interfaceInstanceId,
+    const selectedFormalMarkerIds = formalTerminals.flatMap((terminal) =>
+      terminal.interfaceInstanceIds.filter((instanceId) =>
+        visualSelection.instanceIds.includes(instanceId),
+      ),
     );
     try {
       const deletionEdits = proposeVisualSelectionDeletion(
@@ -4427,8 +4431,8 @@ export function App({
       if (transact(edits).ok) {
         resetSelection();
         const returnedFormalPort = instanceIds.some((instanceId) =>
-          document.netlist?.terminals.some(
-            (terminal) => terminal.interfaceInstanceId === instanceId,
+          document.netlist?.terminals.some((terminal) =>
+            terminal.interfaceInstanceIds.includes(instanceId),
           ),
         );
         setStatus(
@@ -4445,8 +4449,8 @@ export function App({
   function placementTrayIdentity(
     instance: SchematicDocument["instances"][number],
   ): string {
-    const formalName = document.netlist?.terminals.find(
-      (terminal) => terminal.interfaceInstanceId === instance.id,
+    const formalName = document.netlist?.terminals.find((terminal) =>
+      terminal.interfaceInstanceIds.includes(instance.id),
     )?.name;
     const schematicName = flattenRichText(
       instance.schematicName ?? { runs: [] },

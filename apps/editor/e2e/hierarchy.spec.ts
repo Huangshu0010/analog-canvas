@@ -386,13 +386,13 @@ test("copies and independently deletes repeated Formal Cell Pin markers", async 
   }
   await expect(
     page.getByLabel("Cell Pin properties").getByLabel("Cell Pin name"),
-  ).toHaveValue("VIN_copy");
+  ).toHaveValue("VIN");
   await clickCommand(page, "Netlist", "Check Report…");
   await expect(
     page
       .getByRole("dialog", { name: "Check Report" })
       .getByTestId("netlist-preview"),
-  ).toContainText(".subckt Main VIN_copy");
+  ).toContainText(".subckt Main VIN");
 });
 
 test("edits a Cell Pin name and RichText presentation in place", async ({
@@ -629,4 +629,36 @@ test("renaming one Cell Pin leaves another interface Pin alone", async ({
     .allTextContents();
   expect(texts).toContain("Vother");
   expect(texts).toContain("Vbias");
+});
+
+test("renaming a Cell Pin to an existing name merges the interface and Net", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await placeCellPin(page, {
+    name: "VIN",
+    position: { x: 260, y: 180 },
+  });
+  await placeCellPin(page, {
+    name: "ALIAS",
+    position: { x: 260, y: 320 },
+  });
+
+  await page.getByTestId("hit-P2").click();
+  const shelf = page.getByTestId("selection-shelf");
+  if ((await shelf.getAttribute("aria-expanded")) === "false") {
+    await shelf.click();
+  }
+  const nameField = page.getByLabel("Cell Pin name");
+  await nameField.fill("vin");
+  await nameField.blur();
+
+  await expect(page.getByTestId("status")).toContainText("Renamed Cell Pin");
+  await clickCommand(page, "Netlist", "Check Report…");
+  const preview = await page
+    .getByRole("dialog", { name: "Check Report" })
+    .getByTestId("netlist-preview")
+    .innerText();
+  expect(preview).toContain(".subckt Main VIN");
+  expect(preview).not.toContain("ALIAS");
 });

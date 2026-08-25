@@ -87,8 +87,8 @@ revision-scoped Logical-Net representative decision—partially superseding ADR
 [`0041-physical-cut-and-endpoint-readiness.md`](0041-physical-cut-and-endpoint-readiness.md).
 The schema-23 Base-Net cleanup and full Gallery storage convergence decision is
 [`0042-schema-23-gallery-convergence.md`](0042-schema-23-gallery-convergence.md).
-The one-to-one Cell Pin contract that retires Free Port and repeated marker
-semantics is
+The unified Cell Pin contract that retires Free Port while preserving repeated
+visual markers for one formal terminal is
 [`0043-cell-pin-contract-convergence.md`](0043-cell-pin-contract-convergence.md).
 The arbitrary-angle Route authoring decision is
 [`0039-any-angle-route-authoring.md`](0039-any-angle-route-authoring.md).

@@ -121,7 +121,7 @@ describe("CircuitProject schema", () => {
           name: "Vout",
           netId: "net-vout",
           direction: "output",
-          interfaceInstanceId: "port-object",
+          interfaceInstanceIds: ["port-object"],
         },
       ],
     };
@@ -270,7 +270,7 @@ describe("CircuitProject schema", () => {
       name: "VIN",
       netId: "net-input",
       direction: "input",
-      interfaceInstanceId: "P1",
+      interfaceInstanceIds: ["P1"],
     });
     expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
 
@@ -305,7 +305,7 @@ describe("CircuitProject schema", () => {
           name: "P1",
           netId: "net-a",
           direction: "passive",
-          interfaceInstanceId: "P1",
+          interfaceInstanceIds: ["P1"],
         },
       ],
     };
@@ -546,7 +546,7 @@ describe("CircuitProject schema", () => {
       name: "VIN",
       netId: "net-input",
       direction: "input",
-      interfaceInstanceId: "P1",
+      interfaceInstanceIds: ["P1"],
     });
     document.presentation.cellSymbol = {
       minimumBodySize: { width: 100, height: 60 },

@@ -703,8 +703,8 @@ export function executeTransaction(
       }
       case "reset_cell_body": {
         const cellPinInstanceIds = new Set(
-          draft.netlist?.terminals.map(
-            (terminal) => terminal.interfaceInstanceId,
+          draft.netlist?.terminals.flatMap(
+            (terminal) => terminal.interfaceInstanceIds,
           ) ?? [],
         );
         const interfaceNetIds = new Set(
@@ -1011,10 +1011,24 @@ export function executeTransaction(
           }
           const previousSource = mappedPins.get(targetPin);
           if (previousSource && previousSource !== sourcePin) {
-            return rejectAt(
-              "EDIT_PRECONDITION",
-              `Pin map aliases ${previousSource} and ${sourcePin} to ${targetPin}`,
+            const ownerNetIds = new Set(
+              draft.nets.flatMap((net) =>
+                net.terminals.some(
+                  (terminal) =>
+                    terminal.instanceId === edit.instanceId &&
+                    (terminal.pinName === previousSource ||
+                      terminal.pinName === sourcePin),
+                )
+                  ? [net.id]
+                  : [],
+              ),
             );
+            if (ownerNetIds.size > 1) {
+              return rejectAt(
+                "EDIT_PRECONDITION",
+                `Pin map aliases ${previousSource} and ${sourcePin} to ${targetPin} before their Nets are merged`,
+              );
+            }
           }
           mappedPins.set(targetPin, sourcePin);
         }
@@ -1026,6 +1040,16 @@ export function executeTransaction(
             changed = true;
           }
           if (changed) changedObjectIds.add(net.id);
+          if (changed) {
+            net.terminals = net.terminals.filter(
+              (terminal, index, terminals) =>
+                terminals.findIndex(
+                  (candidate) =>
+                    candidate.instanceId === terminal.instanceId &&
+                    candidate.pinName === terminal.pinName,
+                ) === index,
+            );
+          }
         }
         for (const route of draft.routes) {
           let changed = false;
@@ -1433,8 +1457,8 @@ export function executeTransaction(
           );
         }
         if (
-          draft.netlist?.terminals.some(
-            (terminal) => terminal.interfaceInstanceId === instance.id,
+          draft.netlist?.terminals.some((terminal) =>
+            terminal.interfaceInstanceIds.includes(instance.id),
           )
         ) {
           return rejectAt(
@@ -1767,8 +1791,8 @@ export function executeTransaction(
           }
         }
         if (edit.direction !== undefined) terminal.direction = edit.direction;
-        if (edit.interfaceInstanceId !== undefined) {
-          terminal.interfaceInstanceId = edit.interfaceInstanceId;
+        if (edit.interfaceInstanceIds !== undefined) {
+          terminal.interfaceInstanceIds = [...edit.interfaceInstanceIds];
         }
         changedObjectIds.add(terminal.id);
         connectivityChanged = true;
@@ -2475,13 +2499,23 @@ export function executeTransaction(
           }
           for (const cellTerminal of draft.netlist?.terminals ?? []) {
             if (cellTerminal.netId !== net.id) continue;
-            const groupNetId = netIdByEndpoint.get(
-              endpointKey({
-                kind: "terminal",
-                instanceId: cellTerminal.interfaceInstanceId,
-                pinName: "P",
+            const groupNetIds = new Set(
+              cellTerminal.interfaceInstanceIds.flatMap((instanceId) => {
+                const groupNetId = netIdByEndpoint.get(
+                  endpointKey({ kind: "terminal", instanceId, pinName: "P" }),
+                );
+                return groupNetId ? [groupNetId] : [];
               }),
             );
+            if (groupNetIds.size > 1) {
+              return rejectAt(
+                "EDIT_PRECONDITION",
+                `Cut would separate repeated Cell Pin ${cellTerminal.name}; remove or reconnect a marker first`,
+                [],
+                [...cellTerminal.interfaceInstanceIds],
+              );
+            }
+            const groupNetId = [...groupNetIds][0];
             if (groupNetId && groupNetId !== cellTerminal.netId) {
               cellTerminal.netId = groupNetId;
               changedObjectIds.add(cellTerminal.id);

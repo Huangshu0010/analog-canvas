@@ -441,7 +441,7 @@ describe("current Agent Circuit API service", () => {
                 name: "OUT",
                 netId: "net-port-out",
                 direction: "output",
-                interfaceInstanceId: "PORT-OUT",
+                interfaceInstanceIds: ["PORT-OUT"],
               },
             },
           ],
@@ -455,7 +455,10 @@ describe("current Agent Circuit API service", () => {
       expect.objectContaining({ id: "PORT-OUT", symbolId: "port" }),
     );
     expect(fixture.getDocument().netlist?.terminals).toContainEqual(
-      expect.objectContaining({ name: "OUT", interfaceInstanceId: "PORT-OUT" }),
+      expect.objectContaining({
+        name: "OUT",
+        interfaceInstanceIds: ["PORT-OUT"],
+      }),
     );
     expect(resolver.resolve("port")?.definition.pins).toEqual([
       expect.objectContaining({ name: "P" }),

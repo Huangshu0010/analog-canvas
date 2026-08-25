@@ -189,14 +189,18 @@
           {
             "direction": "passive",
             "id": "cell-terminal-vinp",
-            "interfaceInstanceId": "VINP",
+            "interfaceInstanceIds": [
+              "VINP"
+            ],
             "name": "VINP",
             "netId": "net-vinp"
           },
           {
             "direction": "passive",
             "id": "cell-terminal-vout",
-            "interfaceInstanceId": "VOUT",
+            "interfaceInstanceIds": [
+              "VOUT"
+            ],
             "name": "VOUT",
             "netId": "net-vout"
           }

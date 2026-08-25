@@ -2240,14 +2240,14 @@ describe("routing Edit Engine", () => {
         name: "IN",
         netId: "net-interface",
         direction: "input",
-        interfaceInstanceId: "P1",
+        interfaceInstanceIds: ["P1"],
       },
       {
         id: "terminal-out",
         name: "OUT",
         netId: "net-interface",
         direction: "output",
-        interfaceInstanceId: "P2",
+        interfaceInstanceIds: ["P2"],
       },
     );
     document.routes.push({
@@ -2274,7 +2274,7 @@ describe("routing Edit Engine", () => {
       const markerNet = result.document.nets.find((net) =>
         net.terminals.some(
           (terminal) =>
-            terminal.instanceId === cellTerminal.interfaceInstanceId &&
+            cellTerminal.interfaceInstanceIds.includes(terminal.instanceId) &&
             terminal.pinName === "P",
         ),
       );

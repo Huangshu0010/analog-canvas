@@ -94,7 +94,7 @@ rename them.
 
 `terminals` maps each ordered formal cell-terminal name to one existing Net.
 Canvas `port` and `port-filled` symbols are Cell Pins: each owns exactly one
-ordered interface terminal through `terminals[].interfaceInstanceId` and
+ordered interface terminal through `terminals[].interfaceInstanceIds` and
 neither emits an instance line. Cell Pins are available in top and child
 Documents. A hierarchy instance uses its bound child
 Document and that child's explicit private interface. Ports receive no visible

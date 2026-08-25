@@ -101,8 +101,8 @@ export function missingDefaultInstanceDisplayAnnotations(
   styleProfile: SchematicStyleProfile,
 ): readonly Annotation[] {
   if (!instance.placement) return [];
-  const formalTerminalId = document.netlist?.terminals.find(
-    (terminal) => terminal.interfaceInstanceId === instance.id,
+  const formalTerminalId = document.netlist?.terminals.find((terminal) =>
+    terminal.interfaceInstanceIds.includes(instance.id),
   )?.id;
   const candidates = defaultInstanceDisplayAnnotations(
     document,

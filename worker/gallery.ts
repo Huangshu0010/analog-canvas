@@ -15,7 +15,11 @@
 
 import { evaluateSubmissionGates } from "@icm/derived";
 import { analyzeDesignNetlist } from "@icm/netlist";
-import { parseProject, serializeProject } from "@icm/project-protocol";
+import {
+  parseProject,
+  serializeProject,
+  upgradeSchema23To24WithReport,
+} from "@icm/project-protocol";
 import { renderDocumentSvg } from "@icm/render-svg";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import {
@@ -49,6 +53,27 @@ export function shortId(length = SHORT_ID_LENGTH): string {
 export const GALLERY_MAX_PROJECT_BYTES = 2 * 1024 * 1024;
 /** How many circuits an account's scratch shelf keeps. */
 export const WORKSPACE_SLOT_LIMIT = 3;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function tableRows(value: unknown): Record<string, unknown>[] | null {
+  return Array.isArray(value) && value.every(isRecord) ? value : null;
+}
+
+function rowValues(
+  row: Record<string, unknown>,
+  columns: readonly string[],
+): Array<string | number | null> {
+  return columns.map((column) => {
+    const value = row[column];
+    if (value === null || typeof value === "string" || typeof value === "number") {
+      return value;
+    }
+    throw new Error(`Backup row has invalid ${column}`);
+  });
+}
 
 export interface WorkspaceSlotSummary {
   id: string;
@@ -370,6 +395,8 @@ export class GalleryDO {
         return this.schemaBackup();
       case "schema-converge":
         return this.schemaConverge(body.apply === true);
+      case "schema-restore":
+        return this.schemaRestore(body.backup);
       default:
         return Response.json({ error: "Unknown operation" }, { status: 404 });
     }
@@ -864,6 +891,74 @@ export class GalleryDO {
     });
   }
 
+  /** Restore exactly the three Project-bearing tables from an owned backup. */
+  private schemaRestore(rawBackup: unknown): Response {
+    if (!isRecord(rawBackup) || rawBackup.format !== "analog-canvas-gallery-schema-backup-v1") {
+      return Response.json({ restored: false, error: "invalid-backup" }, { status: 400 });
+    }
+    const tables = isRecord(rawBackup.tables) ? rawBackup.tables : null;
+    const galleryEntries = tableRows(tables?.galleryEntries);
+    const galleryEntryVersions = tableRows(tables?.galleryEntryVersions);
+    const workspaceSlots = tableRows(tables?.workspaceSlots);
+    if (!galleryEntries || !galleryEntryVersions || !workspaceSlots) {
+      return Response.json({ restored: false, error: "invalid-backup-tables" }, { status: 400 });
+    }
+    this.state.storage.transactionSync(() => {
+      this.sql.exec("DELETE FROM gallery_entries");
+      this.sql.exec("DELETE FROM gallery_entry_versions");
+      this.sql.exec("DELETE FROM workspace_slots");
+      for (const row of galleryEntries) {
+        this.sql.exec(
+          `INSERT INTO gallery_entries
+           (id, name, author, description, created_at, schema_version, status,
+            recycled_at, owner_user_id, submitter_email, submitter_provider,
+            project_text, svg_text, reject_reason, reviewed_at, reviewed_by,
+            tags, netlistable)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ...rowValues(row, [
+            "id", "name", "author", "description", "created_at",
+            "schema_version", "status", "recycled_at", "owner_user_id",
+            "submitter_email", "submitter_provider", "project_text", "svg_text",
+            "reject_reason", "reviewed_at", "reviewed_by", "tags", "netlistable",
+          ]),
+        );
+      }
+      for (const row of galleryEntryVersions) {
+        this.sql.exec(
+          `INSERT INTO gallery_entry_versions
+           (id, entry_id, version_no, name, author, description, tags,
+            schema_version, project_text, svg_text, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ...rowValues(row, [
+            "id", "entry_id", "version_no", "name", "author", "description",
+            "tags", "schema_version", "project_text", "svg_text", "created_at",
+          ]),
+        );
+      }
+      for (const row of workspaceSlots) {
+        this.sql.exec(
+          `INSERT INTO workspace_slots
+           (id, user_id, name, saved_at, seq, schema_version, project_text)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          ...rowValues(row, [
+            "id", "user_id", "name", "saved_at", "seq", "schema_version",
+            "project_text",
+          ]),
+        );
+      }
+    });
+    return Response.json({
+      restored: true,
+      records:
+        galleryEntries.length + galleryEntryVersions.length + workspaceSlots.length,
+      tables: {
+        galleryEntries: galleryEntries.length,
+        galleryEntryVersions: galleryEntryVersions.length,
+        workspaceSlots: workspaceSlots.length,
+      },
+    });
+  }
+
   /**
    * Validate every persisted Project before writing any of them. The apply
    * phase is one Durable Object transaction, so a failed record cannot leave
@@ -908,6 +1003,11 @@ export class GalleryDO {
       storedSchemaVersion: number;
       message: string;
     }> = [];
+    const migrationReports: Array<{
+      table: string;
+      id: string;
+      report: ReturnType<typeof upgradeSchema23To24WithReport>["report"];
+    }> = [];
     for (const source of sources) {
       const versions: Record<string, number> = {};
       inventory[source.table] = versions;
@@ -915,7 +1015,21 @@ export class GalleryDO {
         const versionKey = String(row.schema_version);
         versions[versionKey] = (versions[versionKey] ?? 0) + 1;
         try {
-          const project = parseProject(row.project_text);
+          const raw = JSON.parse(row.project_text) as Record<string, unknown>;
+          const migration =
+            raw.schemaVersion === CURRENT_PROJECT_SCHEMA_VERSION - 1
+              ? upgradeSchema23To24WithReport(raw)
+              : null;
+          const project = parseProject(
+            JSON.stringify(migration?.project ?? raw),
+          );
+          if (migration) {
+            migrationReports.push({
+              table: source.table,
+              id: row.id,
+              report: migration.report,
+            });
+          }
           updates.push({
             table: source.table,
             id: row.id,
@@ -962,6 +1076,7 @@ export class GalleryDO {
       records: updates.length + failures.length,
       ready: updates.length,
       failures,
+      migrationReports,
     });
   }
 
@@ -1505,6 +1620,29 @@ export async function routeGalleryRequest(
     } | null;
     const { status, payload } = await callGallery(env, "schema-converge", {
       apply: body?.apply === true,
+    });
+    return Response.json(payload, {
+      status,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  if (
+    segments.length === 2 &&
+    segments[0] === "maintenance" &&
+    segments[1] === "schema-restore" &&
+    request.method === "POST"
+  ) {
+    if (!sameOrigin(request)) {
+      return Response.json({ error: "forbidden" }, { status: 403 });
+    }
+    if (!(await isAdmin(request, env))) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const body = (await request.json().catch(() => null)) as {
+      backup?: unknown;
+    } | null;
+    const { status, payload } = await callGallery(env, "schema-restore", {
+      backup: body?.backup,
     });
     return Response.json(payload, {
       status,

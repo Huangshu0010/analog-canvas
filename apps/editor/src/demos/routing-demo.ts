@@ -51,7 +51,7 @@ export function createRoutingDemoProject(): CircuitProject {
             name: name!,
             netId: netId!,
             direction: "passive" as const,
-            interfaceInstanceId: instanceId!,
+            interfaceInstanceIds: [instanceId!],
           })),
         },
         instances: [
