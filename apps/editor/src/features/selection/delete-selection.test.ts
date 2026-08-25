@@ -1,9 +1,19 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { createEmptyDocument, createEmptyProject } from "@icm/model";
 import {
+  executeProjectTransaction,
   executeTransaction,
+  planRemoveCellTerminalMarkers,
   proposeVisualRouteDeletion,
 } from "@icm/edit-engine";
-import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
+import { parseProject } from "@icm/project-protocol";
+import {
+  builtInSymbols,
+  createProjectSymbolResolver,
+  InMemorySymbolResolver,
+} from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,11 +21,73 @@ import {
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
   proposeSelectionRouteDeletion,
+  proposeVisualSelectionDeletion,
 } from "./delete-selection";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("connected instance deletion", () => {
+  it("deletes the complete differential-op-amp Gallery scene atomically", () => {
+    const project = parseProject(
+      readFileSync(
+        resolve(
+          process.cwd(),
+          "apps/editor/src/examples/fully-differential-two-stage-op-amp.icproj.json",
+        ),
+        "utf8",
+      ),
+    );
+    const document = project.documents[0]!;
+    const galleryResolver = createProjectSymbolResolver(
+      project,
+      builtInSymbols,
+    );
+    const deletionEdits = proposeVisualSelectionDeletion(
+      document,
+      galleryResolver,
+      {
+        instanceIds: document.instances.map((instance) => instance.id),
+        routeIds: document.routes.map((route) => route.id),
+        junctionIds: document.junctions.map((junction) => junction.id),
+        annotationIds: document.annotations.map((annotation) => annotation.id),
+        draftingIds: (document.drafting?.objects ?? []).map(
+          (object) => object.id,
+        ),
+      },
+      1,
+    );
+    const result = executeProjectTransaction(project, {
+      transactionId: "delete-gallery-scene",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "test" },
+      edits: planRemoveCellTerminalMarkers(
+        project,
+        document.id,
+        document.netlist!.terminals.map(
+          (terminal) => terminal.interfaceInstanceId,
+        ),
+        deletionEdits,
+      ),
+    });
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.project.documents[0]).toMatchObject({
+      instances: [],
+      routes: [],
+      junctions: [],
+      annotations: [],
+      netlist: { terminals: [] },
+    });
+    expect(
+      result.project.documents[0]!.connectivityEvidence.some(
+        (evidence) =>
+          evidence.kind === "name-claim" &&
+          evidence.owner.kind === "power-marker",
+      ),
+    ).toBe(false);
+  });
+
   it("does not remove an attached label twice in a mixed marquee deletion", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({

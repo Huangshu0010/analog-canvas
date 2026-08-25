@@ -370,7 +370,6 @@ describe("routing Edit Engine", () => {
       segmentModes: ["manual"],
       presentation: "power-rail",
     });
-
     const proposal = proposePowerRailEndpointResize(
       document,
       resolver,
@@ -419,6 +418,15 @@ describe("routing Edit Engine", () => {
       waypoints: [],
       segmentModes: ["manual"],
       presentation: "power-rail",
+    });
+    document.connectivityEvidence.push({
+      id: "claim-VDD",
+      kind: "name-claim",
+      netId: "VDD",
+      name: "VDD",
+      owner: { kind: "power-marker", objectId: "vdd-end" },
+      scope: "global",
+      powerDomain: "vdd",
     });
     document.annotations.push({
       id: "label-VDD",
@@ -482,6 +490,9 @@ describe("routing Edit Engine", () => {
     if (!deleted.ok) throw new Error(deleted.error.message);
     expect(deleted.document.annotations).toHaveLength(0);
     expect(deleted.document.routes).toHaveLength(0);
+    expect(deleted.document.junctions).toHaveLength(0);
+    expect(deleted.document.connectivityEvidence).toHaveLength(0);
+    expect(deleted.document.nets).toHaveLength(0);
   });
 
   it("attaches a real terminal to a Route interior and lets both halves follow it", () => {

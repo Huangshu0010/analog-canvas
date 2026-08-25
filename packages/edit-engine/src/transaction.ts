@@ -2264,10 +2264,12 @@ export function executeTransaction(
             endpoint.kind === "junction" ? [endpoint.junctionId] : [],
           ),
         );
-        const ownerNetIds = removeConnectivityEvidenceOwnedBy(
-          draft,
-          new Set([route.id]),
-          changedObjectIds,
+        const ownerNetIds = new Set(
+          removeConnectivityEvidenceOwnedBy(
+            draft,
+            new Set([route.id]),
+            changedObjectIds,
+          ),
         );
         draft.routes.splice(routeIndex, 1);
         changedObjectIds.add(route.id);
@@ -2297,6 +2299,13 @@ export function executeTransaction(
               !preservedObjectIds.has(junction.id),
           )
           .map((junction) => junction.id);
+        for (const netId of removeConnectivityEvidenceOwnedBy(
+          draft,
+          new Set(removedJunctionIds),
+          changedObjectIds,
+        )) {
+          ownerNetIds.add(netId);
+        }
         draft.junctions = draft.junctions.filter(
           (junction) => !removedJunctionIds.includes(junction.id),
         );
