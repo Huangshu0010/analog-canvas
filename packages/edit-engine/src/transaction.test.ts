@@ -1246,15 +1246,26 @@ describe("Edit Transaction envelope", () => {
         { instanceId: "VDD1", pinName: "P" },
       ],
     });
-    document.connectivityEvidence.push({
-      id: "claim-vdd-1",
-      kind: "name-claim",
-      netId: "net-power-vdd1",
-      name: "VDD",
-      owner: { kind: "power-marker", objectId: "VDD1" },
-      scope: "global",
-      powerDomain: "vdd",
-    });
+    document.connectivityEvidence.push(
+      {
+        id: "claim-vdd-legacy-projection",
+        kind: "name-claim",
+        netId: "net-power-vdd1",
+        name: "VDD",
+        owner: { kind: "explicit-net-property" },
+        scope: "global",
+        powerDomain: "vdd",
+      },
+      {
+        id: "claim-vdd-1",
+        kind: "name-claim",
+        netId: "net-power-vdd1",
+        name: "VDD",
+        owner: { kind: "power-marker", objectId: "VDD1" },
+        scope: "global",
+        powerDomain: "vdd",
+      },
+    );
     document.mosBulkDefaults = { pmosNetId: "net-power-vdd1" };
     document.instances[0]!.mosBulkBinding = {
       origin: "cell-default",
@@ -1281,6 +1292,46 @@ describe("Edit Transaction envelope", () => {
     expect(removed.document.mosBulkDefaults).toBeUndefined();
     expect(removed.document.instances[0]?.mosBulkBinding).toBeUndefined();
     expect(removed.document.nets).toEqual([]);
+    expect(removed.document.connectivityEvidence).toEqual([]);
+
+    const replaced = executeTransaction(
+      removed.document,
+      {
+        ...transaction(removed.document.revision),
+        edits: [
+          {
+            kind: "add_instance",
+            instance: { id: "VDD1", symbolId: "vdd-port", placement: null },
+          },
+          {
+            kind: "connect_endpoints",
+            from: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+            to: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+            newNetId: "net-power-vdd1",
+          },
+          {
+            kind: "upsert_connectivity_evidence",
+            evidence: {
+              id: "claim-vdd-1",
+              kind: "name-claim",
+              netId: "net-power-vdd1",
+              name: "VDD",
+              owner: { kind: "power-marker", objectId: "VDD1" },
+              scope: "global",
+              powerDomain: "vdd",
+            },
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(replaced).toMatchObject({
+      ok: true,
+      document: {
+        instances: [{ id: "M1" }, { id: "VDD1" }],
+        nets: [{ id: "net-power-vdd1" }],
+      },
+    });
   });
 
   it("keeps an explicit custom PMOS body default without a power marker", () => {
@@ -1397,7 +1448,7 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
-  it("removes only evidence owned by a deleted Net Label", () => {
+  it("reclaims ownerless naming evidence with the label's orphaned Net", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({ id: "net-a", terminals: [] });
     document.annotations.push({
@@ -1436,8 +1487,123 @@ describe("Edit Transaction envelope", () => {
     expect(result).toMatchObject({
       ok: true,
       document: {
+        nets: [],
+        connectivityEvidence: [],
+      },
+    });
+  });
+
+  it("keeps a source-backed node name when its visible label is deleted", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({ id: "net-a", terminals: [] });
+    document.junctions.push({
+      id: "junction-a",
+      netId: "net-a",
+      position: { x: 0, y: 0 },
+      role: "route-anchor",
+    });
+    document.annotations.push({
+      id: "label-a",
+      kind: "net-label",
+      binding: { kind: "net-name", netId: "net-a" },
+      netId: "net-a",
+      anchor: {
+        kind: "object",
+        objectId: "junction-a",
+        localOffset: { x: 0, y: 0 },
+        fallbackPosition: { x: 0, y: 0 },
+      },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    document.connectivityEvidence.push(
+      {
+        id: "claim-label",
+        kind: "name-claim",
+        netId: "net-a",
+        name: "A",
+        owner: { kind: "net-label", annotationId: "label-a" },
+        scope: "local",
+      },
+      {
+        id: "claim-source-name",
+        kind: "name-claim",
+        netId: "net-a",
+        name: "A",
+        owner: { kind: "explicit-net-property" },
+        scope: "local",
+      },
+      {
+        id: "source-a",
+        kind: "spice-source",
+        netId: "net-a",
+        sourceNetId: "source-a",
+      },
+    );
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [{ kind: "remove_schematic_annotation", annotationId: "label-a" }],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
         nets: [{ id: "net-a" }],
-        connectivityEvidence: [{ id: "claim-property" }],
+        connectivityEvidence: [{ id: "claim-source-name" }, { id: "source-a" }],
+      },
+    });
+  });
+
+  it("trims explicit equivalence when one member Net becomes unreachable", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push(
+      { id: "net-a", terminals: [] },
+      { id: "net-b", terminals: [] },
+      { id: "net-c", terminals: [] },
+    );
+    document.annotations.push({
+      id: "label-a",
+      kind: "net-label",
+      binding: { kind: "net-name", netId: "net-a" },
+      netId: "net-a",
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    document.connectivityEvidence.push(
+      {
+        id: "claim-label-a",
+        kind: "name-claim",
+        netId: "net-a",
+        name: "A",
+        owner: { kind: "net-label", annotationId: "label-a" },
+        scope: "local",
+      },
+      {
+        id: "equivalence-abc",
+        kind: "explicit-equivalence",
+        memberNetIds: ["net-a", "net-b", "net-c"],
+      },
+    );
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [{ kind: "remove_schematic_annotation", annotationId: "label-a" }],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        nets: [{ id: "net-b" }, { id: "net-c" }],
+        connectivityEvidence: [
+          {
+            id: "equivalence-abc",
+            memberNetIds: ["net-b", "net-c"],
+          },
+        ],
       },
     });
   });

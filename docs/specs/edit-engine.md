@@ -147,14 +147,20 @@ atomic writers for the schema-24 evidence list. Upsert replaces evidence with
 the same ID or inserts a new record after checking the shared Document object
 namespace; final Document validation checks every Net and owner reference.
 Removing an Instance, Net Label, Junction, or Route also removes only
-`name-claim` evidence that names that object as its owner. Explicit Net-property
-claims, SPICE-source assertions, and explicit equivalence remain until an
-explicit evidence edit removes them. Evidence is Net reachability: local-Net
-cleanup cannot remove a referenced Base Net, but re-runs after owner/evidence
-deletion so an actually unreachable final Net disappears in the same Undoable
-transaction. Reset Cell Body previews and removes non-interface evidence while
-retaining assertions whose complete Net and owner closure survives. The
-retired Agent surface classifies both evidence edits as unsupported.
+`name-claim` evidence that names that object as its owner. A source-unbacked
+legacy Net-property projection shadowed by that owner retires with it; an
+imported node name remains while its Base Net still has structural reachability.
+Evidence describes a Base Net but is not itself Net reachability. When the last
+terminal, Route/Junction, formal interface, Annotation, layout reference, or
+materialized MOS binding disappears, cleanup removes the Base Net together with
+its Net-property and SPICE-source evidence and trims explicit-equivalence
+membership. The Document source binding remains as import provenance. Cleanup
+of evidence-bearing candidates is deferred to the transaction boundary so
+ordered edits can still remove or replace their evidence atomically; evidence
+explicitly upserted by that transaction remains subject to final validation.
+Reset Cell Body previews and removes non-interface evidence while retaining
+assertions whose complete Net and owner closure survives. The retired Agent
+surface classifies both evidence edits as unsupported.
 
 `hierarchy-planner.ts` is the shared pure orchestration boundary above these
 edits. It constructs canonical subcircuit Instances and plans Cell

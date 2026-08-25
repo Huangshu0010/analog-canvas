@@ -74,18 +74,14 @@ describe("connected instance deletion", () => {
     if (!result.ok) throw new Error(result.error.message);
     expect(result.project.documents[0]).toMatchObject({
       instances: [],
+      nets: [],
+      connectivityEvidence: [],
       routes: [],
       junctions: [],
       annotations: [],
       netlist: { terminals: [] },
     });
-    expect(
-      result.project.documents[0]!.connectivityEvidence.some(
-        (evidence) =>
-          evidence.kind === "name-claim" &&
-          evidence.owner.kind === "power-marker",
-      ),
-    ).toBe(false);
+    expect(result.project.documents[0]!.mosBulkDefaults).toBeUndefined();
   });
 
   it("does not remove an attached label twice in a mixed marquee deletion", () => {
