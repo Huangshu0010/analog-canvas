@@ -110,6 +110,54 @@ function transaction(documentId: string, edits: readonly SchematicEdit[]) {
 }
 
 describe("Instance lifecycle planning", () => {
+  it("returns an offset MOS bulk terminal through its grid landing", () => {
+    const document = createEmptyDocument("document-bulk", "Bulk");
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+    });
+    document.nets.push({
+      id: "net-body",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+    document.junctions.push({
+      id: "J1",
+      netId: "net-body",
+      position: { x: 180, y: 100 },
+    });
+    document.routes.push({
+      id: "route-body",
+      netId: "net-body",
+      from: { kind: "terminal", instanceId: "M1", pinName: "B" },
+      to: { kind: "junction", junctionId: "J1" },
+      waypoints: [{ x: 100, y: 100 }],
+      segmentModes: ["escape", "manual"],
+      presentation: "bulk-dashed",
+    });
+
+    const edits = planInstanceUnplacement(document, resolver, ["M1"], 9);
+    expect(edits[0]).toMatchObject({
+      kind: "add_junction",
+      position: { x: 100, y: 100 },
+    });
+    expect(edits[1]).toMatchObject({
+      kind: "set_route_points",
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+    expect(
+      executeTransaction(document, transaction(document.id, edits), {
+        symbolResolver: resolver,
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
   it("returns a formal Cell Pin without removing its exported interface", () => {
     const document = createEmptyDocument("document-child", "Child");
     document.instances.push({

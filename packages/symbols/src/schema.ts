@@ -8,11 +8,41 @@ import { z } from "zod";
 export const SYMBOL_CONNECTION_GRID = 10;
 const SymbolGeometryPointSchema = SymbolLocalPointSchema;
 
+function routingLandingIssue(pin: {
+  at: { x: number; y: number };
+  direction: "north" | "east" | "south" | "west";
+  routing?:
+    { preferredLanding?: { x: number; y: number } | undefined } | undefined;
+}): string | null {
+  const landing = pin.routing?.preferredLanding;
+  if (!landing) return null;
+  const delta = { x: landing.x - pin.at.x, y: landing.y - pin.at.y };
+  const outward =
+    (pin.direction === "east" && delta.y === 0 && delta.x >= 0) ||
+    (pin.direction === "west" && delta.y === 0 && delta.x <= 0) ||
+    (pin.direction === "south" && delta.x === 0 && delta.y >= 0) ||
+    (pin.direction === "north" && delta.x === 0 && delta.y <= 0);
+  return outward
+    ? null
+    : "Preferred routing landing must lie on the pin's outward axis";
+}
+
+/**
+ * Symbol-local authoring intent for a terminal whose calibrated artwork
+ * contact does not itself lie on the connection grid. The preferred landing
+ * is geometry only: electrical identity remains the canonical pin name.
+ */
+export const SymbolPinRoutingSchema = z.strictObject({
+  escape: z.literal("outward"),
+  preferredLanding: SymbolLocalPointSchema.optional(),
+});
+
 export const SymbolPinSchema = z.strictObject({
   name: z.string().min(1),
   role: z.string().min(1),
   at: SymbolLocalPointSchema,
   direction: z.enum(["north", "east", "south", "west"]),
+  routing: SymbolPinRoutingSchema.optional(),
   presentation: z.strictObject({
     visibility: z.enum(["visible", "implicit", "conditional"]),
     leadLength: z.number().int().nonnegative().optional(),
@@ -92,6 +122,7 @@ export const SymbolVariantSchema = z.strictObject({
         name: z.string().min(1),
         at: SymbolLocalPointSchema,
         direction: z.enum(["north", "east", "south", "west"]),
+        routing: SymbolPinRoutingSchema.optional(),
       }),
     )
     .optional(),
@@ -162,6 +193,24 @@ export const SymbolDefinitionSchema = z
           });
         }
       }
+      const routingIssue = routingLandingIssue(pin);
+      if (routingIssue) {
+        context.addIssue({
+          code: "custom",
+          message: routingIssue,
+          path: ["pins", pinIndex, "routing", "preferredLanding"],
+        });
+      }
+      for (const coordinate of ["x", "y"] as const) {
+        const value = pin.routing?.preferredLanding?.[coordinate];
+        if (value !== undefined && value % SYMBOL_CONNECTION_GRID !== 0) {
+          context.addIssue({
+            code: "custom",
+            message: `Preferred routing landings must use the ${SYMBOL_CONNECTION_GRID}-unit connection grid`,
+            path: ["pins", pinIndex, "routing", "preferredLanding", coordinate],
+          });
+        }
+      }
     }
     if (
       symbol.defaultVariantId !== undefined &&
@@ -198,6 +247,39 @@ export const SymbolDefinitionSchema = z
             code: "custom",
             message: `Variant exposes an unknown auxiliary pin: ${pin.name}`,
             path: ["variants", variantIndex, "auxiliaryPins", pinIndex],
+          });
+        }
+        for (const coordinate of ["x", "y"] as const) {
+          const value = pin.routing?.preferredLanding?.[coordinate];
+          if (value !== undefined && value % SYMBOL_CONNECTION_GRID !== 0) {
+            context.addIssue({
+              code: "custom",
+              message: `Preferred routing landings must use the ${SYMBOL_CONNECTION_GRID}-unit connection grid`,
+              path: [
+                "variants",
+                variantIndex,
+                "auxiliaryPins",
+                pinIndex,
+                "routing",
+                "preferredLanding",
+                coordinate,
+              ],
+            });
+          }
+        }
+        const routingIssue = routingLandingIssue(pin);
+        if (routingIssue) {
+          context.addIssue({
+            code: "custom",
+            message: routingIssue,
+            path: [
+              "variants",
+              variantIndex,
+              "auxiliaryPins",
+              pinIndex,
+              "routing",
+              "preferredLanding",
+            ],
           });
         }
       }

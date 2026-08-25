@@ -31,6 +31,22 @@ The product has five explicit coordinate domains:
 | Client | browser/CSS/SVG screen coordinates | finite float | never persisted |
 | Symbol-local | catalog artwork coordinate system | finite float | catalog only, never a Document page point |
 
+Terminal geometry crosses these domains through one `EndpointConnection`:
+
+```text
+contactPoint  exact Derived artwork contact
+gridLanding   persistable Grid routing anchor
+escapePath    derived contact-to-landing lead
+outward       transformed terminal direction
+```
+
+Wire preview/render/hit testing use `contactPoint` and `escapePath`; Route
+planning, Junction creation, movement, deletion, rotation, mirror, and tray
+lifecycle use `gridLanding`. Route waypoints never copy symbol-local or
+derived contact coordinates. A Symbol pin may declare an outward
+`preferredLanding`; if the active Document uses a coarser grid, the resolver
+advances that landing outward to the next compatible grid line.
+
 Every persisted Document page point is grid-aligned: Instance placement,
 Junction position, Route waypoints, free/object anchor position data and
 fallbacks, drafting points/waypoints/controls, and drafting centers. A typed
@@ -61,6 +77,10 @@ GridPoint --project--> DerivedPoint --render/hit/diagnose--> read-only output
 Document parse, import/replacement, recovery restore, and transaction payload
 validation reject a non-grid Project point with its exact object path. They do
 not round or migrate it.
+
+Typed-edit preflight extracts page points by edit kind. It does not recursively
+classify every structural `{x,y}` pair, so symbol, derived, preview, attachment,
+and measurement geometry cannot be mistaken for persisted page coordinates.
 
 ## Consequences
 

@@ -1,7 +1,166 @@
-import { transformPoint } from "@icm/model";
-import type { Net, Point, RouteEndpoint, SchematicDocument } from "@icm/model";
+import { isGridAlignedCoordinate, transformPoint } from "@icm/model";
+import type {
+  DerivedPoint,
+  GridPoint,
+  Net,
+  RouteEndpoint,
+  SchematicDocument,
+  SymbolLocalPoint,
+} from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 import { mosBulkShouldBeVisible } from "./mos-bulk.js";
+
+export interface EndpointRoutingGeometry {
+  /** Exact transformed artwork contact used by render and pointer hit. */
+  contactPoint: DerivedPoint;
+  /** Persistable page-grid point used by every routing mutator. */
+  gridLanding: GridPoint;
+  /** Read-only contact-to-grid lead; empty when contact and landing coincide. */
+  escapePath: readonly DerivedPoint[];
+  /** Transformed terminal direction; Junctions have no outward direction. */
+  outward: DerivedPoint | null;
+}
+
+export interface EndpointConnection extends EndpointRoutingGeometry {
+  endpoint: RouteEndpoint;
+}
+
+interface ResolvedPinGeometry {
+  at: SymbolLocalPoint;
+  direction: "north" | "east" | "south" | "west";
+  routing?: {
+    escape: "outward";
+    preferredLanding?: SymbolLocalPoint | undefined;
+  };
+}
+
+function samePoint(left: DerivedPoint, right: DerivedPoint): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
+function resolvedTerminalPin(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  endpoint: Extract<RouteEndpoint, { kind: "terminal" }>,
+): {
+  instance: SchematicDocument["instances"][number] & {
+    placement: NonNullable<SchematicDocument["instances"][number]["placement"]>;
+  };
+  pin: ResolvedPinGeometry;
+} | null {
+  const instance = document.instances.find(
+    (candidate) => candidate.id === endpoint.instanceId,
+  );
+  if (!instance?.placement) return null;
+  const symbol = resolver.resolve(instance.symbolId, instance.symbolVariantId);
+  const basePin = symbol?.definition.pins.find(
+    (candidate) => candidate.name === endpoint.pinName,
+  );
+  if (!basePin) return null;
+  const auxiliary = symbol?.variant?.auxiliaryPins?.find(
+    (candidate) => candidate.name === endpoint.pinName,
+  );
+  const selected = auxiliary ?? basePin;
+  return {
+    instance: { ...instance, placement: instance.placement },
+    pin: {
+      at: selected.at,
+      direction: selected.direction,
+      ...(selected.routing ? { routing: selected.routing } : {}),
+    },
+  };
+}
+
+/**
+ * Resolve one endpoint across the symbol/derived/grid boundary. This is the
+ * only entry point mutation planners may use for terminal geometry: artwork
+ * contact remains exact, while every persisted Junction or waypoint uses the
+ * grid landing.
+ */
+export function resolveEndpointConnection(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  endpoint: RouteEndpoint,
+): EndpointConnection | null {
+  if (endpoint.kind === "junction") {
+    const position = document.junctions.find(
+      (junction) => junction.id === endpoint.junctionId,
+    )?.position;
+    return position
+      ? {
+          endpoint,
+          contactPoint: position,
+          gridLanding: position,
+          escapePath: [],
+          outward: null,
+        }
+      : null;
+  }
+
+  const resolved = resolvedTerminalPin(document, resolver, endpoint);
+  if (!resolved) return null;
+  const { instance, pin } = resolved;
+  const contactPoint = transformPoint(
+    pin.at,
+    instance.placement.position,
+    instance.placement,
+  );
+  const localLanding = pin.routing?.preferredLanding ?? pin.at;
+  const landing = transformPoint(
+    localLanding,
+    instance.placement.position,
+    instance.placement,
+  );
+  const localDirection = {
+    north: { x: 0, y: -1 },
+    east: { x: 1, y: 0 },
+    south: { x: 0, y: 1 },
+    west: { x: -1, y: 0 },
+  }[pin.direction];
+  const outward = transformPoint(
+    localDirection,
+    { x: 0, y: 0 },
+    instance.placement,
+  );
+  const grid = document.presentation.grid;
+  const gridLanding: GridPoint | null = (() => {
+    if (
+      isGridAlignedCoordinate(landing.x, grid) &&
+      isGridAlignedCoordinate(landing.y, grid)
+    ) {
+      return { x: landing.x, y: landing.y };
+    }
+    if (outward.x !== 0 && isGridAlignedCoordinate(landing.y, grid)) {
+      return {
+        x:
+          (outward.x > 0
+            ? Math.ceil(landing.x / grid)
+            : Math.floor(landing.x / grid)) * grid,
+        y: landing.y,
+      };
+    }
+    if (outward.y !== 0 && isGridAlignedCoordinate(landing.x, grid)) {
+      return {
+        x: landing.x,
+        y:
+          (outward.y > 0
+            ? Math.ceil(landing.y / grid)
+            : Math.floor(landing.y / grid)) * grid,
+      };
+    }
+    return null;
+  })();
+  if (!gridLanding) return null;
+  return {
+    endpoint,
+    contactPoint,
+    gridLanding,
+    escapePath: samePoint(contactPoint, gridLanding)
+      ? []
+      : [contactPoint, gridLanding],
+    outward,
+  };
+}
 
 export function endpointKey(endpoint: RouteEndpoint): string {
   switch (endpoint.kind) {
@@ -58,66 +217,21 @@ export function resolveEndpointPoint(
   document: SchematicDocument,
   resolver: SymbolResolver,
   endpoint: RouteEndpoint,
-): Point | null {
-  switch (endpoint.kind) {
-    case "junction":
-      return (
-        document.junctions.find(
-          (junction) => junction.id === endpoint.junctionId,
-        )?.position ?? null
-      );
-    case "terminal": {
-      const instance = document.instances.find(
-        (candidate) => candidate.id === endpoint.instanceId,
-      );
-      if (!instance?.placement) return null;
-      const symbol = resolver.resolve(
-        instance.symbolId,
-        instance.symbolVariantId,
-      );
-      const basePin = symbol?.definition.pins.find(
-        (candidate) => candidate.name === endpoint.pinName,
-      );
-      if (!basePin) return null;
-      const auxiliary = symbol?.variant?.auxiliaryPins?.find(
-        (candidate) => candidate.name === endpoint.pinName,
-      );
-      const pin = auxiliary ?? basePin;
-      return transformPoint(
-        pin.at,
-        instance.placement.position,
-        instance.placement,
-      );
-    }
-  }
+): DerivedPoint | null {
+  return (
+    resolveEndpointConnection(document, resolver, endpoint)?.contactPoint ??
+    null
+  );
 }
 
 export function resolveEndpointOutwardDirection(
   document: SchematicDocument,
   resolver: SymbolResolver,
   endpoint: RouteEndpoint,
-): Point | null {
-  if (endpoint.kind !== "terminal") return null;
-  const instance = document.instances.find(
-    (candidate) => candidate.id === endpoint.instanceId,
+): DerivedPoint | null {
+  return (
+    resolveEndpointConnection(document, resolver, endpoint)?.outward ?? null
   );
-  if (!instance?.placement) return null;
-  const symbol = resolver.resolve(instance.symbolId, instance.symbolVariantId);
-  const basePin = symbol?.definition.pins.find(
-    (candidate) => candidate.name === endpoint.pinName,
-  );
-  if (!basePin) return null;
-  const auxiliary = symbol?.variant?.auxiliaryPins?.find(
-    (candidate) => candidate.name === endpoint.pinName,
-  );
-  const pin = auxiliary ?? basePin;
-  const localDirection = {
-    north: { x: 0, y: -1 },
-    east: { x: 1, y: 0 },
-    south: { x: 0, y: 1 },
-    west: { x: -1, y: 0 },
-  }[pin.direction];
-  return transformPoint(localDirection, { x: 0, y: 0 }, instance.placement);
 }
 
 export function endpointBelongsToNet(

@@ -47,7 +47,7 @@ function credential(agentToken) {
 
 function snapshot() {
   return {
-    snapshotVersion: "1.0",
+    snapshotVersion: "2.0",
     electricalTopologyHash: "a".repeat(64),
     byteLength: 512,
     project: {
@@ -130,7 +130,7 @@ const relay = createServer(async (request, response) => {
         ok: true,
         capabilities: {
           apiVersions: ["2.0"],
-          snapshotVersions: ["1.0"],
+          snapshotVersions: ["2.0"],
           operations: ["capabilities", "snapshot", "transact", "render"],
           editKinds: ["add_instance"],
           permissions: {

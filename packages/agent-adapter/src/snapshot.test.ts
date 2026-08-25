@@ -64,7 +64,10 @@ describe("Agent Document Snapshot", () => {
     const m1 = snapshot.document.instances.find((item) => item.id === "M1")!;
     expect(m1.pins.find((pin) => pin.name === "G")).toMatchObject({
       netId: "net-vinp",
-      pagePosition: expect.any(Object),
+      connection: expect.objectContaining({
+        contactPoint: expect.any(Object),
+        gridLanding: expect.any(Object),
+      }),
     });
     const vinp = snapshot.document.nets.find((item) => item.id === "net-vinp")!;
     expect(vinp.terminals).toContainEqual({ instanceId: "M1", pinName: "G" });

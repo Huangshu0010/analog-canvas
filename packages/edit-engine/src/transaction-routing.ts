@@ -14,7 +14,7 @@ import {
   netEndpoints,
   pointOnSegment as pointOnGenericSegment,
   resolveDocumentLogicalNets,
-  resolveEndpointOutwardDirection,
+  resolveEndpointConnection,
 } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -298,11 +298,8 @@ export function validateRoute(
     ],
   ] as const) {
     if (endpoint.kind !== "terminal" || mode !== "escape") continue;
-    const outward = resolveEndpointOutwardDirection(
-      document,
-      resolver,
-      endpoint,
-    );
+    const connection = resolveEndpointConnection(document, resolver, endpoint);
+    const outward = connection?.outward;
     if (!outward) return `Route ${route.id} has an unresolved pin direction`;
     const departure = { x: adjacent.x - point.x, y: adjacent.y - point.y };
     if (departure.x * outward.x + departure.y * outward.y <= 0) {

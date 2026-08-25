@@ -119,7 +119,7 @@ export function inspectInstanceValue(
       name: pin.name,
       direction: pin.direction,
       netId: pin.netId,
-      ...(pin.pagePosition ? { position: pin.pagePosition } : {}),
+      ...(pin.connection ? { connection: pin.connection } : {}),
     })),
     ...(Object.keys(instance.parameters).length > 0
       ? { parameters: instance.parameters }

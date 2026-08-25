@@ -3,8 +3,10 @@ import {
   isMosBulkRoute,
   isMosBulkTerminal,
   pointOnSegment,
-  resolveEndpointPoint,
+  resolveEndpointConnection,
   segmentLength,
+  type EndpointConnection,
+  type EndpointRoutingGeometry,
 } from "@icm/derived";
 import {
   normalizeRouteGeometry,
@@ -32,7 +34,7 @@ import type { SymbolResolver } from "@icm/symbols";
 import type { SchematicEdit } from "./transaction.js";
 
 export interface WireEndpointGeometry {
-  point: Point;
+  connection: EndpointRoutingGeometry;
 }
 
 export interface ManualWirePath {
@@ -70,6 +72,7 @@ export interface WireDraftOptions {
 }
 
 export interface WireSource extends WireEndpointGeometry {
+  connection: EndpointConnection;
   endpoint: RouteEndpoint;
   netId: string | null;
   preludeEdits: SchematicEdit[];
@@ -820,7 +823,7 @@ export function compileWireDraft(
   finalRoutingMode: WireRoutingMode = "orthogonal",
   finalCornerOrder: WireCornerOrder = "auto",
 ): ManualWirePath {
-  const points: Point[] = [{ ...from.point }];
+  const points: Point[] = [{ ...from.connection.gridLanding }];
   const modes: SegmentMode[] = [];
   const appendStep = (step: WireDraftStep) => {
     // A free leg is the straight line to the click: no elbow is inserted, so
@@ -849,16 +852,34 @@ export function compileWireDraft(
   };
   for (const step of steps) appendStep(step);
   appendStep({
-    point: to.point,
+    point: to.connection.gridLanding,
     routingMode: finalRoutingMode,
     cornerOrder: finalCornerOrder,
   });
-  if (points.length === 1) return { points, waypoints: [], segmentModes: [] };
-  const normalized = normalizeRouteGeometry(points, modes);
+  const normalized =
+    points.length === 1
+      ? { points, segmentModes: [] as SegmentMode[] }
+      : normalizeRouteGeometry(points, modes);
+  const authoredPoints: Point[] = [{ ...from.connection.contactPoint }];
+  const authoredModes: SegmentMode[] = [];
+  const appendAuthored = (point: Point, mode: SegmentMode) => {
+    const previous = authoredPoints.at(-1);
+    if (previous?.x === point.x && previous.y === point.y) return;
+    if (previous) authoredModes.push(mode);
+    authoredPoints.push({ ...point });
+  };
+  appendAuthored(from.connection.gridLanding, "escape");
+  for (let index = 1; index < normalized.points.length; index += 1) {
+    appendAuthored(
+      normalized.points[index]!,
+      normalized.segmentModes[index - 1] ?? "manual",
+    );
+  }
+  appendAuthored(to.connection.contactPoint, "escape");
   return {
-    points: normalized.points,
-    waypoints: normalized.points.slice(1, -1),
-    segmentModes: normalized.segmentModes,
+    points: authoredPoints,
+    waypoints: authoredPoints.slice(1, -1),
+    segmentModes: authoredModes,
   };
 }
 
@@ -1053,7 +1074,10 @@ export function proposeWireCommitThroughContacts(
       ) {
         return [];
       }
-      const offset = pathOffsetAtPoint(path.points, source.point);
+      const offset = pathOffsetAtPoint(
+        path.points,
+        source.connection.contactPoint,
+      );
       return offset !== null && offset > 0 && offset < totalOffset
         ? [{ source, offset }]
         : [];
@@ -1158,7 +1182,13 @@ export function createFreeWireAnchor(
   return {
     endpoint: { kind: "junction", junctionId },
     netId,
-    point,
+    connection: {
+      endpoint: { kind: "junction", junctionId },
+      contactPoint: point,
+      gridLanding: point,
+      escapePath: [],
+      outward: null,
+    },
     preludeEdits: [
       {
         kind: "add_junction",
@@ -1202,7 +1232,13 @@ export function createRouteWireAnchor(
   return {
     endpoint: { kind: "junction", junctionId },
     netId: route.netId,
-    point: splitPoint,
+    connection: {
+      endpoint: { kind: "junction", junctionId },
+      contactPoint: splitPoint,
+      gridLanding: splitPoint,
+      escapePath: [],
+      outward: null,
+    },
     ...(isMosBulkRoute(document, route)
       ? { routePresentation: "bulk-dashed" as const }
       : {}),
@@ -1252,11 +1288,12 @@ function endpointWireSource(
   resolver: SymbolResolver,
   endpoint: RouteEndpoint,
 ): WireSource | string {
-  const point = resolveEndpointPoint(document, resolver, endpoint);
-  if (!point) return `Wire endpoint is unresolved: ${JSON.stringify(endpoint)}`;
+  const connection = resolveEndpointConnection(document, resolver, endpoint);
+  if (!connection)
+    return `Wire endpoint is unresolved or has no grid landing: ${JSON.stringify(endpoint)}`;
   return {
     endpoint,
-    point,
+    connection,
     netId: endpointNetId(document, endpoint),
     preludeEdits: [],
   };

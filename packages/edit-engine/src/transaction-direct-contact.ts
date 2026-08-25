@@ -4,7 +4,7 @@ import {
   deriveDirectContactDelta,
   endpointKey,
   isMosBulkTerminal,
-  resolveEndpointPoint,
+  resolveEndpointConnection,
 } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -97,9 +97,13 @@ export function reconcileTransformDirectContacts(
     ) {
       continue;
     }
-    const leftPoint = resolveEndpointPoint(draft, resolver, left);
-    const rightPoint = resolveEndpointPoint(draft, resolver, right);
+    const leftConnection = resolveEndpointConnection(draft, resolver, left);
+    const rightConnection = resolveEndpointConnection(draft, resolver, right);
+    const leftPoint = leftConnection?.contactPoint;
+    const rightPoint = rightConnection?.contactPoint;
     if (
+      !leftConnection ||
+      !rightConnection ||
       !leftPoint ||
       !rightPoint ||
       (leftPoint.x === rightPoint.x && leftPoint.y === rightPoint.y)
@@ -107,8 +111,8 @@ export function reconcileTransformDirectContacts(
       continue;
     }
     const geometry = buildManualWirePath(
-      { point: leftPoint },
-      { point: rightPoint },
+      { connection: leftConnection },
+      { connection: rightConnection },
     );
     const routeId = uniqueDerivedId(draft, transactionId, pair.id);
     draft.routes.push({

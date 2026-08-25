@@ -9,6 +9,7 @@ import {
   endpointsEqual,
   isVisibleEndpoint,
   netEndpoints,
+  resolveEndpointConnection,
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
 } from "./index.js";
@@ -49,7 +50,24 @@ const resolver = new InMemorySymbolResolver([
     primitives: [
       { kind: "line" as const, from: { x: -10, y: 0 }, to: { x: 10, y: 0 } },
     ],
-    variants: [{ id: "hide-r", hiddenPinNames: ["R"] }],
+    variants: [
+      { id: "hide-r", hiddenPinNames: ["R"] },
+      {
+        id: "offset-r",
+        hiddenPinNames: [],
+        auxiliaryPins: [
+          {
+            name: "R",
+            at: { x: 16, y: 0 },
+            direction: "east",
+            routing: {
+              escape: "outward",
+              preferredLanding: { x: 20, y: 0 },
+            },
+          },
+        ],
+      },
+    ],
   },
 ]);
 
@@ -142,6 +160,82 @@ describe("endpoint primitives", () => {
       expect(
         resolveEndpointPoint(document, resolver, terminal("I1", "R")),
       ).toEqual({ x: 120, y: 100 });
+    });
+  });
+
+  describe("resolveEndpointConnection", () => {
+    it("separates an exact auxiliary contact from its persistable grid landing", () => {
+      const project = createEmptyProject("ep", "EP");
+      const document = project.documents[0]!;
+      document.instances = [{ ...placeDual(), symbolVariantId: "offset-r" }];
+
+      expect(
+        resolveEndpointConnection(document, resolver, terminal("I1", "R")),
+      ).toEqual({
+        endpoint: terminal("I1", "R"),
+        contactPoint: { x: 116, y: 100 },
+        gridLanding: { x: 120, y: 100 },
+        escapePath: [
+          { x: 116, y: 100 },
+          { x: 120, y: 100 },
+        ],
+        outward: { x: 1, y: 0 },
+      });
+    });
+
+    it("transforms contact, landing, escape, and outward direction together", () => {
+      const project = createEmptyProject("ep", "EP");
+      const document = project.documents[0]!;
+      document.instances = [{ ...placeDual(90), symbolVariantId: "offset-r" }];
+
+      expect(
+        resolveEndpointConnection(document, resolver, terminal("I1", "R")),
+      ).toMatchObject({
+        contactPoint: { x: 100, y: 116 },
+        gridLanding: { x: 100, y: 120 },
+        escapePath: [
+          { x: 100, y: 116 },
+          { x: 100, y: 120 },
+        ],
+        outward: { x: 0, y: 1 },
+      });
+    });
+
+    it("advances an outward landing onto a coarser Document grid", () => {
+      const document = createEmptyProject("ep", "EP").documents[0]!;
+      document.presentation.grid = 40;
+      document.instances = [
+        {
+          ...placeDual(0, { x: 120, y: 120 }),
+          symbolVariantId: "offset-r",
+        },
+      ];
+
+      expect(
+        resolveEndpointConnection(document, resolver, terminal("I1", "R")),
+      ).toMatchObject({
+        contactPoint: { x: 136, y: 120 },
+        gridLanding: { x: 160, y: 120 },
+      });
+    });
+
+    it("uses one coincident connection for a Junction", () => {
+      const document = createEmptyProject("ep", "EP").documents[0]!;
+      document.junctions = [
+        { id: "J1", netId: "N1", position: { x: 40, y: 60 } },
+      ];
+      expect(
+        resolveEndpointConnection(document, resolver, {
+          kind: "junction",
+          junctionId: "J1",
+        }),
+      ).toEqual({
+        endpoint: { kind: "junction", junctionId: "J1" },
+        contactPoint: { x: 40, y: 60 },
+        gridLanding: { x: 40, y: 60 },
+        escapePath: [],
+        outward: null,
+      });
     });
   });
 

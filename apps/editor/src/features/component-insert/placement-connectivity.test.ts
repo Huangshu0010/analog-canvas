@@ -199,7 +199,13 @@ describe("component placement electrical contacts", () => {
       {
         endpoint: { kind: "terminal", instanceId: "R1", pinName: "1" },
         netId: "net-tail",
-        point,
+        connection: {
+          endpoint: { kind: "terminal", instanceId: "R1", pinName: "1" },
+          contactPoint: point,
+          gridLanding: point,
+          escapePath: [],
+          outward: null,
+        },
         preludeEdits: [],
       },
     ]);

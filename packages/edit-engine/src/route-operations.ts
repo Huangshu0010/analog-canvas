@@ -13,7 +13,7 @@ import {
   isSegmentAllowed,
   polylineSatisfiesConstraint,
   resolveDocumentRoutingGeometry,
-  resolveEndpointPoint,
+  resolveEndpointConnection,
   resolveRouteGeometry,
   type ResolvedDocumentRoutingGeometry,
 } from "@icm/derived";
@@ -693,8 +693,12 @@ export function proposeLocalStretch(
       route.to.kind === "terminal" && route.to.instanceId === instanceId;
     if (!movesFrom && !movesTo) continue;
     const original = routeEditPathFromGeometry(routingGeometry, route.id);
-    const newFrom = resolveEndpointPoint(movedDocument, resolver, route.from);
-    const newTo = resolveEndpointPoint(movedDocument, resolver, route.to);
+    const newFrom = resolveEndpointConnection(
+      movedDocument,
+      resolver,
+      route.from,
+    );
+    const newTo = resolveEndpointConnection(movedDocument, resolver, route.to);
     if (!original || !newFrom || !newTo) continue;
     const points = original.points.map((point) => ({ ...point }));
     const modes = [...original.segmentModes];
@@ -705,7 +709,7 @@ export function proposeLocalStretch(
         modes,
         "from",
         original.points[0]!,
-        newFrom,
+        newFrom.contactPoint,
       );
     }
     if (movesTo) {
@@ -715,7 +719,7 @@ export function proposeLocalStretch(
         modes,
         "to",
         original.points.at(-1)!,
-        newTo,
+        newTo.contactPoint,
       );
     }
     proposals.push(normalizeProposal(route.id, points, modes));

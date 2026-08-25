@@ -39,13 +39,22 @@ const terminal = (instanceId: string) => ({
   instanceId,
   pinName: "P",
 });
+const connection = (
+  x: number,
+  y: number,
+  outward: { x: number; y: number } | null = null,
+) => ({
+  contactPoint: { x, y },
+  gridLanding: { x, y },
+  outward,
+});
 
 describe("derived connectivity and route geometry", () => {
   it("builds pin-aware orthogonal escape geometry", () => {
     expect(
       buildOrthogonalEscapeRoute(
-        { point: { x: 100, y: 100 }, outward: { x: 1, y: 0 } },
-        { point: { x: 40, y: 80 } },
+        connection(100, 100, { x: 1, y: 0 }),
+        connection(40, 80),
       ),
     ).toEqual({
       points: [
@@ -72,8 +81,8 @@ describe("derived connectivity and route geometry", () => {
 
   it("snaps escape-router midpoints to the document connection grid", () => {
     const route = buildOrthogonalEscapeRoute(
-      { point: { x: 300, y: 240 }, outward: { x: 0, y: -1 } },
-      { point: { x: 530, y: 140 }, outward: { x: 0, y: -1 } },
+      connection(300, 240, { x: 0, y: -1 }),
+      connection(530, 140, { x: 0, y: -1 }),
       10,
       10,
     );

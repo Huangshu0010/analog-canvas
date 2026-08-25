@@ -43,6 +43,12 @@ terminal mappings report stable ID, direction, Net, and their ordinary Port
 Instance; they never materialize a separate canvas object class. The Project
 index reports `structureRevision` for structural optimistic concurrency.
 
+Snapshot format `2.0` reports each placed pin's read-only `connection` with
+`contactPoint`, persistable `gridLanding`, derived `escapePath`, and `outward`.
+Route polylines and contact points may contain derived decimals. Agent
+authoring submits endpoint identity and uses `gridLanding` for any explicit
+page geometry; it never copies `contactPoint` into a Junction or waypoint.
+
 VDD is a named Net with Route/Junction rail geometry and a net-name-bound
 annotation. It is never a symbol, and local versus global scope is explicit in
 the Net/edit payload. MOS Instances use canonical `nmos`/`pmos`

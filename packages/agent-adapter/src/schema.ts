@@ -29,7 +29,7 @@ import {
 import { z } from "zod";
 
 export const AGENT_API_VERSION = "2.0" as const;
-export const AGENT_SNAPSHOT_VERSION = "1.0" as const;
+export const AGENT_SNAPSHOT_VERSION = "2.0" as const;
 export const AgentApiVersionSchema = z.literal(AGENT_API_VERSION);
 const RequestBaseSchema = z.strictObject({
   apiVersion: AgentApiVersionSchema,
@@ -358,7 +358,14 @@ export const AgentSnapshotPinSchema = z.strictObject({
   direction: z.enum(["north", "east", "south", "west"]).nullable(),
   visibility: z.enum(["visible", "implicit", "conditional", "unknown"]),
   localPosition: SymbolLocalPointSchema.nullable(),
-  pagePosition: PointSchema.nullable(),
+  connection: z
+    .strictObject({
+      contactPoint: DerivedPointSchema,
+      gridLanding: PointSchema,
+      escapePath: z.array(DerivedPointSchema),
+      outward: DerivedPointSchema.nullable(),
+    })
+    .nullable(),
   netId: AgentSnapshotLogicalNetIdSchema.nullable(),
 });
 
@@ -450,7 +457,7 @@ export const AgentSnapshotRouteSchema = z.strictObject({
   waypoints: z.array(PointSchema),
   segmentModes: z.array(SegmentModeSchema),
   presentation: RoutePresentationSchema.optional(),
-  polyline: z.array(PointSchema).min(2).nullable(),
+  polyline: z.array(DerivedPointSchema).min(2).nullable(),
 });
 
 export const AgentSnapshotJunctionSchema = z.strictObject({
@@ -608,7 +615,7 @@ export const AgentTransactSuccessResponseSchema = ResponseBaseSchema.extend({
     .array(
       z.strictObject({
         routeId: StableIdSchema,
-        polyline: z.array(PointSchema).min(2),
+        polyline: z.array(DerivedPointSchema).min(2),
       }),
     )
     .optional(),

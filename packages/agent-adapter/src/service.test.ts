@@ -292,7 +292,7 @@ describe("current Agent Circuit API service", () => {
       capabilities: {
         operations: ["capabilities", "snapshot", "transact", "render"],
         apiVersions: ["2.0"],
-        snapshotVersions: ["1.0"],
+        snapshotVersions: ["2.0"],
         permissions: { snapshot: true },
       },
     });
@@ -309,7 +309,7 @@ describe("current Agent Circuit API service", () => {
       ok: true,
       revision: 0,
       snapshot: {
-        snapshotVersion: "1.0",
+        snapshotVersion: "2.0",
         document: {
           id: "document-differential-stage",
           instances: expect.any(Array),

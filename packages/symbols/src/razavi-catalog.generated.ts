@@ -441,7 +441,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "ed4a97e6d6192f83e24a20d29a311858bfe45d19b1b3810cbc3af903f5b99b87",
+      "7bfa080f6bc6166a4ae7e0e91f8f6c058e6f6a4cc22a208818c6283fe8650953",
   },
   {
     symbolId: "nor-gate",
@@ -758,7 +758,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "72080a26eb50b6c46ea14faa57cc1c468361c26731a1817cad467e620bb8620a",
+      "daaa6cbb9dcd9de154a9b3e4796b2e8e5b24b39161661935c91f2e078fe1af74",
   },
   {
     symbolId: "pnp",
@@ -2828,6 +2828,13 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
               y: 0,
             },
             direction: "east",
+            routing: {
+              escape: "outward",
+              preferredLanding: {
+                x: 0,
+                y: 0,
+              },
+            },
           },
         ],
         hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],
@@ -4785,6 +4792,13 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
               y: 0,
             },
             direction: "east",
+            routing: {
+              escape: "outward",
+              preferredLanding: {
+                x: 0,
+                y: 0,
+              },
+            },
           },
         ],
         hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],

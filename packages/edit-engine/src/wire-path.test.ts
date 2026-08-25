@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import { buildManualWirePath, compileWireDraft } from "./routing-planner.js";
 
+const at = (x: number, y: number) => ({
+  connection: {
+    contactPoint: { x, y },
+    gridLanding: { x, y },
+    escapePath: [],
+    outward: null,
+  },
+});
+
 describe("buildManualWirePath", () => {
   it("keeps a direct terminal right-angle at the exact electrical endpoint", () => {
-    const path = buildManualWirePath(
-      { point: { x: 100, y: 100 } },
-      { point: { x: 100, y: 200 } },
-    );
+    const path = buildManualWirePath(at(100, 100), at(100, 200));
 
     expect(path.points).toEqual([
       { x: 100, y: 100 },
@@ -17,10 +23,7 @@ describe("buildManualWirePath", () => {
   });
 
   it("adds only the one necessary orthogonal bend", () => {
-    const path = buildManualWirePath(
-      { point: { x: 100, y: 100 } },
-      { point: { x: 200, y: 200 } },
-    );
+    const path = buildManualWirePath(at(100, 100), at(200, 200));
 
     expect(path.points).toEqual([
       { x: 100, y: 100 },
@@ -31,11 +34,9 @@ describe("buildManualWirePath", () => {
   });
 
   it("normalizes redundant manual vertices without adding terminal geometry", () => {
-    const path = buildManualWirePath(
-      { point: { x: 100, y: 100 } },
-      { point: { x: 300, y: 300 } },
-      [{ x: 100, y: 200 }],
-    );
+    const path = buildManualWirePath(at(100, 100), at(300, 300), [
+      { x: 100, y: 200 },
+    ]);
 
     expect(path.points).toEqual([
       { x: 100, y: 100 },
@@ -45,12 +46,7 @@ describe("buildManualWirePath", () => {
   });
 
   it("allows the editor's zero-length source preview", () => {
-    expect(
-      buildManualWirePath(
-        { point: { x: 100, y: 100 } },
-        { point: { x: 100, y: 100 } },
-      ),
-    ).toEqual({
+    expect(buildManualWirePath(at(100, 100), at(100, 100))).toEqual({
       points: [{ x: 100, y: 100 }],
       waypoints: [],
       segmentModes: [],
@@ -59,12 +55,7 @@ describe("buildManualWirePath", () => {
 
   it("compiles 45-degree authored legs through the same Route payload", () => {
     expect(
-      compileWireDraft(
-        { point: { x: 100, y: 100 } },
-        { point: { x: 200, y: 160 } },
-        [],
-        "octilinear",
-      ).points,
+      compileWireDraft(at(100, 100), at(200, 160), [], "octilinear").points,
     ).toEqual([
       { x: 100, y: 100 },
       { x: 160, y: 160 },
@@ -74,8 +65,8 @@ describe("buildManualWirePath", () => {
 
   it("does not reinterpret earlier authored steps when mode changes", () => {
     const path = compileWireDraft(
-      { point: { x: 0, y: 0 } },
-      { point: { x: 200, y: 100 } },
+      at(0, 0),
+      at(200, 100),
       [{ point: { x: 100, y: 0 }, routingMode: "orthogonal" }],
       "octilinear",
     );
@@ -88,8 +79,8 @@ describe("buildManualWirePath", () => {
 });
 
 describe("orthogonal corner order", () => {
-  const from = { point: { x: 0, y: 0 } };
-  const to = { point: { x: 100, y: 60 } };
+  const from = at(0, 0);
+  const to = at(100, 60);
 
   it("turns horizontally first by default", () => {
     expect(compileWireDraft(from, to).points).toEqual([
@@ -131,14 +122,7 @@ describe("free-angle authoring", () => {
   it("draws the straight line that reaches the click", () => {
     // ADR 0039: no elbow is inserted, so the wire lands at whatever angle
     // reaches the endpoint.
-    expect(
-      compileWireDraft(
-        { point: { x: 0, y: 0 } },
-        { point: { x: 130, y: 40 } },
-        [],
-        "free",
-      ).points,
-    ).toEqual([
+    expect(compileWireDraft(at(0, 0), at(130, 40), [], "free").points).toEqual([
       { x: 0, y: 0 },
       { x: 130, y: 40 },
     ]);
@@ -149,12 +133,7 @@ describe("free-angle authoring", () => {
       { point: { x: 60, y: 0 }, routingMode: "orthogonal" as const },
     ];
     expect(
-      compileWireDraft(
-        { point: { x: 0, y: 0 } },
-        { point: { x: 130, y: 40 } },
-        steps,
-        "free",
-      ).points,
+      compileWireDraft(at(0, 0), at(130, 40), steps, "free").points,
     ).toEqual([
       { x: 0, y: 0 },
       { x: 60, y: 0 },
@@ -168,12 +147,7 @@ describe("free-angle routes follow their instances", () => {
     // The follow-stretch used to require octilinear geometry, so a free-angle
     // Route silently stopped following the instance it was drawn from.
     expect(
-      compileWireDraft(
-        { point: { x: 0, y: 0 } },
-        { point: { x: 90, y: 25 } },
-        [],
-        "free",
-      ).segmentModes,
+      compileWireDraft(at(0, 0), at(90, 25), [], "free").segmentModes,
     ).toEqual(["manual"]);
   });
 });

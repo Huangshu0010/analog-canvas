@@ -7,6 +7,7 @@ import {
 } from "@icm/edit-engine";
 import {
   findRouteSegmentsAtPoint,
+  resolveEndpointConnection,
   resolveDocumentRoutingGeometry,
   resolveElectricalContactTargets,
 } from "@icm/derived";
@@ -14,7 +15,7 @@ import type {
   ElectricalContactCandidate,
   ElectricalContactTarget,
 } from "@icm/derived";
-import { deriveStableId, transformPoint } from "@icm/model";
+import { deriveStableId } from "@icm/model";
 import type { Instance, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -80,6 +81,7 @@ function standalonePowerNetId(
 }
 
 function newInstanceEndpoints(
+  document: SchematicDocument,
   resolver: SymbolResolver,
   instance: Instance,
 ): readonly WireSource[] {
@@ -95,17 +97,27 @@ function newInstanceEndpoints(
       instanceId: instance.id,
       pinName: pin.name,
     };
-    return !resolved.variant?.hiddenPinNames.includes(pin.name) &&
+    const connection = resolveEndpointConnection(
+      {
+        ...document,
+        instances: [
+          ...document.instances.filter(
+            (candidate) => candidate.id !== instance.id,
+          ),
+          instance,
+        ],
+      },
+      resolver,
+      endpoint,
+    );
+    return connection &&
+      !resolved.variant?.hiddenPinNames.includes(pin.name) &&
       pin.presentation.visibility !== "implicit"
       ? [
           {
             endpoint,
             netId: null,
-            point: transformPoint(
-              pin.at,
-              instance.placement!.position,
-              instance.placement!,
-            ),
+            connection,
             preludeEdits: [],
           },
         ]
@@ -138,19 +150,24 @@ export function proposePlacementContact(
   }> = [];
   let ambiguous = false;
   const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
-  for (const source of newInstanceEndpoints(resolver, instance)) {
+  for (const source of newInstanceEndpoints(document, resolver, instance)) {
     const candidates: ElectricalContactCandidate[] = targets
-      .filter((target) => samePoint(source.point, target.point))
+      .filter((target) =>
+        samePoint(
+          source.connection.contactPoint,
+          target.connection.contactPoint,
+        ),
+      )
       .map((target) => ({
         kind: "endpoint" as const,
         id: `endpoint:${JSON.stringify(target.endpoint)}`,
-        point: target.point,
+        point: target.connection.contactPoint,
         netId: target.netId,
         endpoint: target.endpoint,
       }));
     for (const address of findRouteSegmentsAtPoint(
       routingGeometry,
-      source.point,
+      source.connection.contactPoint,
     )) {
       const route = document.routes.find(
         (candidate) => candidate.id === address.routeId,
@@ -159,7 +176,7 @@ export function proposePlacementContact(
       candidates.push({
         kind: "route" as const,
         id: `route:${route.id}:${address.segmentIndex}`,
-        point: source.point,
+        point: source.connection.contactPoint,
         netId: route.netId,
         routeId: route.id,
         segmentIndex: address.segmentIndex,
@@ -235,7 +252,7 @@ export function proposePlacementContact(
           source.endpoint,
           null,
           target.route.routeId,
-          source.point,
+          source.connection.contactPoint,
           target.route.segmentIndex,
           `contact-${instance.id.toLowerCase()}-${source.endpoint.kind === "terminal" ? source.endpoint.pinName.toLowerCase() : "pin"}`,
         ).edits,

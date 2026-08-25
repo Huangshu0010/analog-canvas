@@ -25,8 +25,7 @@ import {
   isMosBulkRoute,
   logicalNetContractIssueKey,
   resolveDocumentLogicalNets,
-  resolveEndpointOutwardDirection,
-  resolveEndpointPoint,
+  resolveEndpointConnection,
   resolveMosBulkConnection,
   validateLogicalNetContract,
 } from "@icm/derived";
@@ -1946,9 +1945,17 @@ export function executeTransaction(
             [edit.routeId],
           );
         }
-        const fromPoint = resolveEndpointPoint(draft, resolver, edit.from);
-        const toPoint = resolveEndpointPoint(draft, resolver, edit.to);
-        if (!fromPoint || !toPoint) {
+        const fromConnection = resolveEndpointConnection(
+          draft,
+          resolver,
+          edit.from,
+        );
+        const toConnection = resolveEndpointConnection(
+          draft,
+          resolver,
+          edit.to,
+        );
+        if (!fromConnection || !toConnection) {
           return rejectAt(
             "EDIT_PRECONDITION",
             `Route ${edit.routeId} has an unresolved endpoint`,
@@ -1957,18 +1964,8 @@ export function executeTransaction(
           );
         }
         const geometry = buildOrthogonalEscapeRoute(
-          {
-            point: fromPoint,
-            outward: resolveEndpointOutwardDirection(
-              draft,
-              resolver,
-              edit.from,
-            ),
-          },
-          {
-            point: toPoint,
-            outward: resolveEndpointOutwardDirection(draft, resolver, edit.to),
-          },
+          fromConnection,
+          toConnection,
           edit.escapeLength,
           draft.presentation.grid,
         );
@@ -2135,15 +2132,15 @@ export function executeTransaction(
             `Endpoint belongs to ${owner}; merge it with ${route.netId} explicitly`,
           );
         }
-        const endpointPoint = resolveEndpointPoint(
+        const endpointConnection = resolveEndpointConnection(
           draft,
           resolver,
           edit.endpoint,
         );
         if (
-          !endpointPoint ||
-          endpointPoint.x !== edit.point.x ||
-          endpointPoint.y !== edit.point.y
+          !endpointConnection ||
+          endpointConnection.contactPoint.x !== edit.point.x ||
+          endpointConnection.contactPoint.y !== edit.point.y
         ) {
           return rejectAt(
             "EDIT_PRECONDITION",

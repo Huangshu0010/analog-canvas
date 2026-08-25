@@ -25,6 +25,11 @@ Route transaction.
 
 - Starting and ending a wire on terminals or explicit Junctions creates or
   joins real Net membership through one atomic Edit Engine transaction.
+- Every terminal resolves through one `EndpointConnection`. Exact artwork
+  contact and outward escape are derived presentation geometry; the Wire
+  compiler persists only grid landings and ordinary grid waypoints. An offset
+  MOS B anchor therefore uses the same Route transaction as every other pin;
+  `bulk-dashed` changes only presentation.
 - Exact visible endpoint coincidence is a derived zero-length physical contact
   only for endpoints already in the same Base Net. New contact intent is still
   authored explicitly by the snap/placement planner through
@@ -100,7 +105,9 @@ do not receive invented page coordinates.
 
 `ProjectConnectivityIndex` is the shared logical/routed connectivity view.
 `ResolvedRouteGeometry` is the shared geometry for render, hit testing, drag,
-marker attachment, diagnostics, export, and Agent Snapshot.
+marker attachment, diagnostics, export, and Agent Snapshot. It publishes the
+same resolved endpoint connections consumed by those readers; consumers do not
+reconstruct terminal contacts from Symbol coordinates.
 `deriveDocumentContactEvidence` is the sole coincident-endpoint contact source;
 consumers do not infer contact independently from pixels or bounds.
 

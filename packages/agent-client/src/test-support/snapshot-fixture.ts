@@ -1,5 +1,14 @@
 import type { AgentSessionSnapshot } from "@icm/agent-adapter";
 
+function connection(x: number, y: number) {
+  return {
+    contactPoint: { x, y },
+    gridLanding: { x, y },
+    escapePath: [],
+    outward: null,
+  };
+}
+
 /**
  * Deterministic minimal Snapshot for Helper tests: one NMOS, one resistor,
  * a routed local Net (Vout), a global VDD Net anchored by one junction, and
@@ -7,7 +16,7 @@ import type { AgentSessionSnapshot } from "@icm/agent-adapter";
  */
 export function testSnapshot(): AgentSessionSnapshot {
   return {
-    snapshotVersion: "1.0",
+    snapshotVersion: "2.0",
     electricalTopologyHash: "a".repeat(64),
     byteLength: 2048,
     project: {
@@ -59,7 +68,7 @@ export function testSnapshot(): AgentSessionSnapshot {
               direction: "west",
               visibility: "visible",
               localPosition: { x: -20, y: 0 },
-              pagePosition: { x: 280, y: 240 },
+              connection: connection(280, 240),
               netId: "net-g",
             },
             {
@@ -68,7 +77,7 @@ export function testSnapshot(): AgentSessionSnapshot {
               direction: "north",
               visibility: "visible",
               localPosition: { x: 0, y: -40 },
-              pagePosition: { x: 300, y: 200 },
+              connection: connection(300, 200),
               netId: "net-vout",
             },
             {
@@ -77,7 +86,7 @@ export function testSnapshot(): AgentSessionSnapshot {
               direction: "south",
               visibility: "visible",
               localPosition: { x: 0, y: 40 },
-              pagePosition: { x: 300, y: 280 },
+              connection: connection(300, 280),
               netId: "net-gnd",
             },
           ],
@@ -110,7 +119,7 @@ export function testSnapshot(): AgentSessionSnapshot {
               direction: "north",
               visibility: "visible",
               localPosition: { x: 0, y: -20 },
-              pagePosition: { x: 460, y: 140 },
+              connection: connection(460, 140),
               netId: "net-vout",
             },
             {
@@ -119,7 +128,7 @@ export function testSnapshot(): AgentSessionSnapshot {
               direction: "south",
               visibility: "visible",
               localPosition: { x: 0, y: 20 },
-              pagePosition: { x: 460, y: 180 },
+              connection: connection(460, 180),
               netId: null,
             },
           ],

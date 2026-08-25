@@ -7,8 +7,8 @@ import type {
 import type { SymbolResolver } from "@icm/symbols";
 
 import {
-  resolveEndpointOutwardDirection,
-  resolveEndpointPoint,
+  type EndpointConnection,
+  resolveEndpointConnection,
 } from "./endpoint.js";
 import { unitDirection } from "./segment-geometry.js";
 
@@ -56,6 +56,10 @@ export interface ResolvedRouteGeometry {
   segments: readonly ResolvedRouteSegment[];
   vertices: readonly ResolvedRouteVertex[];
   endpointJoins: readonly EndpointJoin[];
+  endpointConnections: Readonly<{
+    from: EndpointConnection;
+    to: EndpointConnection;
+  }>;
 }
 
 /** Complete pure routing read model for one Document. */
@@ -82,9 +86,15 @@ export function resolveRouteGeometry(
   resolver: SymbolResolver,
   route: SchematicDocument["routes"][number],
 ): ResolvedRouteGeometry | null {
-  const from = resolveEndpointPoint(document, resolver, route.from);
-  const to = resolveEndpointPoint(document, resolver, route.to);
-  if (!from || !to) return null;
+  const fromConnection = resolveEndpointConnection(
+    document,
+    resolver,
+    route.from,
+  );
+  const toConnection = resolveEndpointConnection(document, resolver, route.to);
+  if (!fromConnection || !toConnection) return null;
+  const from = fromConnection.contactPoint;
+  const to = toConnection.contactPoint;
   const centerline = [from, ...route.waypoints, to];
   const segments: ResolvedRouteSegment[] = centerline
     .slice(0, -1)
@@ -107,11 +117,7 @@ export function resolveRouteGeometry(
 
   const endpointJoins: EndpointJoin[] = [];
   if (route.from.kind === "terminal" && centerline.length >= 2) {
-    const pinOutward = resolveEndpointOutwardDirection(
-      document,
-      resolver,
-      route.from,
-    );
+    const pinOutward = fromConnection.outward;
     const routeDirection = unitDirection(centerline[0]!, centerline[1]!);
     if (pinOutward && routeDirection) {
       endpointJoins.push({
@@ -124,11 +130,7 @@ export function resolveRouteGeometry(
     }
   }
   if (route.to.kind === "terminal" && centerline.length >= 2) {
-    const pinOutward = resolveEndpointOutwardDirection(
-      document,
-      resolver,
-      route.to,
-    );
+    const pinOutward = toConnection.outward;
     const routeDirection = unitDirection(
       centerline.at(-1)!,
       centerline.at(-2)!,
@@ -151,6 +153,7 @@ export function resolveRouteGeometry(
     segments,
     vertices,
     endpointJoins,
+    endpointConnections: { from: fromConnection, to: toConnection },
   };
 }
 
