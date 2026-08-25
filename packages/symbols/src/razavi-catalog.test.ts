@@ -170,7 +170,6 @@ describe("Razavi symbol catalog", () => {
       ["variable-capacitor", "reviewed", "razavi-reference-v1"],
       ["variable-inductor", "reviewed", "razavi-reference-v1"],
       ["variable-resistor", "reviewed", "razavi-reference-v1"],
-      ["vdd-port", "reviewed", "razavi-reference-v1"],
       ["voltage-amplifier", "reviewed", "razavi-reference-v1"],
       ["voltage-source", "reviewed", "razavi-reference-v1"],
       ["xnor-gate", "reviewed", "razavi-reference-v1"],
@@ -222,7 +221,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(36);
+    expect(razaviCatalogSymbols).toHaveLength(35);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -261,7 +260,6 @@ describe("Razavi symbol catalog", () => {
       "variable-capacitor",
       "variable-inductor",
       "variable-resistor",
-      "vdd-port",
       "voltage-amplifier",
       "voltage-source",
       "xnor-gate",
@@ -300,40 +298,6 @@ describe("Razavi symbol catalog", () => {
       expect(getRazaviCatalogEntry(symbolId)).toBeUndefined();
       expect(getRazaviCatalogSymbol(symbolId)).toBeUndefined();
     }
-  });
-
-  it("restores the VDD power port with a seam-closed bar and stem", () => {
-    const vddPort = requireRazaviCatalogSymbol("vdd-port");
-    expect(vddPort.name).toBe("VDD Power Port");
-    expect(vddPort.pins).toHaveLength(1);
-    expect(vddPort.pins[0]).toMatchObject({
-      name: "P",
-      role: "power",
-      at: { x: 0, y: 20 },
-      direction: "south",
-    });
-    const stem = vddPort.primitives.find(
-      (primitive) => primitive.kind === "line",
-    );
-    const bar = vddPort.primitives.find(
-      (primitive) => primitive.kind === "polygon",
-    );
-    expect(stem).toMatchObject({
-      from: { x: 0, y: 20 },
-      to: { x: 0, y: 1.5 },
-    });
-    expect(bar?.points).toEqual([
-      { x: -10, y: -0.88 },
-      { x: 10, y: -0.88 },
-      { x: 10, y: 2.36 },
-      { x: -10, y: 2.36 },
-    ]);
-    // Butt-capped primitives need a real interior overlap, not a merely
-    // coincident endpoint, to avoid an anti-aliased VDD T-junction seam.
-    const stemLine = stem as Extract<typeof stem, { kind: "line" }>;
-    const barBottom = Math.max(...bar!.points.map((point) => point.y));
-    expect(stemLine.to.y).toBeLessThan(barBottom);
-    expect(vddPort.labelVisibility).toBe("hidden");
   });
 
   it("contains no removed generic compatibility symbols", () => {

@@ -40,8 +40,9 @@ in-memory Project, and writes only schema 24. Older project files are rejected.
 - Route endpoints are terminal or Junction references only.
 - A marker claim may classify its Logical Net as `vdd` or `ground`; role never
   substitutes for name identity.
-- A named Power Rail uses an ordinary Base Net, Route/Junction geometry, the
-  same global name claim as a VDD marker, and a bound RichText annotation.
+- A named Power Rail uses an ordinary Base Net, Route/Junction geometry, one
+  owner-addressed global name claim, and a bound RichText annotation. It is the
+  sole VDD authoring representation and creates no device Instance.
 - Every visible editable label is a RichText annotation. Its binding separates
   `instance-designator`, `instance-schematic-name`, `instance-master-name`,
   `instance-value`, and `cell-terminal-name`. The default ordinary label is

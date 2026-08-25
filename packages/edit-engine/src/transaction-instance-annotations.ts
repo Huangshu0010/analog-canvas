@@ -12,7 +12,6 @@ import type {
 } from "@icm/model";
 import {
   defaultInstanceLabelPlacement,
-  defaultVddPowerLabelPlacement,
   displayableInstanceValue,
   inferInstanceLabelSide,
   instanceLabelRowOffset,
@@ -50,58 +49,6 @@ export function instanceAnnotationSlot(
 
 function samePoint(left: Point, right: Point): boolean {
   return left.x === right.x && left.y === right.y;
-}
-
-function isCanonicalVddPowerLabel(
-  annotation: Annotation,
-  instance: SchematicDocument["instances"][number],
-  resolved: NonNullable<ReturnType<SymbolResolver["resolve"]>>,
-  document: SchematicDocument,
-  oldPosition: Point,
-  oldOrientation: Orientation,
-): boolean {
-  if (
-    instance.symbolId !== "vdd-port" ||
-    annotation.kind !== "power-label" ||
-    annotation.id !== `power-label-${instance.id.toLowerCase()}` ||
-    annotation.anchor.kind !== "object" ||
-    annotation.anchor.objectId !== instance.id
-  ) {
-    return false;
-  }
-  const visiblePosition = {
-    x: oldPosition.x + annotation.anchor.localOffset.x,
-    y: oldPosition.y + annotation.anchor.localOffset.y,
-  };
-  const oldInstance = {
-    ...instance,
-    placement: { position: oldPosition, ...oldOrientation },
-  };
-  const canonical = defaultVddPowerLabelPlacement(
-    oldInstance,
-    resolved,
-    document.presentation.grid,
-  );
-  const matchesCanonical =
-    canonical !== null &&
-    annotation.rotation === 0 &&
-    annotation.alignment === canonical.alignment &&
-    samePoint(visiblePosition, canonical.position) &&
-    samePoint(annotation.anchor.fallbackPosition, canonical.position);
-  if (matchesCanonical) return true;
-
-  // Compatibility for untouched labels authored before orientation-aware VDD
-  // placement. Their original {10,10} vector rotated rigidly with the Symbol.
-  const legacyPosition = transformPoint(
-    { x: 10, y: 10 },
-    oldPosition,
-    oldOrientation,
-  );
-  return (
-    annotation.alignment === "start" &&
-    samePoint(visiblePosition, legacyPosition) &&
-    samePoint(annotation.anchor.fallbackPosition, legacyPosition)
-  );
 }
 
 /** A Cell Pin name uses the canonical upright reference-row placement. */
@@ -350,41 +297,6 @@ export function followAttachedAnnotations(
       x: oldPosition.x + annotation.anchor.localOffset.x,
       y: oldPosition.y + annotation.anchor.localOffset.y,
     };
-    if (
-      instance &&
-      resolved &&
-      isCanonicalVddPowerLabel(
-        annotation,
-        instance,
-        resolved,
-        draft,
-        oldPosition,
-        oldOrientation,
-      )
-    ) {
-      const next = defaultVddPowerLabelPlacement(
-        {
-          ...instance,
-          placement: { position: newPosition, ...newOrientation },
-        },
-        resolved,
-        draft.presentation.grid,
-      );
-      if (next) {
-        annotation.anchor = {
-          ...annotation.anchor,
-          localOffset: {
-            x: next.position.x - newPosition.x,
-            y: next.position.y - newPosition.y,
-          },
-          fallbackPosition: next.position,
-        };
-        annotation.alignment = next.alignment;
-        annotation.rotation = 0;
-        changedObjectIds.add(annotation.id);
-        continue;
-      }
-    }
     if (
       instance &&
       resolved &&

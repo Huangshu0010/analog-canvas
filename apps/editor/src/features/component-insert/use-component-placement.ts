@@ -43,7 +43,6 @@ import {
 } from "./placement-connectivity";
 import { planInitialMosBulkDefault } from "./mos-bulk-defaults";
 import { constrainedPowerRailEndpoint, planVddRailEdits } from "./vdd-rail";
-import { vddPowerLabelAnnotation } from "./vdd-power-label";
 import {
   defaultInstanceDisplayAnnotations,
   missingDefaultInstanceDisplayAnnotations,
@@ -202,19 +201,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
             powerNetId,
           )
         : [];
-    const resolvedPowerSymbol = options.resolver.resolve(
-      instance.symbolId,
-      instance.symbolVariantId,
-    );
-    const vddPowerLabel =
-      powerConnection?.domain === "vdd" && powerNetId && resolvedPowerSymbol
-        ? vddPowerLabelAnnotation({
-            instance,
-            resolved: resolvedPowerSymbol,
-            netId: powerNetId,
-            grid: options.document.presentation.grid,
-          })
-        : null;
     const projectedDocument = structuredClone(options.document);
     projectedDocument.instances.push(instance);
     for (const edit of [...contact.edits, ...standalonePower.edits]) {
@@ -248,14 +234,6 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
         projectedDocument,
         projectedDocument.instances,
       ),
-      ...(vddPowerLabel
-        ? [
-            {
-              kind: "upsert_schematic_annotation" as const,
-              annotation: vddPowerLabel,
-            },
-          ]
-        : []),
       ...displayAnnotations.map((annotation) => ({
         kind: "upsert_schematic_annotation" as const,
         annotation,

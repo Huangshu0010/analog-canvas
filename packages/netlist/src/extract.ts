@@ -633,17 +633,6 @@ function extractDeviceInstance(
         `Ground marker must connect to global Net 0, not ${markerNet.scope} Net ${markerNet.name}`,
         [instance.id, markerNet.id],
       );
-    } else if (
-      instance.symbolId === "vdd-port" &&
-      markerNet.powerDomain !== "vdd"
-    ) {
-      diagnostic(
-        diagnostics,
-        document.id,
-        "INVALID_NET_MARKER",
-        `VDD Port ${instance.id} must connect to an explicitly classified VDD Net`,
-        [instance.id, markerNet.id],
-      );
     }
     return null;
   }

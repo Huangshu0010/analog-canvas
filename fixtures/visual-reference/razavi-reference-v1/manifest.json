@@ -262,7 +262,7 @@
   "logicGateGeometryPath": "logic-gate-geometry.json",
   "logicGateGeometrySha256": "82ab85760e6c5db3f1201a792fbad19d7a3dad32dfc42c90bd69603f693c88f8",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "d027193bdfac07f3cbe51e11159b39e763b4a1485a57db0d5672fa5be55a906f",
+  "fidelityTargetsSha256": "777e63bd6fd3e5aec37422dbc61d2f7b02ab420152242b2b3efa5b1b49336ae1",
   "pixels": {
     "width": 1204,
     "height": 794
@@ -275,7 +275,7 @@
     "ground, supply, port, and source presentation",
     "capacitor geometry and stroke treatment",
     "route current-arrow treatment, current-source geometry, and hollow port origin",
-    "VDD supply marker geometry",
+    "route-based VDD rail geometry",
     "PDF-derived inductor geometry and stroke treatment",
     "PDF-derived three-terminal op-amp geometry and polarity marks",
     "PDF-derived common BJT, diode, gain-block, and switch families",

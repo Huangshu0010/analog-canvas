@@ -33,9 +33,9 @@ The product set is exactly the reviewed, Reference-calibrated entries:
 
 `nmos` and `pmos` are the only MOS asset IDs. Their default visual variant is
 `textbook-3terminal`; explicit bulk-capable variants remain properties of the
-same canonical assets. The drawn VDD rail remains the explicit Net/Route
-authoring form; `vdd-port` is its reviewed marker Symbol for placed-device
-authoring on the same global VDD Net. There is no legacy symbol catalog or
+same canonical assets. The route-based `vdd` Power Rail is the sole VDD
+authoring primitive and creates a named global Net/Route. The VDD raster and
+geometry files remain its visual calibration authority. There is no legacy symbol catalog or
 generic fallback. A device without a reviewed Razavi symbol is an unsupported
 import error until its Reference calibration is approved and added here.
 

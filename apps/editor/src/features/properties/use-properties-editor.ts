@@ -32,7 +32,6 @@ import {
   updateTextEditingSession,
 } from "../text-editing/text-editing";
 import type { TextEditingSession } from "../text-editing/text-editing";
-import { planElectricalMarkerName } from "./electrical-marker-name";
 
 export interface InstancePropertyDraft {
   instanceId: string | null;
@@ -183,19 +182,6 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
   const parametersForInstance = (instance: Instance) =>
     options.componentParametersForInstance?.(instance) ??
     componentParameters(instance.symbolId);
-
-  const commitElectricalMarkerName = (
-    instanceId: string,
-    name: string,
-  ): void => {
-    const plan = planElectricalMarkerName(options.document, instanceId, name);
-    if (plan.status === "noop") return;
-    if (plan.status === "rejected") {
-      options.setStatus(plan.message);
-      return;
-    }
-    if (options.transact([...plan.edits]).ok) options.setStatus(plan.message);
-  };
 
   const draftForInstance = (instance: Instance): InstancePropertyDraft => ({
     instanceId: instance.id,
@@ -837,7 +823,6 @@ export function usePropertiesEditor(options: UsePropertiesEditorOptions) {
     beginDraftingTextEditing,
     beginNetLabelEditing,
     commitInstancePropertyDraft,
-    commitElectricalMarkerName,
     commitNetLabelEditing,
     commitPendingNetLabelDraft,
     commitTextEditing,

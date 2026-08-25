@@ -324,18 +324,25 @@ describe("current formal cell interface", () => {
     expect(result.ir?.globals).toEqual(["0"]);
   });
 
-  it("exports a global named VDD Port Net without inventing a marker record", () => {
+  it("exports a global named VDD rail without inventing a device record", () => {
     const project = createEmptyProject("project", "Project");
     const document = project.documents[0]!;
-    document.instances.push({
-      id: "VDD1",
-      symbolId: "vdd-port",
-      placement: null,
-    });
     document.nets.push({
       id: "net-vdd",
-
-      terminals: [{ instanceId: "VDD1", pinName: "P" }],
+      terminals: [],
+    });
+    document.junctions.push(
+      { id: "j-vdd-a", netId: "net-vdd", position: { x: 0, y: 0 } },
+      { id: "j-vdd-b", netId: "net-vdd", position: { x: 100, y: 0 } },
+    );
+    document.routes.push({
+      id: "route-vdd",
+      netId: "net-vdd",
+      from: { kind: "junction", junctionId: "j-vdd-a" },
+      to: { kind: "junction", junctionId: "j-vdd-b" },
+      waypoints: [],
+      segmentModes: ["manual"],
+      presentation: "power-rail",
     });
     claimNet(document, "net-vdd", "VDD", "global", "vdd");
 
@@ -349,32 +356,6 @@ describe("current formal cell interface", () => {
       scope: "global",
     });
     expect(result.ir?.globals).toEqual(["VDD"]);
-  });
-
-  it("rejects a VDD Port attached to a named non-VDD Net", () => {
-    const project = createEmptyProject("project", "Project");
-    const document = project.documents[0]!;
-    document.instances.push({
-      id: "VDD1",
-      symbolId: "vdd-port",
-      placement: null,
-    });
-    document.nets.push({
-      id: "net-signal",
-
-      terminals: [{ instanceId: "VDD1", pinName: "P" }],
-    });
-    claimNet(document, "net-signal", "SIGNAL");
-
-    const result = analyzeDesignNetlist(project);
-
-    expect(result.ir).toBeNull();
-    expect(result.diagnostics).toContainEqual(
-      expect.objectContaining({
-        code: "INVALID_NET_MARKER",
-        objectIds: ["VDD1", "net-signal"],
-      }),
-    );
   });
 
   it("emits a resolved shared external interface without inventing an empty Cell", () => {

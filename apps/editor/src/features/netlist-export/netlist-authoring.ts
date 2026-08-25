@@ -24,7 +24,6 @@ const placementPrefixOverrides: Record<string, string> = {
   ground: "GND",
   port: "P",
   "port-filled": "P",
-  "vdd-port": "VDD",
 };
 
 export function placementReferencePrefix(symbolId: string): string {

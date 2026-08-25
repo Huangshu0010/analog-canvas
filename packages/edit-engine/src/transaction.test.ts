@@ -1234,17 +1234,20 @@ describe("Edit Transaction envelope", () => {
 
   it("revokes a materialized PMOS default when the last VDD claim is deleted", () => {
     const document = createEmptyDocument("document-main", "Main");
-    document.instances.push(
-      { id: "M1", symbolId: "pmos", placement: null },
-      { id: "VDD1", symbolId: "vdd-port", placement: null },
-    );
+    document.instances.push({ id: "M1", symbolId: "pmos", placement: null });
     document.nets.push({
       id: "net-power-vdd1",
-
-      terminals: [
-        { instanceId: "M1", pinName: "B" },
-        { instanceId: "VDD1", pinName: "P" },
-      ],
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+    document.annotations.push({
+      id: "label-vdd1",
+      kind: "power-label",
+      binding: { kind: "net-name", netId: "net-power-vdd1" },
+      netId: "net-power-vdd1",
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
     });
     document.connectivityEvidence.push(
       {
@@ -1261,7 +1264,7 @@ describe("Edit Transaction envelope", () => {
         kind: "name-claim",
         netId: "net-power-vdd1",
         name: "VDD",
-        owner: { kind: "power-marker", objectId: "VDD1" },
+        owner: { kind: "power-marker", objectId: "label-vdd1" },
         scope: "global",
         powerDomain: "vdd",
       },
@@ -1277,11 +1280,7 @@ describe("Edit Transaction envelope", () => {
       {
         ...transaction(),
         edits: [
-          {
-            kind: "disconnect_endpoint",
-            endpoint: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
-          },
-          { kind: "remove_instance", instanceId: "VDD1" },
+          { kind: "remove_schematic_annotation", annotationId: "label-vdd1" },
         ],
       },
       { symbolResolver: resolver },
@@ -1293,45 +1292,6 @@ describe("Edit Transaction envelope", () => {
     expect(removed.document.instances[0]?.mosBulkBinding).toBeUndefined();
     expect(removed.document.nets).toEqual([]);
     expect(removed.document.connectivityEvidence).toEqual([]);
-
-    const replaced = executeTransaction(
-      removed.document,
-      {
-        ...transaction(removed.document.revision),
-        edits: [
-          {
-            kind: "add_instance",
-            instance: { id: "VDD1", symbolId: "vdd-port", placement: null },
-          },
-          {
-            kind: "connect_endpoints",
-            from: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
-            to: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
-            newNetId: "net-power-vdd1",
-          },
-          {
-            kind: "upsert_connectivity_evidence",
-            evidence: {
-              id: "claim-vdd-1",
-              kind: "name-claim",
-              netId: "net-power-vdd1",
-              name: "VDD",
-              owner: { kind: "power-marker", objectId: "VDD1" },
-              scope: "global",
-              powerDomain: "vdd",
-            },
-          },
-        ],
-      },
-      { symbolResolver: resolver },
-    );
-    expect(replaced).toMatchObject({
-      ok: true,
-      document: {
-        instances: [{ id: "M1" }, { id: "VDD1" }],
-        nets: [{ id: "net-power-vdd1" }],
-      },
-    });
   });
 
   it("keeps an explicit custom PMOS body default without a power marker", () => {
@@ -1364,31 +1324,46 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
-  it("migrates a PMOS default to another marker of the same supply", () => {
+  it("migrates a PMOS default to another rail with the same supply name", () => {
     const document = createEmptyDocument("document-main", "Main");
-    document.instances.push(
-      {
-        id: "M1",
-        symbolId: "pmos",
-        placement: null,
-        mosBulkBinding: { origin: "cell-default", netId: "net-vdd-1" },
-      },
-      { id: "VDD1", symbolId: "vdd-port", placement: null },
-      { id: "VDD2", symbolId: "vdd-port", placement: null },
-    );
+    document.instances.push({
+      id: "M1",
+      symbolId: "pmos",
+      placement: null,
+      mosBulkBinding: { origin: "cell-default", netId: "net-vdd-1" },
+    });
     document.nets.push(
       {
         id: "net-vdd-1",
 
-        terminals: [
-          { instanceId: "M1", pinName: "B" },
-          { instanceId: "VDD1", pinName: "P" },
-        ],
+        terminals: [{ instanceId: "M1", pinName: "B" }],
       },
       {
         id: "net-vdd-2",
 
-        terminals: [{ instanceId: "VDD2", pinName: "P" }],
+        terminals: [],
+      },
+    );
+    document.annotations.push(
+      {
+        id: "label-vdd-1",
+        kind: "power-label",
+        binding: { kind: "net-name", netId: "net-vdd-1" },
+        netId: "net-vdd-1",
+        anchor: { kind: "free", position: { x: 0, y: 0 } },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
+      },
+      {
+        id: "label-vdd-2",
+        kind: "power-label",
+        binding: { kind: "net-name", netId: "net-vdd-2" },
+        netId: "net-vdd-2",
+        anchor: { kind: "free", position: { x: 100, y: 0 } },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
       },
     );
     document.connectivityEvidence.push(
@@ -1397,7 +1372,7 @@ describe("Edit Transaction envelope", () => {
         kind: "name-claim",
         netId: "net-vdd-1",
         name: "VDD",
-        owner: { kind: "power-marker", objectId: "VDD1" },
+        owner: { kind: "power-marker", objectId: "label-vdd-1" },
         scope: "global",
         powerDomain: "vdd",
       },
@@ -1406,7 +1381,7 @@ describe("Edit Transaction envelope", () => {
         kind: "name-claim",
         netId: "net-vdd-2",
         name: "VDD",
-        owner: { kind: "power-marker", objectId: "VDD2" },
+        owner: { kind: "power-marker", objectId: "label-vdd-2" },
         scope: "global",
         powerDomain: "vdd",
       },
@@ -1419,10 +1394,9 @@ describe("Edit Transaction envelope", () => {
         ...transaction(),
         edits: [
           {
-            kind: "disconnect_endpoint",
-            endpoint: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+            kind: "remove_schematic_annotation",
+            annotationId: "label-vdd-1",
           },
-          { kind: "remove_instance", instanceId: "VDD1" },
         ],
       },
       { symbolResolver: resolver },
