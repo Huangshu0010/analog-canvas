@@ -1,6 +1,5 @@
 import type { FormalExportSource, RasterExport } from "./index.js";
 import { DEFAULT_EXPORT_SCALE } from "./index.js";
-import { createPdfFromPng } from "./pdf.js";
 
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -52,5 +51,6 @@ export async function exportFormalArtifactsInBrowser(
   source: FormalExportSource,
 ): Promise<{ png: RasterExport; pdf: Uint8Array }> {
   const png = await rasterizeFormalSvgInBrowser(source);
+  const { createPdfFromPng } = await import("./pdf.js");
   return { png, pdf: await createPdfFromPng(png, source.bounds) };
 }

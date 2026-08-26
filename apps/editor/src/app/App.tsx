@@ -52,10 +52,6 @@ import {
   type WireCornerOrder,
 } from "@icm/edit-engine";
 import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
-import {
-  exportFormalArtifactsInBrowser,
-  rasterizeFormalSvgInBrowser,
-} from "@icm/exporters/browser";
 import { analyzeDesignNetlist, printDesignNetlist } from "@icm/netlist";
 import type { NetlistDiagnostic, NetlistFormat } from "@icm/netlist";
 import {
@@ -6741,6 +6737,8 @@ export function App({
   async function exportRaster(format: "png" | "pdf"): Promise<void> {
     setStatus(`Preparing ${format.toUpperCase()} export`);
     try {
+      const { exportFormalArtifactsInBrowser, rasterizeFormalSvgInBrowser } =
+        await import("@icm/exporters/browser");
       const source = createFormalExportSource(document, resolver, {
         title: project.name,
       });
