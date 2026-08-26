@@ -2,7 +2,6 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CSSProperties,
   DragEvent,
-  MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
 import "../editor.css";
@@ -155,6 +154,7 @@ import {
 } from "../canvas/editor-canvas-overlays";
 import { EditorSelectionHitTargets } from "../canvas/editor-selection-hit-targets";
 import { EditorEndpointHitTargets } from "../canvas/editor-endpoint-hit-targets";
+import { EditorDraftingHitTargets } from "../canvas/editor-drafting-hit-targets";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
 import { draggedAnnotationAtPosition } from "../features/text-editing/annotation-drag-model";
 import {
@@ -292,10 +292,7 @@ import {
   marqueeMode,
   marqueeSelection,
 } from "../features/selection/marquee-selection";
-import {
-  draftingPathData,
-  quadraticMidpoint,
-} from "../features/drafting/drafting-path";
+import { quadraticMidpoint } from "../features/drafting/drafting-path";
 import {
   resolveEditorShortcut,
   stepBoundedScale,
@@ -8044,215 +8041,43 @@ export function App({
                   onWireEndpoint={handleWireEndpoint}
                 />
               </EditorSelectionHitTargets>
-              {(document.drafting?.objects ?? []).map((object) => {
-                // WP-R5/P1: every drafting object gets a selectable/deletable hit
-                // shape derived from the shared geometry. P1: use the object's
-                // actual shape (stroke polyline/line for lines and arrows) instead
-                // of a full bounding rect, so large leader/callout boxes do not
-                // block the canvas underneath.
-                const geometry = resolveDraftingObjectGeometry(
-                  document,
-                  resolver,
-                  object,
-                );
-                const draggable = !object.locked && draftingDragOrigin(object);
-                const selected =
-                  selectedDraftingId === object.id ||
-                  supplementalSelection.draftingIds.includes(object.id)
-                    ? "annotation-hit selected"
-                    : "annotation-hit";
-                const textSelected =
-                  selectedDraftingId === object.id ||
-                  supplementalSelection.draftingIds.includes(object.id)
-                    ? "hit-target annotation-text-hit selected"
-                    : "hit-target annotation-text-hit";
-                const onDown = (event: ReactPointerEvent<SVGElement>): void => {
-                  if (draggable) {
-                    beginDraftingDrag(event, object);
-                  } else {
+              <EditorDraftingHitTargets
+                document={document}
+                resolver={resolver}
+                tool={tool}
+                selectedDraftingId={selectedDraftingId}
+                supplementalDraftingIds={supplementalSelection.draftingIds}
+                onPointerDown={(event, object, draggable) => {
+                  if (draggable) beginDraftingDrag(event, object);
+                  else {
                     event.stopPropagation();
                     selectDraftingObject(object.id);
                   }
-                };
-                if (
-                  object.kind === "construction-line" &&
-                  geometry.kind === "construction-line"
-                ) {
-                  const points = object.points
-                    .map((point) => `${point.x},${point.y}`)
-                    .join(" ");
-                  const hasCurve = geometry.curveControls.some(Boolean);
-                  const commonProps = {
-                    "data-testid": `drafting-hit-${object.id}`,
-                    "data-canvas-hit-kind": "drafting",
-                    "data-canvas-hit-id": object.id,
-                    "data-drag-object-id": object.id,
-                    className: selected,
-                    fill: "none",
-                    onPointerDown: onDown,
-                    onDoubleClick: (event: ReactMouseEvent<SVGElement>) => {
-                      event.stopPropagation();
-                      insertConstructionVertex(
-                        object,
-                        pointFromClient(
-                          event.clientX,
-                          event.clientY,
-                          event.currentTarget.ownerSVGElement!,
-                        ),
-                      );
-                    },
-                    pointerEvents: tool === "wire" ? "none" : undefined,
-                  };
-                  return hasCurve ? (
-                    <path
-                      key={`drafting-hit-${object.id}`}
-                      {...commonProps}
-                      d={draftingPathData(
-                        geometry.points,
-                        geometry.curveControls,
-                      )}
-                    />
-                  ) : (
-                    <polyline
-                      key={`drafting-hit-${object.id}`}
-                      {...commonProps}
-                      points={points}
-                    />
+                }}
+                onConstructionLineEdit={(event, object) => {
+                  event.stopPropagation();
+                  insertConstructionVertex(
+                    object,
+                    pointFromClient(
+                      event.clientX,
+                      event.clientY,
+                      event.currentTarget.ownerSVGElement!,
+                    ),
                   );
-                }
-                if (object.kind === "arrow" && geometry.kind === "arrow") {
-                  return geometry.curveControls.some(Boolean) ? (
-                    <path
-                      key={`drafting-hit-${object.id}`}
-                      data-testid={`drafting-hit-${object.id}`}
-                      data-canvas-hit-kind="drafting"
-                      data-canvas-hit-id={object.id}
-                      data-drag-object-id={object.id}
-                      className={selected}
-                      d={draftingPathData(
-                        geometry.points,
-                        geometry.curveControls,
-                      )}
-                      fill="none"
-                      onPointerDown={onDown}
-                      onDoubleClick={(event) => {
-                        event.stopPropagation();
-                        insertArrowWaypoint(
-                          object,
-                          pointFromClient(
-                            event.clientX,
-                            event.clientY,
-                            event.currentTarget.ownerSVGElement!,
-                          ),
-                        );
-                      }}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    />
-                  ) : (
-                    <polyline
-                      key={`drafting-hit-${object.id}`}
-                      data-testid={`drafting-hit-${object.id}`}
-                      data-canvas-hit-kind="drafting"
-                      data-canvas-hit-id={object.id}
-                      data-drag-object-id={object.id}
-                      className={selected}
-                      points={geometry.points
-                        .map((point) => `${point.x},${point.y}`)
-                        .join(" ")}
-                      fill="none"
-                      onPointerDown={onDown}
-                      onDoubleClick={(event) => {
-                        event.stopPropagation();
-                        insertArrowWaypoint(
-                          object,
-                          pointFromClient(
-                            event.clientX,
-                            event.clientY,
-                            event.currentTarget.ownerSVGElement!,
-                          ),
-                        );
-                      }}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    />
+                }}
+                onArrowEdit={(event, object) => {
+                  event.stopPropagation();
+                  insertArrowWaypoint(
+                    object,
+                    pointFromClient(
+                      event.clientX,
+                      event.clientY,
+                      event.currentTarget.ownerSVGElement!,
+                    ),
                   );
-                }
-                if (
-                  object.kind === "rectangle" &&
-                  geometry.kind === "rectangle"
-                ) {
-                  return (
-                    <polygon
-                      key={`drafting-hit-${object.id}`}
-                      data-testid={`drafting-hit-${object.id}`}
-                      data-canvas-hit-kind="drafting"
-                      data-canvas-hit-id={object.id}
-                      data-drag-object-id={object.id}
-                      className={`${selected} drafting-rectangle-hit`}
-                      points={serializePolylinePoints(geometry.corners)}
-                      fill="none"
-                      onPointerDown={onDown}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    />
-                  );
-                }
-                if (object.kind === "leader" && geometry.kind === "leader") {
-                  return (
-                    <line
-                      key={`drafting-hit-${object.id}`}
-                      data-testid={`drafting-hit-${object.id}`}
-                      data-canvas-hit-kind="drafting"
-                      data-canvas-hit-id={object.id}
-                      data-drag-object-id={object.id}
-                      className={selected}
-                      x1={geometry.anchor.x}
-                      y1={geometry.anchor.y}
-                      x2={geometry.target.x}
-                      y2={geometry.target.y}
-                      onPointerDown={onDown}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    />
-                  );
-                }
-                if (object.kind === "callout" && geometry.kind === "callout") {
-                  return (
-                    <g
-                      key={`drafting-hit-${object.id}`}
-                      data-testid={`drafting-hit-${object.id}`}
-                      data-canvas-hit-kind="drafting"
-                      data-canvas-hit-id={object.id}
-                      data-drag-object-id={object.id}
-                      onPointerDown={onDown}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    >
-                      <line
-                        className={selected}
-                        x1={geometry.textPosition.x}
-                        y1={geometry.textPosition.y}
-                        x2={geometry.target.x}
-                        y2={geometry.target.y}
-                      />
-                      <rect className={selected} {...geometry.textBounds} />
-                    </g>
-                  );
-                }
-                return (
-                  <rect
-                    key={`drafting-hit-${object.id}`}
-                    data-testid={`drafting-hit-${object.id}`}
-                    data-canvas-hit-kind="drafting"
-                    data-canvas-hit-id={object.id}
-                    data-drag-object-id={object.id}
-                    className={object.kind === "text" ? textSelected : selected}
-                    {...geometry.bounds}
-                    onPointerDown={onDown}
-                    onDoubleClick={(event) => {
-                      if (object.kind !== "text") return;
-                      event.stopPropagation();
-                      beginDraftingTextEditing(object);
-                    }}
-                  />
-                );
-              })}
+                }}
+                onTextEdit={beginDraftingTextEditing}
+              />
               {selectedDraftingId
                 ? (() => {
                     const object = document.drafting?.objects.find(
