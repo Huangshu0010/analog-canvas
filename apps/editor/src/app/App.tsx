@@ -54,7 +54,6 @@ import type {
   GlobalNetTraceHop,
   HierarchyFrame,
   HierarchyNetTraceHop,
-  ObjectLocator,
   SearchResult,
 } from "@icm/derived";
 import {
@@ -274,6 +273,7 @@ import {
 } from "../components/recovery-banners";
 import { BrowserAgentHost } from "../agent/browser-agent-host";
 import { BrowserAgentFileHost } from "../agent/browser-agent-file-host";
+import { createAgentSemanticIntentHandler } from "../agent/agent-semantic-intent-handler";
 import { PUBLIC_AGENT_UI_ENABLED } from "../agent/public-agent-ui";
 import { useAgentSession } from "../agent/use-agent-session";
 import type { AgentFileCandidateSummary } from "@icm/agent-adapter";
@@ -2095,6 +2095,7 @@ export function App({
     jumpToCaller,
     navigateToLocator,
     navigateToNetlistDiagnostic,
+    fitDocument,
     enterHierarchy,
     enterSelectedHierarchy,
     returnToParentDocument,
@@ -2123,6 +2124,21 @@ export function App({
     commitProjectStructure,
     setStatus,
   });
+  const applyAgentSemanticIntent = createAgentSemanticIntentHandler({
+    project,
+    resolver,
+    connectivityIndex: projectConnectivityIndex,
+    navigateToLocator,
+    fitDocument,
+    clearFocus: () => {
+      resetInteractionState();
+      setHighlightedNetOrigin(null);
+      setSelectionOpen(false);
+      setStatus("Agent cleared semantic focus");
+    },
+    highlightNet,
+  });
+  agentSemanticIntentRef.current = applyAgentSemanticIntent;
 
   useEffect(() => {
     if (!selectedRouteId) setSelectedRouteSegmentIndex(null);
@@ -2379,207 +2395,6 @@ export function App({
       setStatus(error instanceof Error ? error.message : "Delete failed");
     }
   }
-
-  function applyAgentSemanticIntent(
-    request: AgentHostSemanticIntentRequest,
-  ): AgentHostSemanticIntentResult {
-    const intent = request.intent;
-    const targetDocument = project.documents.find(
-      (candidate) => candidate.id === request.documentId,
-    );
-    if (!targetDocument) {
-      return {
-        ok: false,
-        code: "DOCUMENT_NOT_FOUND",
-        message: `Document ${request.documentId} is not present in this Project`,
-      };
-    }
-    const activateDocument = (message: string) => {
-      const hierarchyPath =
-        findHierarchyPath(
-          projectConnectivityIndex,
-          project.topDocumentId,
-          targetDocument.id,
-        ) ?? [];
-      navigateToLocator(
-        {
-          documentId: targetDocument.id,
-          hierarchyPath,
-          kind: "document",
-          objectId: targetDocument.id,
-        },
-        message,
-      );
-    };
-    const fail = (
-      code: string,
-      message: string,
-    ): AgentHostSemanticIntentResult => ({
-      ok: false,
-      code,
-      message,
-    });
-
-    switch (intent.kind) {
-      case "activate-document":
-        activateDocument(`Agent activated Cell ${targetDocument.name}`);
-        return {
-          ok: true,
-          kind: intent.kind,
-          documentId: targetDocument.id,
-          objectIds: [],
-        };
-      case "fit-document": {
-        activateDocument(`Agent fit Cell ${targetDocument.name}`);
-        setViewBox(
-          fitCameraToBounds(
-            buildSvgScene(targetDocument, resolver).viewBox,
-            targetDocument.presentation.grid,
-          ),
-          targetDocument.presentation.grid,
-        );
-        return {
-          ok: true,
-          kind: intent.kind,
-          documentId: targetDocument.id,
-          objectIds: [],
-        };
-      }
-      case "clear-focus":
-        resetInteractionState();
-        setHighlightedNetOrigin(null);
-        setSelectionOpen(false);
-        setStatus("Agent cleared semantic focus");
-        return {
-          ok: true,
-          kind: intent.kind,
-          documentId: targetDocument.id,
-          objectIds: [],
-        };
-      case "highlight-net": {
-        const net = targetDocument.nets.find(
-          (candidate) => candidate.id === intent.netId,
-        );
-        if (!net) {
-          return fail(
-            "OBJECT_NOT_FOUND",
-            `Net ${intent.netId} is not present in Document ${targetDocument.id}`,
-          );
-        }
-        activateDocument(
-          `Agent highlighted Net ${resolveDocumentLogicalNets(targetDocument).byBaseNetId.get(net.id)?.name ?? net.id}`,
-        );
-        highlightNet(net.id, targetDocument.id, intent.endpoint);
-        return {
-          ok: true,
-          kind: intent.kind,
-          documentId: targetDocument.id,
-          objectIds: [net.id],
-          netId: net.id,
-        };
-      }
-      case "select": {
-        const { locator } = intent;
-        if (locator.documentId !== targetDocument.id) {
-          return fail(
-            "DOCUMENT_MISMATCH",
-            "A semantic locator must address the transaction Document",
-          );
-        }
-        const expectedHierarchyPath = findHierarchyPath(
-          projectConnectivityIndex,
-          project.topDocumentId,
-          targetDocument.id,
-        );
-        if (
-          !expectedHierarchyPath ||
-          expectedHierarchyPath.length !== locator.hierarchyPath.length ||
-          expectedHierarchyPath.some(
-            (frame, index) =>
-              frame.parentDocumentId !==
-                locator.hierarchyPath[index]?.parentDocumentId ||
-              frame.instanceId !== locator.hierarchyPath[index]?.instanceId ||
-              frame.childDocumentId !==
-                locator.hierarchyPath[index]?.childDocumentId,
-          )
-        ) {
-          return fail(
-            "LOCATOR_MISMATCH",
-            "The locator hierarchy path is not reachable from this Project top Cell",
-          );
-        }
-        const exists = (() => {
-          switch (locator.kind) {
-            case "instance":
-              return targetDocument.instances.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "net":
-              return targetDocument.nets.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "route":
-              return targetDocument.routes.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "junction":
-              return targetDocument.junctions.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "annotation":
-              return targetDocument.annotations.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "no-connect":
-              return targetDocument.noConnects.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "terminal": {
-              const endpoint = locator.endpoint;
-              if (endpoint?.kind !== "terminal") return false;
-              const instance = targetDocument.instances.find(
-                (item) => item.id === endpoint.instanceId,
-              );
-              const resolved = instance
-                ? resolver.resolve(instance.symbolId, instance.symbolVariantId)
-                : null;
-              return (
-                resolved?.definition.pins.some(
-                  (pin) => pin.name === endpoint.pinName,
-                ) ?? false
-              );
-            }
-          }
-        })();
-        if (!exists) {
-          return fail(
-            "OBJECT_NOT_FOUND",
-            `Locator ${locator.kind} ${locator.objectId} is not present in Document ${targetDocument.id}`,
-          );
-        }
-        const objectLocator: ObjectLocator = {
-          documentId: locator.documentId,
-          hierarchyPath: locator.hierarchyPath,
-          kind: locator.kind,
-          objectId: locator.objectId,
-          ...(locator.endpoint ? { endpoint: locator.endpoint } : {}),
-        };
-        navigateToLocator(
-          objectLocator,
-          `Agent selected ${locator.kind} ${locator.objectId}`,
-        );
-        return {
-          ok: true,
-          kind: intent.kind,
-          documentId: targetDocument.id,
-          objectIds: [locator.objectId],
-          ...(locator.kind === "net" ? { netId: locator.objectId } : {}),
-        };
-      }
-    }
-  }
-
-  agentSemanticIntentRef.current = applyAgentSemanticIntent;
 
   function approveAgentFileCandidate(): void {
     if (!agentFileCandidate) return;

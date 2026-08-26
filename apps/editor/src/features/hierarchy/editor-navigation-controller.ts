@@ -275,10 +275,30 @@ export function createEditorNavigationController({
   const navigateToNetlistDiagnostic = (diagnostic: NetlistDiagnostic): void => {
     navigateToLocator(diagnostic.primary, `Preflight: ${diagnostic.message}`);
     if (diagnostic.primary.kind !== "document") return;
+    fitDocument(diagnostic.primary.documentId);
+  };
+
+  const fitDocument = (documentId: string, statusMessage?: string): void => {
     const target = project.documents.find(
-      (candidate) => candidate.id === diagnostic.primary.documentId,
+      (candidate) => candidate.id === documentId,
     );
     if (!target) return;
+    if (statusMessage) {
+      navigateToLocator(
+        {
+          documentId: target.id,
+          hierarchyPath:
+            findHierarchyPath(
+              connectivityIndex,
+              project.topDocumentId,
+              target.id,
+            ) ?? [],
+          kind: "document",
+          objectId: target.id,
+        },
+        statusMessage,
+      );
+    }
     setViewBox(
       fitCameraToBounds(
         buildSvgScene(target, resolver).viewBox,
@@ -367,6 +387,7 @@ export function createEditorNavigationController({
     jumpToCaller,
     navigateToLocator,
     navigateToNetlistDiagnostic,
+    fitDocument,
     enterHierarchy,
     enterSelectedHierarchy,
     returnToParentDocument,
