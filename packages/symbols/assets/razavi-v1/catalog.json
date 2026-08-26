@@ -484,11 +484,12 @@
       "automaticMappings": [],
       "manualOnlyReason": "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential.symbol.json",
-      "assetHash": "21f8b7c9d19b2681d4d1fd1d3b548f8f1db7252b0fc60a3a22fa036d1342b4ea",
+      "assetHash": "5d099dfe921db69074cba876784b06220070f7d2168ec076235bf60ec00f306b",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
           "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
           "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png"
         ],
@@ -499,7 +500,7 @@
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePath": "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
         "converterPath": "scripts/generate-razavi-opamp-asset.mjs",
-        "converterVersion": 3
+        "converterVersion": 4
       }
     },
     {
@@ -512,11 +513,12 @@
       "automaticMappings": [],
       "manualOnlyReason": "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential-inputs-swapped.symbol.json",
-      "assetHash": "9911ad8eb2cd5239f103f2b4a077219d90ccf6836d67b56cd02941f84cfc1a2b",
+      "assetHash": "3b20ebbfa8ccbb9577ec9ba3128e1d377a9a4020d9c2015b251b5cf45869e850",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
           "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
           "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png"
         ],
@@ -539,11 +541,12 @@
       "automaticMappings": [],
       "manualOnlyReason": "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential-crossed.symbol.json",
-      "assetHash": "36c0ff0c21191fa4310468f1602a2d491dfad87eeffeea6f8ff49c5586c8e846",
+      "assetHash": "3bc41a05b96e17bffb43adabda10e68088c87492057a1cbfa2d90b932c68b417",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
           "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
           "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png"
         ],
@@ -554,7 +557,7 @@
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePath": "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
         "converterPath": "scripts/generate-razavi-opamp-asset.mjs",
-        "converterVersion": 3
+        "converterVersion": 4
       }
     },
     {
@@ -567,11 +570,12 @@
       "automaticMappings": [],
       "manualOnlyReason": "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential-crossed-inputs-swapped.symbol.json",
-      "assetHash": "e744c73e834512f595115c155dec990a8d194168b8e8accca8dc88e82478c651",
+      "assetHash": "fd40c93b399a486e7d7772062702d798bae63c9b1835992e0f9e5f8fd95715cb",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
           "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
           "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png"
         ],

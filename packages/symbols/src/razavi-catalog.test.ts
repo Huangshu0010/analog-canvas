@@ -235,7 +235,11 @@ describe("Razavi symbol catalog", () => {
     expect(invalid.success).toBe(false);
   });
 
-  it("keeps FD Amp leads compact and at the current wire width", () => {
+  it("shares the full Op Amp body and continuously joined compact leads", () => {
+    const opampTriangle = requireRazaviCatalogSymbol("opamp").primitives.find(
+      (primitive) => primitive.kind === "path",
+    );
+    expect(opampTriangle).toBeDefined();
     for (const symbolId of [
       "opamp-differential",
       "opamp-differential-crossed",
@@ -265,6 +269,21 @@ describe("Razavi symbol catalog", () => {
           style: { strokeRole: "normal" },
         });
       }
+      expect(symbol.primitives[4]).toEqual(opampTriangle);
+      const [topInput, bottomInput, topOutput, bottomOutput] =
+        symbol.primitives.slice(0, 4);
+      if (
+        topInput?.kind !== "line" ||
+        bottomInput?.kind !== "line" ||
+        topOutput?.kind !== "line" ||
+        bottomOutput?.kind !== "line"
+      ) {
+        throw new Error("FD Amp leads must remain line primitives");
+      }
+      expect(topInput.to.x + 26.7979).toBeCloseTo(1.6, 6);
+      expect(bottomInput.to.x + 26.7979).toBeCloseTo(1.6, 6);
+      expect(3.2007399075137144 - topOutput.from.x).toBeCloseTo(1.6, 6);
+      expect(3.2021 - bottomOutput.from.x).toBeCloseTo(1.6, 6);
     }
   });
 
