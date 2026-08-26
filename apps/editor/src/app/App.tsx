@@ -281,6 +281,7 @@ import {
 } from "../features/drafting/drafting-manipulation";
 import type { DraftingHandle } from "../features/drafting/drafting-manipulation";
 import { createDraftingCommands } from "../features/drafting/drafting-commands";
+import { createDraftingCreateController } from "../features/drafting/drafting-create-controller";
 import {
   EditorInteractionPreviews,
   EditorPlacementPreview,
@@ -1864,6 +1865,32 @@ export function App({
     },
     beginTextEditing: beginDraftingTextEditing,
     selectAnnotation: (id) => selectOnly("annotation", [id]),
+  });
+  const {
+    snapPoint: snapDraftingPoint,
+    handleCanvasClick: handleDraftingCanvasClick,
+    finish: finishDraftingCreate,
+  } = createDraftingCreateController({
+    document,
+    resolver,
+    visibleEndpoints,
+    routeGeometryRecords,
+    tool,
+    source: draftingSource,
+    hover: draftingHover,
+    waypoints: draftingWaypoints,
+    setSource: setDraftingSource,
+    setHover: setDraftingHover,
+    setWaypoints: setDraftingWaypoints,
+    setSnapPoint: setDraftingSnapPoint,
+    clear: clearDraftingCreate,
+    setTool,
+    transact,
+    setStatus,
+    nextId: (prefix) => {
+      uniqueSuffixCounter.current += 1;
+      return `${prefix}-${uniqueSuffixCounter.current}`;
+    },
   });
 
   function compositeSelectionOwnsHit(
@@ -4935,273 +4962,6 @@ export function App({
   // DRAFTING_SNAP_RADIUS — wins; grid snap is the fallback. Shift locks the
   // resulting segment from the origin to horizontal/vertical/45°. Purely visual
   // — never creates a Net, junction, or short.
-  function snapDraftingPoint(
-    point: DerivedPoint,
-    altKey: boolean,
-    shiftKey: boolean,
-    origin?: Point,
-    tolerance = document.presentation.grid,
-  ): { point: Point; snap: Point | null; guides: SnapGuideLine[] } {
-    if (altKey) {
-      const constrained =
-        shiftKey && origin ? constrainAngle(origin, point) : point;
-      return {
-        point: snapGridPoint(constrained, document.presentation.grid),
-        snap: null,
-        guides: [],
-      };
-    }
-    const routeTargets = routeGeometryRecords.flatMap(({ route, geometry }) =>
-      geometry.centerline.slice(0, -1).map((from, segmentIndex) => ({
-        id: `route:${route.id}:${segmentIndex}`,
-        point: closestPointOnSegment(
-          point,
-          from,
-          geometry.centerline[segmentIndex + 1]!,
-        ),
-        kind: "route" as const,
-      })),
-    );
-    const resolved = resolvePointSnap(
-      point,
-      [
-        ...buildSceneSnapTargets(document, resolver, visibleEndpoints),
-        ...routeTargets,
-      ],
-      {
-        grid: document.presentation.grid,
-        tolerance,
-        profile: SNAP_PROFILES.draftingHandle,
-      },
-    );
-    let snapped: DerivedPoint = {
-      x: point.x + resolved.delta.x,
-      y: point.y + resolved.delta.y,
-    };
-    const hasObjectSnap =
-      (resolved.xMatch && resolved.xMatch.targetKind !== "grid") ||
-      (resolved.yMatch && resolved.yMatch.targetKind !== "grid");
-    // Closest point on each route segment (visual snap to conductors; no
-    // electrical effect — drafting never joins a Net by proximity).
-    if (shiftKey && origin) {
-      snapped = constrainAngle(origin, snapped);
-    }
-    return {
-      point: snapGridPoint(snapped, document.presentation.grid),
-      snap: hasObjectSnap
-        ? snapGridPoint(snapped, document.presentation.grid)
-        : null,
-      guides: resolved.guides,
-    };
-  }
-
-  function constrainAngle(origin: Point, target: DerivedPoint): DerivedPoint {
-    const dx = target.x - origin.x;
-    const dy = target.y - origin.y;
-    const angle = Math.atan2(dy, dx);
-    const step = Math.PI / 4; // 45° increments
-    const locked = Math.round(angle / step) * step;
-    const length = Math.hypot(dx, dy);
-    return {
-      x: Math.round(origin.x + Math.cos(locked) * length),
-      y: Math.round(origin.y + Math.sin(locked) * length),
-    };
-  }
-
-  // Handle a canvas click while the Arrow / Construction line tool is active.
-  // Mirrors the wire tool's click model: first click fixes the start (and a snap
-  // candidate), hover updates the preview, the next click commits. Construction
-  // lines append a vertex per intermediate click; arrows commit on click #2.
-  function handleDraftingCanvasClick(
-    rawPoint: Point,
-    altKey: boolean,
-    shiftKey: boolean,
-    tolerance: number,
-  ): void {
-    if (
-      tool !== "arrow" &&
-      tool !== "construction-line" &&
-      tool !== "rectangle"
-    )
-      return;
-    const { point, snap } = snapDraftingPoint(
-      rawPoint,
-      altKey,
-      shiftKey,
-      draftingSource ?? undefined,
-      tolerance,
-    );
-    if (draftingSource === null) {
-      setDraftingSource(point);
-      setDraftingHover(point);
-      setDraftingSnapPoint(snap);
-      setDraftingWaypoints([]);
-      setStatus(
-        tool === "arrow"
-          ? "Arrow: click the end point (Enter to finish, Esc to cancel)"
-          : tool === "rectangle"
-            ? "Rectangle: click the opposite corner (Esc to cancel)"
-            : "Construction line: click next vertex (Enter to finish, Esc to cancel)",
-      );
-      return;
-    }
-    if (tool === "arrow" || tool === "rectangle") {
-      commitDraftingCreate(tool, draftingSource, point);
-      clearDraftingCreate();
-      return;
-    }
-    // construction-line: each click appends a vertex; commit happens on Enter
-    // or double-click (finishDraftingCreate).
-    setDraftingWaypoints((current) => [...current, point]);
-    setDraftingHover(point);
-    setDraftingSnapPoint(snap);
-    setStatus(`Construction line: ${draftingWaypoints.length + 1} bend(s)`);
-  }
-
-  // Finish construction-line creation from the accumulated waypoints + hover,
-  // or finish an arrow from its source + hover. One transaction.
-  function finishDraftingCreate(): void {
-    if (
-      tool !== "arrow" &&
-      tool !== "construction-line" &&
-      tool !== "rectangle"
-    )
-      return;
-    if (draftingSource === null) return;
-    const end = draftingHover ?? draftingSource;
-    if (tool === "arrow" || tool === "rectangle") {
-      if (draftingSource.x !== end.x || draftingSource.y !== end.y) {
-        commitDraftingCreate(tool, draftingSource, end);
-      }
-    } else {
-      const points = [draftingSource, ...draftingWaypoints];
-      if (
-        end.x !== points[points.length - 1]!.x ||
-        end.y !== points[points.length - 1]!.y
-      ) {
-        points.push(end);
-      }
-      if (points.length >= 2) {
-        commitDraftingCreateVertices(points);
-      }
-    }
-    clearDraftingCreate();
-  }
-
-  // P1: commit a drafting object at the final end point.
-  function commitDraftingCreate(
-    activeTool: EditorTool,
-    start: Point,
-    end: Point,
-  ): void {
-    uniqueSuffixCounter.current += 1;
-    const snappedStart = snapGridPoint(start, document.presentation.grid);
-    const snappedEnd = snapGridPoint(end, document.presentation.grid);
-    if (activeTool === "construction-line") {
-      const id = `construction-${uniqueSuffixCounter.current}`;
-      const result = transact([
-        {
-          kind: "upsert_drafting_object",
-          object: {
-            id,
-            kind: "construction-line",
-            locked: false,
-            zIndex: 0,
-            anchor: { kind: "free", position: snappedStart },
-            points: [snappedStart, snappedEnd],
-            lineStyle: "dashed",
-          },
-        },
-      ]);
-      if (result.ok) setStatus(`Added construction line ${id}`);
-    } else if (activeTool === "arrow") {
-      const id = `arrow-${uniqueSuffixCounter.current}`;
-      const result = transact([
-        {
-          kind: "upsert_drafting_object",
-          object: {
-            id,
-            kind: "arrow",
-            locked: false,
-            zIndex: 0,
-            anchor: { kind: "free", position: snappedStart },
-            from: {
-              kind: "free",
-              position: snappedStart,
-            },
-            to: {
-              kind: "free",
-              position: snappedEnd,
-            },
-          },
-        },
-      ]);
-      if (result.ok) setStatus(`Added free arrow ${id}`);
-    } else if (activeTool === "rectangle") {
-      const width = Math.round(Math.abs(snappedEnd.x - snappedStart.x));
-      const height = Math.round(Math.abs(snappedEnd.y - snappedStart.y));
-      if (width < 1 || height < 1) {
-        setStatus("Rectangle needs non-zero width and height");
-        return;
-      }
-      const id = `rectangle-${uniqueSuffixCounter.current}`;
-      const center = snapGridPoint(
-        {
-          x: Math.round((snappedStart.x + snappedEnd.x) / 2),
-          y: Math.round((snappedStart.y + snappedEnd.y) / 2),
-        },
-        document.presentation.grid,
-      );
-      const result = transact([
-        {
-          kind: "upsert_drafting_object",
-          object: {
-            id,
-            kind: "rectangle",
-            locked: false,
-            zIndex: 0,
-            anchor: { kind: "free", position: center },
-            center,
-            width,
-            height,
-            rotation: 0,
-            lineStyle: "solid",
-          },
-        },
-      ]);
-      if (result.ok) setStatus(`Added rectangle ${id}`);
-    }
-    setTool("pointer");
-  }
-
-  // Commit a multi-vertex construction line from the two-phase click model.
-  function commitDraftingCreateVertices(points: Point[]): void {
-    if (points.length < 2) return;
-    uniqueSuffixCounter.current += 1;
-    const id = `construction-${uniqueSuffixCounter.current}`;
-    const snappedPoints = points.map((point) =>
-      snapGridPoint(point, document.presentation.grid),
-    );
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: {
-          id,
-          kind: "construction-line",
-          locked: false,
-          zIndex: 0,
-          anchor: { kind: "free", position: snappedPoints[0]! },
-          points: snappedPoints,
-          lineStyle: "dashed",
-        },
-      },
-    ]);
-    if (result.ok) {
-      setStatus(`Added construction line ${id}`);
-      setTool("pointer");
-    }
-  }
-
   function disconnectSelectedEndpoint(removeRoutes: boolean): void {
     if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
       return;
