@@ -26,21 +26,12 @@ import {
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
   planEnsureNamedNet,
-  planCreateCell,
   planDeleteCell,
-  planRenameCell,
   planRemoveCellTerminalMarkers,
-  planRenameCellTerminal,
-  planReorderCellTerminal,
-  planSetCellSymbolPresentation,
   planEditCellTerminalAnnotation,
-  planSetCellTerminalPlacement,
-  planUpdateCellTerminalDirection,
   planSetMosModelTarget,
   planCellReset,
   planInstanceUnplacement,
-  proposeSetCellFormalParameters,
-  proposeUpsertExternalSubcircuitDefinition,
   type SchematicEdit,
   type CellResetPlan,
   type WireSource,
@@ -91,7 +82,6 @@ import type {
 } from "@icm/derived";
 import {
   createEmptyProject,
-  createEmptyDocument,
   createId,
   deriveStableId,
   defaultDraftTextDocument,
@@ -107,7 +97,6 @@ import type {
   CircuitProject,
   ConnectivityEvidence,
   DerivedPoint,
-  ExternalSubcircuitDefinition,
   DraftingObject,
   GridRect,
   Point,
@@ -236,6 +225,7 @@ import {
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { HierarchyToolbar } from "../features/hierarchy/hierarchy-toolbar";
+import { createProjectStructureCommands } from "../features/hierarchy/project-structure-commands";
 import { parseProject } from "@icm/project-protocol";
 import { DocumentSettingsSection } from "../features/editor-shell/document-settings-section";
 import { derivedFingerWidth } from "../features/properties/finger-width";
@@ -866,6 +856,24 @@ export function App({
       cancelAllTransientInteraction,
       setStatus,
     });
+  const {
+    createCell,
+    renameCell,
+    updateCellPinDirection,
+    renameCellTerminal,
+    moveCellTerminal,
+    setCellFormalParameters,
+    setExternalSubcircuitDefinition,
+    setCellSymbolBodySize,
+    setCellSymbolPortPlacement,
+    renameProject,
+  } = createProjectStructureCommands({
+    project,
+    activeDocument: document,
+    commitStructure,
+    setStatus,
+    onCellCreated: () => setDocumentStack([]),
+  });
   const [draftingInspectorSegment, setDraftingInspectorSegment] = useState<{
     objectId: string;
     index: number;
@@ -2262,32 +2270,6 @@ export function App({
     );
   }
 
-  function createCell(name: string): void {
-    name = name.trim();
-    if (!name) return;
-    const child = createEmptyDocument(createId("document"), name);
-    child.netlist!.name = name;
-    child.presentation = structuredClone(document.presentation);
-    if (commitStructure("create-cell", planCreateCell(child), child.id)) {
-      setDocumentStack([]);
-      setStatus(`Created Cell ${name}`);
-    }
-  }
-
-  function renameCell(documentId: string, name: string): void {
-    const target = project.documents.find(
-      (candidate) => candidate.id === documentId,
-    );
-    if (!target) return;
-    name = name.trim();
-    if (!name || name === target.name) return;
-    if (
-      commitStructure("rename-cell", planRenameCell(project, documentId, name))
-    ) {
-      setStatus(`Renamed Cell to ${name}`);
-    }
-  }
-
   function jumpToCaller(parentDocumentId: string, instanceId: string): void {
     const path = findHierarchyPath(
       projectConnectivityIndex,
@@ -2320,202 +2302,6 @@ export function App({
       launch: cellInsertLaunch(),
     });
     setStatus("Choose a Cell, then place it on the canvas");
-  }
-
-  function updateCellPinDirection(
-    terminalId: string,
-    direction: "input" | "output" | "inout" | "passive",
-    targetDocumentId = document.id,
-  ): void {
-    const targetDocument = project.documents.find(
-      (candidate) => candidate.id === targetDocumentId,
-    );
-    if (!targetDocument?.netlist) return;
-    if (
-      commitStructure(
-        "update-cell-pin-direction",
-        planUpdateCellTerminalDirection(
-          project,
-          targetDocumentId,
-          terminalId,
-          direction,
-        ),
-      )
-    ) {
-      setStatus("Updated Cell port direction");
-    }
-  }
-
-  function renameCellTerminal(
-    terminalId: string,
-    name: string,
-    targetDocumentId = document.id,
-  ): void {
-    const nextName = name.trim();
-    const targetDocument = project.documents.find(
-      (candidate) => candidate.id === targetDocumentId,
-    );
-    const terminal = targetDocument?.netlist?.terminals.find(
-      (candidate) => candidate.id === terminalId,
-    );
-    if (!terminal || !nextName || terminal.name === nextName) return;
-    try {
-      if (
-        commitStructure(
-          "rename-cell-interface-terminal",
-          planRenameCellTerminal(
-            project,
-            targetDocumentId,
-            terminalId,
-            nextName,
-          ),
-        )
-      ) {
-        setStatus(`Renamed Cell Pin to ${nextName}`);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not rename port",
-      );
-    }
-  }
-
-  function moveCellTerminal(
-    terminalId: string,
-    delta: -1 | 1,
-    targetDocumentId = document.id,
-  ): void {
-    const edits = planReorderCellTerminal(
-      project,
-      targetDocumentId,
-      terminalId,
-      delta,
-    );
-    if (edits.length === 0) return;
-    if (commitStructure("reorder-cell-interface-terminal", edits)) {
-      setStatus("Reordered formal terminal interface");
-    }
-  }
-
-  function setCellFormalParameters(
-    formalParameters: NonNullable<
-      SchematicDocument["netlist"]
-    >["formalParameters"],
-    targetDocumentId = document.id,
-  ): void {
-    try {
-      const proposal = proposeSetCellFormalParameters(
-        project,
-        targetDocumentId,
-        formalParameters.map((parameter) => ({
-          name: parameter.name.trim(),
-          ...(parameter.defaultValue?.trim()
-            ? { defaultValue: parameter.defaultValue.trim() }
-            : {}),
-        })),
-      );
-      if (commitStructure("set-cell-formal-parameters", [...proposal.edits])) {
-        setStatus("Updated Cell formal parameters");
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error
-          ? error.message
-          : "Could not update Cell formal parameters",
-      );
-    }
-  }
-
-  function setExternalSubcircuitDefinition(
-    definition: ExternalSubcircuitDefinition,
-  ): void {
-    try {
-      const proposal = proposeUpsertExternalSubcircuitDefinition(
-        project,
-        definition,
-      );
-      if (proposal.diagnostics.length > 0) {
-        setStatus(
-          `Cannot update external interface: ${proposal.diagnostics[0]}`,
-        );
-        return;
-      }
-      if (
-        commitStructure("upsert-external-subcircuit-interface", [
-          ...proposal.edits,
-        ])
-      ) {
-        setStatus(`Updated external subcircuit ${definition.name}`);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error
-          ? error.message
-          : "Could not update external subcircuit interface",
-      );
-    }
-  }
-
-  function setCellSymbolBodySize(
-    child: SchematicDocument,
-    width: number,
-    height: number,
-  ): void {
-    if (
-      !Number.isInteger(width) ||
-      !Number.isInteger(height) ||
-      width <= 0 ||
-      height <= 0 ||
-      width % 10 !== 0 ||
-      height % 10 !== 0
-    ) {
-      setStatus("Cell symbol size must use positive 10-unit grid values");
-      return;
-    }
-    const current = child.presentation.cellSymbol;
-    if (
-      commitStructure(
-        "resize-cell-symbol",
-        planSetCellSymbolPresentation(project, child.id, {
-          ...(current?.pinPlacements
-            ? { pinPlacements: current.pinPlacements }
-            : {}),
-          minimumBodySize: { width, height },
-        }),
-      )
-    ) {
-      setStatus(`Resized ${child.name} symbol for every parent instance`);
-    }
-  }
-
-  function setCellSymbolPortPlacement(
-    child: SchematicDocument,
-    terminalId: string,
-    side: "north" | "east" | "south" | "west" | "auto",
-    offset: number,
-  ): void {
-    try {
-      if (
-        commitStructure(
-          "move-cell-symbol-pin",
-          planSetCellTerminalPlacement(
-            project,
-            child.id,
-            terminalId,
-            side,
-            offset,
-          ),
-        )
-      ) {
-        setStatus(`Moved Cell symbol pin in every parent instance`);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error
-          ? error.message
-          : "Could not move Cell symbol pin",
-      );
-    }
   }
 
   function exitCellSymbolLayout(): void {
@@ -2619,37 +2405,20 @@ export function App({
     : undefined;
 
   function commitProjectName(): void {
-    const next = (projectNameDraft ?? "").trim();
     setProjectNameDraft(null);
-    if (!next || next === project.name) return;
-    if (
-      commitStructure("rename-project", [
-        { kind: "rename_project", name: next },
-      ])
-    ) {
-      setStatus(`Renamed circuit to ${next}`);
-    }
+    renameProject(projectNameDraft);
   }
 
   function renameSelectedFormalPort(name: string): void {
     if (!selectedFormalTerminal) return;
     name = name.trim();
     if (!name || name === selectedFormalTerminal.name) return;
-    try {
-      const edits = planRenameCellTerminal(
-        project,
-        document.id,
-        selectedFormalTerminal.id,
-        name,
-      );
-      if (commitStructure("rename-cell-pin", edits)) {
-        setStatus(`Renamed Cell Pin to ${name}`);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not rename port",
-      );
-    }
+    renameCellTerminal(
+      selectedFormalTerminal.id,
+      name,
+      document.id,
+      "rename-cell-pin",
+    );
   }
 
   function deleteSelectedFormalPort(): void {
