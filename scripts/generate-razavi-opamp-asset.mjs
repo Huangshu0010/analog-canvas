@@ -26,8 +26,10 @@ const differentialAssetPaths = {
     "packages/symbols/assets/razavi-v1/opamp-differential-crossed.symbol.json",
   ),
 };
-/** Output pair height; the reviewed input pair uses the same ±10 offset. */
-const OUTPUT_PAIR_OFFSET = 10;
+/** Figure-derived pair height before the reviewed product-scale adjustment. */
+const SOURCE_PAIR_OFFSET = 10;
+/** Keep both input and output pairs one connection grid farther apart. */
+const OUTPUT_PAIR_OFFSET = 20;
 const catalogPath = resolve(
   root,
   "packages/symbols/assets/razavi-v1/catalog.json",
@@ -173,21 +175,34 @@ const compactDifferentialTriangle = {
   topY: -15.0002,
   bottomY: 14.9993,
 };
-const FD_AMP_BODY_SCALE =
+const FD_AMP_SIZE_SCALE = 1.4;
+const BASE_FD_AMP_BODY_SCALE =
   (opampTriangle.apexX - opampTriangle.leftX) /
   (compactDifferentialTriangle.apexX - compactDifferentialTriangle.leftX);
+const FD_AMP_BODY_SCALE = BASE_FD_AMP_BODY_SCALE * FD_AMP_SIZE_SCALE;
+const opampCenterX = (opampTriangle.leftX + opampTriangle.apexX) / 2;
 const opampCenterY = (opampTriangle.topY + opampTriangle.bottomY) / 2;
+const compactDifferentialCenterX =
+  (compactDifferentialTriangle.leftX + compactDifferentialTriangle.apexX) / 2;
 const compactDifferentialCenterY =
   (compactDifferentialTriangle.topY + compactDifferentialTriangle.bottomY) / 2;
-const scaleDifferentialPoint = ({ x, y }) => ({
-  x:
-    opampTriangle.leftX +
-    (x - compactDifferentialTriangle.leftX) * FD_AMP_BODY_SCALE,
-  y: opampCenterY + (y - compactDifferentialCenterY) * FD_AMP_BODY_SCALE,
+const scaleDifferentialPointBy = ({ x, y }, scale) => ({
+  x: opampCenterX + (x - compactDifferentialCenterX) * scale,
+  y: opampCenterY + (y - compactDifferentialCenterY) * scale,
 });
+const scaleDifferentialPoint = (point) =>
+  scaleDifferentialPointBy(point, FD_AMP_BODY_SCALE);
+const scaleDifferentialMarkPoint = (point) =>
+  scaleDifferentialPointBy(point, BASE_FD_AMP_BODY_SCALE);
 const scaledDifferentialTriangle = {
-  leftX: opampTriangle.leftX,
-  apexX: opampTriangle.apexX,
+  leftX: scaleDifferentialPoint({
+    x: compactDifferentialTriangle.leftX,
+    y: compactDifferentialCenterY,
+  }).x,
+  apexX: scaleDifferentialPoint({
+    x: compactDifferentialTriangle.apexX,
+    y: compactDifferentialCenterY,
+  }).x,
   topY: scaleDifferentialPoint({
     x: compactDifferentialTriangle.leftX,
     y: compactDifferentialTriangle.topY,
@@ -201,6 +216,22 @@ const scaledDifferentialTriangle = {
     y: 0.000436,
   }).y,
 };
+const baseDifferentialTriangle = {
+  leftX: opampTriangle.leftX,
+  apexX: opampTriangle.apexX,
+  topY: scaleDifferentialMarkPoint({
+    x: compactDifferentialTriangle.leftX,
+    y: compactDifferentialTriangle.topY,
+  }).y,
+  bottomY: scaleDifferentialMarkPoint({
+    x: compactDifferentialTriangle.leftX,
+    y: compactDifferentialTriangle.bottomY,
+  }).y,
+  apexY: scaleDifferentialMarkPoint({
+    x: compactDifferentialTriangle.apexX,
+    y: 0.000436,
+  }).y,
+};
 const coordinate = (value) => Number(value.toFixed(6));
 const differentialTrianglePathData =
   `M ${coordinate(scaledDifferentialTriangle.leftX)} ` +
@@ -209,10 +240,46 @@ const differentialTrianglePathData =
   `${coordinate(scaledDifferentialTriangle.bottomY)} ` +
   `L ${coordinate(scaledDifferentialTriangle.apexX)} ` +
   `${coordinate(scaledDifferentialTriangle.apexY)} Z`;
-const scaleDifferentialLine = (geometry) => ({
-  from: scaleDifferentialPoint(geometry.from),
-  to: scaleDifferentialPoint(geometry.to),
-});
+const triangleEdgeXAtY = (triangle, y) => {
+  const reachesApexFromTop = y <= triangle.apexY;
+  const edgeY = reachesApexFromTop ? triangle.topY : triangle.bottomY;
+  const ratio = reachesApexFromTop
+    ? (y - edgeY) / (triangle.apexY - edgeY)
+    : (edgeY - y) / (edgeY - triangle.apexY);
+  return triangle.leftX + ratio * (triangle.apexX - triangle.leftX);
+};
+const scaleDifferentialPairLine = (geometry) => {
+  const base = {
+    from: scaleDifferentialMarkPoint(geometry.from),
+    to: scaleDifferentialMarkPoint(geometry.to),
+  };
+  const center = {
+    x: (base.from.x + base.to.x) / 2,
+    y: (base.from.y + base.to.y) / 2,
+  };
+  const side = Math.sign(center.y - opampCenterY);
+  const targetCenterY =
+    center.y + side * (OUTPUT_PAIR_OFFSET - SOURCE_PAIR_OFFSET);
+  const baseEdgeX = triangleEdgeXAtY(baseDifferentialTriangle, center.y);
+  const crossSectionFraction =
+    (center.x - baseDifferentialTriangle.leftX) /
+    (baseEdgeX - baseDifferentialTriangle.leftX);
+  const targetEdgeX = triangleEdgeXAtY(
+    scaledDifferentialTriangle,
+    targetCenterY,
+  );
+  const targetCenterX =
+    scaledDifferentialTriangle.leftX +
+    crossSectionFraction * (targetEdgeX - scaledDifferentialTriangle.leftX);
+  const shiftPoint = (point) => ({
+    x: targetCenterX + (point.x - center.x),
+    y: targetCenterY + (point.y - center.y),
+  });
+  return {
+    from: shiftPoint(base.from),
+    to: shiftPoint(base.to),
+  };
+};
 const differentialLine = (geometry) => ({
   kind: "line",
   from: geometry.from,
@@ -228,7 +295,7 @@ const acrossAxis = (primitive) => ({
   from: { ...primitive.from, y: -primitive.from.y },
   to: { ...primitive.to, y: -primitive.to.y },
 });
-/** Keep the user-facing FD Amp leads compact without changing its core body. */
+/** Keep the user-facing FD Amp leads compact on the connection grid. */
 const FD_AMP_LEAD_SCALE = 0.5;
 const CONNECTION_GRID = 10;
 const snapToConnectionGrid = (value) =>
@@ -239,9 +306,7 @@ const halfwayAlongLead = (contact, pin) => ({
     x: snapToConnectionGrid(
       contact.x + (pin.at.x - contact.x) * FD_AMP_LEAD_SCALE,
     ),
-    y: snapToConnectionGrid(
-      contact.y + (pin.at.y - contact.y) * FD_AMP_LEAD_SCALE,
-    ),
+    y: contact.y,
   },
 });
 const TRIANGLE_STROKE_WIDTH = 2.4;
@@ -278,6 +343,7 @@ const outputLeadContact = (y) => {
 };
 const inputLead = (pin, contact) => ({
   kind: "line",
+  part: "input-lead",
   from: pin.at,
   to: contact,
   // Symbol DSL has no wire role; normal currently resolves to the Razavi wire
@@ -286,35 +352,36 @@ const inputLead = (pin, contact) => ({
 });
 const outputLead = (contact, pin) => ({
   kind: "line",
+  part: "output-lead",
   from: contact,
   to: pin.at,
   style: normal,
 });
 const sourceInputMarks = [
   taggedLine(
-    scaleDifferentialLine(differentialGeometry.input_plus_vertical),
+    scaleDifferentialPairLine(differentialGeometry.input_plus_vertical),
     "input-polarity",
   ),
   taggedLine(
-    scaleDifferentialLine(differentialGeometry.input_plus_horizontal),
+    scaleDifferentialPairLine(differentialGeometry.input_plus_horizontal),
     "input-polarity",
   ),
   taggedLine(
-    scaleDifferentialLine(differentialGeometry.input_minus_horizontal),
+    scaleDifferentialPairLine(differentialGeometry.input_minus_horizontal),
     "input-polarity",
   ),
 ];
 const sourceOutputMarks = [
   taggedLine(
-    scaleDifferentialLine(differentialGeometry.output_minus_horizontal),
+    scaleDifferentialPairLine(differentialGeometry.output_minus_horizontal),
     "output-polarity",
   ),
   taggedLine(
-    scaleDifferentialLine(differentialGeometry.output_plus_vertical),
+    scaleDifferentialPairLine(differentialGeometry.output_plus_vertical),
     "output-polarity",
   ),
   taggedLine(
-    scaleDifferentialLine(differentialGeometry.output_plus_horizontal),
+    scaleDifferentialPairLine(differentialGeometry.output_plus_horizontal),
     "output-polarity",
   ),
 ];

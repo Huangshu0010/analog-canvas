@@ -586,7 +586,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential.symbol.json",
     assetHash:
-      "1834d79f79f660fcac0aa1ca78f8d4df2d21d955d0be835ed8db4f2f1a6eac1e",
+      "9b9a7abe0d6286f3a6790c2e9fd732395020a5fb008d9b0a4b071948d093d6b8",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -621,7 +621,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-inputs-swapped.symbol.json",
     assetHash:
-      "4d03985955a86f105b1b5d869eca637bc93675de0095b397306877021b9a007d",
+      "9b9e8d4e8dc18db090e432e17ca3762640b9cee4b4ebd3c49c04af2236451f74",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -653,7 +653,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-crossed.symbol.json",
     assetHash:
-      "94d7f6705e9e47fa3703cb0a4a54a15fa0ba00d71250d65d6abadad8f9a9ae4b",
+      "75c92b68695f5b7119b27fa627ff03287a63e9c9d2604c955018a318f93e8bc4",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -688,7 +688,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-crossed-inputs-swapped.symbol.json",
     assetHash:
-      "7d33a47bf5fc704e0188e2f45699e0f82ac1b87d36d5baf52b1fee21aacc222c",
+      "1ee750d79537393376b2502db5736bcb59954026d1da9d0df5ec09084f56b843",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -3523,7 +3523,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "non-inverting-input",
         at: {
           x: -40,
-          y: 10,
+          y: 20,
         },
         direction: "west",
         presentation: {
@@ -3536,7 +3536,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "inverting-input",
         at: {
           x: -40,
-          y: -10,
+          y: -20,
         },
         direction: "west",
         presentation: {
@@ -3548,8 +3548,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT+",
         role: "output",
         at: {
-          x: 20,
-          y: 10,
+          x: 10,
+          y: 20,
         },
         direction: "east",
         presentation: {
@@ -3561,8 +3561,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT-",
         role: "output",
         at: {
-          x: 20,
-          y: -10,
+          x: 10,
+          y: -20,
         },
         direction: "east",
         presentation: {
@@ -3574,13 +3574,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     primitives: [
       {
         kind: "line",
+        part: "input-lead",
         from: {
           x: -40,
-          y: -10,
+          y: -20,
         },
         to: {
-          x: -27.947899999999997,
-          y: -10,
+          x: -37.9479,
+          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -3590,13 +3591,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "input-lead",
         from: {
           x: -40,
-          y: 10,
+          y: 20,
         },
         to: {
-          x: -27.947899999999997,
-          y: 10,
+          x: -37.9479,
+          y: 20,
         },
         style: {
           strokeRole: "normal",
@@ -3606,13 +3608,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "output-lead",
         from: {
-          x: -0.1350471602937411,
-          y: -10,
+          x: -13.468439157806387,
+          y: -20,
         },
         to: {
-          x: 20,
-          y: -10,
+          x: 10,
+          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -3622,13 +3625,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "output-lead",
         from: {
-          x: -0.12793020562090973,
-          y: 10,
+          x: -13.461716017666415,
+          y: 20,
         },
         to: {
-          x: 20,
-          y: 10,
+          x: 10,
+          y: 20,
         },
         style: {
           strokeRole: "normal",
@@ -3638,7 +3642,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -26.7979 -21.427487 L -26.7979 21.429187 L 23.2021 0.002116 Z",
+        data: "M -36.7979 -29.998821 L -36.7979 30.000521 L 33.2021 0.002622 Z",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -3649,12 +3653,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -21.439559380910744,
-          y: 13.391246526265867,
+          x: -32.15401822780977,
+          y: 23.391246526265867,
         },
         to: {
-          x: -21.439559380910744,
-          y: 8.034150200001143,
+          x: -32.15401822780977,
+          y: 18.034150200001143,
         },
         style: {
           strokeRole: "normal",
@@ -3666,12 +3670,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -24.118728976165574,
-          y: 10.713321223835566,
+          x: -34.833146398405304,
+          y: 20.713321223835564,
         },
         to: {
-          x: -18.761634078480448,
-          y: 10.713321223835566,
+          x: -29.476051500720175,
+          y: 20.713321223835564,
         },
         style: {
           strokeRole: "normal",
@@ -3683,12 +3687,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -24.118728976165574,
-          y: -10.713815502660013,
+          x: -34.833066010316486,
+          y: -20.71381550266001,
         },
         to: {
-          x: -18.761634078480448,
-          y: -10.713815502660013,
+          x: -29.475971112631356,
+          y: -20.71381550266001,
         },
         style: {
           strokeRole: "normal",
@@ -3700,12 +3704,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -16.082463054646027,
-          y: -10.713321223835566,
+          x: -27.868382076144005,
+          y: -20.713321223835564,
         },
         to: {
-          x: -10.726612449785428,
-          y: -10.713321223835566,
+          x: -22.512531471283403,
+          y: -20.713321223835564,
         },
         style: {
           strokeRole: "normal",
@@ -3717,12 +3721,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -13.404537752215727,
-          y: 8.037135921633837,
+          x: -25.19056727127771,
+          y: 18.037135921633833,
         },
         to: {
-          x: -13.404537752215727,
-          y: 13.394232247898557,
+          x: -25.19056727127771,
+          y: 23.394232247898557,
         },
         style: {
           strokeRole: "normal",
@@ -3734,12 +3738,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -16.082463054646027,
-          y: 10.713815502660013,
+          x: -27.868181119934864,
+          y: 20.71381550266001,
         },
         to: {
-          x: -10.726612449785428,
-          y: 10.713815502660013,
+          x: -22.51233051507426,
+          y: 20.71381550266001,
         },
         style: {
           strokeRole: "normal",
@@ -3767,7 +3771,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "non-inverting-input",
         at: {
           x: -40,
-          y: -10,
+          y: -20,
         },
         direction: "west",
         presentation: {
@@ -3780,7 +3784,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "inverting-input",
         at: {
           x: -40,
-          y: 10,
+          y: 20,
         },
         direction: "west",
         presentation: {
@@ -3792,8 +3796,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT+",
         role: "output",
         at: {
-          x: 20,
-          y: 10,
+          x: 10,
+          y: 20,
         },
         direction: "east",
         presentation: {
@@ -3805,8 +3809,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT-",
         role: "output",
         at: {
-          x: 20,
-          y: -10,
+          x: 10,
+          y: -20,
         },
         direction: "east",
         presentation: {
@@ -3818,13 +3822,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     primitives: [
       {
         kind: "line",
+        part: "input-lead",
         from: {
           x: -40,
-          y: -10,
+          y: -20,
         },
         to: {
-          x: -27.947899999999997,
-          y: -10,
+          x: -37.9479,
+          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -3834,13 +3839,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "input-lead",
         from: {
           x: -40,
-          y: 10,
+          y: 20,
         },
         to: {
-          x: -27.947899999999997,
-          y: 10,
+          x: -37.9479,
+          y: 20,
         },
         style: {
           strokeRole: "normal",
@@ -3850,13 +3856,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "output-lead",
         from: {
-          x: -0.1350471602937411,
-          y: -10,
+          x: -13.468439157806387,
+          y: -20,
         },
         to: {
-          x: 20,
-          y: -10,
+          x: 10,
+          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -3866,13 +3873,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "output-lead",
         from: {
-          x: -0.12793020562090973,
-          y: 10,
+          x: -13.461716017666415,
+          y: 20,
         },
         to: {
-          x: 20,
-          y: 10,
+          x: 10,
+          y: 20,
         },
         style: {
           strokeRole: "normal",
@@ -3882,7 +3890,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -26.7979 -21.427487 L -26.7979 21.429187 L 23.2021 0.002116 Z",
+        data: "M -36.7979 -29.998821 L -36.7979 30.000521 L 33.2021 0.002622 Z",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -3893,12 +3901,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -21.439559380910744,
-          y: -13.391246526265867,
+          x: -32.15401822780977,
+          y: -23.391246526265867,
         },
         to: {
-          x: -21.439559380910744,
-          y: -8.034150200001143,
+          x: -32.15401822780977,
+          y: -18.034150200001143,
         },
         style: {
           strokeRole: "normal",
@@ -3910,12 +3918,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -24.118728976165574,
-          y: -10.713321223835566,
+          x: -34.833146398405304,
+          y: -20.713321223835564,
         },
         to: {
-          x: -18.761634078480448,
-          y: -10.713321223835566,
+          x: -29.476051500720175,
+          y: -20.713321223835564,
         },
         style: {
           strokeRole: "normal",
@@ -3927,12 +3935,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -24.118728976165574,
-          y: 10.713815502660013,
+          x: -34.833066010316486,
+          y: 20.71381550266001,
         },
         to: {
-          x: -18.761634078480448,
-          y: 10.713815502660013,
+          x: -29.475971112631356,
+          y: 20.71381550266001,
         },
         style: {
           strokeRole: "normal",
@@ -3944,12 +3952,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -16.082463054646027,
-          y: -10.713321223835566,
+          x: -27.868382076144005,
+          y: -20.713321223835564,
         },
         to: {
-          x: -10.726612449785428,
-          y: -10.713321223835566,
+          x: -22.512531471283403,
+          y: -20.713321223835564,
         },
         style: {
           strokeRole: "normal",
@@ -3961,12 +3969,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -13.404537752215727,
-          y: 8.037135921633837,
+          x: -25.19056727127771,
+          y: 18.037135921633833,
         },
         to: {
-          x: -13.404537752215727,
-          y: 13.394232247898557,
+          x: -25.19056727127771,
+          y: 23.394232247898557,
         },
         style: {
           strokeRole: "normal",
@@ -3978,12 +3986,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -16.082463054646027,
-          y: 10.713815502660013,
+          x: -27.868181119934864,
+          y: 20.71381550266001,
         },
         to: {
-          x: -10.726612449785428,
-          y: 10.713815502660013,
+          x: -22.51233051507426,
+          y: 20.71381550266001,
         },
         style: {
           strokeRole: "normal",
@@ -4011,7 +4019,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "non-inverting-input",
         at: {
           x: -40,
-          y: 10,
+          y: 20,
         },
         direction: "west",
         presentation: {
@@ -4024,7 +4032,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "inverting-input",
         at: {
           x: -40,
-          y: -10,
+          y: -20,
         },
         direction: "west",
         presentation: {
@@ -4036,8 +4044,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT+",
         role: "output",
         at: {
-          x: 20,
-          y: -10,
+          x: 10,
+          y: -20,
         },
         direction: "east",
         presentation: {
@@ -4049,8 +4057,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT-",
         role: "output",
         at: {
-          x: 20,
-          y: 10,
+          x: 10,
+          y: 20,
         },
         direction: "east",
         presentation: {
@@ -4062,13 +4070,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     primitives: [
       {
         kind: "line",
+        part: "input-lead",
         from: {
           x: -40,
-          y: -10,
+          y: -20,
         },
         to: {
-          x: -27.947899999999997,
-          y: -10,
+          x: -37.9479,
+          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -4078,13 +4087,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "input-lead",
         from: {
           x: -40,
-          y: 10,
+          y: 20,
         },
         to: {
-          x: -27.947899999999997,
-          y: 10,
+          x: -37.9479,
+          y: 20,
         },
         style: {
           strokeRole: "normal",
@@ -4094,13 +4104,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "output-lead",
         from: {
-          x: -0.1350471602937411,
-          y: -10,
+          x: -13.468439157806387,
+          y: -20,
         },
         to: {
-          x: 20,
-          y: -10,
+          x: 10,
+          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -4110,13 +4121,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "output-lead",
         from: {
-          x: -0.12793020562090973,
-          y: 10,
+          x: -13.461716017666415,
+          y: 20,
         },
         to: {
-          x: 20,
-          y: 10,
+          x: 10,
+          y: 20,
         },
         style: {
           strokeRole: "normal",
@@ -4126,7 +4138,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -26.7979 -21.427487 L -26.7979 21.429187 L 23.2021 0.002116 Z",
+        data: "M -36.7979 -29.998821 L -36.7979 30.000521 L 33.2021 0.002622 Z",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -4137,12 +4149,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -21.439559380910744,
-          y: 13.391246526265867,
+          x: -32.15401822780977,
+          y: 23.391246526265867,
         },
         to: {
-          x: -21.439559380910744,
-          y: 8.034150200001143,
+          x: -32.15401822780977,
+          y: 18.034150200001143,
         },
         style: {
           strokeRole: "normal",
@@ -4154,12 +4166,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -24.118728976165574,
-          y: 10.713321223835566,
+          x: -34.833146398405304,
+          y: 20.713321223835564,
         },
         to: {
-          x: -18.761634078480448,
-          y: 10.713321223835566,
+          x: -29.476051500720175,
+          y: 20.713321223835564,
         },
         style: {
           strokeRole: "normal",
@@ -4171,12 +4183,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -24.118728976165574,
-          y: -10.713815502660013,
+          x: -34.833066010316486,
+          y: -20.71381550266001,
         },
         to: {
-          x: -18.761634078480448,
-          y: -10.713815502660013,
+          x: -29.475971112631356,
+          y: -20.71381550266001,
         },
         style: {
           strokeRole: "normal",
@@ -4188,12 +4200,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -16.082463054646027,
-          y: 10.713321223835566,
+          x: -27.868382076144005,
+          y: 20.713321223835564,
         },
         to: {
-          x: -10.726612449785428,
-          y: 10.713321223835566,
+          x: -22.512531471283403,
+          y: 20.713321223835564,
         },
         style: {
           strokeRole: "normal",
@@ -4205,12 +4217,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -13.404537752215727,
-          y: -8.037135921633837,
+          x: -25.19056727127771,
+          y: -18.037135921633833,
         },
         to: {
-          x: -13.404537752215727,
-          y: -13.394232247898557,
+          x: -25.19056727127771,
+          y: -23.394232247898557,
         },
         style: {
           strokeRole: "normal",
@@ -4222,12 +4234,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -16.082463054646027,
-          y: -10.713815502660013,
+          x: -27.868181119934864,
+          y: -20.71381550266001,
         },
         to: {
-          x: -10.726612449785428,
-          y: -10.713815502660013,
+          x: -22.51233051507426,
+          y: -20.71381550266001,
         },
         style: {
           strokeRole: "normal",
@@ -4255,7 +4267,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "non-inverting-input",
         at: {
           x: -40,
-          y: -10,
+          y: -20,
         },
         direction: "west",
         presentation: {
@@ -4268,7 +4280,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "inverting-input",
         at: {
           x: -40,
-          y: 10,
+          y: 20,
         },
         direction: "west",
         presentation: {
@@ -4280,8 +4292,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT+",
         role: "output",
         at: {
-          x: 20,
-          y: -10,
+          x: 10,
+          y: -20,
         },
         direction: "east",
         presentation: {
@@ -4293,8 +4305,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT-",
         role: "output",
         at: {
-          x: 20,
-          y: 10,
+          x: 10,
+          y: 20,
         },
         direction: "east",
         presentation: {
@@ -4306,13 +4318,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     primitives: [
       {
         kind: "line",
+        part: "input-lead",
         from: {
           x: -40,
-          y: -10,
+          y: -20,
         },
         to: {
-          x: -27.947899999999997,
-          y: -10,
+          x: -37.9479,
+          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -4322,13 +4335,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "input-lead",
         from: {
           x: -40,
-          y: 10,
+          y: 20,
         },
         to: {
-          x: -27.947899999999997,
-          y: 10,
+          x: -37.9479,
+          y: 20,
         },
         style: {
           strokeRole: "normal",
@@ -4338,13 +4352,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "output-lead",
         from: {
-          x: -0.1350471602937411,
-          y: -10,
+          x: -13.468439157806387,
+          y: -20,
         },
         to: {
-          x: 20,
-          y: -10,
+          x: 10,
+          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -4354,13 +4369,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "line",
+        part: "output-lead",
         from: {
-          x: -0.12793020562090973,
-          y: 10,
+          x: -13.461716017666415,
+          y: 20,
         },
         to: {
-          x: 20,
-          y: 10,
+          x: 10,
+          y: 20,
         },
         style: {
           strokeRole: "normal",
@@ -4370,7 +4386,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -26.7979 -21.427487 L -26.7979 21.429187 L 23.2021 0.002116 Z",
+        data: "M -36.7979 -29.998821 L -36.7979 30.000521 L 33.2021 0.002622 Z",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -4381,12 +4397,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -21.439559380910744,
-          y: -13.391246526265867,
+          x: -32.15401822780977,
+          y: -23.391246526265867,
         },
         to: {
-          x: -21.439559380910744,
-          y: -8.034150200001143,
+          x: -32.15401822780977,
+          y: -18.034150200001143,
         },
         style: {
           strokeRole: "normal",
@@ -4398,12 +4414,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -24.118728976165574,
-          y: -10.713321223835566,
+          x: -34.833146398405304,
+          y: -20.713321223835564,
         },
         to: {
-          x: -18.761634078480448,
-          y: -10.713321223835566,
+          x: -29.476051500720175,
+          y: -20.713321223835564,
         },
         style: {
           strokeRole: "normal",
@@ -4415,12 +4431,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -24.118728976165574,
-          y: 10.713815502660013,
+          x: -34.833066010316486,
+          y: 20.71381550266001,
         },
         to: {
-          x: -18.761634078480448,
-          y: 10.713815502660013,
+          x: -29.475971112631356,
+          y: 20.71381550266001,
         },
         style: {
           strokeRole: "normal",
@@ -4432,12 +4448,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -16.082463054646027,
-          y: 10.713321223835566,
+          x: -27.868382076144005,
+          y: 20.713321223835564,
         },
         to: {
-          x: -10.726612449785428,
-          y: 10.713321223835566,
+          x: -22.512531471283403,
+          y: 20.713321223835564,
         },
         style: {
           strokeRole: "normal",
@@ -4449,12 +4465,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -13.404537752215727,
-          y: -8.037135921633837,
+          x: -25.19056727127771,
+          y: -18.037135921633833,
         },
         to: {
-          x: -13.404537752215727,
-          y: -13.394232247898557,
+          x: -25.19056727127771,
+          y: -23.394232247898557,
         },
         style: {
           strokeRole: "normal",
@@ -4466,12 +4482,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -16.082463054646027,
-          y: -10.713815502660013,
+          x: -27.868181119934864,
+          y: -20.71381550266001,
         },
         to: {
-          x: -10.726612449785428,
-          y: -10.713815502660013,
+          x: -22.51233051507426,
+          y: -20.71381550266001,
         },
         style: {
           strokeRole: "normal",

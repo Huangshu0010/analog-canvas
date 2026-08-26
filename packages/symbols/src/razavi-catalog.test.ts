@@ -235,7 +235,7 @@ describe("Razavi symbol catalog", () => {
     expect(invalid.success).toBe(false);
   });
 
-  it("preserves the FD Amp angle at Op Amp scale with boundary-only joins", () => {
+  it("keeps the enlarged FD Amp angle, pair spacing, and joined leads", () => {
     const opampTriangle = requireRazaviCatalogSymbol("opamp").primitives.find(
       (primitive) => primitive.kind === "path",
     );
@@ -275,17 +275,17 @@ describe("Razavi symbol catalog", () => {
         expect.arrayContaining([
           expect.objectContaining({
             name: "IN+",
-            at: { x: -40, y: 10 },
+            at: { x: -40, y: 20 },
           }),
           expect.objectContaining({
             name: "IN-",
-            at: { x: -40, y: -10 },
+            at: { x: -40, y: -20 },
           }),
           expect.objectContaining({
-            at: { x: 20, y: -10 },
+            at: { x: 10, y: -20 },
           }),
           expect.objectContaining({
-            at: { x: 20, y: 10 },
+            at: { x: 10, y: 20 },
           }),
         ]),
       );
@@ -302,9 +302,29 @@ describe("Razavi symbol catalog", () => {
       const points = pathPoints(triangle.data);
       const width = points.apex.x - points.leftTop.x;
       const height = points.leftBottom.y - points.leftTop.y;
-      expect(width).toBeCloseTo(opampWidth, 6);
+      expect(width).toBeCloseTo(opampWidth * 1.4, 6);
+      expect((points.leftTop.x + points.apex.x) / 2).toBeCloseTo(
+        (opampPoints.leftTop.x + opampPoints.apex.x) / 2,
+        6,
+      );
       expect(width / height).toBeCloseTo(originalFdAspect, 5);
       expect(triangle.style).toEqual(opampTriangle.style);
+      const edgeXAtY = (y: number) =>
+        y <= points.apex.y
+          ? points.leftTop.x +
+            ((y - points.leftTop.y) / (points.apex.y - points.leftTop.y)) *
+              width
+          : points.leftBottom.x +
+            ((points.leftBottom.y - y) /
+              (points.leftBottom.y - points.apex.y)) *
+              width;
+      for (const primitive of symbol.primitives.filter(
+        (candidate) => candidate.part === "output-polarity",
+      )) {
+        if (primitive.kind !== "line") continue;
+        expect(primitive.from.x).toBeLessThan(edgeXAtY(primitive.from.y));
+        expect(primitive.to.x).toBeLessThan(edgeXAtY(primitive.to.y));
+      }
       const [topInput, bottomInput, topOutput, bottomOutput] =
         symbol.primitives.slice(0, 4);
       if (
