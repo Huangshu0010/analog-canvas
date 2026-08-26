@@ -19,6 +19,10 @@ export const AUTH_LOGIN_TOKEN_TTL_MS = 15 * 60 * 1000;
 export const AUTH_EMAIL_DAILY_LIMIT = 5;
 export const AUTH_DISPLAY_NAME_MAX = 40;
 
+const TOKENZHANG_DISPLAY_NAME_MIGRATION =
+  "2026-08-26-tokenzhang-to-zhishuai-zhang";
+const TOKENZHANG_DISPLAY_NAME = "Zhishuai Zhang";
+
 type SqlResult<T> = {
   toArray(): T[];
   one(): T;
@@ -216,6 +220,34 @@ export class AuthDO {
     } catch {
       // Column already present.
     }
+    this.sql.exec(`
+      CREATE TABLE IF NOT EXISTS data_migrations (
+        id TEXT PRIMARY KEY,
+        applied_at TEXT NOT NULL
+      ) WITHOUT ROWID
+    `);
+    state.storage.transactionSync(() => {
+      const applied = this.sql
+        .exec<{ id: string }>(
+          "SELECT id FROM data_migrations WHERE id = ?",
+          TOKENZHANG_DISPLAY_NAME_MIGRATION,
+        )
+        .toArray();
+      if (applied.length > 0) return;
+      // One production account was initially named from its GitHub login.
+      // Change only that legacy spelling; the marker preserves any later
+      // display-name choice made by the account holder.
+      this.sql.exec(
+        `UPDATE users SET display_name = ?
+         WHERE LOWER(REPLACE(TRIM(display_name), ' ', '')) = 'tokenzhang'`,
+        TOKENZHANG_DISPLAY_NAME,
+      );
+      this.sql.exec(
+        "INSERT INTO data_migrations(id, applied_at) VALUES (?, ?)",
+        TOKENZHANG_DISPLAY_NAME_MIGRATION,
+        new Date().toISOString(),
+      );
+    });
     this.sql.exec(`
       CREATE TABLE IF NOT EXISTS sessions (
         token_hash TEXT PRIMARY KEY,

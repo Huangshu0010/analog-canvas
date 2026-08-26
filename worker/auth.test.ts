@@ -146,6 +146,57 @@ describe("runtime binding", () => {
   });
 });
 
+describe("account data migrations", () => {
+  it("renames the legacy tokenzhang account once without touching other users", () => {
+    const state = sqliteState();
+    new AuthDO(state, {} as AuthEnv);
+    state.storage.sql.exec(
+      `INSERT INTO users
+       (id, provider, provider_id, email, display_name, role, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?)`,
+      "legacy-user",
+      "github",
+      "1",
+      null,
+      "Token Zhang",
+      "user",
+      "2026-08-01T00:00:00.000Z",
+      "other-user",
+      "github",
+      "2",
+      null,
+      "Zhishuai Zhang",
+      "user",
+      "2026-08-01T00:00:00.000Z",
+    );
+    state.storage.sql.exec("DELETE FROM data_migrations");
+
+    new AuthDO(state, {} as AuthEnv);
+    expect(
+      state.storage.sql
+        .exec<{ id: string; display_name: string }>(
+          "SELECT id, display_name FROM users ORDER BY id",
+        )
+        .toArray(),
+    ).toEqual([
+      { id: "legacy-user", display_name: "Zhishuai Zhang" },
+      { id: "other-user", display_name: "Zhishuai Zhang" },
+    ]);
+
+    state.storage.sql.exec(
+      "UPDATE users SET display_name = 'Token Zhang' WHERE id = 'legacy-user'",
+    );
+    new AuthDO(state, {} as AuthEnv);
+    expect(
+      state.storage.sql
+        .exec<{ display_name: string }>(
+          "SELECT display_name FROM users WHERE id = 'legacy-user'",
+        )
+        .one().display_name,
+    ).toBe("Token Zhang");
+  });
+});
+
 describe("providers visibility (dark ship)", () => {
   it("reports exactly the providers whose secrets exist", async () => {
     const dark = harness();
