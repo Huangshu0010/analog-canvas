@@ -119,10 +119,8 @@ import {
   reviewedSky130MosModelSuggestions,
 } from "@icm/symbols";
 import {
-  clipboardPlacementAnchor,
   clipboardPreviewDocument,
   copySelection,
-  copyWholeDocument,
 } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import { startCanvasDragSession } from "../canvas/canvas-drag-session";
@@ -223,10 +221,10 @@ import {
   planDifferentialInputSwap,
 } from "../features/editor-shell/differential-input-swap";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
+import { createGalleryExampleCommands } from "../features/editor-shell/gallery-example-commands";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { HierarchyToolbar } from "../features/hierarchy/hierarchy-toolbar";
 import { createProjectStructureCommands } from "../features/hierarchy/project-structure-commands";
-import { parseProject } from "@icm/project-protocol";
 import { DocumentSettingsSection } from "../features/editor-shell/document-settings-section";
 import { derivedFingerWidth } from "../features/properties/finger-width";
 import type { PublishGalleryDraft } from "../features/editor-shell/publish-gallery-dialog";
@@ -246,7 +244,6 @@ import {
 import {
   createLibraryExampleProject,
   libraryProjectExamples,
-  type LibraryProjectExample,
 } from "../examples/library-examples";
 import { useDocumentController } from "../document/document-controller";
 import { useProjectFileLifecycle } from "../document/use-project-file-lifecycle";
@@ -874,6 +871,16 @@ export function App({
     setStatus,
     onCellCreated: () => setDocumentStack([]),
   });
+  const { openGalleryEntryById, openLibraryExample, insertGalleryEntryById } =
+    createGalleryExampleCommands({
+      defaultViewBox: DEFAULT_VIEWBOX,
+      replaceActiveProject,
+      guardDirtyReplacement,
+      beginCopyPlacement: beginCopyPlacementInteraction,
+      cancelAllTransientInteraction,
+      setGalleryEntryContext,
+      setStatus,
+    });
   const [draftingInspectorSegment, setDraftingInspectorSegment] = useState<{
     objectId: string;
     index: number;
@@ -2105,66 +2112,6 @@ export function App({
     toggleExamplesPanelFromShell();
   }
 
-  // The same loader serves a fresh `/g/<id>` boot and the live Examples panel.
-  // Only the live path crosses an existing Project session and needs the
-  // replacement guard and Previous Project snapshot.
-  async function openGalleryEntryById(
-    entryId: string,
-    protectCurrentProject = true,
-  ): Promise<void> {
-    try {
-      const response = await fetch(`/api/gallery/${entryId}`, {
-        credentials: "same-origin",
-      });
-      if (!response.ok) {
-        setStatus("This gallery entry is unavailable");
-        return;
-      }
-      const payload = (await response.json()) as {
-        entry?: {
-          name?: string;
-          author?: string;
-          description?: string;
-          tags?: string[];
-        };
-        ownerUserId?: string | null;
-        projectText?: string;
-      };
-      if (!payload.projectText) {
-        setStatus("This gallery entry is unavailable");
-        return;
-      }
-      const galleryProject = parseProject(payload.projectText);
-      const install = () => {
-        replaceActiveProject(galleryProject, DEFAULT_VIEWBOX, {
-          rememberPrevious: protectCurrentProject,
-        });
-        setGalleryEntryContext({
-          id: entryId,
-          name: payload.entry?.name ?? galleryProject.name,
-          projectId: galleryProject.id,
-          ownerUserId: payload.ownerUserId ?? null,
-          author: payload.entry?.author ?? "",
-          description: payload.entry?.description ?? "",
-          tags: payload.entry?.tags ?? [],
-        });
-        setStatus(
-          `Opened gallery circuit: ${payload.entry?.name ?? galleryProject.name}`,
-        );
-      };
-      if (protectCurrentProject) {
-        await guardDirtyReplacement(
-          `Open gallery circuit ${payload.entry?.name ?? galleryProject.name}`,
-          install,
-        );
-      } else {
-        install();
-      }
-    } catch {
-      setStatus("This gallery entry is unavailable");
-    }
-  }
-
   // boot Project only; ordinary sessions never re-run these.
   const bootTargetHandled = useRef(false);
   useEffect(() => {
@@ -3018,79 +2965,6 @@ export function App({
               ? "Construction line: click the start point"
               : "Pointer ready",
     );
-  }
-
-  /**
-   * Examples join the drawing instead of replacing it: the example's content
-   * is attached to the placement cursor like an ordinary copy, so existing
-   * work is never overwritten. A hierarchical example cannot be flattened
-   * onto one Document, so it still opens as its own Project behind the
-   * ordinary dirty guard.
-   */
-  /**
-   * Start placing another Project's single document on the current canvas.
-   * Borrowing part of a circuit is the common reason to open one from the
-   * panel, and replacing the canvas throws away whatever is already drawn.
-   * A hierarchical Project cannot be pasted as one fragment, so it reports
-   * false and the caller falls back to opening it.
-   */
-  function beginProjectImportPlacement(
-    imported: CircuitProject,
-    label: string,
-  ): boolean {
-    const importedDocument = imported.documents.find(
-      (candidate) => candidate.id === imported.topDocumentId,
-    );
-    if (!importedDocument || imported.documents.length > 1) return false;
-    const clipboard = copyWholeDocument(importedDocument);
-    const anchor = clipboard ? clipboardPlacementAnchor(clipboard) : null;
-    if (!clipboard || !anchor) return false;
-    cancelAllTransientInteraction();
-    beginCopyPlacementInteraction(clipboard, anchor);
-    setStatus(
-      `Place ${label} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
-    );
-    return true;
-  }
-
-  function openLibraryExample(example: LibraryProjectExample): void {
-    const exampleProject = createLibraryExampleProject(example.id);
-    if (!exampleProject) {
-      setStatus(`Example is unavailable: ${example.name}`);
-      return;
-    }
-    if (beginProjectImportPlacement(exampleProject, example.name)) return;
-    void guardDirtyReplacement(`Open ${example.name} example`, () => {
-      replaceActiveProject(exampleProject);
-      setStatus(`Opened example: ${example.name}`);
-    });
-  }
-
-  /** Panel cards insert; the `/g/<id>` deep link still opens the circuit. */
-  async function insertGalleryEntryById(entryId: string): Promise<void> {
-    try {
-      const response = await fetch(`/api/gallery/${entryId}`, {
-        credentials: "same-origin",
-      });
-      const payload = response.ok
-        ? ((await response.json()) as {
-            entry?: { name?: string };
-            projectText?: string;
-          })
-        : null;
-      if (!payload?.projectText) {
-        setStatus("This gallery entry is unavailable");
-        return;
-      }
-      const imported = parseProject(payload.projectText);
-      const label = payload.entry?.name ?? imported.name;
-      if (beginProjectImportPlacement(imported, label)) return;
-      // A hierarchical circuit cannot be pasted as one fragment, so opening it
-      // is the useful answer rather than refusing with a message.
-      await openGalleryEntryById(entryId);
-    } catch {
-      setStatus("This gallery entry is unavailable");
-    }
   }
 
   function rotatePendingCopy(delta: 90 | -90): void {

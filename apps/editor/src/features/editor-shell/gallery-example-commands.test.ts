@@ -1,0 +1,115 @@
+import { createEmptyDocument, createEmptyProject } from "@icm/model";
+import { serializeProject } from "@icm/project-protocol";
+import { describe, expect, it, vi } from "vitest";
+
+import { createGalleryExampleCommands } from "./gallery-example-commands";
+
+const defaultViewBox = { x: 0, y: 0, width: 960, height: 640 };
+
+function dependencies(fetchImpl: typeof fetch = vi.fn<typeof fetch>()) {
+  return {
+    defaultViewBox,
+    replaceActiveProject: vi.fn(),
+    guardDirtyReplacement: vi.fn(async (_intent, perform) => {
+      await perform();
+    }),
+    beginCopyPlacement: vi.fn(),
+    cancelAllTransientInteraction: vi.fn(),
+    setGalleryEntryContext: vi.fn(),
+    setStatus: vi.fn(),
+    fetchImpl,
+  };
+}
+
+describe("Gallery and example commands", () => {
+  it("starts a whole-Document placement with interface composition policy", () => {
+    const input = dependencies();
+    const imported = createEmptyProject("imported", "Imported");
+    imported.documents[0]!.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 80 },
+        rotation: 0,
+        mirror: "none",
+      },
+    });
+    const commands = createGalleryExampleCommands(input);
+
+    expect(commands.beginProjectImportPlacement(imported, "Scene")).toBe(true);
+
+    expect(input.cancelAllTransientInteraction).toHaveBeenCalledOnce();
+    expect(input.beginCopyPlacement).toHaveBeenCalledWith(
+      expect.objectContaining({ cellTerminalPastePolicy: "merge-by-name" }),
+      { x: 100, y: 80 },
+    );
+    expect(input.setStatus).toHaveBeenCalledWith(
+      expect.stringContaining("Place Scene on the canvas"),
+    );
+  });
+
+  it("leaves hierarchical Projects for guarded replacement", () => {
+    const input = dependencies();
+    const imported = createEmptyProject("imported", "Imported");
+    imported.documents.push(createEmptyDocument("child", "Child"));
+    const commands = createGalleryExampleCommands(input);
+
+    expect(commands.beginProjectImportPlacement(imported, "Hierarchy")).toBe(
+      false,
+    );
+    expect(input.beginCopyPlacement).not.toHaveBeenCalled();
+  });
+
+  it("opens a Gallery Project and records the live entry context", async () => {
+    const project = createEmptyProject("gallery-project", "Project fallback");
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      Response.json({
+        entry: {
+          name: "Published name",
+          author: "Ada",
+          description: "A circuit",
+          tags: ["ota"],
+        },
+        ownerUserId: "user-1",
+        projectText: serializeProject(project),
+      }),
+    );
+    const input = dependencies(fetchImpl);
+    const commands = createGalleryExampleCommands(input);
+
+    await commands.openGalleryEntryById("entry-1");
+
+    expect(input.guardDirtyReplacement).toHaveBeenCalledWith(
+      "Open gallery circuit Published name",
+      expect.any(Function),
+    );
+    expect(input.replaceActiveProject).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "gallery-project" }),
+      defaultViewBox,
+      { rememberPrevious: true },
+    );
+    expect(input.setGalleryEntryContext).toHaveBeenCalledWith({
+      id: "entry-1",
+      name: "Published name",
+      projectId: "gallery-project",
+      ownerUserId: "user-1",
+      author: "Ada",
+      description: "A circuit",
+      tags: ["ota"],
+    });
+  });
+
+  it("reports unavailable Gallery payloads without replacing the Project", async () => {
+    const input = dependencies(
+      vi.fn<typeof fetch>(async () => Response.json({}, { status: 404 })),
+    );
+    const commands = createGalleryExampleCommands(input);
+
+    await commands.openGalleryEntryById("missing");
+
+    expect(input.replaceActiveProject).not.toHaveBeenCalled();
+    expect(input.setStatus).toHaveBeenCalledWith(
+      "This gallery entry is unavailable",
+    );
+  });
+});
