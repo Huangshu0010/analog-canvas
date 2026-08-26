@@ -149,6 +149,11 @@ import {
   logicalRadiusForCanvasPixels,
   replaceCanvasSnapGuides,
 } from "../canvas/canvas-viewport";
+import {
+  CanvasGridOverlay,
+  CanvasInputPlanes,
+  NetHighlightOverlay,
+} from "../canvas/editor-canvas-overlays";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
 import { draggedAnnotationAtPosition } from "../features/text-editing/annotation-drag-model";
 import {
@@ -8160,28 +8165,7 @@ export function App({
             onDragOver={(event) => event.preventDefault()}
             onDrop={handleDrop}
           >
-            {gridDotsVisible ? (
-              <>
-                <defs>
-                  <pattern
-                    id="grid"
-                    width="10"
-                    height="10"
-                    patternUnits="userSpaceOnUse"
-                  >
-                    <circle className="canvas-grid-dot" cx="0" cy="0" r="0.7" />
-                  </pattern>
-                </defs>
-                <rect
-                  data-testid="canvas-grid-dots"
-                  x={viewBox.x}
-                  y={viewBox.y}
-                  width={viewBox.width}
-                  height={viewBox.height}
-                  fill="url(#grid)"
-                />
-              </>
-            ) : null}
+            <CanvasGridOverlay visible={gridDotsVisible} viewBox={viewBox} />
             <g dangerouslySetInnerHTML={sceneInnerHtml} />
             {selectedCellSymbolLayout
               ? (() => {
@@ -8255,66 +8239,12 @@ export function App({
                   );
                 })()
               : null}
-            {highlightedNet ? (
-              <g
-                data-testid="net-highlight-overlay"
-                data-net-id={highlightedNet.netId}
-                className="net-highlight-overlay"
-                pointerEvents="none"
-              >
-                {routeGeometryRecords
-                  .filter(({ route }) =>
-                    highlightedNet.routes.includes(route.id),
-                  )
-                  .map(({ route, geometry }) => (
-                    <polyline
-                      key={route.id}
-                      className="net-highlight-halo"
-                      points={serializePolylinePoints(geometry.centerline)}
-                    />
-                  ))}
-                {routeGeometryRecords
-                  .filter(({ route }) =>
-                    highlightedNet.routes.includes(route.id),
-                  )
-                  .map(({ route, geometry }) => (
-                    <polyline
-                      key={`${route.id}-core`}
-                      className="net-highlight-core"
-                      points={serializePolylinePoints(geometry.centerline)}
-                    />
-                  ))}
-                {document.junctions
-                  .filter((junction) =>
-                    highlightedNet.junctions.includes(junction.id),
-                  )
-                  .map((junction) => (
-                    <circle
-                      key={junction.id}
-                      cx={junction.position.x}
-                      cy={junction.position.y}
-                      r="4.5"
-                    />
-                  ))}
-                {highlightedNet.visibleEndpoints.flatMap((endpoint) => {
-                  const connection = resolveEndpointConnection(
-                    document,
-                    resolver,
-                    endpoint,
-                  );
-                  if (!connection) return [];
-                  return [
-                    <circle
-                      key={`endpoint:${endpointKey(endpoint)}`}
-                      className="net-highlight-endpoint"
-                      cx={connection.contactPoint.x}
-                      cy={connection.contactPoint.y}
-                      r="5.5"
-                    />,
-                  ];
-                })}
-              </g>
-            ) : null}
+            <NetHighlightOverlay
+              highlight={highlightedNet}
+              document={document}
+              resolver={resolver}
+              routeGeometryRecords={routeGeometryRecords}
+            />
             {copyPreviewInnerHtml !== null ? (
               <g
                 data-testid="copy-placement-preview"
@@ -8322,30 +8252,14 @@ export function App({
                 dangerouslySetInnerHTML={copyPreviewInnerHtml}
               />
             ) : null}
-            {tool === "wire" ? (
-              <rect
-                data-testid="wire-input-plane"
-                className="wire-input-plane"
-                x={viewBox.x}
-                y={viewBox.y}
-                width={viewBox.width}
-                height={viewBox.height}
-              />
-            ) : null}
-            {pendingSymbolId || vddRailMode || copyPlacement ? (
-              <rect
-                data-testid={
-                  copyPlacement
-                    ? "copy-placement-input-plane"
-                    : "component-input-plane"
-                }
-                className="component-input-plane"
-                x={viewBox.x}
-                y={viewBox.y}
-                width={viewBox.width}
-                height={viewBox.height}
-              />
-            ) : null}
+            <CanvasInputPlanes
+              tool={tool}
+              viewBox={viewBox}
+              componentPlacementActive={Boolean(
+                pendingSymbolId || vddRailMode || copyPlacement,
+              )}
+              copyPlacementActive={copyPlacement !== null}
+            />
             <g data-layer="editor-overlay">
               {vddRailMode ? (
                 vddRailStart && componentPreviewPoint ? (
