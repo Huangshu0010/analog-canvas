@@ -2,6 +2,8 @@ import { createEmptyDocument } from "@icm/model";
 import { describe, expect, it } from "vitest";
 
 import {
+  deriveMosBulkRouteFamily,
+  hasExplicitMosBulkRoute,
   isMosBulkTerminal,
   mosBulkShouldBeVisible,
   resolveMosBulkConnection,
@@ -142,6 +144,57 @@ describe("MOS bulk resolution", () => {
     document.mosBulkDefaults = { nmosNetId: "net-cell-substrate" };
 
     expect(mosBulkShouldBeVisible(document, "M1")).toBe(false);
+  });
+
+  it("gives an explicit multi-segment bulk route precedence over stale default metadata", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.instances.push({
+      ...mos("M1", "nmos"),
+      mosBulkBinding: {
+        netId: "net-vss",
+        origin: "cell-default",
+      },
+    });
+    document.nets.push({
+      id: "net-vss",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+    document.junctions.push(
+      { id: "J1", netId: "net-vss", position: { x: 100, y: 100 } },
+      { id: "J2", netId: "net-vss", position: { x: 200, y: 100 } },
+    );
+    document.routes.push(
+      {
+        id: "bulk-near",
+        netId: "net-vss",
+        from: { kind: "terminal", instanceId: "M1", pinName: "B" },
+        to: { kind: "junction", junctionId: "J1" },
+        waypoints: [],
+        segmentModes: ["manual"],
+        presentation: "bulk-dashed",
+      },
+      {
+        id: "bulk-distal",
+        netId: "net-vss",
+        from: { kind: "junction", junctionId: "J1" },
+        to: { kind: "junction", junctionId: "J2" },
+        waypoints: [],
+        segmentModes: ["manual"],
+        presentation: "bulk-dashed",
+      },
+    );
+    document.mosBulkDefaults = { nmosNetId: "net-vss" };
+
+    expect(hasExplicitMosBulkRoute(document, "M1")).toBe(true);
+    expect(deriveMosBulkRouteFamily(document, document.routes[1]!)).toEqual({
+      routeIds: ["bulk-distal", "bulk-near"],
+      instanceIds: ["M1"],
+    });
+    expect(resolveMosBulkConnection(document, "M1")).toMatchObject({
+      status: "explicit",
+      net: { id: "net-vss" },
+    });
+    expect(mosBulkShouldBeVisible(document, "M1")).toBe(true);
   });
 
   it("does not guess when imported fourth-node evidence is missing", () => {

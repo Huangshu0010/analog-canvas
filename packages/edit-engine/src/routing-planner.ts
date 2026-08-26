@@ -1,4 +1,5 @@
 import {
+  deriveMosBulkRouteFamily,
   derivePowerRailComponent,
   isMosBulkRoute,
   isMosBulkTerminal,
@@ -24,6 +25,7 @@ import {
 } from "./route-operations.js";
 import type {
   Point,
+  RouteBranch,
   RouteEndpoint,
   RoutePresentation,
   SchematicDocument,
@@ -577,40 +579,34 @@ export function proposeVisualRouteDeletion(
   const instanceIdsScheduledForDeletion = new Set(
     context.instanceIdsScheduledForDeletion ?? [],
   );
-  const routesToRemove = new Set(routeIds);
+  const routesToRemove = new Set<string>();
+  const bulkRoutesToRemove = new Set<string>();
   const junctionsToRemove = new Set(junctionIds);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    const bulkJunctions = new Set(
-      document.routes
-        .filter(
-          (route) =>
-            routesToRemove.has(route.id) && isMosBulkRoute(document, route),
-        )
-        .flatMap((route) => [route.from, route.to])
-        .filter(
-          (
-            endpoint,
-          ): endpoint is Extract<RouteEndpoint, { kind: "junction" }> =>
-            endpoint.kind === "junction",
-        )
-        .map((endpoint) => endpoint.junctionId),
-    );
-    for (const route of document.routes) {
-      if (
-        isMosBulkRoute(document, route) &&
-        !routesToRemove.has(route.id) &&
-        [route.from, route.to].some(
-          (endpoint) =>
-            endpoint.kind === "junction" &&
-            bulkJunctions.has(endpoint.junctionId),
-        )
-      ) {
-        routesToRemove.add(route.id);
+  const includeRouteAndBulkFamily = (route: RouteBranch): boolean => {
+    let changed = false;
+    if (!routesToRemove.has(route.id)) {
+      routesToRemove.add(route.id);
+      changed = true;
+    }
+    const family = deriveMosBulkRouteFamily(document, route);
+    if (!family) return changed;
+    for (const routeId of family.routeIds) {
+      bulkRoutesToRemove.add(routeId);
+      if (!routesToRemove.has(routeId)) {
+        routesToRemove.add(routeId);
         changed = true;
       }
     }
+    return changed;
+  };
+  for (const routeId of routeIds) {
+    const route = document.routes.find((candidate) => candidate.id === routeId);
+    if (route) includeRouteAndBulkFamily(route);
+    else routesToRemove.add(routeId);
+  }
+  let changed = true;
+  while (changed) {
+    changed = false;
     for (const route of document.routes) {
       const touchesDeletedJunction =
         (route.from.kind === "junction" &&
@@ -618,8 +614,7 @@ export function proposeVisualRouteDeletion(
         (route.to.kind === "junction" &&
           junctionsToRemove.has(route.to.junctionId));
       if (touchesDeletedJunction && !routesToRemove.has(route.id)) {
-        routesToRemove.add(route.id);
-        changed = true;
+        changed = includeRouteAndBulkFamily(route) || changed;
       }
     }
     for (const junction of document.junctions) {
@@ -684,10 +679,7 @@ export function proposeVisualRouteDeletion(
   const disconnectedBulkInstances = [
     ...new Set(
       document.routes
-        .filter(
-          (route) =>
-            routesToRemove.has(route.id) && isMosBulkRoute(document, route),
-        )
+        .filter((route) => bulkRoutesToRemove.has(route.id))
         .flatMap((route) => [route.from, route.to])
         .filter(
           (
