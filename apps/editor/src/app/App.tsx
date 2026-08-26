@@ -23,7 +23,7 @@ import {
   type WireSource,
 } from "@icm/edit-engine";
 import { analyzeDesignNetlist } from "@icm/netlist";
-import type { NetlistDiagnostic, NetlistFormat } from "@icm/netlist";
+import type { NetlistFormat } from "@icm/netlist";
 import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
@@ -34,7 +34,6 @@ import {
   diagnoseVisualQuality,
   endpointKey,
   findHierarchyPath,
-  findHierarchyPaths,
   isMosBulkTerminal,
   isVisibleEndpoint,
   resolveEndpointConnection,
@@ -219,8 +218,8 @@ import {
 } from "../features/editor-shell/differential-input-swap";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { createGalleryExampleCommands } from "../features/editor-shell/gallery-example-commands";
-import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { HierarchyToolbar } from "../features/hierarchy/hierarchy-toolbar";
+import { createEditorNavigationController } from "../features/hierarchy/editor-navigation-controller";
 import { createProjectStructureCommands } from "../features/hierarchy/project-structure-commands";
 import { DocumentSettingsSection } from "../features/editor-shell/document-settings-section";
 import type { PublishGalleryDraft } from "../features/editor-shell/publish-gallery-dialog";
@@ -2089,6 +2088,41 @@ export function App({
     clearSelectedEndpoint: () => setSelectedEndpoint(null),
     setStatus,
   });
+  const {
+    switchDocument,
+    selectDocumentFromHierarchy,
+    openInstanceFromTable,
+    jumpToCaller,
+    navigateToLocator,
+    navigateToNetlistDiagnostic,
+    enterHierarchy,
+    enterSelectedHierarchy,
+    returnToParentDocument,
+    returnToTopDocument,
+  } = createEditorNavigationController({
+    project,
+    document,
+    resolver,
+    connectivityIndex: projectConnectivityIndex,
+    documentStack,
+    setDocumentStack,
+    documentViewBoxes,
+    viewBox,
+    defaultViewBox: DEFAULT_VIEWBOX,
+    setViewBox,
+    openDocument,
+    resetInteractionState,
+    selectOnly,
+    setSelectedEndpoint,
+    setHighlightedNetOrigin,
+    setSelectionOpen,
+    setInstanceTableOpen,
+    setCellManagerOpen,
+    selectedInstance,
+    selectedDrafting,
+    commitProjectStructure,
+    setStatus,
+  });
 
   useEffect(() => {
     if (!selectedRouteId) setSelectedRouteSegmentIndex(null);
@@ -2213,73 +2247,6 @@ export function App({
     } else {
       resetSelection();
     }
-  }
-
-  function switchDocument(nextDocumentId: string): void {
-    if (nextDocumentId === document.id) return;
-    documentViewBoxes.current.set(document.id, viewBox);
-    const nextDocument = openDocument(nextDocumentId);
-    if (!nextDocument) {
-      setStatus(`Document not found: ${nextDocumentId}`);
-      return;
-    }
-    setViewBox(
-      documentViewBoxes.current.get(nextDocument.id) ?? DEFAULT_VIEWBOX,
-      nextDocument.presentation.grid,
-    );
-    resetInteractionState();
-    setStatus(`Opened Cell ${nextDocument.name}`);
-  }
-
-  function selectDocumentFromHierarchy(nextDocumentId: string): void {
-    const paths = findHierarchyPaths(
-      projectConnectivityIndex,
-      project.topDocumentId,
-      nextDocumentId,
-    );
-    setDocumentStack(paths?.length === 1 ? [...paths[0]!] : []);
-    switchDocument(nextDocumentId);
-    if (paths && paths.length > 1) {
-      setStatus(
-        `Opened shared Cell without caller context (${paths.length} instance paths)`,
-      );
-    }
-  }
-
-  function openInstanceFromTable(documentId: string, instanceId: string): void {
-    const paths = findHierarchyPaths(
-      projectConnectivityIndex,
-      project.topDocumentId,
-      documentId,
-    );
-    // A reused definition remains a single table row. Navigation still needs
-    // one concrete caller context, so use the deterministic first valid path.
-    setDocumentStack(paths?.[0] ? [...paths[0]] : []);
-    switchDocument(documentId);
-    selectOnly("instance", [instanceId]);
-    setInstanceTableOpen(false);
-    setStatus(
-      paths && paths.length > 1
-        ? `Opened ${documentId}.${instanceId} via one of ${paths.length} caller paths`
-        : `Opened ${documentId}.${instanceId}`,
-    );
-  }
-
-  function jumpToCaller(parentDocumentId: string, instanceId: string): void {
-    const path = findHierarchyPath(
-      projectConnectivityIndex,
-      project.topDocumentId,
-      parentDocumentId,
-    );
-    if (!path) {
-      setStatus("Caller path could not be resolved");
-      return;
-    }
-    setDocumentStack([...path]);
-    switchDocument(parentDocumentId);
-    selectOnly("instance", [instanceId]);
-    setCellManagerOpen(false);
-    setStatus(`Opened caller ${parentDocumentId}.${instanceId}`);
   }
 
   const cellManagerEntries = useMemo(
@@ -2411,135 +2378,6 @@ export function App({
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Delete failed");
     }
-  }
-
-  function navigateToLocator(
-    locator: ObjectLocator,
-    statusMessage: string,
-  ): void {
-    const targetDocument = project.documents.find(
-      (candidate) => candidate.id === locator.documentId,
-    );
-    if (!targetDocument) {
-      setStatus(`Document not found: ${locator.documentId}`);
-      return;
-    }
-    const derivedPath = findHierarchyPath(
-      projectConnectivityIndex,
-      project.topDocumentId,
-      locator.documentId,
-    );
-    const hierarchyPath =
-      locator.hierarchyPath.length > 0
-        ? locator.hierarchyPath
-        : (derivedPath ?? []);
-    documentViewBoxes.current.set(document.id, viewBox);
-    const opened = openDocument(locator.documentId);
-    if (!opened) {
-      setStatus(`Document not found: ${locator.documentId}`);
-      return;
-    }
-    setDocumentStack([...hierarchyPath]);
-    setViewBox(
-      documentViewBoxes.current.get(opened.id) ?? DEFAULT_VIEWBOX,
-      opened.presentation.grid,
-    );
-    resetInteractionState();
-
-    const focusPoint = (point: Point) =>
-      setViewBox(
-        {
-          x: point.x - 80,
-          y: point.y - 60,
-          width: 160,
-          height: 120,
-        },
-        opened.presentation.grid,
-      );
-    const endpoint =
-      locator.kind === "terminal"
-        ? locator.endpoint
-        : locator.kind === "no-connect"
-          ? opened.noConnects.find(
-              (noConnect) => noConnect.id === locator.objectId,
-            )?.endpoint
-          : undefined;
-    if (endpoint) {
-      const connection = resolveEndpointConnection(opened, resolver, endpoint);
-      if (connection) {
-        setSelectedEndpoint({
-          endpoint,
-          netId: endpointNetId(opened, endpoint),
-          connection,
-          preludeEdits: [],
-        });
-        focusPoint(connection.contactPoint);
-      }
-    } else if (locator.kind === "instance") {
-      const instance = opened.instances.find(
-        (item) => item.id === locator.objectId,
-      );
-      selectOnly("instance", [locator.objectId]);
-      if (instance?.placement) focusPoint(instance.placement.position);
-    } else if (locator.kind === "route") {
-      const route = opened.routes.find((item) => item.id === locator.objectId);
-      selectOnly("route", [locator.objectId]);
-      const centerline = route
-        ? projectConnectivityIndex.documents
-            .get(opened.id)
-            ?.routingGeometry.routes.get(route.id)?.centerline
-        : undefined;
-      if (centerline?.[0]) focusPoint(centerline[0]);
-    } else if (locator.kind === "junction") {
-      const junction = opened.junctions.find(
-        (item) => item.id === locator.objectId,
-      );
-      selectOnly("junction", [locator.objectId]);
-      if (junction) focusPoint(junction.position);
-    } else if (locator.kind === "annotation") {
-      const annotation = opened.annotations.find(
-        (item) => item.id === locator.objectId,
-      );
-      selectOnly("annotation", [locator.objectId]);
-      const position =
-        annotation?.anchor.kind === "free"
-          ? annotation.anchor.position
-          : annotation?.anchor.fallbackPosition;
-      if (position) focusPoint(position);
-    } else if (locator.kind === "net") {
-      setHighlightedNetOrigin({
-        documentId: opened.id,
-        netId: locator.objectId,
-        hierarchyPath: locator.hierarchyPath,
-      });
-      const route = opened.routes.find(
-        (item) => item.netId === locator.objectId,
-      );
-      const centerline = route
-        ? projectConnectivityIndex.documents
-            .get(opened.id)
-            ?.routingGeometry.routes.get(route.id)?.centerline
-        : undefined;
-      if (centerline?.[0]) focusPoint(centerline[0]);
-    }
-    setSelectionOpen(true);
-    setStatus(statusMessage);
-  }
-
-  function navigateToNetlistDiagnostic(diagnostic: NetlistDiagnostic): void {
-    navigateToLocator(diagnostic.primary, `Preflight: ${diagnostic.message}`);
-    if (diagnostic.primary.kind !== "document") return;
-    const target = project.documents.find(
-      (candidate) => candidate.id === diagnostic.primary.documentId,
-    );
-    if (!target) return;
-    setViewBox(
-      fitCameraToBounds(
-        buildSvgScene(target, resolver).viewBox,
-        target.presentation.grid,
-      ),
-      target.presentation.grid,
-    );
   }
 
   function applyAgentSemanticIntent(
@@ -2742,78 +2580,6 @@ export function App({
   }
 
   agentSemanticIntentRef.current = applyAgentSemanticIntent;
-
-  function enterHierarchy(instanceId: string): void {
-    const instance = document.instances.find(
-      (candidate) => candidate.id === instanceId,
-    );
-    const targetId = instance ? referencedDocumentId(project, instance) : null;
-    if (!targetId) {
-      setStatus(`${instanceId} has no child Cell`);
-      return;
-    }
-    setDocumentStack((current) => [
-      ...current,
-      {
-        parentDocumentId: document.id,
-        instanceId,
-        childDocumentId: targetId,
-      },
-    ]);
-    switchDocument(targetId);
-  }
-
-  function enterSelectedHierarchy(): void {
-    if (
-      selectedInstance &&
-      referencedDocumentId(project, selectedInstance) !== null
-    ) {
-      enterHierarchy(selectedInstance.id);
-      return;
-    }
-    if (selectedDrafting?.kind !== "rectangle") {
-      setStatus(
-        "Select a rectangle or hierarchical block before entering a Cell",
-      );
-      return;
-    }
-    try {
-      const converted = convertRectangleToHierarchy(
-        project,
-        document.id,
-        selectedDrafting.id,
-      );
-      commitProjectStructure(converted.project, document.id);
-      setDocumentStack((current) => [
-        ...current,
-        {
-          parentDocumentId: converted.parentDocumentId,
-          instanceId: converted.instanceId,
-          childDocumentId: converted.childDocumentId,
-        },
-      ]);
-      switchDocument(converted.childDocumentId);
-      setStatus(`Created and entered Cell ${converted.cellName}`);
-    } catch (error) {
-      setStatus(
-        `Could not create Cell: ${
-          error instanceof Error ? error.message : "unexpected failure"
-        }`,
-      );
-    }
-  }
-
-  function returnToParentDocument(): void {
-    const frame = documentStack.at(-1);
-    if (!frame) return;
-    setDocumentStack((current) => current.slice(0, -1));
-    switchDocument(frame.parentDocumentId);
-  }
-
-  function returnToTopDocument(): void {
-    setDocumentStack([]);
-    switchDocument(project.topDocumentId);
-  }
 
   function approveAgentFileCandidate(): void {
     if (!agentFileCandidate) return;
