@@ -95,7 +95,6 @@ import {
   type CameraRectInput,
 } from "../canvas/fit-view";
 import type { CanvasDragSession } from "../canvas/canvas-drag-session";
-import { rankCanvasHits } from "../canvas/canvas-hit-resolver";
 import { createCanvasHitController } from "../canvas/canvas-hit-controller";
 import {
   type RouteStretchPreview,
@@ -104,6 +103,7 @@ import {
 import { closestPointOnSegment } from "../canvas/canvas-geometry";
 import type { BoxPreview, PanPreview } from "../canvas/canvas-gesture-model";
 import { createCanvasGestureController } from "../canvas/canvas-gesture-controller";
+import { createEditorCanvasEventHandlers } from "../canvas/editor-canvas-event-handlers";
 import {
   canvasPointFromClient,
   logicalRadiusForCanvasPixels,
@@ -220,11 +220,6 @@ import {
   EditorInteractionPreviews,
   EditorPlacementPreview,
 } from "../canvas/editor-transient-preview-overlays";
-import {
-  proposeRectangleLabel,
-  rectangleInteriorAt,
-  rectangleLabelFor,
-} from "../features/drafting/rectangle-label";
 import {
   resolveEditorShortcut,
   stepBoundedScale,
@@ -3007,6 +3002,67 @@ export function App({
     );
   }
 
+  const canvasEventHandlers = createEditorCanvasEventHandlers({
+    tool,
+    document,
+    resolver,
+    interactionKind: () => getCurrentInteractionState().kind,
+    pendingSymbolId,
+    pendingComponentPlacement: Boolean(pendingComponentPlacement),
+    vddRailMode,
+    copyPlacementActive: copyPlacement !== null,
+    cellSymbolLayoutEnabled,
+    selectedDrafting,
+    wireSource,
+    wireDraftStepCount: wireDraftSteps.length,
+    draftingSourceActive: draftingSource !== null,
+    pointFromClient,
+    snapPlacementPoint: (point) => ({
+      x: snapCoordinate(point.x, document.presentation.grid),
+      y: snapCoordinate(point.y, document.presentation.grid),
+    }),
+    commitCommandMove: commitCommandMoveFromSelection,
+    commitCopyPlacement: commitCopyPlacementFromSelection,
+    commitPendingPlacement: commitPendingPlacementAtFromHook,
+    exitCellSymbolLayout,
+    clearDraftingSelection: () => replaceSelectionKind("drafting", []),
+    handleCanvasHitPointerDown,
+    beginCanvasGesture,
+    continueCanvasGesture,
+    finishCanvasGesture,
+    clearComponentPreview: () => setComponentPreviewPoint(null),
+    clearVddRailPreview: () => setVddRailPreviewPoint(null),
+    clearCopyPreview: () => setCopyPreviewPoint(null),
+    handleDraftingCanvasClick,
+    logicalRadiusForPixels,
+    snapCaptureRadiusPixels: SNAP_CAPTURE_RADIUS_PX,
+    applyWireCanvasPoint,
+    beginAnnotationTextEditing,
+    cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
+    beginDraftingTextEditing,
+    nextRectangleLabelId: () => {
+      uniqueSuffixCounter.current += 1;
+      return `note-${uniqueSuffixCounter.current}`;
+    },
+    upsertDraftingObject: (object) =>
+      transact([{ kind: "upsert_drafting_object", object }]).ok,
+    finishDraftingCreate,
+    resolveWireCanvasSnap,
+    completeWire,
+    cancelDraftingCreate: clearDraftingCreate,
+    cancelWire: () => {
+      setWireSource(null, null);
+      setWirePreviewPoint(null);
+      setWireDraftSteps([]);
+      setTool("pointer");
+      setBulkDrawInstanceId(null);
+      setStatus("Wire cancelled");
+    },
+    setStatus,
+    onWheel: handleWheel,
+    onDrop: handleDrop,
+  });
+
   return (
     <main className="app-shell">
       {renderCrashRequested() ? <RenderCrashProbe /> : null}
@@ -4137,318 +4193,7 @@ export function App({
             role="img"
             aria-label="Schematic canvas"
             viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-            onWheel={handleWheel}
-            onClickCapture={(event) => {
-              const currentInteraction = getCurrentInteractionState();
-              if (currentInteraction.kind === "moving-selection") {
-                if (event.detail === 1) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  commitCommandMoveFromSelection(
-                    pointFromClient(
-                      event.clientX,
-                      event.clientY,
-                      event.currentTarget,
-                    ),
-                    { x: event.clientX, y: event.clientY },
-                    event.currentTarget,
-                  );
-                }
-                return;
-              }
-              if (currentInteraction.kind === "copy-placement") {
-                if (event.detail > 1) return;
-                event.preventDefault();
-                event.stopPropagation();
-                const point = pointFromClient(
-                  event.clientX,
-                  event.clientY,
-                  event.currentTarget,
-                );
-                commitCopyPlacementFromSelection({
-                  x: snapCoordinate(point.x, document.presentation.grid),
-                  y: snapCoordinate(point.y, document.presentation.grid),
-                });
-                return;
-              }
-              if (
-                !vddRailMode &&
-                (!pendingSymbolId || !pendingComponentPlacement)
-              )
-                return;
-              if (event.detail > 1) return;
-              event.stopPropagation();
-              const rawPoint = pointFromClient(
-                event.clientX,
-                event.clientY,
-                event.currentTarget,
-              );
-              commitPendingPlacementAtFromHook({
-                x: snapCoordinate(rawPoint.x, document.presentation.grid),
-                y: snapCoordinate(rawPoint.y, document.presentation.grid),
-              });
-            }}
-            onPointerDownCapture={(event) => {
-              const target = event.target as Element;
-              if (target.closest('[data-testid="canvas-text-editor"]')) {
-                // The SVG capture layer otherwise re-ranks the canvas below
-                // this HTML editor through elementsFromPoint() before the
-                // editor's own bubbling handlers can stop the event.
-                return;
-              }
-              if (
-                cellSymbolLayoutEnabled &&
-                target.closest('[data-testid="cell-symbol-layout-overlay"]')
-              ) {
-                return;
-              }
-              if (cellSymbolLayoutEnabled) {
-                // Layout grips are a short-lived edit mode. Any ordinary
-                // canvas action leaves it first, so the next hit can use the
-                // regular selection and movement rules.
-                exitCellSymbolLayout();
-              }
-              if (getCurrentInteractionState().kind === "moving-selection") {
-                event.stopPropagation();
-                return;
-              }
-              if (
-                selectedDrafting &&
-                (selectedDrafting.kind === "arrow" ||
-                  selectedDrafting.kind === "construction-line" ||
-                  selectedDrafting.kind === "rectangle") &&
-                !target.closest(
-                  `[data-testid="drafting-hit-${selectedDrafting.id}"]`,
-                ) &&
-                !target.closest(
-                  `[data-testid="drafting-handles-${selectedDrafting.id}"]`,
-                )
-              ) {
-                replaceSelectionKind("drafting", []);
-              }
-              handleCanvasHitPointerDown(event);
-            }}
-            onPointerDown={beginCanvasGesture}
-            onPointerMove={continueCanvasGesture}
-            onPointerLeave={() => {
-              const currentInteraction = getCurrentInteractionState();
-              if (pendingSymbolId) setComponentPreviewPoint(null);
-              if (vddRailMode) setVddRailPreviewPoint(null);
-              if (currentInteraction.kind === "copy-placement") {
-                setCopyPreviewPoint(null);
-              }
-            }}
-            onPointerUp={finishCanvasGesture}
-            onPointerCancel={finishCanvasGesture}
-            onClick={(event) => {
-              const target = event.target as Element;
-              const onBackground =
-                target === event.currentTarget || target.tagName === "rect";
-              if (
-                (tool === "arrow" ||
-                  tool === "construction-line" ||
-                  tool === "rectangle") &&
-                event.detail === 1 &&
-                onBackground
-              ) {
-                handleDraftingCanvasClick(
-                  pointFromClient(
-                    event.clientX,
-                    event.clientY,
-                    event.currentTarget,
-                  ),
-                  event.altKey,
-                  event.shiftKey,
-                  logicalRadiusForPixels(
-                    event.currentTarget,
-                    SNAP_CAPTURE_RADIUS_PX,
-                  ),
-                );
-                return;
-              }
-              if (tool !== "wire" || event.detail !== 1) return;
-              applyWireCanvasPoint(
-                pointFromClient(
-                  event.clientX,
-                  event.clientY,
-                  event.currentTarget,
-                  false,
-                ),
-                event.currentTarget,
-                event.altKey,
-                false,
-              );
-            }}
-            onDoubleClick={(event) => {
-              const target = event.target as Element;
-              if (tool === "pointer") {
-                // Movement ranks electrical geometry before labels, but a
-                // deliberate double-click is an editing request. Look through
-                // the same point candidates for text instead of forcing users
-                // to Alt-cycle a route-attached label before editing it.
-                const pointHits = rankCanvasHits(
-                  event.currentTarget.ownerDocument.elementsFromPoint(
-                    event.clientX,
-                    event.clientY,
-                  ),
-                );
-                const annotationHit = pointHits.find(
-                  (hit) => hit.kind === "annotation",
-                );
-                const annotation = annotationHit
-                  ? document.annotations.find(
-                      (candidate) => candidate.id === annotationHit.id,
-                    )
-                  : undefined;
-                if (annotation) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  canvasDragSessionRef.current?.cancel();
-                  beginAnnotationTextEditing(annotation);
-                  return;
-                }
-                // A double-click on empty space inside a drafting rectangle is
-                // the same editing intent aimed at the box: open its centered
-                // label, creating the anchored text on first use. Electrical
-                // geometry under the pointer keeps its own double-click
-                // meaning, so wires crossing a group frame never open a label.
-                const electricalHit = pointHits.some(
-                  (hit) =>
-                    hit.kind !== "annotation" &&
-                    hit.kind !== "instance-label" &&
-                    hit.kind !== "drafting",
-                );
-                const interiorPoint = pointFromClient(
-                  event.clientX,
-                  event.clientY,
-                  event.currentTarget,
-                );
-                const rectangle = electricalHit
-                  ? null
-                  : rectangleInteriorAt(document, resolver, interiorPoint);
-                if (rectangle) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  canvasDragSessionRef.current?.cancel();
-                  const existingLabel = rectangleLabelFor(
-                    document,
-                    rectangle.id,
-                  );
-                  if (existingLabel) {
-                    beginDraftingTextEditing(existingLabel);
-                    return;
-                  }
-                  uniqueSuffixCounter.current += 1;
-                  const label = proposeRectangleLabel(
-                    rectangle,
-                    `note-${uniqueSuffixCounter.current}`,
-                  );
-                  if (
-                    transact([
-                      { kind: "upsert_drafting_object", object: label },
-                    ]).ok
-                  ) {
-                    beginDraftingTextEditing(label);
-                    setStatus(`Editing label of ${rectangle.id}`);
-                  }
-                  return;
-                }
-              }
-              if (
-                tool === "arrow" ||
-                tool === "construction-line" ||
-                tool === "rectangle"
-              ) {
-                if (target !== event.currentTarget && target.tagName !== "rect")
-                  return;
-                finishDraftingCreate();
-                return;
-              }
-              if (tool !== "wire") return;
-              // A double-click ends the wire wherever it lands. The guard
-              // below only lets background presses through, so finishing on a
-              // Junction or an existing Route never reached this handler and
-              // drafting appeared to continue.
-              if (wireSource && wireDraftSteps.length === 0) {
-                // Landing on an endpoint or Route commits on the first press;
-                // the second press then opens a fresh wire at that same spot.
-                // No authored step is what separates it from a real wire.
-                completeWire();
-                setStatus("Wire finished · Esc exits");
-                return;
-              }
-              if (target !== event.currentTarget && target.tagName !== "rect")
-                return;
-              const point = pointFromClient(
-                event.clientX,
-                event.clientY,
-                event.currentTarget,
-                false,
-              );
-              const resolved = resolveWireCanvasSnap(
-                point,
-                event.currentTarget,
-                event.altKey,
-              );
-              // Landing on an endpoint or an existing Route commits on the
-              // first press of the double-click, and the second press then
-              // opens a fresh wire at that same spot. Such a source has no
-              // authored step yet, which is what separates it from a real
-              // wire being finished here — so end the session instead of
-              // drawing on from it.
-              if (
-                wireSource &&
-                wireDraftSteps.length === 0 &&
-                wireSource.connection.contactPoint.x === resolved.point.x &&
-                wireSource.connection.contactPoint.y === resolved.point.y
-              ) {
-                completeWire();
-                setStatus("Wire finished · Esc exits");
-                return;
-              }
-              if (
-                wireSource?.endpoint.kind === "junction" &&
-                wireSource.preludeEdits.some(
-                  (edit) => edit.kind === "add_junction" && edit.createNet,
-                ) &&
-                wireSource.connection.contactPoint.x === resolved.point.x &&
-                wireSource.connection.contactPoint.y === resolved.point.y
-              ) {
-                setStatus("Wire finished · Esc exits");
-                completeWire();
-                return;
-              }
-              applyWireCanvasPoint(
-                point,
-                event.currentTarget,
-                event.altKey,
-                true,
-              );
-            }}
-            onContextMenu={(event) => {
-              event.preventDefault();
-              if (
-                tool === "arrow" ||
-                tool === "construction-line" ||
-                tool === "rectangle"
-              ) {
-                if (draftingSource !== null) {
-                  clearDraftingCreate();
-                  setStatus("Drawing cancelled");
-                }
-                return;
-              }
-              if (tool === "wire") {
-                setWireSource(null, null);
-                setWirePreviewPoint(null);
-                setWireDraftSteps([]);
-                setTool("pointer");
-                setBulkDrawInstanceId(null);
-                setStatus("Wire cancelled");
-              }
-            }}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={handleDrop}
+            {...canvasEventHandlers}
           >
             <CanvasGridOverlay visible={gridDotsVisible} viewBox={viewBox} />
             <g dangerouslySetInnerHTML={sceneInnerHtml} />
