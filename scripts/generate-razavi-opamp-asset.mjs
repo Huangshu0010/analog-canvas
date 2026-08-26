@@ -123,114 +123,155 @@ const assetSource = normalize(
 );
 
 /**
- * The fully differential amplifier is the same reviewed body with its apex
- * truncated at the height of the output pair, so two outputs can leave a real
- * edge instead of a point. Every number below is derived from the pinned
- * evidence: the cut lands where the reviewed triangle edges reach ±10, and the
- * output polarity marks are the reviewed input marks reflected about the
- * body's own vertical centerline.
+ * Figure 13.48 is the direct source for the fully differential body.  It is a
+ * compact native triangle: its two outputs leave the sloping edges, rather
+ * than a synthetic truncation of Figure 8.26's apex.  The source's displayed
+ * input polarity is the input-swapped state of our persistent FD Amp contract;
+ * retain the pin semantics and derive only the marks needed for each state.
  */
-const trianglePoints = [
-  ...geometry.trianglePathData.matchAll(
-    /(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/gu,
-  ),
-].map((match) => ({ x: Number(match[1]), y: Number(match[2]) }));
-if (trianglePoints.length !== 3) fail("triangle evidence is not a triangle");
-const apex = trianglePoints.reduce((best, point) =>
-  point.x > best.x ? point : best,
+const differentialAuthority = manifest.vectorEvidence?.find(
+  (candidate) =>
+    candidate.id === "razavi-textbook-figure-13-48-differential-opamp",
 );
-const backEdgeX = Math.min(...trianglePoints.map((point) => point.x));
-const backTop = Math.min(...trianglePoints.map((point) => point.y));
-const backBottom = Math.max(...trianglePoints.map((point) => point.y));
-const round = (value) => Number(value.toFixed(4));
-/** Where a reviewed triangle edge crosses the given height. */
-const edgeXAtHeight = (backY, height) =>
-  backEdgeX + ((backY - height) / (backY - apex.y)) * (apex.x - backEdgeX);
-const cutTopX = edgeXAtHeight(backTop, -OUTPUT_PAIR_OFFSET);
-const cutBottomX = edgeXAtHeight(backBottom, OUTPUT_PAIR_OFFSET);
-if (Math.abs(cutTopX - cutBottomX) > 0.05) {
-  fail("reviewed triangle is not symmetric about its output axis");
+if (
+  !differentialAuthority ||
+  differentialAuthority.kind !== "pdf-vector-extract"
+) {
+  fail("missing manifest-pinned Figure 13.48 differential op-amp evidence");
 }
-const cutX = round((cutTopX + cutBottomX) / 2);
-const centerlineX = (backEdgeX + apex.x) / 2;
-const reflect = (point) => ({
-  x: round(2 * centerlineX - point.x),
-  y: point.y,
-});
-const reflectLine = ({ from, to }) => ({
-  from: reflect(from),
-  to: reflect(to),
-});
-const outputLead = (y) => ({
+const differentialEvidenceSource = files.get(differentialAuthority.extractPath);
+if (!differentialEvidenceSource) {
+  fail("Figure 13.48 vector evidence was not loaded by the authority");
+}
+const differentialEvidence = JSON.parse(
+  differentialEvidenceSource.toString("utf8"),
+);
+const differentialGeometry = differentialEvidence.normalization?.symbolGeometry;
+if (
+  differentialEvidence.schemaVersion !== 1 ||
+  differentialEvidence.id !== differentialAuthority.id ||
+  differentialEvidence.source?.sha256 !== differentialAuthority.source.sha256 ||
+  differentialEvidence.source?.pdfPage !==
+    differentialAuthority.source.pdfPage ||
+  differentialEvidence.normalization?.pinAnchorsLogical?.length !== 4 ||
+  differentialEvidence.normalization?.derivation?.kind !==
+    "semantic-pin-extension" ||
+  typeof differentialGeometry?.trianglePathData !== "string"
+) {
+  fail("Figure 13.48 differential op-amp evidence contract mismatch");
+}
+
+const differentialNormal = {
+  strokeWidth: Number(
+    (
+      differentialEvidence.selection.normalLineWidthPdfPt *
+      differentialEvidence.normalization.logicalUnitsPerPdfPoint
+    ).toFixed(6),
+  ),
+  lineCap: "butt",
+  lineJoin: "miter",
+};
+const differentialTriangle = {
+  strokeWidth: Number(
+    (
+      differentialEvidence.selection.triangleLineWidthPdfPt *
+      differentialEvidence.normalization.logicalUnitsPerPdfPoint
+    ).toFixed(6),
+  ),
+  lineCap: "butt",
+  lineJoin: "miter",
+  miterLimit: 4,
+};
+const differentialLine = (geometry) => ({
   kind: "line",
-  from: { x: cutX, y },
-  to: { x: geometry.output.to.x, y },
-  style: normal,
+  from: geometry.from,
+  to: geometry.to,
+  style: differentialNormal,
 });
-const outputPlusMarks = [
-  line(reflectLine(geometry.plusVertical)),
-  line(reflectLine(geometry.plusHorizontal)),
-];
-const outputMinusMark = line(reflectLine(geometry.minusHorizontal));
-/** Mirror a mark to the opposite output rail. */
+const taggedLine = (geometry, part) => ({
+  ...differentialLine(geometry),
+  part,
+});
 const acrossAxis = (primitive) => ({
   ...primitive,
   from: { ...primitive.from, y: -primitive.from.y },
   to: { ...primitive.to, y: -primitive.to.y },
 });
-const differentialSymbol = (id, name, plusOutputAtBottom) => ({
-  schemaVersion: 1,
-  id,
-  name,
-  viewBox: symbol.viewBox,
-  pins: [
-    symbol.pins[0],
-    symbol.pins[1],
-    {
-      name: "OUT+",
-      role: "output",
-      at: {
-        x: geometry.output.to.x,
-        y: plusOutputAtBottom ? OUTPUT_PAIR_OFFSET : -OUTPUT_PAIR_OFFSET,
-      },
-      direction: "east",
-      presentation: { visibility: "visible", leadLength: 20 },
-    },
-    {
-      name: "OUT-",
-      role: "output",
-      at: {
-        x: geometry.output.to.x,
-        y: plusOutputAtBottom ? -OUTPUT_PAIR_OFFSET : OUTPUT_PAIR_OFFSET,
-      },
-      direction: "east",
-      presentation: { visibility: "visible", leadLength: 20 },
-    },
-  ],
-  primitives: [
-    line(geometry.inputMinus),
-    line(geometry.inputPlus),
-    outputLead(-OUTPUT_PAIR_OFFSET),
-    outputLead(OUTPUT_PAIR_OFFSET),
-    {
-      kind: "path",
-      data: `M ${round(backEdgeX)} ${round(backTop)} L ${round(backEdgeX)} ${round(backBottom)} L ${cutX} ${OUTPUT_PAIR_OFFSET} L ${cutX} ${-OUTPUT_PAIR_OFFSET} Z`,
-      style: {
-        strokeRole: "emphasis",
-        lineCap: "butt",
-        lineJoin: "miter",
-        miterLimit: 4,
-      },
-    },
-    line(geometry.plusVertical),
-    line(geometry.plusHorizontal),
-    line(geometry.minusHorizontal),
-    ...(plusOutputAtBottom
-      ? [...outputPlusMarks, outputMinusMark]
-      : [...outputPlusMarks.map(acrossAxis), acrossAxis(outputMinusMark)]),
-  ],
-  variants: [],
+const inputLead = (pin, sourceLead) => ({
+  kind: "line",
+  from: pin.at,
+  to: sourceLead.to,
+  style: differentialNormal,
 });
+const outputLead = (sourceLead, pin) => ({
+  kind: "line",
+  from: sourceLead.from,
+  to: pin.at,
+  style: differentialNormal,
+});
+const sourceInputMarks = [
+  taggedLine(differentialGeometry.input_plus_vertical, "input-polarity"),
+  taggedLine(differentialGeometry.input_plus_horizontal, "input-polarity"),
+  taggedLine(differentialGeometry.input_minus_horizontal, "input-polarity"),
+];
+const sourceOutputMarks = [
+  taggedLine(differentialGeometry.output_minus_horizontal, "output-polarity"),
+  taggedLine(differentialGeometry.output_plus_vertical, "output-polarity"),
+  taggedLine(differentialGeometry.output_plus_horizontal, "output-polarity"),
+];
+const differentialSymbol = (id, name, plusOutputAtBottom) => {
+  const topInput = symbol.pins[1];
+  const bottomInput = symbol.pins[0];
+  const topOutput = {
+    name: "OUT-",
+    role: "output",
+    at: { x: geometry.output.to.x, y: -OUTPUT_PAIR_OFFSET },
+    direction: "east",
+    presentation: { visibility: "visible", leadLength: 20 },
+  };
+  const bottomOutput = {
+    name: "OUT+",
+    role: "output",
+    at: { x: geometry.output.to.x, y: OUTPUT_PAIR_OFFSET },
+    direction: "east",
+    presentation: { visibility: "visible", leadLength: 20 },
+  };
+  const outputPins = plusOutputAtBottom
+    ? [bottomOutput, topOutput]
+    : [
+        { ...topOutput, name: "OUT+" },
+        { ...bottomOutput, name: "OUT-" },
+      ];
+  return {
+    schemaVersion: 1,
+    id,
+    name,
+    viewBox: symbol.viewBox,
+    pins: [bottomInput, topInput, ...outputPins],
+    primitives: [
+      inputLead(topInput, differentialGeometry.input_plus),
+      inputLead(bottomInput, differentialGeometry.input_minus),
+      outputLead(
+        differentialGeometry.output_minus,
+        outputPins.find((pin) => pin.at.y === -OUTPUT_PAIR_OFFSET),
+      ),
+      outputLead(
+        differentialGeometry.output_plus,
+        outputPins.find((pin) => pin.at.y === OUTPUT_PAIR_OFFSET),
+      ),
+      {
+        kind: "path",
+        data: differentialGeometry.trianglePathData,
+        style: differentialTriangle,
+      },
+      ...sourceInputMarks.map(acrossAxis),
+      ...(plusOutputAtBottom
+        ? sourceOutputMarks
+        : sourceOutputMarks.map(acrossAxis)),
+    ],
+    variants: [],
+  };
+};
 const differentialSymbols = [
   differentialSymbol("opamp-differential", "Differential Op Amp", true),
   differentialSymbol(
@@ -260,11 +301,36 @@ const generation = {
   converterPath: "scripts/generate-razavi-opamp-asset.mjs",
   converterVersion: 2,
 };
-for (const [id, source] of [[symbol.id, assetSource], ...differentialSources]) {
+const differentialGeneration = {
+  kind: "razavi-pdf-vector-reference",
+  referenceManifestPath:
+    "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+  referencePath:
+    "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
+  converterPath: "scripts/generate-razavi-opamp-asset.mjs",
+  converterVersion: 3,
+};
+const differentialAuthorityPaths = [
+  "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
+  "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png",
+];
+const baseEntry = catalog.entries.find(
+  (candidate) => candidate.symbolId === symbol.id,
+);
+if (!baseEntry) fail(`missing catalog entry ${symbol.id}`);
+baseEntry.assetHash = hash(assetSource);
+baseEntry.generation = { ...generation };
+for (const [id, source] of differentialSources) {
   const entry = catalog.entries.find((candidate) => candidate.symbolId === id);
   if (!entry) fail(`missing catalog entry ${id}`);
   entry.assetHash = hash(source);
-  entry.generation = { ...generation };
+  entry.visualAuthority = {
+    ...entry.visualAuthority,
+    referencePaths: differentialAuthorityPaths,
+    calibrationPath:
+      "fixtures/visual-reference/razavi-reference-v1/differential-opamp-geometry.json",
+  };
+  entry.generation = { ...differentialGeneration };
 }
 const catalogSource = normalize(
   await format(JSON.stringify(catalog, null, 2), { parser: "json" }),
@@ -292,5 +358,5 @@ if (check) {
 
 console.log(
   `${check ? "Validated" : "Generated"} PDF-derived Razavi op-amp assets` +
-    ` (differential body cut at x=${cutX})`,
+    " (Figure 13.48 differential body)",
 );

@@ -70,11 +70,11 @@
         "y": -10
       },
       "to": {
-        "x": -26.952962,
+        "x": -20.039234,
         "y": -10
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeWidth": 0.625137,
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -86,11 +86,11 @@
         "y": 10
       },
       "to": {
-        "x": -26.797909,
+        "x": -20.039234,
         "y": 10
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeWidth": 0.625137,
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -98,7 +98,7 @@
     {
       "kind": "line",
       "from": {
-        "x": 3.2014,
+        "x": -8.008196,
         "y": -10
       },
       "to": {
@@ -106,7 +106,7 @@
         "y": -10
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeWidth": 0.625137,
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -114,7 +114,7 @@
     {
       "kind": "line",
       "from": {
-        "x": 3.2014,
+        "x": -8.281093,
         "y": 10
       },
       "to": {
@@ -122,16 +122,16 @@
         "y": 10
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeWidth": 0.625137,
         "lineCap": "butt",
         "lineJoin": "miter"
       }
     },
     {
       "kind": "path",
-      "data": "M -26.7979 -24.9983 L -26.7979 25 L 3.2014 10 L 3.2014 -10 Z",
+      "data": "M -20 -15.0002 L -20 14.9993 L 14.9998 0.000436 Z",
       "style": {
-        "strokeRole": "emphasis",
+        "strokeWidth": 1.250273,
         "lineCap": "butt",
         "lineJoin": "miter",
         "miterLimit": 4
@@ -140,98 +140,104 @@
     {
       "kind": "line",
       "from": {
-        "x": -18.047038,
-        "y": 8.749129
+        "x": -16.249183,
+        "y": 9.374864
       },
       "to": {
-        "x": -18.047038,
-        "y": 16.249129
+        "x": -16.249183,
+        "y": 5.624918
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeWidth": 0.625137,
         "lineCap": "butt",
         "lineJoin": "miter"
-      }
+      },
+      "part": "input-polarity"
     },
     {
       "kind": "line",
       "from": {
-        "x": -21.796167,
-        "y": 12.5
+        "x": -18.124591,
+        "y": 7.500327
       },
       "to": {
-        "x": -14.296167,
-        "y": 12.5
+        "x": -14.374646,
+        "y": 7.500327
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeWidth": 0.625137,
         "lineCap": "butt",
         "lineJoin": "miter"
-      }
+      },
+      "part": "input-polarity"
     },
     {
       "kind": "line",
       "from": {
-        "x": -21.796167,
-        "y": -12.5
+        "x": -18.124591,
+        "y": -7.498583
       },
       "to": {
-        "x": -14.296167,
-        "y": -12.5
+        "x": -14.374646,
+        "y": -7.498583
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeWidth": 0.625137,
         "lineCap": "butt",
         "lineJoin": "miter"
-      }
+      },
+      "part": "input-polarity"
     },
     {
       "kind": "line",
       "from": {
-        "x": 14.4512,
-        "y": 8.749129
+        "x": -12.499237,
+        "y": -7.500327
       },
       "to": {
-        "x": 14.4512,
-        "y": 16.249129
+        "x": -8.750163,
+        "y": -7.500327
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeWidth": 0.625137,
         "lineCap": "butt",
         "lineJoin": "miter"
-      }
+      },
+      "part": "output-polarity"
     },
     {
       "kind": "line",
       "from": {
-        "x": 18.2004,
-        "y": 12.5
+        "x": -10.6247,
+        "y": 5.624918
       },
       "to": {
-        "x": 10.7004,
-        "y": 12.5
+        "x": -10.6247,
+        "y": 9.374864
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeWidth": 0.625137,
         "lineCap": "butt",
         "lineJoin": "miter"
-      }
+      },
+      "part": "output-polarity"
     },
     {
       "kind": "line",
       "from": {
-        "x": 18.2004,
-        "y": -12.5
+        "x": -12.499237,
+        "y": 7.498583
       },
       "to": {
-        "x": 10.7004,
-        "y": -12.5
+        "x": -8.750163,
+        "y": 7.498583
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeWidth": 0.625137,
         "lineCap": "butt",
         "lineJoin": "miter"
-      }
+      },
+      "part": "output-polarity"
     }
   ],
   "variants": []

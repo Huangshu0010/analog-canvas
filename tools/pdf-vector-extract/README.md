@@ -9,6 +9,8 @@ The family extractors currently cover:
 - `extract-razavi-inductor.py`: continuous inductor path from Figure 15.21;
 - `extract-razavi-opamp.py`: triangle, three leads, and polarity marks from
   Figure 8.26;
+- `extract-razavi-differential-opamp.py`: direct four-terminal amplifier body,
+  dual-output edge joins, and polarity marks from Figure 13.48;
 - `extract-razavi-common-assets.py`: NPN/PNP BJT, diode, voltage amplifier,
   and ideal switch.
 - `extract-razavi-logic-gates.py`: inverter, AND, NAND, NOR, and XOR native

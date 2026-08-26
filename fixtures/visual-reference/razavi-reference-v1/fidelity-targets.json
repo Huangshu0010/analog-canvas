@@ -134,6 +134,13 @@
       "useVariant": false
     },
     {
+      "id": "opamp-differential-figure-13-48",
+      "measurementPath": "differential-opamp-geometry.json",
+      "measurementKey": "opamp-differential-inputs-swapped",
+      "symbolId": "opamp-differential-inputs-swapped",
+      "useVariant": false
+    },
+    {
       "id": "capacitor-vertical",
       "measurementPath": "capacitor-geometry.json",
       "measurementKey": "capacitor-vertical",

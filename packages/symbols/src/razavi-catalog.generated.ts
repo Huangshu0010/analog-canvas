@@ -586,26 +586,26 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential.symbol.json",
     assetHash:
-      "b6591da73f0ba470fff9800783c37cdc24ed198ee787c6e82c6a13f85741b057",
+      "f575ff6fd3640a9d8e529fe06cf45932d29366924f971b799d9c776186f8ab75",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
-        "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png",
       ],
       calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-geometry.json",
     },
     generation: {
       kind: "razavi-pdf-vector-reference",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePath:
-        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
       converterPath: "scripts/generate-razavi-opamp-asset.mjs",
-      converterVersion: 2,
+      converterVersion: 3,
     },
   },
   {
@@ -620,17 +620,17 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-inputs-swapped.symbol.json",
     assetHash:
-      "f4cbb7f66dd9fea2ae61e1b65a871744b096113a28614aa077bfe223c0cb6a57",
+      "c77b80605f99c903651640a785b0302a8de20609e5e9675edc61883a51795bdc",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
-        "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png",
       ],
       calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-geometry.json",
     },
     generation: {
       kind: "derived-input-swap",
@@ -651,26 +651,26 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-crossed.symbol.json",
     assetHash:
-      "d84c4a0beacc6453fd2e9b9348368a62ecfe4026e2dc607b116140bd397ae6be",
+      "d72511a4780bf7c1e84825453916e94b931232116dac72590259882b6f9dcd98",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
-        "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png",
       ],
       calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-geometry.json",
     },
     generation: {
       kind: "razavi-pdf-vector-reference",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePath:
-        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
       converterPath: "scripts/generate-razavi-opamp-asset.mjs",
-      converterVersion: 2,
+      converterVersion: 3,
     },
   },
   {
@@ -685,17 +685,17 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-crossed-inputs-swapped.symbol.json",
     assetHash:
-      "088e85038212ae9d8dfd29f8a4f91447c0d5ec52f4e510364a1f3e1da41c5d7b",
+      "f61d28cf09834f94baeceaeadc728f97f6022ab457ec74b59c97c304ef5cfa3f",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
       referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
-        "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png",
       ],
       calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json",
+        "fixtures/visual-reference/razavi-reference-v1/differential-opamp-geometry.json",
     },
     generation: {
       kind: "derived-input-swap",
@@ -3575,11 +3575,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: -26.952962,
+          x: -20.039234,
           y: -10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3591,11 +3591,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: -26.797909,
+          x: -20.039234,
           y: 10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3603,7 +3603,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 3.2014,
+          x: -8.008196,
           y: -10,
         },
         to: {
@@ -3611,7 +3611,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3619,7 +3619,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 3.2014,
+          x: -8.281093,
           y: 10,
         },
         to: {
@@ -3627,16 +3627,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
       },
       {
         kind: "path",
-        data: "M -26.7979 -24.9983 L -26.7979 25 L 3.2014 10 L 3.2014 -10 Z",
+        data: "M -20 -15.0002 L -20 14.9993 L 14.9998 0.000436 Z",
         style: {
-          strokeRole: "emphasis",
+          strokeWidth: 1.250273,
           lineCap: "butt",
           lineJoin: "miter",
           miterLimit: 4,
@@ -3645,98 +3645,104 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -18.047038,
-          y: 8.749129,
+          x: -16.249183,
+          y: 9.374864,
         },
         to: {
-          x: -18.047038,
-          y: 16.249129,
+          x: -16.249183,
+          y: 5.624918,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: -21.796167,
-          y: 12.5,
+          x: -18.124591,
+          y: 7.500327,
         },
         to: {
-          x: -14.296167,
-          y: 12.5,
+          x: -14.374646,
+          y: 7.500327,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: -21.796167,
-          y: -12.5,
+          x: -18.124591,
+          y: -7.498583,
         },
         to: {
-          x: -14.296167,
-          y: -12.5,
+          x: -14.374646,
+          y: -7.498583,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 14.4512,
-          y: 8.749129,
+          x: -12.499237,
+          y: -7.500327,
         },
         to: {
-          x: 14.4512,
-          y: 16.249129,
+          x: -8.750163,
+          y: -7.500327,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 18.2004,
-          y: 12.5,
+          x: -10.6247,
+          y: 5.624918,
         },
         to: {
-          x: 10.7004,
-          y: 12.5,
+          x: -10.6247,
+          y: 9.374864,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 18.2004,
-          y: -12.5,
+          x: -12.499237,
+          y: 7.498583,
         },
         to: {
-          x: 10.7004,
-          y: -12.5,
+          x: -8.750163,
+          y: 7.498583,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
     ],
     variants: [],
@@ -3813,11 +3819,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: -26.952962,
+          x: -20.039234,
           y: -10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3829,11 +3835,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: -26.797909,
+          x: -20.039234,
           y: 10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3841,7 +3847,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 3.2014,
+          x: -8.008196,
           y: -10,
         },
         to: {
@@ -3849,7 +3855,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3857,7 +3863,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 3.2014,
+          x: -8.281093,
           y: 10,
         },
         to: {
@@ -3865,16 +3871,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
       },
       {
         kind: "path",
-        data: "M -26.7979 -24.9983 L -26.7979 25 L 3.2014 10 L 3.2014 -10 Z",
+        data: "M -20 -15.0002 L -20 14.9993 L 14.9998 0.000436 Z",
         style: {
-          strokeRole: "emphasis",
+          strokeWidth: 1.250273,
           lineCap: "butt",
           lineJoin: "miter",
           miterLimit: 4,
@@ -3883,98 +3889,104 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -18.047038,
-          y: -8.749129,
+          x: -16.249183,
+          y: -9.374864,
         },
         to: {
-          x: -18.047038,
-          y: -16.249129,
+          x: -16.249183,
+          y: -5.624918,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: -21.796167,
-          y: -12.5,
+          x: -18.124591,
+          y: -7.500327,
         },
         to: {
-          x: -14.296167,
-          y: -12.5,
+          x: -14.374646,
+          y: -7.500327,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: -21.796167,
-          y: 12.5,
+          x: -18.124591,
+          y: 7.498583,
         },
         to: {
-          x: -14.296167,
-          y: 12.5,
+          x: -14.374646,
+          y: 7.498583,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 14.4512,
-          y: 8.749129,
+          x: -12.499237,
+          y: -7.500327,
         },
         to: {
-          x: 14.4512,
-          y: 16.249129,
+          x: -8.750163,
+          y: -7.500327,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 18.2004,
-          y: 12.5,
+          x: -10.6247,
+          y: 5.624918,
         },
         to: {
-          x: 10.7004,
-          y: 12.5,
+          x: -10.6247,
+          y: 9.374864,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 18.2004,
-          y: -12.5,
+          x: -12.499237,
+          y: 7.498583,
         },
         to: {
-          x: 10.7004,
-          y: -12.5,
+          x: -8.750163,
+          y: 7.498583,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
     ],
     variants: [],
@@ -4051,11 +4063,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: -26.952962,
+          x: -20.039234,
           y: -10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4067,11 +4079,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: -26.797909,
+          x: -20.039234,
           y: 10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4079,7 +4091,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 3.2014,
+          x: -8.008196,
           y: -10,
         },
         to: {
@@ -4087,7 +4099,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4095,7 +4107,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 3.2014,
+          x: -8.281093,
           y: 10,
         },
         to: {
@@ -4103,16 +4115,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
       },
       {
         kind: "path",
-        data: "M -26.7979 -24.9983 L -26.7979 25 L 3.2014 10 L 3.2014 -10 Z",
+        data: "M -20 -15.0002 L -20 14.9993 L 14.9998 0.000436 Z",
         style: {
-          strokeRole: "emphasis",
+          strokeWidth: 1.250273,
           lineCap: "butt",
           lineJoin: "miter",
           miterLimit: 4,
@@ -4121,98 +4133,104 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -18.047038,
-          y: 8.749129,
+          x: -16.249183,
+          y: 9.374864,
         },
         to: {
-          x: -18.047038,
-          y: 16.249129,
+          x: -16.249183,
+          y: 5.624918,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: -21.796167,
-          y: 12.5,
+          x: -18.124591,
+          y: 7.500327,
         },
         to: {
-          x: -14.296167,
-          y: 12.5,
+          x: -14.374646,
+          y: 7.500327,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: -21.796167,
-          y: -12.5,
+          x: -18.124591,
+          y: -7.498583,
         },
         to: {
-          x: -14.296167,
-          y: -12.5,
+          x: -14.374646,
+          y: -7.498583,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 14.4512,
-          y: -8.749129,
+          x: -12.499237,
+          y: 7.500327,
         },
         to: {
-          x: 14.4512,
-          y: -16.249129,
+          x: -8.750163,
+          y: 7.500327,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 18.2004,
-          y: -12.5,
+          x: -10.6247,
+          y: -5.624918,
         },
         to: {
-          x: 10.7004,
-          y: -12.5,
+          x: -10.6247,
+          y: -9.374864,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 18.2004,
-          y: 12.5,
+          x: -12.499237,
+          y: -7.498583,
         },
         to: {
-          x: 10.7004,
-          y: 12.5,
+          x: -8.750163,
+          y: -7.498583,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
     ],
     variants: [],
@@ -4289,11 +4307,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: -26.952962,
+          x: -20.039234,
           y: -10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4305,11 +4323,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: -26.797909,
+          x: -20.039234,
           y: 10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4317,7 +4335,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 3.2014,
+          x: -8.008196,
           y: -10,
         },
         to: {
@@ -4325,7 +4343,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4333,7 +4351,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 3.2014,
+          x: -8.281093,
           y: 10,
         },
         to: {
@@ -4341,16 +4359,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
       },
       {
         kind: "path",
-        data: "M -26.7979 -24.9983 L -26.7979 25 L 3.2014 10 L 3.2014 -10 Z",
+        data: "M -20 -15.0002 L -20 14.9993 L 14.9998 0.000436 Z",
         style: {
-          strokeRole: "emphasis",
+          strokeWidth: 1.250273,
           lineCap: "butt",
           lineJoin: "miter",
           miterLimit: 4,
@@ -4359,98 +4377,104 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -18.047038,
-          y: -8.749129,
+          x: -16.249183,
+          y: -9.374864,
         },
         to: {
-          x: -18.047038,
-          y: -16.249129,
+          x: -16.249183,
+          y: -5.624918,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: -21.796167,
-          y: -12.5,
+          x: -18.124591,
+          y: -7.500327,
         },
         to: {
-          x: -14.296167,
-          y: -12.5,
+          x: -14.374646,
+          y: -7.500327,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: -21.796167,
-          y: 12.5,
+          x: -18.124591,
+          y: 7.498583,
         },
         to: {
-          x: -14.296167,
-          y: 12.5,
+          x: -14.374646,
+          y: 7.498583,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "input-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 14.4512,
-          y: -8.749129,
+          x: -12.499237,
+          y: 7.500327,
         },
         to: {
-          x: 14.4512,
-          y: -16.249129,
+          x: -8.750163,
+          y: 7.500327,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 18.2004,
-          y: -12.5,
+          x: -10.6247,
+          y: -5.624918,
         },
         to: {
-          x: 10.7004,
-          y: -12.5,
+          x: -10.6247,
+          y: -9.374864,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
       {
         kind: "line",
         from: {
-          x: 18.2004,
-          y: 12.5,
+          x: -12.499237,
+          y: -7.498583,
         },
         to: {
-          x: 10.7004,
-          y: 12.5,
+          x: -8.750163,
+          y: -7.498583,
         },
         style: {
-          strokeRole: "normal",
+          strokeWidth: 0.625137,
           lineCap: "butt",
           lineJoin: "miter",
         },
+        part: "output-polarity",
       },
     ],
     variants: [],

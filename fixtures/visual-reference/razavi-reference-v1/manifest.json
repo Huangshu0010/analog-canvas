@@ -62,6 +62,25 @@
       ]
     },
     {
+      "id": "razavi-textbook-figure-13-48-differential-opamp",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 583,
+        "printedPage": 564,
+        "figure": "13.48"
+      },
+      "extractPath": "differential-opamp-vector-source.json",
+      "extractSha256": "e735c93cbcb3962d51e2217bb225619dd45196ceed4be6a9703513205ccfe360",
+      "rasterPath": "differential-opamp-reference.png",
+      "rasterSha256": "9fa682862a9f779e57be2d48b5dbe8d55ec9d71fffc3509ecfa08cc493f460b5",
+      "scope": [
+        "fully differential op-amp triangle geometry",
+        "dual-output edge joins and polarity-mark proportions"
+      ]
+    },
+    {
       "id": "razavi-textbook-closed-switch",
       "kind": "pdf-vector-extract",
       "source": {
@@ -257,12 +276,14 @@
   "inductorGeometrySha256": "a45c05a9335545e202626bae7e0da1bcbbc314ab46e0b964522dccd0cee55b19",
   "opampGeometryPath": "opamp-geometry.json",
   "opampGeometrySha256": "cc0b623c3620cf70161f353f7abcfa01b1f14daa5108d23f3800c0ca9c202c06",
+  "differentialOpampGeometryPath": "differential-opamp-geometry.json",
+  "differentialOpampGeometrySha256": "a3f16365d6a7f87d91459c1708c58152ac81aad7f8832c73144b74d13b148612",
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
   "commonSymbolGeometrySha256": "de9531139628f23ecdadf7dbc51d64ad176d790cb17f6929ef7fbaae597c398a",
   "logicGateGeometryPath": "logic-gate-geometry.json",
   "logicGateGeometrySha256": "82ab85760e6c5db3f1201a792fbad19d7a3dad32dfc42c90bd69603f693c88f8",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "d027193bdfac07f3cbe51e11159b39e763b4a1485a57db0d5672fa5be55a906f",
+  "fidelityTargetsSha256": "aa6ac0c4b8882c7dcfd5d908c8c80f6f0db5a4ba386b8e1234d4711eb4da7044",
   "pixels": {
     "width": 1204,
     "height": 794
@@ -278,6 +299,7 @@
     "VDD supply marker geometry",
     "PDF-derived inductor geometry and stroke treatment",
     "PDF-derived three-terminal op-amp geometry and polarity marks",
+    "PDF-derived fully differential op-amp geometry and polarity marks",
     "PDF-derived common BJT, diode, gain-block, and switch families",
     "PDF-derived logic-gate bodies, bubbles, and lead junctions"
   ],
