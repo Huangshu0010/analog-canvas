@@ -274,14 +274,16 @@ import {
 import { useDocumentController } from "../document/document-controller";
 import { useProjectFileLifecycle } from "../document/use-project-file-lifecycle";
 import {
-  applyDraftingHandle,
   draftingDragOrigin,
   rotateDraftingObject,
   translateDraftingObject,
 } from "../features/drafting/drafting-manipulation";
-import type { DraftingHandle } from "../features/drafting/drafting-manipulation";
 import { createDraftingCommands } from "../features/drafting/drafting-commands";
 import { createDraftingCreateController } from "../features/drafting/drafting-create-controller";
+import {
+  createDraftingDragController,
+  type DraftingHandlePreview,
+} from "../features/drafting/drafting-drag-controller";
 import {
   EditorInteractionPreviews,
   EditorPlacementPreview,
@@ -421,11 +423,6 @@ interface AnnotationDragPreview {
 // Handle drags are geometry edits rather than translations.  Keep a complete
 // transient object so the formal SVG renderer can redraw both a curved shaft
 // and its arrow head from the same latest control point before pointer-up.
-interface DraftingHandlePreview {
-  objectId: string;
-  object: DraftingObject;
-}
-
 const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
   routeIds: [],
   junctionIds: [],
@@ -1891,6 +1888,45 @@ export function App({
       uniqueSuffixCounter.current += 1;
       return `${prefix}-${uniqueSuffixCounter.current}`;
     },
+  });
+  const {
+    beginDrag: beginDraftingDrag,
+    beginHandleDrag: beginDraftingHandleDrag,
+  } = createDraftingDragController({
+    document,
+    resolver,
+    visibleEndpoints,
+    dragSessionRef: canvasDragSessionRef,
+    dragThresholdPx: DRAG_START_DISTANCE_PX,
+    snapCaptureRadiusPx: SNAP_CAPTURE_RADIUS_PX,
+    pointFromClient: (clientX, clientY, svg, snapToGrid) =>
+      snapToGrid
+        ? pointFromClient(clientX, clientY, svg)
+        : pointFromClient(clientX, clientY, svg, false),
+    logicalRadiusForPixels,
+    paintSnapGuides,
+    snapDraftingPoint,
+    onCompositeMove: (event, hitTarget) => {
+      if (getCurrentInteractionState().kind !== "moving-selection")
+        return false;
+      const primaryInstanceId = selectedIds.at(-1);
+      if (primaryInstanceId) {
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
+      } else {
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          hitTarget,
+        );
+      }
+      return true;
+    },
+    selectDraftingObject,
+    setInspectorSegment: setDraftingInspectorSegment,
+    clearTangentInput: () => setDraftingTangentInput(null),
+    setHandlePreview: setDraftingHandlePreview,
+    transact,
+    setStatus,
   });
 
   function compositeSelectionOwnsHit(
@@ -4081,243 +4117,6 @@ export function App({
     setDraftingInspectorSegment(null);
     setDraftingTangentInput(null);
     setDraftingBearingInput(null);
-  }
-
-  // A drafting drag commits exactly one typed transaction on pointerup. Its
-  // geometry is kind-aware: arrows move their free endpoints and construction
-  // lines move their points, rather than mutating the unused base anchor.
-  function beginDraftingDrag(
-    event: ReactPointerEvent<SVGElement>,
-    object: DraftingObject,
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (event.button !== 0 || object.locked) return;
-    if (getCurrentInteractionState().kind === "moving-selection") {
-      const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId)
-        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
-      else
-        beginVisualSelectionMoveFromSelection(
-          event,
-          visualSelection,
-          hitTarget,
-        );
-      return;
-    }
-    const origin = draftingDragOrigin(object);
-    if (!origin) {
-      selectDraftingObject(object.id);
-      setStatus("This anchored drawing moves with its attachment");
-      return;
-    }
-    event.stopPropagation();
-    if (event.shiftKey || event.ctrlKey || event.metaKey) {
-      selectDraftingObject(object.id);
-      setStatus(`Selected drawing ${object.id}`);
-      return;
-    }
-    canvasDragSessionRef.current?.cancel();
-    const svg = hitTarget.ownerSVGElement!;
-    const start = pointFromClient(event.clientX, event.clientY, svg, false);
-    const original = { ...origin };
-    selectDraftingObject(object.id);
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, [object.id]));
-    const tolerance = logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX);
-    const movingAnchors = [
-      {
-        id: `drafting:${object.id}:origin`,
-        point: original,
-        kind: "drafting" as const,
-      },
-      ...buildDraftingAnchors(document, resolver, new Set([object.id])),
-    ];
-    const targetAnchors = buildSceneSnapTargets(
-      document,
-      resolver,
-      visibleEndpoints,
-      new Set(),
-      new Set([object.id]),
-    );
-    let lastSnap: SnapResult | undefined;
-    const positionAt = (
-      clientX: number,
-      clientY: number,
-      suppressSnap: boolean,
-      previous?: SnapResult,
-    ): { position: Point; snap: SnapResult } => {
-      const point = pointFromClient(clientX, clientY, svg, false);
-      const rawDelta = { x: point.x - start.x, y: point.y - start.y };
-      const resolved: SnapResult = suppressSnap
-        ? { delta: rawDelta, guides: [] }
-        : resolveTranslationSnap(
-            {
-              rawDelta,
-              movingAnchors,
-              targetAnchors,
-              primaryAnchorId: `drafting:${object.id}:origin`,
-              grid: document.presentation.grid,
-              tolerance,
-              profile: SNAP_PROFILES.draftingMove,
-            },
-            previous,
-          );
-      return {
-        position: {
-          x: original.x + resolved.delta.x,
-          y: original.y + resolved.delta.y,
-        },
-        snap: resolved,
-      };
-    };
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const resolved = positionAt(
-          client.x,
-          client.y,
-          Boolean(client.altKey),
-          lastSnap,
-        );
-        lastSnap = resolved.snap;
-        paintSnapGuides(resolved.snap.guides);
-        dragVisual().translate({
-          x: resolved.position.x - original.x,
-          y: resolved.position.y - original.y,
-        });
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        paintSnapGuides([]);
-        if (dragged) {
-          const position = positionAt(
-            client.x,
-            client.y,
-            Boolean(client.altKey),
-            lastSnap,
-          ).position;
-          const latest = document.drafting?.objects.find(
-            (item) => item.id === object.id,
-          );
-          if (
-            latest &&
-            (position.x !== original.x || position.y !== original.y)
-          ) {
-            transact([
-              {
-                kind: "upsert_drafting_object",
-                object: translateDraftingObject(
-                  latest,
-                  {
-                    x: position.x - original.x,
-                    y: position.y - original.y,
-                  },
-                  document.presentation.grid,
-                ),
-              },
-            ]);
-          }
-        }
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        paintSnapGuides([]);
-      },
-    });
-  }
-
-  // Drag a single endpoint (arrow from/to) or vertex (construction-line index).
-  // Mirrors beginDraftingDrag's session discipline (cancel on Escape, commit
-  // once on pointerup from the ref) but mutates only the named handle, leaving
-  // the rest of the object's geometry in place. The arrow head always rides the
-  // tip because the renderer derives it from `to`.
-  function beginDraftingHandleDrag(
-    event: ReactPointerEvent<SVGElement>,
-    object: DraftingObject,
-    handle: DraftingHandle,
-  ): void {
-    if (event.button !== 0 || object.locked) return;
-    event.stopPropagation();
-    canvasDragSessionRef.current?.cancel();
-    const hitTarget = event.currentTarget;
-    const svg = hitTarget.ownerSVGElement!;
-    const originalGeometry = resolveDraftingObjectGeometry(
-      document,
-      resolver,
-      object,
-    );
-    if (handle.kind === "curve") {
-      setDraftingInspectorSegment({ objectId: object.id, index: handle.index });
-      setDraftingTangentInput(null);
-    }
-    selectDraftingObject(object.id);
-
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const snapped = snapDraftingPoint(
-          pointFromClient(client.x, client.y, svg),
-          Boolean(client.altKey),
-          event.shiftKey,
-          undefined,
-          logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
-        );
-        paintSnapGuides(snapped.guides);
-        setDraftingHandlePreview({
-          objectId: object.id,
-          object: applyDraftingHandle(
-            object,
-            handle,
-            snapped.point,
-            originalGeometry,
-            document.presentation.grid,
-          ),
-        });
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        paintSnapGuides([]);
-        if (dragged) {
-          const point = snapDraftingPoint(
-            pointFromClient(client.x, client.y, svg),
-            Boolean(client.altKey),
-            event.shiftKey,
-            undefined,
-            logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
-          ).point;
-          const latest = document.drafting?.objects.find(
-            (item) => item.id === object.id,
-          );
-          if (latest) {
-            const next = applyDraftingHandle(
-              latest,
-              handle,
-              point,
-              originalGeometry,
-              document.presentation.grid,
-            );
-            if (next !== latest) {
-              transact([{ kind: "upsert_drafting_object", object: next }]);
-            }
-          }
-        }
-        setDraftingHandlePreview(null);
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        setDraftingHandlePreview(null);
-        paintSnapGuides([]);
-      },
-    });
   }
 
   function referenceLabelVisibilityEdits(
