@@ -141,6 +141,12 @@ import {
   serializePolylinePoints,
 } from "../canvas/canvas-geometry";
 import {
+  classifyCanvasGestureStart,
+  type BoxPreview,
+  type PanPreview,
+  updateCanvasPan,
+} from "../canvas/canvas-gesture-model";
+import {
   canvasPointFromClient,
   logicalRadiusForCanvasPixels,
   replaceCanvasSnapGuides,
@@ -386,24 +392,6 @@ const SNAP_CAPTURE_RADIUS_PX = 7;
 /** Persisted Junctions are grid points, including on ±45° Route segments. */
 
 type DragPreview = InstanceMovePreview;
-
-interface BoxPreview {
-  start: DerivedPoint;
-  end: DerivedPoint;
-  pointerId: number;
-  /**
-   * Left-drag selects what the box touches; right-drag (or Alt+left-drag)
-   * zooms to fit it.
-   */
-  intent: "select" | "zoom";
-}
-
-interface PanPreview {
-  clientStart: Point;
-  viewBoxStart: GridRect;
-  pointerId: number;
-  dragged: boolean;
-}
 
 interface AnnotationDragPreview {
   annotationId: string;
@@ -5171,8 +5159,19 @@ export function App({
   }
 
   function beginCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
-    if (getCurrentInteractionState().kind === "moving-selection") return;
-    if (event.button === 1) {
+    const gesture = classifyCanvasGestureStart({
+      button: event.button,
+      altKey: event.altKey,
+      interactionKind: getCurrentInteractionState().kind,
+      targetIsCanvas:
+        event.target === event.currentTarget ||
+        (event.target as Element).tagName === "rect",
+      placementPending: Boolean(pendingSymbolId && pendingComponentPlacement),
+      vddRailMode,
+      copyPlacementPending: copyPlacement !== null,
+      tool,
+    });
+    if (gesture === "pan") {
       event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
       setPanPreview({
@@ -5183,31 +5182,7 @@ export function App({
       });
       return;
     }
-    // Frame-zoom entry: right-drag, or Alt+left-drag for environments whose
-    // system software (screenshot tools, mouse-driver gestures) hooks the
-    // right button before the browser can see the drag. Modes that commit on
-    // the next left click, and the drafting/wire tools whose right click
-    // cancels them, stay outside this gesture.
-    const frameZoomDrag =
-      event.button === 2 || (event.button === 0 && event.altKey);
-    if (frameZoomDrag) {
-      if (
-        (pendingSymbolId && pendingComponentPlacement) ||
-        vddRailMode ||
-        copyPlacement !== null ||
-        tool === "wire" ||
-        tool === "construction-line" ||
-        tool === "arrow" ||
-        tool === "rectangle"
-      ) {
-        return;
-      }
-      if (
-        event.target !== event.currentTarget &&
-        (event.target as Element).tagName !== "rect"
-      ) {
-        return;
-      }
+    if (gesture === "zoom") {
       const zoomStart = pointFromClient(
         event.clientX,
         event.clientY,
@@ -5222,37 +5197,12 @@ export function App({
       });
       return;
     }
-    if (event.button !== 0) return;
-    // Placement deliberately commits on the matching click below. Pointer-down
-    // must not start the normal selection/move gesture while that click is
-    // pending, regardless of which SVG child was hit.
-    if (
-      (pendingSymbolId && pendingComponentPlacement) ||
-      vddRailMode ||
-      copyPlacement !== null
-    )
-      return;
+    if (gesture !== "select") return;
     const point = pointFromClient(
       event.clientX,
       event.clientY,
       event.currentTarget,
     );
-    if (
-      event.target !== event.currentTarget &&
-      (event.target as Element).tagName !== "rect"
-    )
-      return;
-    if (tool === "wire") return;
-    // Arrow / Construction line use a two-phase click model (mirroring wire):
-    // click to set the start, hover to preview, click to commit. They bypass the
-    // pointer-capture gesture trio here; creation lives in the SVG onClick and
-    // continueCanvasGesture hover handling.
-    if (
-      tool === "construction-line" ||
-      tool === "arrow" ||
-      tool === "rectangle"
-    )
-      return;
     event.currentTarget.setPointerCapture(event.pointerId);
     setBoxPreview({
       start: point,
@@ -5277,28 +5227,15 @@ export function App({
     }
     if (panPreview?.pointerId === event.pointerId) {
       const bounds = event.currentTarget.getBoundingClientRect();
-      const dx =
-        ((event.clientX - panPreview.clientStart.x) / bounds.width) *
-        panPreview.viewBoxStart.width;
-      const dy =
-        ((event.clientY - panPreview.clientStart.y) / bounds.height) *
-        panPreview.viewBoxStart.height;
-      const moved =
-        Math.hypot(
-          event.clientX - panPreview.clientStart.x,
-          event.clientY - panPreview.clientStart.y,
-        ) >= PAN_START_DISTANCE_PX;
-      // A middle press stays a click until it travels far enough to be a pan.
-      // Panning on sub-threshold jitter nudged the canvas under an ordinary
-      // click, so the press is ignored until the gesture commits to a drag.
-      if (!moved && !panPreview.dragged) return;
-      if (moved && !panPreview.dragged)
-        setPanPreview({ ...panPreview, dragged: true });
-      setViewBox({
-        ...panPreview.viewBoxStart,
-        x: Math.round(panPreview.viewBoxStart.x - dx),
-        y: Math.round(panPreview.viewBoxStart.y - dy),
-      });
+      const update = updateCanvasPan(
+        panPreview,
+        { x: event.clientX, y: event.clientY },
+        bounds,
+        PAN_START_DISTANCE_PX,
+      );
+      if (!update) return;
+      if (update.preview !== panPreview) setPanPreview(update.preview);
+      setViewBox(update.viewBox);
       return;
     }
     const point = pointFromClient(
