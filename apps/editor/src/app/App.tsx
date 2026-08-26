@@ -14,9 +14,6 @@ import {
   createFreeWireAnchor,
   createRouteWireAnchor,
   proposeEndpointRouteAttachment,
-  proposeGroupMoveEdits,
-  proposeGroupReflectionEdits,
-  proposeGroupRotationEdits,
   proposeLooseRouteTranslation,
   proposePowerRailEndpointResize,
   proposePowerRailTranslation,
@@ -275,7 +272,6 @@ import { useDocumentController } from "../document/document-controller";
 import { useProjectFileLifecycle } from "../document/use-project-file-lifecycle";
 import {
   draftingDragOrigin,
-  rotateDraftingObject,
   translateDraftingObject,
 } from "../features/drafting/drafting-manipulation";
 import { createDraftingCommands } from "../features/drafting/drafting-commands";
@@ -362,6 +358,7 @@ import {
   pruneVisualSelection,
 } from "../features/selection/visual-selection";
 import { createSelectionMoveController } from "../features/selection/selection-move-controller";
+import { createSelectionTransformController } from "../features/selection/selection-transform-controller";
 import type { VisualSelection } from "../features/selection/visual-selection";
 import {
   planSelectionMove,
@@ -381,7 +378,6 @@ import {
   looseRouteAnchorIds,
 } from "../features/wiring/route-interaction-geometry";
 import { resolveWireCanvasSnap as resolveWireCanvasSnapModel } from "../features/wiring/wire-canvas-snap";
-import { reflectOrientation } from "../interaction/shortcut-orientation";
 import type { ScreenFlip } from "../interaction/shortcut-orientation";
 import {
   buildDraftingAnchors,
@@ -1680,6 +1676,18 @@ export function App({
     transactConnectivity,
     setStatus,
     nextRoutingSuffix,
+  });
+  const {
+    rotate: rotateSelected,
+    mirror: mirrorSelected,
+    align: alignSelectedInstances,
+  } = createSelectionTransformController({
+    document,
+    resolver,
+    selectedInstanceIds: selectedIds,
+    selection: visualSelection,
+    transact,
+    setStatus,
   });
   const {
     beginCopyPlacement: beginCopyPlacementFromSelection,
@@ -3488,130 +3496,6 @@ export function App({
     }
   }
 
-  /** Selected Instances that are actually on the sheet, in selection order. */
-  function placedSelectionIds(): string[] {
-    return selectedIds.filter((id) =>
-      document.instances.some(
-        (candidate) => candidate.id === id && candidate.placement,
-      ),
-    );
-  }
-
-  function rotateSelected(deltaDegrees: 90 | -90 = 90): void {
-    const placedSelection = placedSelectionIds();
-    // Several parts turn as one body about a shared pivot. Spinning each one
-    // about its own origin leaves the arrangement exactly where it was, which
-    // is not what turning a selection means. A lone part has no arrangement to
-    // preserve, so it keeps the simpler in-place turn.
-    const groupRotation =
-      placedSelection.length > 1
-        ? proposeGroupRotationEdits(
-            document,
-            resolver,
-            placedSelection,
-            deltaDegrees,
-          )
-        : null;
-    const instanceEdits = groupRotation
-      ? groupRotation.edits
-      : selectedIds.flatMap((id): SchematicEdit[] => {
-          const instance = document.instances.find(
-            (candidate) => candidate.id === id,
-          );
-          if (!instance?.placement) return [];
-          const next =
-            (((instance.placement.rotation + deltaDegrees) % 360) + 360) % 360;
-          return [
-            {
-              kind: "rotate_instance",
-              instanceId: instance.id,
-              rotation: next as 0 | 90 | 180 | 270,
-            },
-          ];
-        });
-    // Drafting rotation: R now also rotates a selected drafting object. An arrow
-    // pivots about its resolved center; a construction line pivots about the
-    // center of its bounds. Purely geometric — never changes electrical Nets.
-    const draftingEdits = visualSelection.draftingIds.flatMap(
-      (id): SchematicEdit[] => {
-        const object = document.drafting?.objects.find(
-          (candidate) => candidate.id === id,
-        );
-        if (!object) return [];
-        const next = rotateDraftingObject(
-          object,
-          resolveDraftingObjectGeometry(document, resolver, object),
-          deltaDegrees,
-          document.presentation.grid,
-        );
-        return next ? [{ kind: "upsert_drafting_object", object: next }] : [];
-      },
-    );
-    const edits = [...instanceEdits, ...draftingEdits];
-    if (edits.length === 0 || !transact(edits).ok) return;
-    // Name which turn happened. "Committed revision 5" cannot tell someone
-    // whether the arrangement turned or only the symbols did.
-    setStatus(
-      groupRotation
-        ? `Turned ${placedSelection.length} parts as one group`
-        : "Turned the selection in place",
-    );
-  }
-
-  function mirrorSelected(direction: ScreenFlip = "left-right"): void {
-    // Several parts flip as one body about the selection's own axis. Flipping
-    // each about its own centre leaves the arrangement exactly where it was —
-    // a row of three flipped one at a time is still the same row — which is
-    // the same fault rotation had.
-    const placedSelection = placedSelectionIds();
-    if (placedSelection.length > 1) {
-      const plan = proposeGroupReflectionEdits(
-        document,
-        resolver,
-        placedSelection,
-        direction,
-      );
-      if (plan.edits.length > 0 && transact(plan.edits).ok) {
-        setStatus(
-          `Flipped ${placedSelection.length} parts as one group, ${
-            direction === "left-right" ? "left to right" : "top to bottom"
-          }`,
-        );
-      }
-      return;
-    }
-    const edits = selectedIds.flatMap((id): SchematicEdit[] => {
-      const instance = document.instances.find(
-        (candidate) => candidate.id === id,
-      );
-      if (!instance?.placement) return [];
-      const orientation = reflectOrientation(instance.placement, direction);
-      return [
-        {
-          kind: "mirror_instance",
-          instanceId: instance.id,
-          mirror: orientation.mirror,
-        },
-        ...(orientation.rotation === instance.placement.rotation
-          ? []
-          : [
-              {
-                kind: "rotate_instance" as const,
-                instanceId: instance.id,
-                rotation: orientation.rotation,
-              },
-            ]),
-      ];
-    });
-    if (edits.length > 0 && transact(edits).ok) {
-      setStatus(
-        `Flipped the selection ${
-          direction === "left-right" ? "left to right" : "top to bottom"
-        }`,
-      );
-    }
-  }
-
   const editorCommands = createEditorCommandRouter({
     getContext: () => ({
       interactionMode: getCurrentInteractionState().kind,
@@ -3925,18 +3809,6 @@ export function App({
       },
     ]);
     if (result.ok) setStatus(`Current arrow points ${direction}`);
-  }
-
-  function alignSelectedInstances(): void {
-    if (selectedIds.length < 2) {
-      setStatus("Select at least two instances to align");
-      return;
-    }
-    const result = transact([
-      { kind: "align_instances", instanceIds: selectedIds, axis: "y" },
-    ]);
-    if (result.ok)
-      setStatus(`Aligned ${selectedIds.length} selected instances`);
   }
 
   function exportSvg(): void {
