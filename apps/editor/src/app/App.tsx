@@ -179,6 +179,7 @@ import {
   componentTargetDescription,
 } from "../features/properties/component-identity-properties";
 import { ComponentElectricalProperties } from "../features/properties/component-electrical-properties";
+import { ComponentPlacementProperties } from "../features/properties/component-placement-properties";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
 import {
@@ -7018,167 +7019,61 @@ export function App({
                     onAdditionalParametersApply={applyAdditionalParameters}
                     onAdditionalParametersCancel={cancelAdditionalParameters}
                   />
-                  {selectedInstance.importProvenance ? (
-                    <div
-                      className="property-card"
-                      aria-label="Imported source evidence"
-                    >
-                      <div className="property-section-heading">
-                        Imported source evidence
-                      </div>
-                      <small>
-                        {selectedInstance.importProvenance.kind}:{" "}
-                        {selectedInstance.importProvenance.sourceTarget}
-                      </small>
-                    </div>
-                  ) : null}
-                  {selectedInstance.placement ? (
-                    <div className="property-card property-placement-card">
-                      <div className="property-section-heading">Placement</div>
-                      <div
-                        className="component-geometry-row property-placement-controls"
-                        aria-label="Component geometry"
-                      >
-                        <label>
-                          X
-                          <input
-                            aria-label="Component X position"
-                            inputMode="decimal"
-                            value={instancePropertyDraft.x}
-                            onChange={(event) => {
-                              const x = event.currentTarget.value;
-                              updateInstancePropertyDraft((current) => ({
-                                ...current,
-                                x,
-                              }));
-                            }}
-                          />
-                        </label>
-                        <label>
-                          Y
-                          <input
-                            aria-label="Component Y position"
-                            inputMode="decimal"
-                            value={instancePropertyDraft.y}
-                            onChange={(event) => {
-                              const y = event.currentTarget.value;
-                              updateInstancePropertyDraft((current) => ({
-                                ...current,
-                                y,
-                              }));
-                            }}
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          className="property-placement-icon-button"
-                          aria-label={`Rotate component clockwise 90 degrees; current rotation ${instancePropertyDraft.rotation} degrees; shortcut R`}
-                          title={`Rotate 90° clockwise · current ${instancePropertyDraft.rotation}° (R)`}
-                          onClick={() =>
-                            editorCommands.execute({ id: "transform.rotate" })
-                          }
-                        >
-                          <ToolIcon name="rotate" />
-                        </button>
-                        <button
-                          type="button"
-                          className="property-placement-icon-button"
-                          aria-label="Mirror component left to right, Shift+R"
-                          title="Mirror left/right (Shift+R)"
-                          onClick={() =>
-                            editorCommands.execute({
-                              id: "transform.mirror",
-                              direction: "left-right",
-                            })
-                          }
-                        >
-                          <ToolIcon name="mirror-horizontal" />
-                        </button>
-                        <button
-                          type="button"
-                          className="property-placement-icon-button"
-                          aria-label="Mirror component top to bottom, Ctrl+R"
-                          title="Mirror top/bottom (Ctrl+R)"
-                          onClick={() =>
-                            editorCommands.execute({
-                              id: "transform.mirror",
-                              direction: "top-bottom",
-                            })
-                          }
-                        >
-                          <ToolIcon name="mirror-vertical" />
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        className="property-return-to-tray"
-                        aria-label="Return component to Placement Tray"
-                        onClick={() =>
-                          returnInstancesToTray([selectedInstance.id])
+                  <ComponentPlacementProperties
+                    instance={selectedInstance}
+                    x={instancePropertyDraft.x}
+                    y={instancePropertyDraft.y}
+                    rotation={instancePropertyDraft.rotation}
+                    draftChanged={hasInstancePropertyDraftChanges}
+                    onXChange={(x) =>
+                      updateInstancePropertyDraft((current) => ({
+                        ...current,
+                        x,
+                      }))
+                    }
+                    onYChange={(y) =>
+                      updateInstancePropertyDraft((current) => ({
+                        ...current,
+                        y,
+                      }))
+                    }
+                    onRotate={() =>
+                      editorCommands.execute({ id: "transform.rotate" })
+                    }
+                    onMirror={(direction) =>
+                      editorCommands.execute({
+                        id: "transform.mirror",
+                        direction,
+                      })
+                    }
+                    onReturnToTray={() =>
+                      returnInstancesToTray([selectedInstance.id])
+                    }
+                    {...(differentialOutputSibling(selectedInstance.symbolId)
+                      ? {
+                          onSwapOutputs: () =>
+                            transact(
+                              planDifferentialOutputSwap(
+                                selectedInstance.id,
+                                selectedInstance.symbolId,
+                              ),
+                            ),
                         }
-                      >
-                        Return to tray
-                      </button>
-                      {differentialOutputSibling(selectedInstance.symbolId) ||
-                      selectedInstanceHasDifferentialInputs ? (
-                        <div
-                          className="component-mirror-row property-amplifier-actions"
-                          aria-label="Amplifier placement actions"
-                        >
-                          {differentialOutputSibling(
-                            selectedInstance.symbolId,
-                          ) ? (
-                            <button
-                              type="button"
-                              data-testid="swap-differential-outputs"
-                              aria-label="Swap the + and - outputs"
-                              title="Swap the + and - outputs"
-                              onClick={() =>
-                                transact(
-                                  planDifferentialOutputSwap(
-                                    selectedInstance.id,
-                                    selectedInstance.symbolId,
-                                  ),
-                                )
-                              }
-                            >
-                              Swap + / − outputs
-                            </button>
-                          ) : null}
-                          {selectedInstanceHasDifferentialInputs &&
-                          differentialInputSibling(
-                            selectedInstance.symbolId,
-                          ) ? (
-                            <button
-                              type="button"
-                              data-testid="swap-differential-inputs"
-                              aria-label="Swap the + and - inputs"
-                              title="Swap + / - inputs (Ctrl+R)"
-                              onClick={() =>
-                                transact(
-                                  planDifferentialInputSwap(
-                                    selectedInstance.id,
-                                    selectedInstance.symbolId,
-                                  ),
-                                )
-                              }
-                            >
-                              Swap + / − inputs
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {hasInstancePropertyDraftChanges ? (
-                    <button
-                      type="button"
-                      className="property-discard"
-                      onClick={discardInstancePropertyDraft}
-                    >
-                      Discard changes
-                    </button>
-                  ) : null}
+                      : {})}
+                    {...(selectedInstanceHasDifferentialInputs &&
+                    differentialInputSibling(selectedInstance.symbolId)
+                      ? {
+                          onSwapInputs: () =>
+                            transact(
+                              planDifferentialInputSwap(
+                                selectedInstance.id,
+                                selectedInstance.symbolId,
+                              ),
+                            ),
+                        }
+                      : {})}
+                    onDiscard={discardInstancePropertyDraft}
+                  />
                 </section>
               ) : null}
               {selectedDrafting ? (
