@@ -166,6 +166,7 @@ import {
   planDesignNetlistExport,
   requestBrowserDownload,
 } from "../features/editor-shell/editor-export-commands";
+import { EditorStatusbar } from "../features/editor-shell/editor-statusbar";
 import { ComponentPlacementPreview } from "../features/component-insert/component-placement-preview";
 import {
   cellInsertLaunch,
@@ -8141,128 +8142,32 @@ export function App({
           </svg>
         </section>
       </div>
-      <footer className="app-statusbar">
-        <div className="statusbar-left">
-          <p className="editor-status" data-testid="status" aria-live="polite">
-            {status}
-          </p>
-          <span className="statusbar-tool" data-testid="statusbar-tool">
-            {vddRailMode
-              ? "Drawing Power Rail"
-              : pendingSymbolId
-                ? `Placing ${pendingSymbolId}`
-                : tool === "pointer"
-                  ? "Select"
-                  : tool === "construction-line"
-                    ? "Line"
-                    : tool.charAt(0).toUpperCase() + tool.slice(1)}
-          </span>
-          {tool === "wire" ? (
-            <button
-              type="button"
-              className="statusbar-tool"
-              onClick={() => setWireOptionsOpen((open) => !open)}
-              aria-expanded={wireOptionsOpen}
-            >
-              {wireRoutingMode === "orthogonal" ? "Orthogonal" : "45°"} · F3
-            </button>
-          ) : null}
-          {tool === "wire" && wireOptionsOpen ? (
-            <span className="wire-options" data-testid="wire-options">
-              <label>
-                Route
-                <select
-                  value={wireRoutingMode}
-                  onChange={(event) =>
-                    setWireRoutingMode(
-                      event.target.value as typeof wireRoutingMode,
-                    )
-                  }
-                >
-                  <option value="orthogonal">Orthogonal</option>
-                  <option value="octilinear">45° octilinear</option>
-                  <option value="free">Any angle</option>
-                </select>
-              </label>
-              <label>
-                Corner
-                <select
-                  value={wireCornerOrder}
-                  onChange={(event) =>
-                    setWireCornerOrder(
-                      event.target.value as typeof wireCornerOrder,
-                    )
-                  }
-                >
-                  <option value="auto">Auto</option>
-                  <option value="horizontal-first">Horizontal first</option>
-                  <option value="vertical-first">Vertical first</option>
-                  <option value="diagonal-first">Diagonal first</option>
-                  <option value="orthogonal-first">Orthogonal first</option>
-                </select>
-              </label>
-            </span>
-          ) : null}
-          {recoveryStateLabel(recoveryState) === null ? null : (
-            <output
-              className="statusbar-recovery"
-              data-testid="recovery-state"
-              aria-label="Browser recovery state"
-            >
-              {recoveryStateLabel(recoveryState)}
-            </output>
-          )}
-        </div>
-        <div className="canvas-controls" aria-label="Canvas view controls">
-          <button
-            type="button"
-            aria-label={
-              gridDotsVisible ? "Hide background dots" : "Show background dots"
-            }
-            aria-pressed={gridDotsVisible}
-            title={
-              gridDotsVisible ? "Hide background dots" : "Show background dots"
-            }
-            onClick={() =>
-              setGridDotsVisible((visible) => {
-                // Every other canvas control reports what it did; this one
-                // changed the canvas silently.
-                setStatus(
-                  visible ? "Background dots hidden" : "Background dots shown",
-                );
-                return !visible;
-              })
-            }
-          >
-            <ToolIcon name="grid" />
-          </button>
-          <button
-            type="button"
-            aria-label="Zoom out"
-            title="Zoom out"
-            onClick={() => zoomViewAtCenter(1.2)}
-          >
-            <ToolIcon name="zoom-out" />
-          </button>
-          <output aria-label="Current zoom">{zoomPercent}%</output>
-          <button
-            type="button"
-            aria-label="Zoom in"
-            title="Zoom in"
-            onClick={() => zoomViewAtCenter(0.84)}
-          >
-            <ToolIcon name="zoom-in" />
-          </button>
-          <button
-            type="button"
-            aria-label="Fit view"
-            title="Fit view (Home)"
-            onClick={() => editorCommands.execute({ id: "view.fit" })}
-          >
-            <ToolIcon name="fit" />
-          </button>
-        </div>
-      </footer>
+      <EditorStatusbar
+        status={status}
+        tool={tool}
+        vddRailMode={vddRailMode}
+        pendingSymbolId={pendingSymbolId}
+        wireOptionsOpen={wireOptionsOpen}
+        wireRoutingMode={wireRoutingMode}
+        wireCornerOrder={wireCornerOrder}
+        recoveryLabel={recoveryStateLabel(recoveryState)}
+        gridDotsVisible={gridDotsVisible}
+        zoomPercent={zoomPercent}
+        onToggleWireOptions={() => setWireOptionsOpen((open) => !open)}
+        onWireRoutingModeChange={setWireRoutingMode}
+        onWireCornerOrderChange={setWireCornerOrder}
+        onToggleGridDots={() =>
+          setGridDotsVisible((visible) => {
+            setStatus(
+              visible ? "Background dots hidden" : "Background dots shown",
+            );
+            return !visible;
+          })
+        }
+        onZoomOut={() => zoomViewAtCenter(1.2)}
+        onZoomIn={() => zoomViewAtCenter(0.84)}
+        onFitView={() => editorCommands.execute({ id: "view.fit" })}
+      />
     </main>
   );
 }
