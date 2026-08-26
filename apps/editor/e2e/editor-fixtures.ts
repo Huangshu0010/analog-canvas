@@ -36,7 +36,10 @@ export async function chooseComponent(
   page: Page,
   symbolId: string,
 ): Promise<void> {
-  await page.keyboard.press("i");
+  // Route-level code splitting means `page.goto()` can resolve before the
+  // editor bundle has mounted. Clicking the toolbar both waits for the editor
+  // shell and avoids dropping a shortcut during that loading window.
+  await clickDrawTool(page, "insert");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill(symbolId);
   await dialog.getByTestId(`insert-component-${symbolId}`).click();
