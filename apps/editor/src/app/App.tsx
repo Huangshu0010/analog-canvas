@@ -50,7 +50,6 @@ import {
   findHierarchyPath,
   findHierarchyPaths,
   isMosBulkTerminal,
-  isSchematicAnnotationVisible,
   isVisibleEndpoint,
   resolveEndpointConnection,
   resolveDraftingObjectGeometry,
@@ -154,6 +153,7 @@ import {
   CanvasInputPlanes,
   NetHighlightOverlay,
 } from "../canvas/editor-canvas-overlays";
+import { EditorSelectionHitTargets } from "../canvas/editor-selection-hit-targets";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
 import { draggedAnnotationAtPosition } from "../features/text-editing/annotation-drag-model";
 import {
@@ -372,7 +372,6 @@ import {
   defaultInstanceValue,
   effectiveRouteAttachment,
   endpointNetId,
-  instanceHitBox,
   instanceValueAnnotation,
   isRoutedMarker,
   looseRouteAnchorIds,
@@ -7985,237 +7984,148 @@ export function App({
                     </g>
                   );
                 })}
-              {document.instances
-                .filter((instance) => instance.placement !== null)
-                .map((instance) => {
-                  const hitBox = instanceHitBox(instance, resolver);
-                  if (!hitBox) return null;
-                  if (
-                    cellSymbolLayoutEnabled &&
-                    selectedInstance?.id === instance.id
-                  ) {
-                    // The layout overlay is the exclusive interaction surface
-                    // for the selected Cell instance while editing its
-                    // definition. Rendering the generic hit box here still
-                    // wins elementsFromPoint() even with pointer-events:none.
-                    return null;
+              <EditorSelectionHitTargets
+                document={document}
+                resolver={resolver}
+                routeGeometryRecords={routeGeometryRecords}
+                styleProfile={styleProfile}
+                tool={tool}
+                selectedInstanceIds={selectedIds}
+                selectedRouteId={selectedRouteId}
+                supplementalRouteIds={supplementalSelection.routeIds}
+                selectedInternalRouteIds={selectedInternalRouteIds}
+                selectedAnnotationId={selectedAnnotationId}
+                supplementalAnnotationIds={supplementalSelection.annotationIds}
+                cellSymbolLayoutInstanceId={
+                  cellSymbolLayoutEnabled
+                    ? (selectedInstance?.id ?? null)
+                    : null
+                }
+                onInstanceClick={(instance, additive) => {
+                  if (suppressInstanceClick.current) {
+                    suppressInstanceClick.current = false;
+                    return;
                   }
-                  const childDocumentId = referencedDocumentId(
-                    project,
-                    instance,
-                  );
+                  selectInstanceFromSelection(instance.id, additive);
+                }}
+                onInstanceOpen={(instance) => {
+                  if (referencedDocumentId(project, instance))
+                    enterHierarchy(instance.id);
+                  else inspectInstance(instance.id);
+                }}
+                onInstancePointerDown={(event, instance) =>
+                  beginMoveFromSelection(event, instance.id)
+                }
+                onRoutePointerDown={handleRoutePointerDown}
+                onAnnotationPointerDown={beginAnnotationDrag}
+                onAnnotationEdit={beginAnnotationTextEditing}
+              >
+                {wiringEndpoints.map((candidate) => {
+                  const powerRailEnds =
+                    selectedRoute?.presentation === "power-rail"
+                      ? (derivePowerRailComponent(document, selectedRoute.id)
+                          ?.endpointJunctionIds.map((junctionId) =>
+                            document.junctions.find(
+                              (junction) => junction.id === junctionId,
+                            ),
+                          )
+                          .filter(
+                            (
+                              junction,
+                            ): junction is NonNullable<typeof junction> =>
+                              Boolean(junction),
+                          )
+                          .sort(
+                            (left, right) => left.position.x - right.position.x,
+                          ) ?? [])
+                      : [];
+                  const candidateJunctionId =
+                    candidate.endpoint.kind === "junction"
+                      ? candidate.endpoint.junctionId
+                      : null;
+                  const powerRailEndIndex =
+                    candidateJunctionId !== null
+                      ? powerRailEnds.findIndex(
+                          (junction) => junction.id === candidateJunctionId,
+                        )
+                      : -1;
                   return (
-                    <rect
-                      key={instance.id}
-                      data-testid={`hit-${instance.id}`}
-                      data-canvas-hit-kind="instance"
-                      data-canvas-hit-id={instance.id}
-                      data-drag-object-id={instance.id}
-                      {...hitBox}
-                      className={
-                        selectedIds.includes(instance.id)
-                          ? "hit-target selected"
-                          : "hit-target"
-                      }
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (suppressInstanceClick.current) {
-                          suppressInstanceClick.current = false;
-                          return;
-                        }
-                        selectInstanceFromSelection(
-                          instance.id,
-                          event.shiftKey || event.ctrlKey,
-                        );
-                      }}
-                      onDoubleClick={(event) => {
-                        event.stopPropagation();
-                        if (childDocumentId) {
-                          enterHierarchy(instance.id);
-                          return;
-                        }
-                        inspectInstance(instance.id);
-                      }}
-                      onPointerDown={(event) =>
-                        beginMoveFromSelection(event, instance.id)
-                      }
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    />
-                  );
-                })}
-              {routeGeometryRecords.map(({ route, geometry }) => (
-                <polyline
-                  key={route.id}
-                  data-testid={`route-hit-${route.id}`}
-                  data-canvas-hit-kind="route"
-                  data-canvas-hit-id={route.id}
-                  data-drag-object-id={route.id}
-                  className={
-                    selectedRouteId === route.id ||
-                    supplementalSelection.routeIds.includes(route.id) ||
-                    selectedInternalRouteIds.has(route.id)
-                      ? "route-hit selected"
-                      : "route-hit"
-                  }
-                  points={serializePolylinePoints(geometry.centerline)}
-                  onPointerDown={(event) =>
-                    handleRoutePointerDown(event, route.id)
-                  }
-                  onClick={(event) => event.stopPropagation()}
-                />
-              ))}
-              {wiringEndpoints.map((candidate) => {
-                const powerRailEnds =
-                  selectedRoute?.presentation === "power-rail"
-                    ? (derivePowerRailComponent(document, selectedRoute.id)
-                        ?.endpointJunctionIds.map((junctionId) =>
-                          document.junctions.find(
-                            (junction) => junction.id === junctionId,
-                          ),
-                        )
-                        .filter(
-                          (
-                            junction,
-                          ): junction is NonNullable<typeof junction> =>
-                            Boolean(junction),
-                        )
-                        .sort(
-                          (left, right) => left.position.x - right.position.x,
-                        ) ?? [])
-                    : [];
-                const candidateJunctionId =
-                  candidate.endpoint.kind === "junction"
-                    ? candidate.endpoint.junctionId
-                    : null;
-                const powerRailEndIndex =
-                  candidateJunctionId !== null
-                    ? powerRailEnds.findIndex(
-                        (junction) => junction.id === candidateJunctionId,
-                      )
-                    : -1;
-                return (
-                  <circle
-                    key={`${candidate.netId}:${endpointTestId(candidate.endpoint)}`}
-                    data-testid={endpointTestId(candidate.endpoint)}
-                    data-canvas-hit-kind={
-                      candidate.endpoint.kind === "junction"
-                        ? "junction"
-                        : undefined
-                    }
-                    data-canvas-hit-id={
-                      candidate.endpoint.kind === "junction"
-                        ? candidate.endpoint.junctionId
-                        : undefined
-                    }
-                    data-drag-object-id={
-                      candidate.endpoint.kind === "junction"
-                        ? candidate.endpoint.junctionId
-                        : undefined
-                    }
-                    className={
-                      tool === "wire" ||
-                      (candidate.endpoint.kind === "junction" &&
-                        supplementalSelection.junctionIds.includes(
-                          candidate.endpoint.junctionId,
-                        )) ||
-                      (selectedEndpoint?.endpoint.kind === "junction" &&
-                        candidate.endpoint.kind === "junction" &&
-                        selectedEndpoint.endpoint.junctionId ===
-                          candidate.endpoint.junctionId)
-                        ? "endpoint-hit active"
-                        : "endpoint-hit"
-                    }
-                    cx={candidate.connection.contactPoint.x}
-                    cy={candidate.connection.contactPoint.y}
-                    r={4}
-                    onClick={(event) => event.stopPropagation()}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      selectEndpoint(candidate);
-                      setStatus(
-                        `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
-                      );
-                    }}
-                    onPointerDown={(event) => {
-                      if (
-                        tool === "pointer" &&
-                        selectedRoute &&
-                        powerRailEndIndex >= 0
-                      ) {
-                        beginRouteStretch(
-                          event,
-                          selectedRoute.id,
-                          selectedRouteSegmentIndex ?? 0,
-                          powerRailEndIndex === 0
-                            ? "resize-power-rail-start"
-                            : "resize-power-rail-end",
-                        );
-                        return;
-                      }
-                      if (
-                        tool === "pointer" &&
+                    <circle
+                      key={`${candidate.netId}:${endpointTestId(candidate.endpoint)}`}
+                      data-testid={endpointTestId(candidate.endpoint)}
+                      data-canvas-hit-kind={
                         candidate.endpoint.kind === "junction"
-                      ) {
+                          ? "junction"
+                          : undefined
+                      }
+                      data-canvas-hit-id={
+                        candidate.endpoint.kind === "junction"
+                          ? candidate.endpoint.junctionId
+                          : undefined
+                      }
+                      data-drag-object-id={
+                        candidate.endpoint.kind === "junction"
+                          ? candidate.endpoint.junctionId
+                          : undefined
+                      }
+                      className={
+                        tool === "wire" ||
+                        (candidate.endpoint.kind === "junction" &&
+                          supplementalSelection.junctionIds.includes(
+                            candidate.endpoint.junctionId,
+                          )) ||
+                        (selectedEndpoint?.endpoint.kind === "junction" &&
+                          candidate.endpoint.kind === "junction" &&
+                          selectedEndpoint.endpoint.junctionId ===
+                            candidate.endpoint.junctionId)
+                          ? "endpoint-hit active"
+                          : "endpoint-hit"
+                      }
+                      cx={candidate.connection.contactPoint.x}
+                      cy={candidate.connection.contactPoint.y}
+                      r={4}
+                      onClick={(event) => event.stopPropagation()}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
                         event.stopPropagation();
                         selectEndpoint(candidate);
                         setStatus(
-                          `Selected ${endpointTestId(candidate.endpoint)}`,
+                          `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
                         );
-                        return;
-                      }
-                      handleWireEndpoint(event, candidate);
-                    }}
-                  />
-                );
-              })}
-              {document.annotations
-                .filter((annotation) =>
-                  isSchematicAnnotationVisible(document, annotation),
-                )
-                .map((annotation) => {
-                  const anchor = annotationAnchor(
-                    document,
-                    resolver,
-                    annotation,
-                    routeGeometryRecords,
-                    styleProfile,
-                  );
-                  const hitBox = annotationHitBox(
-                    document,
-                    annotation,
-                    anchor,
-                    routeGeometryRecords,
-                    styleProfile,
-                  );
-                  const selected =
-                    selectedAnnotationId === annotation.id ||
-                    supplementalSelection.annotationIds.includes(annotation.id);
-                  return (
-                    <rect
-                      key={`annotation-hit-${annotation.id}`}
-                      data-testid={`annotation-hit-${annotation.id}`}
-                      data-canvas-hit-kind="annotation"
-                      data-canvas-hit-id={annotation.id}
-                      data-drag-object-id={annotation.id}
-                      className={
-                        selected
-                          ? "hit-target annotation-text-hit selected"
-                          : "hit-target annotation-text-hit"
-                      }
-                      {...hitBox}
-                      onClick={(event) => event.stopPropagation()}
-                      onPointerDown={(event) =>
-                        beginAnnotationDrag(event, annotation)
-                      }
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                      onDoubleClick={(event) => {
-                        event.stopPropagation();
-                        beginAnnotationTextEditing(annotation);
+                      }}
+                      onPointerDown={(event) => {
+                        if (
+                          tool === "pointer" &&
+                          selectedRoute &&
+                          powerRailEndIndex >= 0
+                        ) {
+                          beginRouteStretch(
+                            event,
+                            selectedRoute.id,
+                            selectedRouteSegmentIndex ?? 0,
+                            powerRailEndIndex === 0
+                              ? "resize-power-rail-start"
+                              : "resize-power-rail-end",
+                          );
+                          return;
+                        }
+                        if (
+                          tool === "pointer" &&
+                          candidate.endpoint.kind === "junction"
+                        ) {
+                          event.stopPropagation();
+                          selectEndpoint(candidate);
+                          setStatus(
+                            `Selected ${endpointTestId(candidate.endpoint)}`,
+                          );
+                          return;
+                        }
+                        handleWireEndpoint(event, candidate);
                       }}
                     />
                   );
                 })}
+              </EditorSelectionHitTargets>
               {(document.drafting?.objects ?? []).map((object) => {
                 // WP-R5/P1: every drafting object gets a selectable/deletable hit
                 // shape derived from the shared geometry. P1: use the object's
