@@ -61,6 +61,8 @@ export function NetlistPreflightDialog({
   const errors = result.diagnostics.filter(
     (diagnostic) => diagnostic.severity === "error",
   );
+  const hasDiagnostics =
+    result.diagnostics.length > 0 || electricalDiagnostics.length > 0;
   return (
     <div
       className="insert-dialog-backdrop"
@@ -69,44 +71,66 @@ export function NetlistPreflightDialog({
       }}
     >
       <section
-        className="insert-component-dialog"
+        className="netlist-preflight-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="netlist-preflight-title"
       >
-        <header className="insert-dialog-header">
+        <header className="netlist-preflight-header">
           <div>
             <p>Canonical design-netlist analysis</p>
             <h2 id="netlist-preflight-title">Check Report</h2>
           </div>
         </header>
-        <div className="insert-dialog-body">
+        <section className="netlist-preflight-summary" aria-label="Readiness">
+          <h3>
+            {result.ir
+              ? electricalDiagnostics.length > 0
+                ? "Structure ready; review electrical findings"
+                : "Ready to export"
+              : `${errors.length} blocking issue${errors.length === 1 ? "" : "s"}`}
+          </h3>
           {result.ir ? (
-            <section className="insert-control-column">
-              <h3>
-                {electricalDiagnostics.length > 0
-                  ? "Structure ready; review electrical findings"
-                  : "Ready to export"}
-              </h3>
-              <p>
-                {result.ir.cells.length} internal Cell
-                {result.ir.cells.length === 1 ? "" : "s"};{" "}
-                {result.ir.externalMasters?.length ?? 0} external interface
-                {(result.ir.externalMasters?.length ?? 0) === 1 ? "" : "s"}.
-              </p>
-              <label>
-                Structural format
-                <select
-                  aria-label="Netlist export format"
-                  value={format}
-                  onChange={(event) =>
-                    setFormat(event.currentTarget.value as NetlistFormat)
-                  }
-                >
-                  <option value="spice">SPICE (.spi)</option>
-                  <option value="spectre">Spectre (.scs)</option>
-                </select>
-              </label>
+            <p>
+              {result.ir.cells.length} internal Cell
+              {result.ir.cells.length === 1 ? "" : "s"};{" "}
+              {result.ir.externalMasters?.length ?? 0} external interface
+              {(result.ir.externalMasters?.length ?? 0) === 1 ? "" : "s"}.
+            </p>
+          ) : (
+            <p>
+              Resolve each issue before a netlist IR is available for export.
+            </p>
+          )}
+        </section>
+        <div
+          className="netlist-preflight-body"
+          data-has-preview={result.ir ? "true" : "false"}
+          data-has-diagnostics={hasDiagnostics ? "true" : "false"}
+        >
+          {result.ir ? (
+            <section
+              className="netlist-preflight-export"
+              aria-label="Structural netlist"
+            >
+              <div className="netlist-preflight-export-controls">
+                <label>
+                  Structural format
+                  <select
+                    aria-label="Netlist export format"
+                    value={format}
+                    onChange={(event) =>
+                      setFormat(event.currentTarget.value as NetlistFormat)
+                    }
+                  >
+                    <option value="spice">SPICE (.spi)</option>
+                    <option value="spectre">Spectre (.scs)</option>
+                  </select>
+                </label>
+                <button type="button" onClick={() => onExport(format)}>
+                  Download {format === "spice" ? "SPICE" : "Spectre"} netlist
+                </button>
+              </div>
               <pre
                 className="netlist-preview"
                 data-testid="netlist-preview"
@@ -114,74 +138,63 @@ export function NetlistPreflightDialog({
               >
                 {preview}
               </pre>
-              <button type="button" onClick={() => onExport(format)}>
-                Download {format === "spice" ? "SPICE" : "Spectre"} netlist
-              </button>
-            </section>
-          ) : (
-            <section className="insert-control-column">
-              <h3>
-                {errors.length} blocking issue{errors.length === 1 ? "" : "s"}
-              </h3>
-              <p>
-                Resolve each issue before a netlist IR is available for export.
-              </p>
-            </section>
-          )}
-          {result.diagnostics.length > 0 ? (
-            <section
-              className="insert-control-column"
-              aria-label="Preflight findings"
-            >
-              <h3>Findings</h3>
-              <ul className="preflight-findings">
-                {groupedFindings.map((group) => (
-                  <li key={`${group.code}-${group.message}`}>
-                    <button
-                      type="button"
-                      data-severity={group.sample.severity}
-                      onClick={() => onNavigate(group.sample)}
-                    >
-                      <strong>{group.code}</strong>
-                      <span>
-                        {group.message}
-                        {group.count > 1 ? ` (×${group.count})` : ""}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
             </section>
           ) : null}
-          {electricalDiagnostics.length > 0 ? (
-            <section
-              className="insert-control-column"
-              aria-label="Electrical findings"
+          {hasDiagnostics ? (
+            <aside
+              className="netlist-preflight-diagnostics"
+              aria-label="Netlist diagnostics"
             >
-              <h3>Electrical readiness ({electricalDiagnostics.length})</h3>
-              <p>
-                These findings use the same current-revision connectivity
-                assessment as ERC and the Gallery gate. Saving remains a
-                separate action and is allowed for unfinished work.
-              </p>
-              <ul className="preflight-findings">
-                {electricalDiagnostics.map((diagnostic) => (
-                  <li key={diagnostic.id}>
-                    <button
-                      type="button"
-                      data-severity={diagnostic.severity}
-                      onClick={() => onNavigateElectrical(diagnostic)}
-                    >
-                      <strong>{diagnostic.code}</strong>
-                      <span>{diagnostic.message}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
+              {result.diagnostics.length > 0 ? (
+                <section aria-label="Preflight findings">
+                  <h3>Findings</h3>
+                  <ul className="preflight-findings">
+                    {groupedFindings.map((group) => (
+                      <li key={`${group.code}-${group.message}`}>
+                        <button
+                          type="button"
+                          data-severity={group.sample.severity}
+                          onClick={() => onNavigate(group.sample)}
+                        >
+                          <strong>{group.code}</strong>
+                          <span>
+                            {group.message}
+                            {group.count > 1 ? ` (×${group.count})` : ""}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              {electricalDiagnostics.length > 0 ? (
+                <section aria-label="Electrical findings">
+                  <h3>Electrical readiness ({electricalDiagnostics.length})</h3>
+                  <p>
+                    These findings use the same current-revision connectivity
+                    assessment as ERC and the Gallery gate. Saving remains a
+                    separate action and is allowed for unfinished work.
+                  </p>
+                  <ul className="preflight-findings">
+                    {electricalDiagnostics.map((diagnostic) => (
+                      <li key={diagnostic.id}>
+                        <button
+                          type="button"
+                          data-severity={diagnostic.severity}
+                          onClick={() => onNavigateElectrical(diagnostic)}
+                        >
+                          <strong>{diagnostic.code}</strong>
+                          <span>{diagnostic.message}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+            </aside>
           ) : null}
         </div>
-        <footer className="insert-dialog-actions">
+        <footer className="netlist-preflight-actions">
           <button
             type="button"
             data-testid="check-report-close"
