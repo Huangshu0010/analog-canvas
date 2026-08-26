@@ -174,6 +174,10 @@ import {
   CellSymbolLayoutProperties,
   FormalPortProperties,
 } from "../features/properties/component-structure-properties";
+import {
+  ComponentIdentityProperties,
+  componentTargetDescription,
+} from "../features/properties/component-identity-properties";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
 import {
@@ -6907,186 +6911,73 @@ export function App({
                       }
                     />
                   ) : null}
-                  <div
-                    className="property-card property-identity-card"
-                    aria-label="Component identity"
-                  >
-                    <div className="property-section-heading">Identity</div>
-                    <dl className="component-readonly-fields">
-                      {selectedPortNet && !selectedFormalTerminal ? (
-                        <div>
-                          <dt>
-                            {selectedSupplyMarker ? "Supply" : "Net name"}
-                          </dt>
-                          <dd>
-                            <input
-                              key={`${selectedPortNet.id}-${document.revision}-net-port-name`}
-                              aria-label={
-                                selectedSupplyMarker
-                                  ? "Supply name"
-                                  : "Supply Net name"
-                              }
-                              defaultValue={selectedPortLogicalName ?? ""}
-                              onBlur={(event) =>
-                                commitElectricalMarkerName(
-                                  selectedInstance.id,
-                                  event.currentTarget.value,
-                                )
-                              }
-                            />
-                          </dd>
-                        </div>
-                      ) : !selectedFormalTerminal ? (
-                        <div>
-                          <dt>Schematic label</dt>
-                          <dd>
-                            <input
-                              key={`${selectedInstance.id}-${document.revision}-schematic-label`}
-                              aria-label="Component schematic label"
-                              defaultValue={flattenRichText(
-                                selectedInstance.schematicName ??
-                                  defaultDraftTextDocument(
-                                    selectedInstance.schematicReference ??
-                                      selectedInstance.netlist?.reference ??
-                                      "",
-                                  ),
-                              )}
-                              placeholder="Schematic label"
-                              onBlur={(event) =>
-                                updateSelectedSchematicName(
-                                  event.currentTarget.value,
-                                )
-                              }
-                            />
-                          </dd>
-                        </div>
-                      ) : null}
-                      {selectedInstance.netlist ? (
-                        <div>
-                          <dt>Netlist reference</dt>
-                          <dd>
-                            <input
-                              key={`${selectedInstance.id}-${document.revision}-netlist-reference`}
-                              aria-label="Component netlist reference"
-                              defaultValue={selectedInstance.netlist.reference}
-                              onBlur={(event) =>
-                                updateSelectedReference(
-                                  event.currentTarget.value,
-                                )
-                              }
-                            />
-                          </dd>
-                        </div>
-                      ) : null}
-                      <div>
-                        <dt>Symbol</dt>
-                        <dd>{selectedInstance.symbolId}</dd>
-                      </div>
-                      <div>
-                        <dt>Cell</dt>
-                        <dd>{document.netlist?.name ?? document.name}</dd>
-                      </div>
-                      {selectedInstance.netlist &&
+                  <ComponentIdentityProperties
+                    instance={selectedInstance}
+                    revision={document.revision}
+                    cellName={document.netlist?.name ?? document.name}
+                    formalTerminalSelected={Boolean(selectedFormalTerminal)}
+                    portNet={
+                      selectedPortNet
+                        ? {
+                            id: selectedPortNet.id,
+                            logicalName: selectedPortLogicalName ?? "",
+                            supply: Boolean(selectedSupplyMarker),
+                          }
+                        : null
+                    }
+                    targetDescription={
+                      selectedInstance.netlist &&
                       !(
                         selectedInstance.netlist.binding?.kind === "model" ||
                         selectedDevice?.targetPolicy === "required-model" ||
                         selectedExternalMosMapping
-                      ) ? (
-                        <div className="property-identity-target">
-                          <dt>Target</dt>
-                          <dd>
-                            {selectedInstance.netlist.binding?.kind ===
-                            "primitive"
-                              ? `Built-in primitive: ${selectedInstance.netlist.binding.deviceClass}`
-                              : selectedInstance.netlist.binding?.kind ===
-                                  "subcircuit"
-                                ? `Internal Cell: ${selectedHierarchyCell?.netlist?.name ?? "unresolved"}`
-                                : selectedInstance.netlist.binding?.kind ===
-                                    "external-subcircuit"
-                                  ? `External subcircuit: ${selectedExternalSubcircuit?.name ?? "unresolved"}`
-                                  : selectedInstance.netlist.binding?.kind ===
-                                      "unresolved-subcircuit"
-                                    ? `Unresolved subcircuit: ${selectedInstance.netlist.binding.name}`
-                                    : "No target is bound yet."}
-                          </dd>
-                        </div>
-                      ) : null}
-                    </dl>
-                  </div>
-                  {selectedCapacitorPlateRows ? (
-                    <div
-                      className="property-card property-terminal-card"
-                      role="group"
-                      aria-label="Capacitor plate terminals"
-                    >
-                      <div className="property-section-heading">
-                        Electrical terminals
-                      </div>
-                      <dl className="component-readonly-fields">
-                        {selectedCapacitorPlateRows.map((row) => (
-                          <div key={row.role}>
-                            <dt>{row.label}</dt>
-                            <dd aria-label={`${row.label} terminal`}>
-                              Pin {row.pinName} ·{" "}
-                              {row.netName ?? row.netId ?? "Unconnected"}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </div>
-                  ) : null}
-                  {selectedInstance.netlist &&
-                  (selectedInstance.netlist.binding?.kind === "model" ||
-                    selectedDevice?.targetPolicy === "required-model" ||
-                    selectedExternalMosMapping) ? (
-                    <div
-                      className="property-card property-target-card"
-                      aria-label="Netlist target"
-                    >
-                      <div className="property-section-heading">
-                        Netlist target
-                      </div>
-                      <label>
-                        Model
-                        <input
-                          key={`${selectedInstance.id}-${document.revision}-model-target`}
-                          aria-label="Component model target"
-                          list={
-                            selectedPropertyDevice?.symbolId === "nmos" ||
+                      )
+                        ? componentTargetDescription(
+                            selectedInstance,
+                            selectedHierarchyCell?.netlist?.name,
+                            selectedExternalSubcircuit?.name,
+                          )
+                        : null
+                    }
+                    capacitorPlateRows={selectedCapacitorPlateRows}
+                    modelTarget={
+                      selectedInstance.netlist &&
+                      (selectedInstance.netlist.binding?.kind === "model" ||
+                        selectedDevice?.targetPolicy === "required-model" ||
+                        selectedExternalMosMapping)
+                        ? {
+                            defaultValue:
+                              selectedInstance.netlist.binding?.kind === "model"
+                                ? selectedInstance.netlist.binding.name
+                                : selectedExternalMosMapping
+                                  ? (selectedExternalSubcircuit?.name ?? "")
+                                  : "",
+                            suggestions:
+                              selectedPropertyDevice?.symbolId === "nmos" ||
+                              selectedPropertyDevice?.symbolId === "pmos"
+                                ? reviewedSky130MosModelSuggestions(
+                                    selectedPropertyDevice.symbolId,
+                                  )
+                                : [],
+                            ...(selectedPropertyDevice?.symbolId === "nmos" ||
                             selectedPropertyDevice?.symbolId === "pmos"
-                              ? `mos-model-options-${selectedPropertyDevice.symbolId}`
-                              : undefined
+                              ? {
+                                  listId: `mos-model-options-${selectedPropertyDevice.symbolId}`,
+                                }
+                              : {}),
+                            externalSubcircuit: Boolean(
+                              selectedExternalMosMapping,
+                            ),
                           }
-                          defaultValue={
-                            selectedInstance.netlist.binding?.kind === "model"
-                              ? selectedInstance.netlist.binding.name
-                              : selectedExternalMosMapping
-                                ? selectedExternalSubcircuit?.name
-                                : ""
-                          }
-                          placeholder="Model name"
-                          onBlur={(event) =>
-                            updateSelectedModelTarget(event.currentTarget.value)
-                          }
-                        />
-                        {selectedPropertyDevice?.symbolId === "nmos" ||
-                        selectedPropertyDevice?.symbolId === "pmos" ? (
-                          <datalist
-                            id={`mos-model-options-${selectedPropertyDevice.symbolId}`}
-                          >
-                            {reviewedSky130MosModelSuggestions(
-                              selectedPropertyDevice.symbolId,
-                            ).map((model) => (
-                              <option value={model} key={model} />
-                            ))}
-                          </datalist>
-                        ) : null}
-                        {selectedExternalMosMapping ? (
-                          <small>External subcircuit · X reference</small>
-                        ) : null}
-                      </label>
-                    </div>
-                  ) : null}
+                        : null
+                    }
+                    onMarkerNameChange={(value) =>
+                      commitElectricalMarkerName(selectedInstance.id, value)
+                    }
+                    onSchematicNameChange={updateSelectedSchematicName}
+                    onReferenceChange={updateSelectedReference}
+                    onModelTargetChange={updateSelectedModelTarget}
+                  />
                   <div
                     className="property-card property-electrical-section"
                     aria-label="Component parameters and display"
