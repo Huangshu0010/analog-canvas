@@ -76,6 +76,17 @@ performance contracts. Merge-queue, nightly, and manual CI runs always run the
 complete browser suite. Every target also closes with `git diff --check` and
 `git status --short --branch`; see [AGENTS.md](AGENTS.md) for the delivery gate.
 
+## License
+
+Copyright © 2026 Zengchun Chen and Zhishuai Zhang.
+
+Except where otherwise noted, Analog Canvas is licensed under the
+[GNU Affero General Public License v3.0 only](LICENSE.md)
+(`AGPL-3.0-only`). Modified versions that are distributed or made available
+for remote network interaction must provide their Corresponding Source under
+the same license. Third-party dependencies, reference material, and assets
+retain their respective copyright and license terms.
+
 ## Citation
 
 If you use Analog Canvas in research, teaching, or another publication, cite:
