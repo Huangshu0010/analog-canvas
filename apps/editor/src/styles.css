@@ -513,6 +513,176 @@ body {
   color: var(--icm-danger, #b4232a);
 }
 
+/* Netlist review is a report workbench, not a component picker. Its summary
+   spans the dialog while preview and diagnostics each own one complete pane;
+   structural and electrical findings share the diagnostics rail instead of
+   becoming a third item in a two-column insertion grid. */
+.netlist-preflight-dialog {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: var(--icm-space-3);
+  width: min(72rem, calc(100vw - 2.5rem));
+  height: min(44rem, calc(100dvh - 2.5rem));
+  padding: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: var(--icm-radius-lg);
+  color: var(--icm-text);
+  background: var(--icm-surface);
+  box-shadow: var(--icm-shadow-lg);
+}
+
+.netlist-preflight-header,
+.netlist-preflight-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--icm-space-3);
+}
+
+.netlist-preflight-header p,
+.netlist-preflight-header h2,
+.netlist-preflight-summary h3,
+.netlist-preflight-summary p,
+.netlist-preflight-diagnostics h3,
+.netlist-preflight-diagnostics p {
+  margin: 0;
+}
+
+.netlist-preflight-header p {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.netlist-preflight-header h2 {
+  margin-top: 0.15rem;
+  font-size: 16px;
+}
+
+.netlist-preflight-summary {
+  display: grid;
+  gap: var(--icm-space-1);
+  padding: var(--icm-space-3);
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-md);
+  background: var(--icm-surface-muted);
+}
+
+.netlist-preflight-summary h3,
+.netlist-preflight-diagnostics h3 {
+  font-size: var(--icm-font-md);
+}
+
+.netlist-preflight-summary p,
+.netlist-preflight-diagnostics p {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-sm);
+  line-height: 1.45;
+}
+
+.netlist-preflight-body {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(20rem, 2fr);
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-md);
+  background: var(--icm-surface-muted);
+}
+
+.netlist-preflight-body[data-has-preview="false"],
+.netlist-preflight-body[data-has-diagnostics="false"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.netlist-preflight-export {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--icm-space-3);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--icm-space-3);
+  background: var(--icm-surface);
+}
+
+.netlist-preflight-export-controls {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--icm-space-3);
+}
+
+.netlist-preflight-export-controls label {
+  display: grid;
+  gap: var(--icm-space-1);
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-sm);
+  font-weight: 650;
+}
+
+.netlist-preflight-export-controls select,
+.netlist-preflight-export-controls button,
+.netlist-preflight-actions button {
+  min-height: var(--icm-control-h-lg);
+}
+
+.netlist-preflight-export-controls select {
+  min-width: 9rem;
+}
+
+.netlist-preflight-export .netlist-preview {
+  min-height: 0;
+}
+
+.netlist-preflight-diagnostics {
+  display: grid;
+  align-content: start;
+  gap: var(--icm-space-4);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--icm-space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-left: 1px solid var(--icm-border);
+  background: var(--icm-surface-muted);
+  scrollbar-width: thin;
+}
+
+.netlist-preflight-body[data-has-preview="false"]
+  .netlist-preflight-diagnostics {
+  border-left: 0;
+}
+
+.netlist-preflight-diagnostics > section {
+  display: grid;
+  gap: var(--icm-space-2);
+}
+
+@media (max-width: 52rem) {
+  .netlist-preflight-dialog {
+    width: calc(100vw - 1rem);
+    height: calc(100dvh - 1rem);
+  }
+
+  .netlist-preflight-body {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+
+  .netlist-preflight-export {
+    min-height: 24rem;
+  }
+
+  .netlist-preflight-diagnostics {
+    overflow: visible;
+    border-top: 1px solid var(--icm-border);
+    border-left: 0;
+  }
+}
+
 .toolbar-check-glyph {
   width: 0;
   height: 0;

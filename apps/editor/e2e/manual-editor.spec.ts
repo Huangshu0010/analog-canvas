@@ -48,6 +48,14 @@ test("opens netlist preflight and navigates its canonical finding", async ({
   await expect(page.getByTestId("active-document-name")).toHaveText("Main");
   await expect(page.getByTestId("status")).toContainText("Preflight:");
   await expect(dialog).toBeVisible();
+
+  const reportBody = dialog.locator(".netlist-preflight-body");
+  const diagnostics = dialog.getByLabel("Netlist diagnostics");
+  const reportBodyBox = await reportBody.boundingBox();
+  const diagnosticsBox = await diagnostics.boundingBox();
+  expect(reportBodyBox).not.toBeNull();
+  expect(diagnosticsBox).not.toBeNull();
+  expect(diagnosticsBox!.width).toBeGreaterThan(reportBodyBox!.width * 0.9);
 });
 
 test("previews a validated structural netlist in both export dialects", async ({
@@ -3132,6 +3140,30 @@ test("requires warning review before exporting generated NoConnect nodes", async
   await expect(dialog).toContainText("GENERATED_NO_CONNECT_NODE");
   await expect(dialog.getByTestId("netlist-preview")).toContainText(
     "R1 IN NC0001 10k",
+  );
+  await expect(dialog.getByLabel("Preflight findings")).toBeVisible();
+  await expect(dialog.getByLabel("Electrical findings")).toBeVisible();
+
+  const previewPane = dialog.locator(".netlist-preflight-export");
+  const diagnosticsPane = dialog.getByLabel("Netlist diagnostics");
+  const desktopPreviewBox = await previewPane.boundingBox();
+  const desktopDiagnosticsBox = await diagnosticsPane.boundingBox();
+  expect(desktopPreviewBox).not.toBeNull();
+  expect(desktopDiagnosticsBox).not.toBeNull();
+  expect(desktopDiagnosticsBox!.x).toBeGreaterThanOrEqual(
+    desktopPreviewBox!.x + desktopPreviewBox!.width - 1,
+  );
+  expect(
+    Math.abs(desktopDiagnosticsBox!.y - desktopPreviewBox!.y),
+  ).toBeLessThan(2);
+
+  await page.setViewportSize({ width: 760, height: 800 });
+  const narrowPreviewBox = await previewPane.boundingBox();
+  const narrowDiagnosticsBox = await diagnosticsPane.boundingBox();
+  expect(narrowPreviewBox).not.toBeNull();
+  expect(narrowDiagnosticsBox).not.toBeNull();
+  expect(narrowDiagnosticsBox!.y).toBeGreaterThanOrEqual(
+    narrowPreviewBox!.y + narrowPreviewBox!.height - 1,
   );
 
   const downloadPromise = page.waitForEvent("download");
