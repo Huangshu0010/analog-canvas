@@ -190,7 +190,14 @@ describe("Razavi symbol catalog", () => {
     }
   });
 
-  it("uses semantic roles instead of raw VSS widths in migrated assets", () => {
+  it("uses semantic roles except where pinned PDF evidence requires an exact stroke", () => {
+    const figure1348Symbols = new Set([
+      "opamp-differential",
+      "opamp-differential-inputs-swapped",
+      "opamp-differential-crossed",
+      "opamp-differential-crossed-inputs-swapped",
+    ]);
+    const figure1348StrokeWidths = new Set([0.625137, 1.250273]);
     for (const symbol of razaviCatalogSymbols) {
       const primitives = [
         ...symbol.primitives,
@@ -200,10 +207,17 @@ describe("Razavi symbol catalog", () => {
       ];
       for (const primitive of primitives) {
         if (!primitive.style) continue;
-        expect(primitive.style.strokeWidth).toBeUndefined();
-        expect(primitive.style.strokeRole).toMatch(
-          /^(normal|emphasis|ground)$/u,
-        );
+        if (primitive.style.strokeWidth !== undefined) {
+          expect(figure1348Symbols.has(symbol.id)).toBe(true);
+          expect(figure1348StrokeWidths.has(primitive.style.strokeWidth)).toBe(
+            true,
+          );
+          expect(primitive.style.strokeRole).toBeUndefined();
+        } else {
+          expect(primitive.style.strokeRole).toMatch(
+            /^(normal|emphasis|ground)$/u,
+          );
+        }
       }
     }
 

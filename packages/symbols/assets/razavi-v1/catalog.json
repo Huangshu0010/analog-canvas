@@ -484,22 +484,22 @@
       "automaticMappings": [],
       "manualOnlyReason": "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential.symbol.json",
-      "assetHash": "b6591da73f0ba470fff9800783c37cdc24ed198ee787c6e82c6a13f85741b057",
+      "assetHash": "f575ff6fd3640a9d8e529fe06cf45932d29366924f971b799d9c776186f8ab75",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
-          "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png"
+          "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png"
         ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json"
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/differential-opamp-geometry.json"
       },
       "generation": {
         "kind": "razavi-pdf-vector-reference",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-        "referencePath": "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
         "converterPath": "scripts/generate-razavi-opamp-asset.mjs",
-        "converterVersion": 2
+        "converterVersion": 3
       }
     },
     {
@@ -512,15 +512,15 @@
       "automaticMappings": [],
       "manualOnlyReason": "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential-inputs-swapped.symbol.json",
-      "assetHash": "f4cbb7f66dd9fea2ae61e1b65a871744b096113a28614aa077bfe223c0cb6a57",
+      "assetHash": "c77b80605f99c903651640a785b0302a8de20609e5e9675edc61883a51795bdc",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
-          "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png"
+          "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png"
         ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json"
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/differential-opamp-geometry.json"
       },
       "generation": {
         "kind": "derived-input-swap",
@@ -539,22 +539,22 @@
       "automaticMappings": [],
       "manualOnlyReason": "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential-crossed.symbol.json",
-      "assetHash": "d84c4a0beacc6453fd2e9b9348368a62ecfe4026e2dc607b116140bd397ae6be",
+      "assetHash": "d72511a4780bf7c1e84825453916e94b931232116dac72590259882b6f9dcd98",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
-          "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png"
+          "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png"
         ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json"
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/differential-opamp-geometry.json"
       },
       "generation": {
         "kind": "razavi-pdf-vector-reference",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-        "referencePath": "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
         "converterPath": "scripts/generate-razavi-opamp-asset.mjs",
-        "converterVersion": 2
+        "converterVersion": 3
       }
     },
     {
@@ -567,15 +567,15 @@
       "automaticMappings": [],
       "manualOnlyReason": "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential-crossed-inputs-swapped.symbol.json",
-      "assetHash": "088e85038212ae9d8dfd29f8a4f91447c0d5ec52f4e510364a1f3e1da41c5d7b",
+      "assetHash": "f61d28cf09834f94baeceaeadc728f97f6022ab457ec74b59c97c304ef5cfa3f",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
-          "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png"
+          "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png"
         ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json"
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/differential-opamp-geometry.json"
       },
       "generation": {
         "kind": "derived-input-swap",
