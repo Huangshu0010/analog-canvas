@@ -134,7 +134,6 @@ import {
   externalSubcircuitSymbolId,
   findUnsupportedProjectSymbolIds,
   hierarchicalSymbolId,
-  InMemorySymbolResolver,
   resolvePdkSymbolMapping,
   resolvePdkSymbolMappingForTerminalOrder,
   reviewedSky130MosModelSuggestions,
@@ -766,12 +765,7 @@ export function App({
       if (!cancelled) setPublishSession(user);
     });
     // The same evaluator the worker enforces, run live on the open Project.
-    setPublishGates(
-      evaluateSubmissionGates(
-        project,
-        new InMemorySymbolResolver(builtInSymbols),
-      ),
-    );
+    setPublishGates(evaluateSubmissionGates(project, resolver));
     return () => {
       cancelled = true;
     };

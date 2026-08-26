@@ -1,8 +1,13 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 
-import { createEmptyProject, CURRENT_PROJECT_SCHEMA_VERSION } from "@icm/model";
+import {
+  createEmptyDocument,
+  createEmptyProject,
+  CURRENT_PROJECT_SCHEMA_VERSION,
+} from "@icm/model";
 import { parseProject, serializeProject } from "@icm/project-protocol";
+import { hierarchicalSymbolId } from "@icm/symbols";
 
 import {
   GALLERY_DAILY_SUBMISSION_LIMIT,
@@ -618,6 +623,57 @@ describe("gallery submissions", () => {
     expect(await preview.text()).toContain("<svg");
   });
 
+  it("publishes and updates a hierarchical Project with its top-level Cell preview", async () => {
+    const env = environment();
+    const cookie = await makerOf(env);
+    const publish = await route(
+      env,
+      submissionRequest(
+        {
+          name: "Hierarchical DAC",
+          projectText: hierarchicalProjectText("Hierarchical DAC"),
+        },
+        { cookie },
+      ),
+    );
+    expect(publish.status).toBe(201);
+    const { id } = (await publish.json()) as { id: string };
+
+    const detail = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}`),
+    );
+    const stored = (await detail.json()) as { projectText: string };
+    expect(parseProject(stored.projectText).documents).toHaveLength(2);
+
+    const preview = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}/preview.svg`),
+    );
+    const svg = await preview.text();
+    expect(svg).toContain('data-object-id="XU0"');
+    expect(svg).toContain(
+      `data-symbol-id="${hierarchicalSymbolId("scdac_unit")}"`,
+    );
+
+    const update = await route(
+      env,
+      new Request(`${ORIGIN}/api/gallery/${id}`, {
+        method: "PUT",
+        headers: {
+          Origin: ORIGIN,
+          Cookie: cookie,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          name: "Hierarchical DAC v2",
+          projectText: hierarchicalProjectText("Hierarchical DAC v2"),
+        }),
+      }),
+    );
+    expect(update.status).toBe(200);
+  });
+
   it("upgrades a previous-schema submission through the protocol", async () => {
     const env = environment();
     const id = await submitOne(env, "Old Schema", {
@@ -1033,6 +1089,28 @@ function wiredProjectText(name = "Wired"): string {
       ],
     },
   ];
+  return serializeProject(project);
+}
+
+function hierarchicalProjectText(name = "Hierarchical"): string {
+  const project = parseProject(wiredProjectText(name));
+  const top = project.documents[0]!;
+  const child = createEmptyDocument("document-child", "scdac_unit");
+  top.instances.push({
+    id: "XU0",
+    symbolId: hierarchicalSymbolId(child.netlist!.name),
+    placement: {
+      position: { x: 100, y: 120 },
+      rotation: 0,
+      mirror: "none",
+    },
+    netlist: {
+      reference: "XU0",
+      parameters: {},
+      binding: { kind: "subcircuit", childDocumentId: child.id },
+    },
+  });
+  project.documents.push(child);
   return serializeProject(project);
 }
 

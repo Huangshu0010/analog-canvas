@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-import { createEmptyProject } from "@icm/model";
+import { createEmptyDocument, createEmptyProject } from "@icm/model";
 import { serializeProject } from "@icm/project-protocol";
+import { hierarchicalSymbolId } from "@icm/symbols";
 
 import { chooseComponent, clickCommand } from "./editor-fixtures.js";
 
@@ -17,6 +18,66 @@ const ENTRY = {
 
 /** Match the list path with or without filters and a paging cursor. */
 const galleryListUrl = (url: URL): boolean => url.pathname === "/api/gallery";
+
+function hierarchicalPublishProject() {
+  const project = createEmptyProject("hierarchical-publish", "Hierarchical");
+  const top = project.documents[0]!;
+  const child = createEmptyDocument("document-child", "scdac_unit");
+  top.instances = [
+    {
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        mirror: "none",
+      },
+      netlist: { reference: "R1", parameters: {} },
+    },
+    {
+      id: "R2",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 200, y: 0 },
+        rotation: 0,
+        mirror: "none",
+      },
+      netlist: { reference: "R2", parameters: {} },
+    },
+    {
+      id: "XU0",
+      symbolId: hierarchicalSymbolId(child.netlist!.name),
+      placement: {
+        position: { x: 100, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      netlist: {
+        reference: "XU0",
+        parameters: {},
+        binding: { kind: "subcircuit", childDocumentId: child.id },
+      },
+    },
+  ];
+  top.nets = [
+    {
+      id: "n1",
+      terminals: [
+        { instanceId: "R1", pinName: "1" },
+        { instanceId: "R2", pinName: "1" },
+      ],
+    },
+    {
+      id: "n2",
+      terminals: [
+        { instanceId: "R1", pinName: "2" },
+        { instanceId: "R2", pinName: "2" },
+      ],
+    },
+  ];
+  project.documents.push(child);
+  return project;
+}
 
 async function mockGallery(page: Page, entries: object[]): Promise<void> {
   await page.route(galleryListUrl, (route) =>
@@ -829,6 +890,38 @@ test("an ordinary user sees blocking quality gates on an empty project", async (
   await expect(dialog.getByLabel("Owner passphrase")).toHaveCount(0);
   // The gates still hold, but the button says what actually happens next.
   await expect(dialog.getByRole("button", { name: "Publish" })).toBeDisabled();
+});
+
+test("the publish dialog resolves internal Cell instances from the open Project", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: "u9",
+          displayName: "Visitor",
+          email: "visitor@example.com",
+          provider: "email",
+          role: "user",
+          isAdmin: false,
+        },
+      },
+    }),
+  );
+
+  await page.goto("/editor");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "hierarchical-publish.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(serializeProject(hierarchicalPublishProject())),
+  });
+  await page.getByTestId("publish-gallery-button").click();
+  const dialog = page.getByTestId("publish-gallery-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId("publish-gallery-gates")).toHaveCount(0);
+  await expect(dialog).not.toContainText("ERC_UNRESOLVED_SYMBOL");
+  await expect(dialog.getByRole("button", { name: "Publish" })).toBeEnabled();
 });
 
 test("the retired review queue is gone from the moderation page", async ({
