@@ -213,6 +213,7 @@ import {
 } from "../features/netlist-export/netlist-authoring";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
 import { DrawingToolbar } from "../features/editor-shell/drawing-toolbar";
+import { FileCommandMenu } from "../features/editor-shell/file-command-menu";
 import {
   quickPlaceRequest,
   ShapesPanel,
@@ -7781,131 +7782,27 @@ export function App({
             }}
           >
             <div className="menubar-row">
-              <details className="command-menu" name="editor-command-menu">
-                <summary>File</summary>
-                <div className="command-popover">
-                  <button type="button" onClick={createNewProject}>
-                    New Project
-                  </button>
-                  <button type="button" onClick={() => void saveProjectFile()}>
-                    Save Project
-                  </button>
-                  {/* Save writes back to the chosen file without asking
-                      again, so choosing a different one needs its own way in. */}
-                  <button
-                    type="button"
-                    data-testid="save-project-as"
-                    onClick={() => void saveProjectFile({ pickLocation: true })}
-                  >
-                    Save Project As…
-                  </button>
-                  {workspaceSlots.length > 0 ? (
-                    <>
-                      <span className="command-group-label">Your shelf</span>
-                      {workspaceSlots.map((slot) => (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          data-testid={`shelf-slot-${slot.id}`}
-                          title={`Saved ${slot.savedAt}`}
-                          onClick={() => void openShelvedCircuit(slot)}
-                        >
-                          {slot.name}
-                        </button>
-                      ))}
-                    </>
-                  ) : null}
-                  <button type="button" onClick={refreshApp}>
-                    Refresh app
-                  </button>
-                  <label className="file-import">
-                    Open Project
-                    <input
-                      ref={projectInputRef}
-                      data-testid="project-file"
-                      type="file"
-                      accept=".json,.icproj.json,application/json"
-                      onChange={(event) =>
-                        void openProjectFile(
-                          event.currentTarget.files?.[0] ?? null,
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="file-import">
-                    Import SPICE
-                    <input
-                      data-testid="spice-files"
-                      type="file"
-                      accept=".spi,.cir,.sp,.inc,.lib"
-                      multiple
-                      onChange={(event) =>
-                        void importSpiceFiles(event.currentTarget.files)
-                      }
-                    />
-                  </label>
-                  <span className="command-group-label">Export</span>
-                  <button
-                    type="button"
-                    aria-label="Export SVG"
-                    onClick={exportSvg}
-                  >
-                    SVG
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Export PNG"
-                    onClick={() => void exportRaster("png")}
-                  >
-                    PNG
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Export PDF"
-                    onClick={() => void exportRaster("pdf")}
-                  >
-                    PDF
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Export SPICE netlist"
-                    onClick={() => exportDesignNetlist("spice")}
-                  >
-                    SPICE netlist
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Export Spectre netlist"
-                    onClick={() => exportDesignNetlist("spectre")}
-                  >
-                    Spectre netlist
-                  </button>
-                  <button
-                    type="button"
-                    onClick={restorePreviousProject}
-                    disabled={previousProject === null}
-                    title={
-                      previousProject
-                        ? `Return to ${previousProject.project.name}`
-                        : "No previous Project in this editor session"
-                    }
-                  >
-                    Previous Project
-                  </button>
-                  <button
-                    type="button"
-                    onClick={revertToFormalProjectBaseline}
-                    disabled={formalProjectBaseline === null || !isDirtyWork()}
-                  >
-                    Revert to Last Saved
-                  </button>
-                  {recoverySessions.length > 0 ? (
-                    <button type="button" onClick={openRecoveryDialog}>
-                      Recover recent work…
-                    </button>
-                  ) : null}
-                </div>
-              </details>
+              <FileCommandMenu
+                workspaceSlots={workspaceSlots}
+                previousProjectName={previousProject?.project.name ?? null}
+                canRevert={formalProjectBaseline !== null && isDirtyWork()}
+                hasRecoverySessions={recoverySessions.length > 0}
+                projectInputRef={projectInputRef}
+                onNewProject={createNewProject}
+                onSaveProject={(pickLocation) =>
+                  void saveProjectFile({ pickLocation })
+                }
+                onOpenShelfSlot={(slot) => void openShelvedCircuit(slot)}
+                onRefresh={refreshApp}
+                onOpenProject={(file) => void openProjectFile(file)}
+                onImportSpice={(files) => void importSpiceFiles(files)}
+                onExportSvg={exportSvg}
+                onExportRaster={(format) => void exportRaster(format)}
+                onExportNetlist={exportDesignNetlist}
+                onRestorePrevious={restorePreviousProject}
+                onRevert={revertToFormalProjectBaseline}
+                onOpenRecovery={openRecoveryDialog}
+              />
               <details className="command-menu" name="editor-command-menu">
                 <summary>Edit</summary>
                 <div className="command-popover">
