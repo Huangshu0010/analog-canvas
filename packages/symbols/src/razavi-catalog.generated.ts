@@ -586,7 +586,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential.symbol.json",
     assetHash:
-      "f575ff6fd3640a9d8e529fe06cf45932d29366924f971b799d9c776186f8ab75",
+      "21f8b7c9d19b2681d4d1fd1d3b548f8f1db7252b0fc60a3a22fa036d1342b4ea",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -620,7 +620,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-inputs-swapped.symbol.json",
     assetHash:
-      "c77b80605f99c903651640a785b0302a8de20609e5e9675edc61883a51795bdc",
+      "9911ad8eb2cd5239f103f2b4a077219d90ccf6836d67b56cd02941f84cfc1a2b",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -651,7 +651,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-crossed.symbol.json",
     assetHash:
-      "d72511a4780bf7c1e84825453916e94b931232116dac72590259882b6f9dcd98",
+      "36c0ff0c21191fa4310468f1602a2d491dfad87eeffeea6f8ff49c5586c8e846",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -685,7 +685,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-crossed-inputs-swapped.symbol.json",
     assetHash:
-      "f61d28cf09834f94baeceaeadc728f97f6022ab457ec74b59c97c304ef5cfa3f",
+      "e744c73e834512f595115c155dec990a8d194168b8e8accca8dc88e82478c651",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -3518,7 +3518,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "IN+",
         role: "non-inverting-input",
         at: {
-          x: -50,
+          x: -40,
           y: 10,
         },
         direction: "west",
@@ -3531,7 +3531,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "IN-",
         role: "inverting-input",
         at: {
-          x: -50,
+          x: -40,
           y: -10,
         },
         direction: "west",
@@ -3544,7 +3544,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT+",
         role: "output",
         at: {
-          x: 40,
+          x: 20,
           y: 10,
         },
         direction: "east",
@@ -3557,7 +3557,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT-",
         role: "output",
         at: {
-          x: 40,
+          x: 20,
           y: -10,
         },
         direction: "east",
@@ -3571,7 +3571,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -50,
+          x: -40,
           y: -10,
         },
         to: {
@@ -3579,7 +3579,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3587,7 +3587,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -50,
+          x: -40,
           y: 10,
         },
         to: {
@@ -3595,7 +3595,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3607,11 +3607,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: 40,
+          x: 20,
           y: -10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3623,11 +3623,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: 40,
+          x: 20,
           y: 10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3762,7 +3762,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "IN+",
         role: "non-inverting-input",
         at: {
-          x: -50,
+          x: -40,
           y: -10,
         },
         direction: "west",
@@ -3775,7 +3775,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "IN-",
         role: "inverting-input",
         at: {
-          x: -50,
+          x: -40,
           y: 10,
         },
         direction: "west",
@@ -3788,7 +3788,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT+",
         role: "output",
         at: {
-          x: 40,
+          x: 20,
           y: 10,
         },
         direction: "east",
@@ -3801,7 +3801,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT-",
         role: "output",
         at: {
-          x: 40,
+          x: 20,
           y: -10,
         },
         direction: "east",
@@ -3815,7 +3815,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -50,
+          x: -40,
           y: -10,
         },
         to: {
@@ -3823,7 +3823,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3831,7 +3831,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -50,
+          x: -40,
           y: 10,
         },
         to: {
@@ -3839,7 +3839,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3851,11 +3851,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: 40,
+          x: 20,
           y: -10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -3867,11 +3867,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: 40,
+          x: 20,
           y: 10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4006,7 +4006,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "IN+",
         role: "non-inverting-input",
         at: {
-          x: -50,
+          x: -40,
           y: 10,
         },
         direction: "west",
@@ -4019,7 +4019,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "IN-",
         role: "inverting-input",
         at: {
-          x: -50,
+          x: -40,
           y: -10,
         },
         direction: "west",
@@ -4032,7 +4032,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT+",
         role: "output",
         at: {
-          x: 40,
+          x: 20,
           y: -10,
         },
         direction: "east",
@@ -4045,7 +4045,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT-",
         role: "output",
         at: {
-          x: 40,
+          x: 20,
           y: 10,
         },
         direction: "east",
@@ -4059,7 +4059,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -50,
+          x: -40,
           y: -10,
         },
         to: {
@@ -4067,7 +4067,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4075,7 +4075,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -50,
+          x: -40,
           y: 10,
         },
         to: {
@@ -4083,7 +4083,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4095,11 +4095,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: 40,
+          x: 20,
           y: -10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4111,11 +4111,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: 40,
+          x: 20,
           y: 10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4250,7 +4250,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "IN+",
         role: "non-inverting-input",
         at: {
-          x: -50,
+          x: -40,
           y: -10,
         },
         direction: "west",
@@ -4263,7 +4263,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "IN-",
         role: "inverting-input",
         at: {
-          x: -50,
+          x: -40,
           y: 10,
         },
         direction: "west",
@@ -4276,7 +4276,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT+",
         role: "output",
         at: {
-          x: 40,
+          x: 20,
           y: -10,
         },
         direction: "east",
@@ -4289,7 +4289,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "OUT-",
         role: "output",
         at: {
-          x: 40,
+          x: 20,
           y: 10,
         },
         direction: "east",
@@ -4303,7 +4303,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -50,
+          x: -40,
           y: -10,
         },
         to: {
@@ -4311,7 +4311,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4319,7 +4319,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -50,
+          x: -40,
           y: 10,
         },
         to: {
@@ -4327,7 +4327,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4339,11 +4339,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -10,
         },
         to: {
-          x: 40,
+          x: 20,
           y: -10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -4355,11 +4355,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 10,
         },
         to: {
-          x: 40,
+          x: 20,
           y: 10,
         },
         style: {
-          strokeWidth: 0.625137,
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
