@@ -1,7 +1,6 @@
 import { lazy, StrictMode, Suspense, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 
-import { App } from "./app/App";
 import { EditorErrorBoundary } from "./components/editor-error-boundary";
 import "./styles.css";
 
@@ -12,6 +11,12 @@ if (!container) {
 }
 
 type VisitStats = { pv: number; uv: number; scope: "all" };
+
+const EditorApp = lazy(() =>
+  import("./app/App").then((module) => ({
+    default: module.App,
+  })),
+);
 
 const AnalyticsPage = lazy(() =>
   import("./components/analytics-page").then((module) => ({
@@ -126,7 +131,14 @@ function Root() {
     );
   }
   return (
-    <App visitStats={stats} initialGalleryEntryId={galleryEntryIdOf(path)} />
+    <Suspense
+      fallback={<div className="analytics-loading">Loading editor…</div>}
+    >
+      <EditorApp
+        visitStats={stats}
+        initialGalleryEntryId={galleryEntryIdOf(path)}
+      />
+    </Suspense>
   );
 }
 
