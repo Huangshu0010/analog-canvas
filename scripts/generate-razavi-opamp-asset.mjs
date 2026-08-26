@@ -30,6 +30,10 @@ const differentialAssetPaths = {
 const SOURCE_PAIR_OFFSET = 10;
 /** Keep both input and output pairs one connection grid farther apart. */
 const OUTPUT_PAIR_OFFSET = 20;
+/** Polarity glyphs sit half a grid inward from their associated pin pairs. */
+const POLARITY_PAIR_OFFSET = 15;
+/** Add a small horizontal gap between input- and output-side glyphs. */
+const POLARITY_HORIZONTAL_SPREAD = 1;
 const catalogPath = resolve(
   root,
   "packages/symbols/assets/razavi-v1/catalog.json",
@@ -248,7 +252,7 @@ const triangleEdgeXAtY = (triangle, y) => {
     : (edgeY - y) / (edgeY - triangle.apexY);
   return triangle.leftX + ratio * (triangle.apexX - triangle.leftX);
 };
-const scaleDifferentialPairLine = (geometry) => {
+const scaleDifferentialPairLine = (geometry, spreadDirection) => {
   const base = {
     from: scaleDifferentialMarkPoint(geometry.from),
     to: scaleDifferentialMarkPoint(geometry.to),
@@ -259,7 +263,7 @@ const scaleDifferentialPairLine = (geometry) => {
   };
   const side = Math.sign(center.y - opampCenterY);
   const targetCenterY =
-    center.y + side * (OUTPUT_PAIR_OFFSET - SOURCE_PAIR_OFFSET);
+    center.y + side * (POLARITY_PAIR_OFFSET - SOURCE_PAIR_OFFSET);
   const baseEdgeX = triangleEdgeXAtY(baseDifferentialTriangle, center.y);
   const crossSectionFraction =
     (center.x - baseDifferentialTriangle.leftX) /
@@ -270,7 +274,8 @@ const scaleDifferentialPairLine = (geometry) => {
   );
   const targetCenterX =
     scaledDifferentialTriangle.leftX +
-    crossSectionFraction * (targetEdgeX - scaledDifferentialTriangle.leftX);
+    crossSectionFraction * (targetEdgeX - scaledDifferentialTriangle.leftX) +
+    spreadDirection * POLARITY_HORIZONTAL_SPREAD;
   const shiftPoint = (point) => ({
     x: targetCenterX + (point.x - center.x),
     y: targetCenterY + (point.y - center.y),
@@ -308,6 +313,10 @@ const halfwayAlongLead = (contact, pin) => ({
     ),
     y: contact.y,
   },
+});
+const fullInputLeadPin = (contact, pin) => ({
+  ...pin,
+  at: { x: pin.at.x, y: contact.y },
 });
 const TRIANGLE_STROKE_WIDTH = 2.4;
 const TRIANGLE_HALF_STROKE = TRIANGLE_STROKE_WIDTH / 2;
@@ -359,38 +368,38 @@ const outputLead = (contact, pin) => ({
 });
 const sourceInputMarks = [
   taggedLine(
-    scaleDifferentialPairLine(differentialGeometry.input_plus_vertical),
+    scaleDifferentialPairLine(differentialGeometry.input_plus_vertical, -1),
     "input-polarity",
   ),
   taggedLine(
-    scaleDifferentialPairLine(differentialGeometry.input_plus_horizontal),
+    scaleDifferentialPairLine(differentialGeometry.input_plus_horizontal, -1),
     "input-polarity",
   ),
   taggedLine(
-    scaleDifferentialPairLine(differentialGeometry.input_minus_horizontal),
+    scaleDifferentialPairLine(differentialGeometry.input_minus_horizontal, -1),
     "input-polarity",
   ),
 ];
 const sourceOutputMarks = [
   taggedLine(
-    scaleDifferentialPairLine(differentialGeometry.output_minus_horizontal),
+    scaleDifferentialPairLine(differentialGeometry.output_minus_horizontal, 1),
     "output-polarity",
   ),
   taggedLine(
-    scaleDifferentialPairLine(differentialGeometry.output_plus_vertical),
+    scaleDifferentialPairLine(differentialGeometry.output_plus_vertical, 1),
     "output-polarity",
   ),
   taggedLine(
-    scaleDifferentialPairLine(differentialGeometry.output_plus_horizontal),
+    scaleDifferentialPairLine(differentialGeometry.output_plus_horizontal, 1),
     "output-polarity",
   ),
 ];
 const differentialSymbol = (id, name, plusOutputAtBottom) => {
-  const topInput = halfwayAlongLead(
+  const topInput = fullInputLeadPin(
     inputLeadContact(-OUTPUT_PAIR_OFFSET),
     symbol.pins[1],
   );
-  const bottomInput = halfwayAlongLead(
+  const bottomInput = fullInputLeadPin(
     inputLeadContact(OUTPUT_PAIR_OFFSET),
     symbol.pins[0],
   );

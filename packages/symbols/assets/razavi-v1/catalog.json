@@ -484,7 +484,7 @@
       "automaticMappings": [],
       "manualOnlyReason": "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential.symbol.json",
-      "assetHash": "9b9a7abe0d6286f3a6790c2e9fd732395020a5fb008d9b0a4b071948d093d6b8",
+      "assetHash": "ae8bdbf7a0ec4c73b60199dac9cf8bbf7746b790b20a4a557d562db507a89b17",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -513,7 +513,7 @@
       "automaticMappings": [],
       "manualOnlyReason": "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential-inputs-swapped.symbol.json",
-      "assetHash": "9b9e8d4e8dc18db090e432e17ca3762640b9cee4b4ebd3c49c04af2236451f74",
+      "assetHash": "415b962fc6492a94a9d5e703a54b1e714b0a56b0446e7171108b24cd689b7ce5",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -541,7 +541,7 @@
       "automaticMappings": [],
       "manualOnlyReason": "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential-crossed.symbol.json",
-      "assetHash": "75c92b68695f5b7119b27fa627ff03287a63e9c9d2604c955018a318f93e8bc4",
+      "assetHash": "f9877f9cdf6461b3727f9b8ce2ee5f71a1abed6cfa71d0061a5cec88c056f758",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -570,7 +570,7 @@
       "automaticMappings": [],
       "manualOnlyReason": "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
       "assetPath": "opamp-differential-crossed-inputs-swapped.symbol.json",
-      "assetHash": "1ee750d79537393376b2502db5736bcb59954026d1da9d0df5ec09084f56b843",
+      "assetHash": "fa2104c9b1b148963d49262f8f9e259ee61e75784cf0edaf4743c17416f7cc51",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
