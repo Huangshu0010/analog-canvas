@@ -270,7 +270,7 @@ describe("direct-contact transform lifecycle", () => {
     expect(aOwner).toBe(bOwner);
   });
 
-  it("does not merge different Base Nets from raw geometric coincidence", () => {
+  it("merges different Base Nets when a moved endpoint makes exact contact", () => {
     const document = fixture();
     document.instances.find((instance) => instance.id === "B")!.placement = {
       position: { x: 460, y: 300 },
@@ -308,11 +308,288 @@ describe("direct-contact transform lifecycle", () => {
     );
 
     if (!result.ok) throw new Error(result.error.message);
-    expect(result.document.nets).toHaveLength(2);
-    expect(result.document.nets.map((net) => net.id).sort()).toEqual([
-      "net-a",
-      "net-b",
+    expect(result.document.nets).toHaveLength(1);
+    expect(result.document.nets[0]?.terminals).toEqual(
+      expect.arrayContaining([
+        { instanceId: "A", pinName: "P" },
+        { instanceId: "B", pinName: "P" },
+      ]),
+    );
+  });
+
+  it("rejects exact contact between incompatible power domains", () => {
+    const document = fixture();
+    document.instances.find((instance) => instance.id === "B")!.placement = {
+      position: { x: 460, y: 300 },
+      rotation: 0,
+      mirror: "x",
+    };
+    document.nets = [
+      {
+        id: "net-vdd",
+        terminals: [{ instanceId: "A", pinName: "P" }],
+      },
+      {
+        id: "net-ground",
+        terminals: [{ instanceId: "B", pinName: "P" }],
+      },
+    ];
+    document.netlist!.terminals[0]!.netId = "net-vdd";
+    document.netlist!.terminals[1]!.netId = "net-ground";
+    document.connectivityEvidence = [
+      {
+        id: "claim-vdd",
+        kind: "name-claim",
+        netId: "net-vdd",
+        name: "VDD",
+        scope: "global",
+        powerDomain: "vdd",
+        owner: { kind: "explicit-net-property" },
+      },
+      {
+        id: "claim-ground",
+        kind: "name-claim",
+        netId: "net-ground",
+        name: "0",
+        scope: "global",
+        powerDomain: "ground",
+        owner: { kind: "explicit-net-property" },
+      },
+    ];
+
+    const result = executeTransaction(
+      document,
+      transaction(
+        document,
+        [
+          {
+            kind: "move_instance",
+            instanceId: "B",
+            position: { x: 160, y: 300 },
+          },
+        ],
+        "power-conflict",
+      ),
+      context,
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "EDIT_PRECONDITION",
+        message: "Cannot merge Nets with incompatible power domains",
+      },
+    });
+  });
+
+  it("assigns an ownerless terminal to the contacted Net and clears NoConnect", () => {
+    const document = fixture();
+    document.instances.find((instance) => instance.id === "B")!.placement = {
+      position: { x: 460, y: 300 },
+      rotation: 0,
+      mirror: "x",
+    };
+    document.nets[0]!.terminals = [{ instanceId: "A", pinName: "P" }];
+    document.noConnects = [
+      {
+        id: "no-connect-b",
+        endpoint: { kind: "terminal", instanceId: "B", pinName: "P" },
+      },
+    ];
+
+    const result = executeTransaction(
+      document,
+      transaction(
+        document,
+        [
+          {
+            kind: "move_instance",
+            instanceId: "B",
+            position: { x: 160, y: 300 },
+          },
+        ],
+        "ownerless-contact",
+      ),
+      context,
+    );
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.document.nets).toHaveLength(1);
+    expect(result.document.nets[0]?.terminals).toEqual(
+      expect.arrayContaining([
+        { instanceId: "A", pinName: "P" },
+        { instanceId: "B", pinName: "P" },
+      ]),
+    );
+    expect(result.document.noConnects).toEqual([]);
+  });
+
+  it("connects a newly added instance from its final exact placement", () => {
+    const document = fixture();
+    document.instances = [
+      {
+        id: "A",
+        symbolId: "ground",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+    ];
+    document.netlist!.terminals = [];
+    document.nets = [
+      {
+        id: "net-ground",
+        terminals: [{ instanceId: "A", pinName: "0" }],
+      },
+    ];
+    const result = executeTransaction(
+      document,
+      transaction(
+        document,
+        [
+          {
+            kind: "add_instance",
+            instance: {
+              id: "B",
+              symbolId: "ground",
+              placement: {
+                position: { x: 100, y: 100 },
+                rotation: 0,
+                mirror: "none",
+              },
+            },
+          },
+        ],
+        "add-instance-contact",
+      ),
+      context,
+    );
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.document.nets).toEqual([
+      expect.objectContaining({
+        id: "net-ground",
+        terminals: expect.arrayContaining([
+          { instanceId: "A", pinName: "0" },
+          { instanceId: "B", pinName: "0" },
+        ]),
+      }),
     ]);
+  });
+
+  it("honors an explicit disconnect even while endpoints remain coincident", () => {
+    const document = fixture();
+    document.instances = ["A", "B"].map((id) => ({
+      id,
+      symbolId: "ground",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+    }));
+    document.netlist!.terminals = [];
+    document.nets = [
+      {
+        id: "net-contact",
+        terminals: ["A", "B"].map((instanceId) => ({
+          instanceId,
+          pinName: "0",
+        })),
+      },
+    ];
+    const groundEndpoint = (instanceId: string): RouteEndpoint => ({
+      kind: "terminal",
+      instanceId,
+      pinName: "0",
+    });
+    const result = executeTransaction(
+      document,
+      transaction(
+        document,
+        [
+          {
+            kind: "disconnect_endpoint",
+            endpoint: groundEndpoint("B"),
+          },
+        ],
+        "explicit-disconnect",
+      ),
+      context,
+    );
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.document.nets[0]?.terminals).toEqual([
+      { instanceId: "A", pinName: "0" },
+    ]);
+  });
+
+  it("attaches every explicit Junction crossed by a newly added power rail", () => {
+    const document = fixture();
+    document.instances = [];
+    document.netlist!.terminals = [];
+    document.nets = [
+      { id: "net-left", terminals: [] },
+      { id: "net-right", terminals: [] },
+    ];
+    document.junctions = [
+      {
+        id: "junction-left",
+        netId: "net-left",
+        position: { x: 120, y: 300 },
+        role: "route-anchor",
+      },
+      {
+        id: "junction-right",
+        netId: "net-right",
+        position: { x: 180, y: 300 },
+        role: "route-anchor",
+      },
+    ];
+
+    const result = executeTransaction(
+      document,
+      transaction(
+        document,
+        [
+          {
+            kind: "add_power_rail",
+            netId: "net-rail",
+            routeId: "route-rail",
+            startJunctionId: "rail-start",
+            endJunctionId: "rail-end",
+            labelId: "rail-label",
+            netName: "VDD",
+            scope: "global",
+            powerDomain: "vdd",
+            start: { x: 100, y: 300 },
+            end: { x: 200, y: 300 },
+          },
+        ],
+        "rail-crosses-junctions",
+      ),
+      context,
+    );
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.document.nets).toHaveLength(1);
+    expect(
+      new Set(result.document.junctions.map((junction) => junction.netId)),
+    ).toEqual(new Set([result.document.nets[0]!.id]));
+    expect(result.document.routes).toHaveLength(3);
+    expect(
+      result.document.routes.flatMap((route) => [
+        endpointKey(route.from),
+        endpointKey(route.to),
+      ]),
+    ).toEqual(
+      expect.arrayContaining([
+        "junction:junction-left",
+        "junction:junction-right",
+      ]),
+    );
   });
 
   it("restores both zero-length contact and materialized Route with history", () => {

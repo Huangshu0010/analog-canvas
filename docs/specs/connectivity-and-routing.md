@@ -30,17 +30,22 @@ Route transaction.
   compiler persists only grid landings and ordinary grid waypoints. An offset
   MOS B anchor therefore uses the same Route transaction as every other pin;
   `bulk-dashed` changes only presentation.
-- Exact visible endpoint coincidence is a derived zero-length physical contact
-  only for endpoints already in the same Base Net. New contact intent is still
-  authored explicitly by the snap/placement planner through
-  `connect_endpoints`; raw coordinate overlap never merges or creates a Net.
+- Exact visible endpoint coincidence is a zero-length physical contact. After
+  placement or geometry edits reach their final coordinates, the Edit Engine
+  deterministically creates or merges the participating Base Net; incompatible
+  power domains or Net-name contracts reject the whole transaction. An
+  explicit `disconnect_endpoint` in the same transaction suppresses this
+  normalization so deletion cannot immediately reconnect itself.
 - If a move, rotation, or mirror separates a confirmed direct contact, the
   transaction materializes one ordinary manual Route after all transforms have
   reached their final positions. Jointly transformed endpoints remain a
   route-free direct contact, and an existing alternate physical path prevents
   duplicate Route creation.
-- A Route-segment tap splits geometry at an explicit Junction. A mere crossing
-  remains disconnected.
+- A Route-segment tap splits geometry at an explicit Junction. A Junction that
+  lands on another ordinary Route joins and splits that conductor as well; a
+  mere route-interior crossing remains disconnected. Pin-to-route attachment
+  remains a snapped typed intent because it changes the selected Route's
+  identity and geometry.
 - Moving a connected Instance stretches the attached Route while preserving
   endpoint identity.
 - `remove_route_geometry` removes presentation geometry only. The ordinary
@@ -113,8 +118,12 @@ coordinates.
 marker attachment, diagnostics, export, and Agent Snapshot. It publishes the
 same resolved endpoint connections consumed by those readers; consumers do not
 reconstruct terminal contacts from Symbol coordinates.
-`deriveDocumentContactEvidence` is the sole coincident-endpoint contact source;
-consumers do not infer contact independently from pixels or bounds.
+`deriveDocumentContactEvidence` is the sole read model for confirmed same-Net
+coincident contacts; consumers do not infer contact independently from pixels
+or bounds. The transaction connectivity normalizer is the corresponding write
+boundary: it derives gained endpoint and explicit Junction-on-route contacts
+from exact resolved geometry and commits them through the ordinary Base-Net and
+Route mutations.
 
 Route queries (tap, nearest segment, crossings) and attachment placement are
 read-only derived modules. Route normalization, constraint-aware authoring, segment

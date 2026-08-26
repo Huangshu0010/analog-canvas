@@ -68,8 +68,9 @@ function uniqueDerivedId(
  * Reconcile zero-length endpoint contacts once, after all transform edits have
  * reached their final projected positions.
  *
- * This mutates only ordinary Route geometry. It never creates or merges Base
- * Nets: new direct-contact intent remains an explicit authoring action.
+ * This phase mutates only ordinary Route geometry. Gained exact contacts are
+ * handled later by the transaction connectivity normalizer, after every edit
+ * and route-follow operation has reached its final geometry.
  */
 export function reconcileTransformDirectContacts(
   before: SchematicDocument,

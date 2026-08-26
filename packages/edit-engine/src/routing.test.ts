@@ -864,6 +864,11 @@ describe("routing Edit Engine", () => {
 
   it("turns a multi-part selection as one body about a shared pivot", () => {
     const document = documentFixture();
+    for (const instance of document.instances.filter(
+      (candidate) => !["A", "B"].includes(candidate.id),
+    )) {
+      if (instance.placement) instance.placement.position.x += 1_000;
+    }
     // A and B sit side by side on y=300; a quarter turn about their shared
     // centre has to stand them up, not merely spin each symbol where it is.
     const plan = proposeGroupRotationEdits(document, resolver, ["A", "B"], 90);
@@ -2024,7 +2029,7 @@ describe("routing Edit Engine", () => {
     ]);
   });
 
-  it("splits only the explicitly targeted conductor at a crossing", () => {
+  it("rejects a Junction dot that would join conflicting crossing Nets", () => {
     const document = documentFixture();
     document.routes = [
       {
@@ -2065,20 +2070,12 @@ describe("routing Edit Engine", () => {
     );
 
     expect(result).toMatchObject({
-      ok: true,
-      document: {
-        junctions: [{ id: "ambiguous-dot", netId: "net-h" }],
+      ok: false,
+      error: {
+        code: "INVALID_RESULT",
+        message: "Transaction introduces conflicting Logical Net names",
       },
     });
-    if (!result.ok) throw new Error("Targeted crossing split failed");
-    expect(result.document.routes.map((route) => route.id)).toEqual([
-      "route-h-a",
-      "route-h-b",
-      "route-v",
-    ]);
-    expect(
-      result.document.routes.find((route) => route.id === "route-v"),
-    ).toEqual(document.routes[1]);
   });
 
   it("accepts an arbitrary-angle route and still needs its context", () => {

@@ -254,8 +254,10 @@ Topology operations have these preconditions:
   Junctions, terminals, NoConnects, instance-owned annotations, and unlocked
   layout references are removed explicitly, and only then is the unreferenced
   instance removed.
-- Endpoints on different Nets require an explicit preceding `merge_nets` edit
-  in the same transaction.
+- Explicit `connect_endpoints` and `attach_endpoint_to_route` edits on different
+  Nets require their planned merge in the same transaction. Independently,
+  final exact endpoint coincidence and explicit Junction-on-route contact are
+  normalized by the transaction itself, using the same Base-Net merge path.
 - `merge_nets` retargets routes, junctions, annotations, and layout references
   before removing the source Net.
 - `disconnect_endpoint` requires all route geometry that uses the endpoint to
