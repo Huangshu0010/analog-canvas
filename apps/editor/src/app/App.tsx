@@ -23,7 +23,6 @@ import {
   type WireSource,
 } from "@icm/edit-engine";
 import { analyzeDesignNetlist } from "@icm/netlist";
-import type { NetlistFormat } from "@icm/netlist";
 import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
@@ -75,7 +74,6 @@ import type {
   SchematicDocument,
 } from "@icm/model";
 import { buildSvgScene } from "@icm/render-svg";
-import { importSpiceSources } from "@icm/spice";
 import { renderCrashRequested, sceneCrashRequested } from "./crash-test-hooks";
 import { buildSceneSafely } from "./scene-safety";
 import {
@@ -127,11 +125,9 @@ import {
 } from "../canvas/editor-drafting-hit-targets";
 import { createAnnotationDragController } from "../features/text-editing/annotation-drag-controller";
 import {
-  createRasterExportArtifact,
-  createSvgExportArtifact,
-  planDesignNetlistExport,
-  requestBrowserDownload,
-} from "../features/editor-shell/editor-export-commands";
+  createEditorFileCommands,
+  type SpiceImportReport,
+} from "../features/editor-shell/editor-file-commands";
 import { EditorStatusbar } from "../features/editor-shell/editor-statusbar";
 import { EditorTestTelemetry } from "../features/editor-shell/editor-test-telemetry";
 import { useCellSymbolLayout } from "../features/hierarchy/use-cell-symbol-layout";
@@ -282,10 +278,8 @@ import { useInteractionState } from "../interaction/interaction-state";
 import type { EditorTool } from "../interaction/interaction-state";
 import { resolveTextEditingTarget } from "../features/text-editing/text-editing";
 import { planMosBulkDefaultUpdate } from "../features/component-insert/mos-bulk-defaults";
-import { planCheckBulkDefaults } from "../features/netlist-export/check-and-save";
 import {
   listWorkspaceShelf,
-  saveToWorkspaceShelf,
   type WorkspaceSlot,
 } from "../features/editor-shell/workspace-shelf";
 import {
@@ -318,7 +312,6 @@ import {
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
 } from "../features/selection/selection-inspector-details";
-import type { SpiceImportReport } from "../features/selection/selection-inspector-details";
 import {
   hasVisualSelection,
   pruneVisualSelection,
@@ -2685,6 +2678,34 @@ export function App({
       report: setStatus,
     },
   });
+  const {
+    exportSvg,
+    checkAndSave,
+    exportDesignNetlist,
+    exportRaster,
+    importSpiceFiles,
+  } = createEditorFileCommands({
+    project,
+    getCurrentProject: () => editorDocumentController.project,
+    document,
+    resolver,
+    defaultViewBox: DEFAULT_VIEWBOX,
+    publishSessionPresent: publishSession !== null,
+    netlistIr: netlistAnalysis.ir,
+    exportWarningsPresent:
+      netlistAnalysis.diagnostics.length > 0 ||
+      electricalDiagnostics.length > 0,
+    transact,
+    reportExport,
+    guardDirtyReplacement,
+    replaceActiveProject,
+    setWorkspaceSlots,
+    setNetlistPreflightOpen,
+    setImportReport,
+    setImportReviewOpen,
+    setSelectionOpen,
+    setStatus,
+  });
 
   // Single entry point for selecting a drafting object. Editing is opened
   // separately (double-click/Enter) so selection and text caret ownership do
@@ -2694,173 +2715,6 @@ export function App({
     setDraftingInspectorSegment(null);
     setDraftingTangentInput(null);
     setDraftingBearingInput(null);
-  }
-
-  function exportSvg(): void {
-    const artifact = createSvgExportArtifact(document, resolver, project.name);
-    requestBrowserDownload(artifact, project.name);
-    void reportExport(artifact.report);
-  }
-
-  /**
-   * Settle the loose ends and shelve the circuit.
-   *
-   * This deliberately does not run the design-netlist analysis. That analysis
-   * answers "can this be emitted as SPICE?", which is a question about an
-   * export, not about a drawing — a schematic is allowed to be abbreviated
-   * and idealised. An ideal switch, an amplifier drawn as a triangle, a
-   * resistor with no value yet: none of those is a mistake, and calling them
-   * blocking issues on the way to saving would be the tool telling the author
-   * their drawing is wrong when it is not. The Check Report is still one
-   * click away under Netlist, and export still gates on it, which is where
-   * that question belongs.
-   *
-   * What it does settle is MOS bodies, because an unstated body is a loose
-   * end rather than a legitimate abbreviation, and the author asked for it.
-   */
-  async function checkAndSave(): Promise<void> {
-    const bulkPlan = planCheckBulkDefaults(document);
-    const settledBodies = bulkPlan.edits.length > 0;
-    if (settledBodies) transact([...bulkPlan.edits]);
-    const ambiguousSides = [
-      bulkPlan.ambiguous.nmos ? "NMOS" : null,
-      bulkPlan.ambiguous.pmos ? "PMOS" : null,
-    ].filter((side): side is string => side !== null);
-
-    const notes = [
-      settledBodies ? "bound the unwired MOS bodies" : null,
-      ambiguousSides.length > 0
-        ? `${ambiguousSides.join(" and ")} bodies need a supply chosen`
-        : null,
-    ].filter((note): note is string => note !== null);
-    const prefix = notes.length > 0 ? `${notes.join("; ")} — ` : "";
-
-    if (!publishSession) {
-      setStatus(`${prefix}sign in to keep a copy on your shelf`);
-      return;
-    }
-    const outcome = await saveToWorkspaceShelf(
-      editorDocumentController.project,
-    );
-    if (outcome.status === "saved") {
-      setWorkspaceSlots(outcome.slots);
-      setStatus(
-        `${prefix}saved "${editorDocumentController.project.name}" to your shelf`,
-      );
-      return;
-    }
-    setStatus(
-      outcome.status === "signed-out"
-        ? `${prefix}sign in again to keep a copy on your shelf`
-        : outcome.status === "too-large"
-          ? `${prefix}the circuit is too large for the shelf`
-          : `${prefix}the shelf could not be reached (${outcome.message})`,
-    );
-  }
-
-  function exportDesignNetlist(
-    format: NetlistFormat,
-    warningsReviewed = false,
-  ): void {
-    const plan = planDesignNetlistExport({
-      format,
-      ir: netlistAnalysis.ir,
-      warningsPresent:
-        netlistAnalysis.diagnostics.length > 0 ||
-        electricalDiagnostics.length > 0,
-      warningsReviewed,
-      projectName: project.name,
-    });
-    if (plan.status === "blocked") {
-      setNetlistPreflightOpen(true);
-      setStatus(plan.message);
-      return;
-    }
-    requestBrowserDownload(plan.artifact, project.name);
-    void reportExport(plan.artifact.report);
-  }
-
-  async function exportRaster(format: "png" | "pdf"): Promise<void> {
-    setStatus(`Preparing ${format.toUpperCase()} export`);
-    try {
-      const artifact = await createRasterExportArtifact(
-        format,
-        document,
-        resolver,
-        project.name,
-      );
-      requestBrowserDownload(artifact, project.name);
-      await reportExport(artifact.report);
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Export failed");
-    }
-  }
-
-  async function importSpiceFiles(files: FileList | null): Promise<void> {
-    if (!files || files.length === 0) {
-      return;
-    }
-    const selectedFiles = [...files];
-    const sourceInputs = await Promise.all(
-      selectedFiles.map(async (file) => ({
-        path: file.webkitRelativePath || file.name,
-        bytes: new Uint8Array(await file.arrayBuffer()),
-      })),
-    );
-    const conventionalEntries = sourceInputs.filter((input) =>
-      /\.(?:cir|sp|spi)$/iu.test(input.path),
-    );
-    const namedCircuitEntries = conventionalEntries.filter(
-      (input) => input.path.split("/").at(-1)?.toLowerCase() === "circuit.spi",
-    );
-    const entryCandidates =
-      namedCircuitEntries.length === 1
-        ? namedCircuitEntries
-        : conventionalEntries;
-    if (entryCandidates.length !== 1) {
-      setStatus(
-        `Select one unambiguous .cir, .sp, or .spi entry and its local include files; found ${entryCandidates.length}`,
-      );
-      return;
-    }
-    setStatus("Importing SPICE sources");
-    try {
-      const result = await importSpiceSources(
-        sourceInputs,
-        entryCandidates[0]!.path,
-      );
-      const nextImportReport: SpiceImportReport = {
-        entryPath: entryCandidates[0]!.path,
-        diagnostics: result.diagnostics,
-      };
-      if (!result.project || !result.successful) {
-        setImportReport(nextImportReport);
-        setImportReviewOpen(true);
-        setSelectionOpen(true);
-        const firstError = result.diagnostics.find(
-          (item) => item.severity === "error",
-        );
-        setStatus(firstError?.message ?? "SPICE import failed");
-        return;
-      }
-      const instanceCount = result.project.documents.reduce(
-        (count, candidate) => count + candidate.instances.length,
-        0,
-      );
-      await guardDirtyReplacement("Import SPICE sources", () => {
-        replaceActiveProject(result.project!, DEFAULT_VIEWBOX, {
-          source: "spice-import",
-        });
-        setImportReport(nextImportReport);
-        setImportReviewOpen(true);
-        setSelectionOpen(true);
-        setStatus(
-          `Imported ${result.project!.documents.length} Documents and ${instanceCount} structural instances`,
-        );
-      });
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "SPICE import failed");
-    }
   }
 
   // Drafting uses the shared Snap Engine. It may align visually to electrical
