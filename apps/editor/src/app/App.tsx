@@ -212,6 +212,7 @@ import {
   nextInstanceDesignator,
 } from "../features/netlist-export/netlist-authoring";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
+import { DrawingToolbar } from "../features/editor-shell/drawing-toolbar";
 import {
   quickPlaceRequest,
   ShapesPanel,
@@ -8120,155 +8121,28 @@ export function App({
             </button>
           </div>
         </div>
-        <div
-          className="toolbar-row draw-toolbar"
-          aria-label="Drawing tools"
-          data-testid="draw-toolbar"
-        >
-          <button
-            type="button"
-            className="draw-tool examples-toggle"
-            title={
-              leftPanelMode === "examples" && visibleLibraryPanelOpen
-                ? "Hide the circuit gallery"
-                : "Show the circuit gallery"
-            }
-            aria-pressed={
-              leftPanelMode === "examples" && visibleLibraryPanelOpen
-            }
-            aria-controls="examples-panel"
-            aria-expanded={
-              leftPanelMode === "examples" && visibleLibraryPanelOpen
-            }
-            data-testid="examples-toggle"
-            onClick={toggleExamplesPanel}
-          >
-            <ToolIcon name="examples" />
-            <span>Gallery</span>
-          </button>
-          <button
-            type="button"
-            className="draw-tool"
-            title={
-              visibleLibraryPanelOpen
-                ? "Hide component library"
-                : "Show component library"
-            }
-            aria-pressed={
-              leftPanelMode === "library" && visibleLibraryPanelOpen
-            }
-            aria-controls="shapes-library-panel"
-            aria-expanded={
-              leftPanelMode === "library" && visibleLibraryPanelOpen
-            }
-            data-testid="library-toggle"
-            onClick={toggleLibraryPanel}
-          >
-            <ToolIcon name="library" />
-            <span>Library</span>
-          </button>
-          <span className="draw-toolbar-divider" aria-hidden="true" />
-          <button
-            type="button"
-            className="draw-tool"
-            data-testid="draw-tool-insert"
-            title="Insert component (I)"
-            onClick={() =>
-              editorCommands.execute({
-                id: "insert.start",
-                launch: fullInsertLaunch(),
-              })
-            }
-          >
-            <ToolIcon name="insert" />
-            <span>Insert</span>
-          </button>
-          <button
-            type="button"
-            className="draw-tool"
-            data-testid="draw-tool-wire"
-            aria-pressed={tool === "wire"}
-            title="Wire (W)"
-            onClick={() =>
-              editorCommands.execute({ id: "tool.activate", tool: "wire" })
-            }
-          >
-            <ToolIcon name="wire" />
-            <span>Wire</span>
-          </button>
-          <button
-            type="button"
-            className="draw-tool"
-            data-testid="draw-tool-text"
-            aria-label="Text"
-            title="Text (T)"
-            onClick={() => editorCommands.execute({ id: "drafting.add-text" })}
-          >
-            <ToolIcon name="text" />
-            <span>Text</span>
-          </button>
-          <span className="toolbar-divider" aria-hidden="true" />
-          <button
-            type="button"
-            className="draw-tool"
-            data-testid="draw-tool-arrow"
-            aria-pressed={tool === "arrow"}
-            title="Arrow (A)"
-            onClick={() =>
-              editorCommands.execute({ id: "tool.activate", tool: "arrow" })
-            }
-          >
-            <ToolIcon name="arrow" />
-            <span>Arrow</span>
-          </button>
-          <button
-            type="button"
-            className="draw-tool"
-            data-testid="draw-tool-line"
-            aria-pressed={tool === "construction-line"}
-            title="Construction line (K)"
-            onClick={() =>
-              editorCommands.execute({
-                id: "tool.activate",
-                tool: "construction-line",
-              })
-            }
-          >
-            <ToolIcon name="line" />
-            <span>Line</span>
-          </button>
-          <button
-            type="button"
-            className="draw-tool"
-            data-testid="draw-tool-rectangle"
-            aria-pressed={tool === "rectangle"}
-            title="Rectangle (R)"
-            onClick={() =>
-              editorCommands.execute({
-                id: "tool.activate",
-                tool: "rectangle",
-              })
-            }
-          >
-            <ToolIcon name="rectangle" />
-            <span>Rect</span>
-          </button>
-          <span className="toolbar-divider" aria-hidden="true" />
-          <button
-            type="button"
-            className="draw-tool"
-            data-testid="draw-tool-document-style"
-            aria-pressed={documentSettingsOpen}
-            title="Document settings"
-            onClick={() => {
-              setDocumentSettingsOpen((open) => !open);
-              setSelectionOpen(true);
-            }}
-          >
-            <ToolIcon name="style" />
-            <span>Style</span>
-          </button>
-        </div>
+        <DrawingToolbar
+          leftPanelMode={leftPanelMode}
+          libraryPanelOpen={visibleLibraryPanelOpen}
+          tool={tool}
+          documentSettingsOpen={documentSettingsOpen}
+          onToggleExamples={toggleExamplesPanel}
+          onToggleLibrary={toggleLibraryPanel}
+          onInsert={() =>
+            editorCommands.execute({
+              id: "insert.start",
+              launch: fullInsertLaunch(),
+            })
+          }
+          onActivateTool={(nextTool) =>
+            editorCommands.execute({ id: "tool.activate", tool: nextTool })
+          }
+          onAddText={() => editorCommands.execute({ id: "drafting.add-text" })}
+          onOpenDocumentSettings={() => {
+            setDocumentSettingsOpen((open) => !open);
+            setSelectionOpen(true);
+          }}
+        />
         {project.documents.length > 1 ||
         documentStack.length > 0 ||
         hasHierarchyEnterSelection ? (
