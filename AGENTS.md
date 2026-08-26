@@ -78,6 +78,7 @@ the boundary has moved.
   diff: `tests-updated` requires a changed test file, and `no-test-change`
   requires that none changed plus its evidence. CI runs the same check. See
   `docs/testing/README.md` and its contract matrix.
+
 - Keep one primary test layer per behavior. A test mentioning retired input is
   not automatically dead: retain reachable rejection, migration, history, and
   safety boundaries until their replacement is explicit.
@@ -90,9 +91,10 @@ the boundary has moved.
 - Use `pnpm verify:branch` when a completed branch crosses enough workspace
   boundaries to justify static checks, all unit tests, one build, and the
   production smoke check. It is not the mainline delivery gate.
-- Gate planning is advisory in this phase. It does not authorize skipping the
-  canonical mainline gate or any required GitHub check. Gate-policy changes and
-  unclassified non-documentation paths require the full fallback.
+- Gate planning is the local validation policy. It never authorizes skipping a
+  required GitHub check. Shared-core changes, gate-policy changes, and
+  unclassified non-documentation paths require the full fallback; bounded
+  changes use the selected focused checks.
 - Report unresolved questions in the commit message or a review note; do not
   leave them only in an untracked working note.
 
@@ -128,16 +130,26 @@ Before considering a target complete:
 
 ## Mainline Delivery Gate
 
-Focused validation is the normal development loop. It is not sufficient by
-itself to deliver a non-document change to `main`.
+Focused validation is the normal development loop. Delivery keeps full unit,
+release, and performance protection for every implementation change while the
+browser layer is selected by impact.
 
 Before a non-document change is merged or pushed to `main`:
 
-1. Start the canonical CI check from a clean dependency/build state:
-   `pnpm install --frozen-lockfile` followed by `pnpm ci:check`.
-2. Push a review branch and wait for the corresponding GitHub Actions required
-   checks to finish successfully.
-3. If a remote check fails, keep the target active: inspect its log, repair the
+1. Start from a clean dependency state with
+   `pnpm install --frozen-lockfile`. Run `pnpm setup:e2e` once on a machine that
+   does not yet have the matching Playwright Chromium installation.
+2. Run `pnpm gate:preflight -- --base <base-ref>` and
+   `pnpm gate:affected -- --base <base-ref>`.
+3. Run `pnpm gate:full` when the printed plan selects `full-delivery`: shared
+   core, production boundaries, gate-policy changes, and unclassified code all
+   take this conservative path. A bounded mapped change does not repeat the
+   complete browser suite locally.
+4. Push a review branch and wait for all five GitHub required checks. Static,
+   full unit, and release/performance checks run for every implementation PR;
+   the two browser checks run focused specs or automatically fall back to the
+   complete suite. Merge-queue, nightly, and manual CI runs are always full.
+5. If a remote check fails, keep the target active: inspect its log, repair the
    reported cause, and repeat verification. A successful `git push` is not a
    completed delivery.
 

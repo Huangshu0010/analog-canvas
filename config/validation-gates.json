@@ -13,10 +13,20 @@
     "source": ["apps/**", "packages/**", "worker/**", "scripts/**"],
     "editorInteraction": [
       "apps/editor/src/app/**",
-      "apps/editor/src/components/**",
+      "apps/editor/src/canvas/**",
+      "apps/editor/src/commands/**",
       "apps/editor/src/interaction/**",
       "apps/editor/src/presentation/**",
-      "apps/editor/src/features/editor-shell/**"
+      "apps/editor/src/snap/**",
+      "apps/editor/src/features/clipboard/**",
+      "apps/editor/src/features/drafting/**",
+      "apps/editor/src/features/instance-display/**",
+      "apps/editor/src/features/netlist-export/**",
+      "apps/editor/src/features/properties/**",
+      "apps/editor/src/features/search/**",
+      "apps/editor/src/features/selection/**",
+      "apps/editor/src/features/text-editing/**",
+      "apps/editor/src/features/wiring/**"
     ],
     "componentInsert": [
       "apps/editor/src/features/component-insert/**",
@@ -32,11 +42,35 @@
       "packages/render-svg/**"
     ],
     "projectPersistence": [
-      "apps/editor/src/features/document/**",
-      "apps/editor/src/features/project-file/**",
+      "apps/editor/src/document/**",
       "apps/editor/e2e/project-file.spec.ts",
       "packages/model/**",
       "packages/project-protocol/**"
+    ],
+    "gallery": [
+      "worker/auth.ts",
+      "worker/auth.test.ts",
+      "worker/gallery.ts",
+      "worker/gallery.test.ts",
+      "apps/editor/src/components/account.tsx",
+      "apps/editor/src/components/account.test.tsx",
+      "apps/editor/src/components/gallery-chrome.tsx",
+      "apps/editor/src/components/gallery-feed.tsx",
+      "apps/editor/src/components/gallery-feed.test.tsx",
+      "apps/editor/src/components/masonry.tsx",
+      "apps/editor/src/components/masonry.test.ts",
+      "apps/editor/src/components/moderation.tsx",
+      "apps/editor/src/components/my-submissions.tsx",
+      "apps/editor/src/components/version-history-dialog.tsx",
+      "apps/editor/src/features/editor-shell/examples-panel.tsx",
+      "apps/editor/src/features/editor-shell/examples-panel.test.ts",
+      "apps/editor/src/features/editor-shell/gallery-publish.ts",
+      "apps/editor/src/features/editor-shell/gallery-publish.test.ts",
+      "apps/editor/src/features/editor-shell/publish-gallery-dialog.tsx",
+      "apps/editor/src/features/editor-shell/publish-gallery-dialog.test.tsx",
+      "apps/editor/src/features/editor-shell/workspace-shelf.ts",
+      "apps/editor/src/features/editor-shell/workspace-shelf.test.ts",
+      "apps/editor/e2e/gallery.spec.ts"
     ],
     "agent": [
       "apps/editor/src/agent/**",
@@ -57,6 +91,22 @@
       "scripts/*release-smoke.mjs",
       "scripts/editor-production-smoke.mjs"
     ],
+    "highRisk": [
+      "packages/model/**",
+      "packages/project-protocol/**",
+      "packages/edit-engine/**",
+      "packages/derived/**",
+      "packages/devices/**",
+      "packages/symbols/**",
+      "packages/render-svg/**",
+      "packages/spice/**",
+      "packages/netlist/**",
+      "packages/exporters/**",
+      "worker/index.ts",
+      "worker/index.test.ts",
+      "worker/analytics.ts",
+      "wrangler.jsonc"
+    ],
     "gateContract": [
       ".github/workflows/**",
       "AGENTS.md",
@@ -66,7 +116,9 @@
       "docs/testing/**",
       "scripts/gate-*.mjs",
       "scripts/check-test-impact.mjs",
+      "scripts/ci-plan.mjs",
       "scripts/lib/test-impact*.mjs",
+      "scripts/lib/ci-validation-plan*.mjs",
       "scripts/lib/validation-gates*.mjs"
     ]
   },
@@ -108,14 +160,20 @@
         "pnpm",
         "test:e2e:local",
         "apps/editor/e2e/component-insert.spec.ts"
-      ]
+      ],
+      "ci": { "e2eArgs": ["apps/editor/e2e/component-insert.spec.ts"] }
     },
     {
       "id": "hierarchy-browser",
       "stage": "affected",
       "groups": ["hierarchy"],
       "description": "Validate Cell hierarchy authoring and instance workflows.",
-      "command": ["pnpm", "test:e2e:local", "apps/editor/e2e/hierarchy.spec.ts"]
+      "command": [
+        "pnpm",
+        "test:e2e:local",
+        "apps/editor/e2e/hierarchy.spec.ts"
+      ],
+      "ci": { "e2eArgs": ["apps/editor/e2e/hierarchy.spec.ts"] }
     },
     {
       "id": "project-file-browser",
@@ -126,7 +184,22 @@
         "pnpm",
         "test:e2e:local",
         "apps/editor/e2e/project-file.spec.ts"
-      ]
+      ],
+      "ci": {
+        "e2eArgs": [
+          "apps/editor/e2e/project-file.spec.ts",
+          "apps/editor/e2e/recovery-dialog.spec.ts",
+          "apps/editor/e2e/recovery-hardening.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "gallery-browser",
+      "stage": "affected",
+      "groups": ["gallery"],
+      "description": "Validate Gallery, account, submission, moderation, and workspace workflows.",
+      "command": ["pnpm", "test:e2e:local", "apps/editor/e2e/gallery.spec.ts"],
+      "ci": { "e2eArgs": ["apps/editor/e2e/gallery.spec.ts"] }
     },
     {
       "id": "agent-browser",
@@ -137,7 +210,8 @@
         "pnpm",
         "test:e2e:local",
         "apps/editor/e2e/web-agent-session.spec.ts"
-      ]
+      ],
+      "ci": { "e2eArgs": ["apps/editor/e2e/web-agent-session.spec.ts"] }
     },
     {
       "id": "editor-browser",
@@ -148,7 +222,14 @@
         "pnpm",
         "test:e2e:local",
         "apps/editor/e2e/manual-editor.spec.ts"
-      ]
+      ],
+      "ci": {
+        "e2eArgs": [
+          "apps/editor/e2e/manual-editor.spec.ts",
+          "apps/editor/e2e/drafting.spec.ts",
+          "apps/editor/e2e/instance-table.spec.ts"
+        ]
+      }
     },
     {
       "id": "release-verification",
@@ -168,8 +249,8 @@
     {
       "id": "full-delivery",
       "stage": "final",
-      "when": "non-doc",
-      "description": "Canonical complete local gate before mainline delivery.",
+      "groups": ["highRisk"],
+      "description": "Canonical complete gate for shared-core and production-boundary changes.",
       "command": ["pnpm", "ci:check"]
     }
   ],

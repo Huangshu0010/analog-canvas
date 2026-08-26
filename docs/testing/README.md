@@ -37,17 +37,35 @@ pnpm gate:affected -- --base origin/main
 ```
 
 The versioned catalog at `config/validation-gates.json` maps repository paths
-to preflight, affected, and final gates. Unknown non-documentation paths and
-changes to gate policy select the conservative branch/full fallback. In this
-advisory phase, the plan does not skip `pnpm gate:full` or any required GitHub
-check; it makes the expected validation surface visible before those checks
-consume minutes.
+to preflight, affected, and final gates. Shared-core, production-boundary,
+unknown non-documentation, and gate-policy changes select the conservative
+branch/full fallback. Bounded changes select focused browser contracts; this
+does not skip any required GitHub check because the existing two browser check
+names remain present and run the selected specs.
 
 `gate:preflight` runs cheap static contracts and cross-checks the commit's test
 impact declaration. `gate:affected` runs the catalog's bounded unit, focused
 browser, release, or branch checks. Review the printed reasons before
-execution; revisit the chosen validation surface if the real diff materially
-changes the selection.
+execution; run `gate:full` when the plan selects `full-delivery`. Run
+`pnpm setup:e2e` once per machine or Playwright version instead of paying for a
+browser installation on every full check.
+
+## Pull-request batching
+
+Every implementation pull request keeps the inexpensive broad protection:
+
+- `Static contracts` runs all static and generated checks.
+- `Unit and integration tests` runs the complete unit/module suite.
+- `Release contracts` runs the build, release goldens, production smoke, and
+  `performance-baseline.mjs` budgets.
+- `Browser tests (1/2)` and `Browser tests (2/2)` run the fixed affected specs
+  with two workers per shard. If the path map is missing, high risk, or itself
+  changed, both checks automatically run the complete browser suite.
+
+The merge queue, nightly schedule, and manual workflow always force complete
+browser coverage. CI does not repeat on the subsequent `main` push; the
+Cloudflare workflow builds, deploys, and smoke-checks the production URL after
+the required pull-request checks have already passed.
 
 ## Change discipline
 
