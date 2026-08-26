@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CSSProperties,
   DragEvent,
@@ -167,10 +167,7 @@ import {
   serializePolylinePoints,
 } from "../canvas/canvas-geometry";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
-import {
-  ComponentPlacementPreview,
-  InsertComponentDialog,
-} from "../features/component-insert/insert-component-dialog";
+import { ComponentPlacementPreview } from "../features/component-insert/component-placement-preview";
 import {
   cellInsertLaunch,
   fullInsertLaunch,
@@ -206,6 +203,20 @@ import {
   RenderCrashProbe,
 } from "./editor-runtime-helpers";
 import {
+  LazyAgentPropertiesSection,
+  LazyCellManagerDialog,
+  LazyConnectAgentPanel,
+  LazyEditorHelpDialog,
+  LazyInsertComponentDialog,
+  LazyInstanceTableDialog,
+  LazyNetlistPreflightDialog,
+  LazyProjectSearchDialog,
+  LazyPublishGalleryDialog,
+  LazyRecentRecoveryDialog,
+  LazyReplaceGuardDialog,
+  LazyVersionHistoryDialog,
+} from "./lazy-editor-dialogs";
+import {
   bindingForEditedModel,
   initialInstanceNetlist,
   netlistReferenceMatchesPlacement,
@@ -228,21 +239,15 @@ import {
 } from "../features/editor-shell/differential-input-swap";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
-import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
 import { HierarchyToolbar } from "../features/hierarchy/hierarchy-toolbar";
-import { NetlistPreflightDialog } from "../features/netlist-export/netlist-preflight-dialog";
 import { parseProject, serializeProject } from "@icm/project-protocol";
 import { DocumentSettingsSection } from "../features/editor-shell/document-settings-section";
 import { derivedFingerWidth } from "../features/properties/finger-width";
-import {
-  PublishGalleryDialog,
-  type PublishGalleryDraft,
-} from "../features/editor-shell/publish-gallery-dialog";
+import type { PublishGalleryDraft } from "../features/editor-shell/publish-gallery-dialog";
 import {
   publishProjectToGallery,
   updateGalleryEntry,
 } from "../features/editor-shell/gallery-publish";
-import { VersionHistoryDialog } from "../components/version-history-dialog";
 import { fetchSessionUser, type SessionUser } from "../components/account";
 import {
   evaluateSubmissionGates,
@@ -295,18 +300,10 @@ import {
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
 import { createEditorCommandRouter } from "../commands/editor-command";
-import { EditorHelpDialog } from "../components/editor-help-dialog";
-import { ReplaceGuardDialog } from "../components/replace-guard-dialog";
-import { RecentRecoveryDialog } from "../components/recent-recovery-dialog";
 import {
   RecoveryFailureBanner,
   recoveryStateLabel,
 } from "../components/recovery-banners";
-import { ProjectSearchDialog } from "../features/search/project-search-dialog";
-import {
-  AgentPropertiesSection,
-  ConnectAgentPanel,
-} from "../agent/connect-agent-panel";
 import { BrowserAgentHost } from "../agent/browser-agent-host";
 import { BrowserAgentFileHost } from "../agent/browser-agent-file-host";
 import { PUBLIC_AGENT_UI_ENABLED } from "../agent/public-agent-ui";
@@ -350,7 +347,6 @@ import type { BrowserRecoveryGeneration } from "../document/browser-recovery-con
 import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
-import { InstanceTableDialog } from "../features/properties/instance-table-dialog";
 import { capacitorPlatePropertyRows } from "../features/properties/capacitor-plate-properties";
 import {
   LIBRARY_WIDTH_MAX,
@@ -8104,269 +8100,284 @@ export function App({
           </output>
         </div>
       </header>
-      {helpOpen ? (
-        <EditorHelpDialog closeButtonRef={helpCloseRef} onClose={closeHelp} />
-      ) : null}
-      {(recoveryState === "quota-exceeded" ||
-        recoveryState === "unavailable" ||
-        recoveryState === "failed") &&
-      !recoveryFailureDismissed ? (
-        <RecoveryFailureBanner
-          state={recoveryState}
-          onDownload={() => {
-            const outcome = requestProjectDownload(project);
-            setStatus(
-              outcome.status === "download-requested"
-                ? `Download requested: ${outcome.fileName}`
-                : `Download failed: ${outcome.message}`,
-            );
-          }}
-          onDismiss={() => setRecoveryFailureDismissed(true)}
-        />
-      ) : null}
-      {recoveryDialogOpen && recoverySessions.length > 0 ? (
-        <RecentRecoveryDialog
-          sessions={recoverySessions}
-          onRestore={restoreRecoverySession}
-          onDownloadBackup={downloadRecoveryBackup}
-          onDeleteSession={deleteRecoverySessionFromDialog}
-          onClose={() => setRecoveryDialogOpen(false)}
-        />
-      ) : null}
-      {replaceGuard !== null ? (
-        <ReplaceGuardDialog
-          intent={replaceGuard.intent}
-          onCancel={cancelReplaceGuard}
-          onConfirm={confirmReplaceGuard}
-          onDownload={downloadCurrentProjectFromGuard}
-        />
-      ) : null}
-      <ProjectSearchDialog
-        open={searchOpen}
-        query={searchQuery}
-        results={searchResults}
-        onQueryChange={setSearchQuery}
-        onSelect={selectSearchResult}
-        onClose={closeSearch}
-      />
-      <InstanceTableDialog
-        open={instanceTableOpen}
-        project={project}
-        connectivityIndex={projectConnectivityIndex}
-        activeDocumentId={document.id}
-        onClose={() => setInstanceTableOpen(false)}
-        onOpenInstance={openInstanceFromTable}
-        onApply={(transactionId, edits) => {
-          const committed = commitStructure(transactionId, edits);
-          if (committed) {
-            setStatus(
-              `Updated ${edits.length} Cell${edits.length === 1 ? "" : "s"}`,
-            );
-          }
-          return committed;
-        }}
-      />
-      <InsertComponentDialog
-        open={insertDialogOpen}
-        styleProfileId={document.presentation.styleProfileId}
-        recentSymbolIds={recentSymbolIds}
-        cells={cellInsertCandidates}
-        externalDefinitions={externalSubcircuitInsertCandidates}
-        scope={insertScope}
-        initialSelectionId={insertInitialSelectionId}
-        onApply={(request) =>
-          editorCommands.execute({
-            id: "insert.start",
-            launch: { kind: "quick", request },
-          })
-        }
-        onCancel={cancelComponentInsertFromHook}
-      />
-      {pendingCellReset ? (
-        <div
-          className="insert-dialog-backdrop"
-          onPointerDown={(event) =>
-            event.target === event.currentTarget && cancelClearCanvas()
-          }
-        >
-          <section
-            className="editor-action-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="clear-canvas-dialog-title"
-            onKeyDown={(event) => {
-              if (event.key === "Escape") cancelClearCanvas();
+      <Suspense fallback={null}>
+        {helpOpen ? (
+          <LazyEditorHelpDialog
+            closeButtonRef={helpCloseRef}
+            onClose={closeHelp}
+          />
+        ) : null}
+        {(recoveryState === "quota-exceeded" ||
+          recoveryState === "unavailable" ||
+          recoveryState === "failed") &&
+        !recoveryFailureDismissed ? (
+          <RecoveryFailureBanner
+            state={recoveryState}
+            onDownload={() => {
+              const outcome = requestProjectDownload(project);
+              setStatus(
+                outcome.status === "download-requested"
+                  ? `Download requested: ${outcome.fileName}`
+                  : `Download failed: ${outcome.message}`,
+              );
             }}
+            onDismiss={() => setRecoveryFailureDismissed(true)}
+          />
+        ) : null}
+        {recoveryDialogOpen && recoverySessions.length > 0 ? (
+          <LazyRecentRecoveryDialog
+            sessions={recoverySessions}
+            onRestore={restoreRecoverySession}
+            onDownloadBackup={downloadRecoveryBackup}
+            onDeleteSession={deleteRecoverySessionFromDialog}
+            onClose={() => setRecoveryDialogOpen(false)}
+          />
+        ) : null}
+        {replaceGuard !== null ? (
+          <LazyReplaceGuardDialog
+            intent={replaceGuard.intent}
+            onCancel={cancelReplaceGuard}
+            onConfirm={confirmReplaceGuard}
+            onDownload={downloadCurrentProjectFromGuard}
+          />
+        ) : null}
+        {searchOpen ? (
+          <LazyProjectSearchDialog
+            open={searchOpen}
+            query={searchQuery}
+            results={searchResults}
+            onQueryChange={setSearchQuery}
+            onSelect={selectSearchResult}
+            onClose={closeSearch}
+          />
+        ) : null}
+        {instanceTableOpen ? (
+          <LazyInstanceTableDialog
+            open={instanceTableOpen}
+            project={project}
+            connectivityIndex={projectConnectivityIndex}
+            activeDocumentId={document.id}
+            onClose={() => setInstanceTableOpen(false)}
+            onOpenInstance={openInstanceFromTable}
+            onApply={(transactionId, edits) => {
+              const committed = commitStructure(transactionId, edits);
+              if (committed) {
+                setStatus(
+                  `Updated ${edits.length} Cell${edits.length === 1 ? "" : "s"}`,
+                );
+              }
+              return committed;
+            }}
+          />
+        ) : null}
+        {insertDialogOpen ? (
+          <LazyInsertComponentDialog
+            open={insertDialogOpen}
+            styleProfileId={document.presentation.styleProfileId}
+            recentSymbolIds={recentSymbolIds}
+            cells={cellInsertCandidates}
+            externalDefinitions={externalSubcircuitInsertCandidates}
+            scope={insertScope}
+            initialSelectionId={insertInitialSelectionId}
+            onApply={(request) =>
+              editorCommands.execute({
+                id: "insert.start",
+                launch: { kind: "quick", request },
+              })
+            }
+            onCancel={cancelComponentInsertFromHook}
+          />
+        ) : null}
+        {pendingCellReset ? (
+          <div
+            className="insert-dialog-backdrop"
+            onPointerDown={(event) =>
+              event.target === event.currentTarget && cancelClearCanvas()
+            }
           >
-            <header className="editor-action-dialog-header">
-              <p>Cell contents</p>
-              <h2 id="clear-canvas-dialog-title">
-                {pendingCellReset.command} in {document.name}?
-              </h2>
-            </header>
-            <div className="editor-action-dialog-body">
-              <p>
-                {pendingCellReset.plan.summary}. Affected objects:{" "}
-                {pendingCellReset.plan.affectedObjectIds.length}. You can
-                restore them with Undo.
-              </p>
-            </div>
-            <footer className="editor-action-dialog-actions">
-              <button type="button" autoFocus onClick={cancelClearCanvas}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="danger"
-                onClick={confirmClearCanvas}
-              >
-                {pendingCellReset.command}
-              </button>
-            </footer>
-          </section>
-        </div>
-      ) : null}
-      <CellManagerDialog
-        open={cellManagerOpen}
-        cells={cellManagerEntries}
-        documents={project.documents}
-        activeDocumentId={document.id}
-        onClose={() => setCellManagerOpen(false)}
-        onCreate={(name) => {
-          createCell(name);
-          setCellManagerOpen(false);
-        }}
-        onOpen={(documentId) => {
-          setCellManagerOpen(false);
-          switchDocument(documentId);
-        }}
-        onRename={renameCell}
-        onDelete={(documentId) => {
-          const target = project.documents.find(
-            (candidate) => candidate.id === documentId,
-          );
-          if (!target) return;
-          if (
-            commitStructure(
-              "delete-cell",
-              planDeleteCell(project, documentId),
-              project.topDocumentId,
-            )
-          ) {
-            setCellManagerOpen(false);
-            setStatus(`Deleted Cell ${target.name}`);
-          }
-        }}
-        onJumpToCaller={jumpToCaller}
-        onRenameTerminal={(documentId, terminalId, name) =>
-          renameCellTerminal(terminalId, name, documentId)
-        }
-        onSetTerminalDirection={(documentId, terminalId, direction) =>
-          updateCellPinDirection(terminalId, direction, documentId)
-        }
-        onMoveTerminal={(documentId, terminalId, delta) =>
-          moveCellTerminal(terminalId, delta, documentId)
-        }
-        onSetFormalParameters={(documentId, formalParameters) =>
-          setCellFormalParameters(formalParameters, documentId)
-        }
-        externalDefinitions={project.externalSubcircuitDefinitions}
-        onSetExternalDefinition={setExternalSubcircuitDefinition}
-      />
-      <NetlistPreflightDialog
-        open={netlistPreflightOpen}
-        result={netlistAnalysis}
-        electricalDiagnostics={electricalDiagnostics}
-        onClose={() => setNetlistPreflightOpen(false)}
-        onNavigate={navigateToNetlistDiagnostic}
-        onNavigateElectrical={jumpToProjectDiagnostic}
-        onExport={(format) => exportDesignNetlist(format, true)}
-      />
-      {publishGalleryOpen ? (
-        <PublishGalleryDialog
-          draft={publishDraft}
-          onDraftChange={setPublishDraft}
-          defaultName={project.name}
-          session={publishSession}
-          gateReport={publishGates}
-          updateTarget={
-            galleryEntryContext &&
-            publishSession &&
-            (publishSession.isAdmin ||
-              publishSession.role === "moderator" ||
-              (galleryEntryContext.ownerUserId !== null &&
-                publishSession.id === galleryEntryContext.ownerUserId))
-              ? { id: galleryEntryContext.id, name: galleryEntryContext.name }
-              : null
-          }
-          updateDefaults={
-            galleryEntryContext
-              ? {
-                  description: galleryEntryContext.description,
-                  tags: galleryEntryContext.tags,
-                }
-              : null
-          }
-          publish={(fields) => publishProjectToGallery(project, fields)}
-          publishUpdate={
-            galleryEntryContext
-              ? (fields) =>
-                  updateGalleryEntry(galleryEntryContext.id, project, fields)
-              : undefined
-          }
-          onPublished={({ name, updated }) => {
-            setPublishGalleryOpen(false);
-            setPublishDraft(null);
-            setStatus(
-              updated
-                ? `Updated "${name}" in the gallery`
-                : `Published "${name}" to the gallery`,
-            );
-          }}
-          onShowHistory={
-            galleryEntryContext
-              ? () => {
-                  setPublishGalleryOpen(false);
-                  setVersionHistoryOpen(true);
-                }
-              : undefined
-          }
-          onClose={() => setPublishGalleryOpen(false)}
-        />
-      ) : null}
-      {versionHistoryOpen && galleryEntryContext ? (
-        <VersionHistoryDialog
-          entryId={galleryEntryContext.id}
-          entryName={galleryEntryContext.name}
-          onRestored={() => {
-            setVersionHistoryOpen(false);
-            setStatus("Version restored — reloading the entry");
-            void openGalleryEntryById(galleryEntryContext.id);
-          }}
-          onClose={() => setVersionHistoryOpen(false)}
-        />
-      ) : null}
-      {publicAgentUiEnabled ? (
-        <ConnectAgentPanel
-          open={agentPanelOpen}
-          status={agentSession.status}
-          claimCode={agentSession.claimCode}
-          claimExpiresAt={agentSession.claimExpiresAt}
-          scopes={agentSession.scopes}
-          expiresAt={agentSession.expiresAt}
-          error={agentSession.error}
-          now={Date.now()}
-          onGrant={agentSession.grant}
-          onPause={agentSession.pause}
-          onResume={agentSession.resume}
-          onReconnect={agentSession.reconnect}
-          onNewConnection={agentSession.newConnection}
-          onRevoke={agentSession.revoke}
-          onClose={() => {
-            setAgentPanelOpen(false);
-          }}
-        />
-      ) : null}
+            <section
+              className="editor-action-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="clear-canvas-dialog-title"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") cancelClearCanvas();
+              }}
+            >
+              <header className="editor-action-dialog-header">
+                <p>Cell contents</p>
+                <h2 id="clear-canvas-dialog-title">
+                  {pendingCellReset.command} in {document.name}?
+                </h2>
+              </header>
+              <div className="editor-action-dialog-body">
+                <p>
+                  {pendingCellReset.plan.summary}. Affected objects:{" "}
+                  {pendingCellReset.plan.affectedObjectIds.length}. You can
+                  restore them with Undo.
+                </p>
+              </div>
+              <footer className="editor-action-dialog-actions">
+                <button type="button" autoFocus onClick={cancelClearCanvas}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={confirmClearCanvas}
+                >
+                  {pendingCellReset.command}
+                </button>
+              </footer>
+            </section>
+          </div>
+        ) : null}
+        {cellManagerOpen ? (
+          <LazyCellManagerDialog
+            open={cellManagerOpen}
+            cells={cellManagerEntries}
+            documents={project.documents}
+            activeDocumentId={document.id}
+            onClose={() => setCellManagerOpen(false)}
+            onCreate={(name) => {
+              createCell(name);
+              setCellManagerOpen(false);
+            }}
+            onOpen={(documentId) => {
+              setCellManagerOpen(false);
+              switchDocument(documentId);
+            }}
+            onRename={renameCell}
+            onDelete={(documentId) => {
+              const target = project.documents.find(
+                (candidate) => candidate.id === documentId,
+              );
+              if (!target) return;
+              if (
+                commitStructure(
+                  "delete-cell",
+                  planDeleteCell(project, documentId),
+                  project.topDocumentId,
+                )
+              ) {
+                setCellManagerOpen(false);
+                setStatus(`Deleted Cell ${target.name}`);
+              }
+            }}
+            onJumpToCaller={jumpToCaller}
+            onRenameTerminal={(documentId, terminalId, name) =>
+              renameCellTerminal(terminalId, name, documentId)
+            }
+            onSetTerminalDirection={(documentId, terminalId, direction) =>
+              updateCellPinDirection(terminalId, direction, documentId)
+            }
+            onMoveTerminal={(documentId, terminalId, delta) =>
+              moveCellTerminal(terminalId, delta, documentId)
+            }
+            onSetFormalParameters={(documentId, formalParameters) =>
+              setCellFormalParameters(formalParameters, documentId)
+            }
+            externalDefinitions={project.externalSubcircuitDefinitions}
+            onSetExternalDefinition={setExternalSubcircuitDefinition}
+          />
+        ) : null}
+        {netlistPreflightOpen ? (
+          <LazyNetlistPreflightDialog
+            open={netlistPreflightOpen}
+            result={netlistAnalysis}
+            electricalDiagnostics={electricalDiagnostics}
+            onClose={() => setNetlistPreflightOpen(false)}
+            onNavigate={navigateToNetlistDiagnostic}
+            onNavigateElectrical={jumpToProjectDiagnostic}
+            onExport={(format) => exportDesignNetlist(format, true)}
+          />
+        ) : null}
+        {publishGalleryOpen ? (
+          <LazyPublishGalleryDialog
+            draft={publishDraft}
+            onDraftChange={setPublishDraft}
+            defaultName={project.name}
+            session={publishSession}
+            gateReport={publishGates}
+            updateTarget={
+              galleryEntryContext &&
+              publishSession &&
+              (publishSession.isAdmin ||
+                publishSession.role === "moderator" ||
+                (galleryEntryContext.ownerUserId !== null &&
+                  publishSession.id === galleryEntryContext.ownerUserId))
+                ? { id: galleryEntryContext.id, name: galleryEntryContext.name }
+                : null
+            }
+            updateDefaults={
+              galleryEntryContext
+                ? {
+                    description: galleryEntryContext.description,
+                    tags: galleryEntryContext.tags,
+                  }
+                : null
+            }
+            publish={(fields) => publishProjectToGallery(project, fields)}
+            publishUpdate={
+              galleryEntryContext
+                ? (fields) =>
+                    updateGalleryEntry(galleryEntryContext.id, project, fields)
+                : undefined
+            }
+            onPublished={({ name, updated }) => {
+              setPublishGalleryOpen(false);
+              setPublishDraft(null);
+              setStatus(
+                updated
+                  ? `Updated "${name}" in the gallery`
+                  : `Published "${name}" to the gallery`,
+              );
+            }}
+            onShowHistory={
+              galleryEntryContext
+                ? () => {
+                    setPublishGalleryOpen(false);
+                    setVersionHistoryOpen(true);
+                  }
+                : undefined
+            }
+            onClose={() => setPublishGalleryOpen(false)}
+          />
+        ) : null}
+        {versionHistoryOpen && galleryEntryContext ? (
+          <LazyVersionHistoryDialog
+            entryId={galleryEntryContext.id}
+            entryName={galleryEntryContext.name}
+            onRestored={() => {
+              setVersionHistoryOpen(false);
+              setStatus("Version restored — reloading the entry");
+              void openGalleryEntryById(galleryEntryContext.id);
+            }}
+            onClose={() => setVersionHistoryOpen(false)}
+          />
+        ) : null}
+        {publicAgentUiEnabled && agentPanelOpen ? (
+          <LazyConnectAgentPanel
+            open={agentPanelOpen}
+            status={agentSession.status}
+            claimCode={agentSession.claimCode}
+            claimExpiresAt={agentSession.claimExpiresAt}
+            scopes={agentSession.scopes}
+            expiresAt={agentSession.expiresAt}
+            error={agentSession.error}
+            now={Date.now()}
+            onGrant={agentSession.grant}
+            onPause={agentSession.pause}
+            onResume={agentSession.resume}
+            onReconnect={agentSession.reconnect}
+            onNewConnection={agentSession.newConnection}
+            onRevoke={agentSession.revoke}
+            onClose={() => {
+              setAgentPanelOpen(false);
+            }}
+          />
+        ) : null}
+      </Suspense>
       {publicAgentUiEnabled && agentFileCandidate ? (
         <div className="agent-panel" data-testid="agent-file-approval">
           <section
@@ -9888,29 +9899,31 @@ export function App({
                   />
                 </section>
               ) : null}
-              {publicAgentUiEnabled &&
-              agentSession.status !== "idle" &&
-              !agentStatusDismissed ? (
-                <AgentPropertiesSection
-                  status={agentSession.status}
-                  claimCode={agentSession.claimCode}
-                  claimExpiresAt={agentSession.claimExpiresAt}
-                  scopes={agentSession.scopes}
-                  expiresAt={agentSession.expiresAt}
-                  error={agentSession.error}
-                  onPause={agentSession.pause}
-                  onResume={agentSession.resume}
-                  onReconnect={agentSession.reconnect}
-                  onNewConnection={agentSession.newConnection}
-                  onRevoke={agentSession.revoke}
-                  expanded={agentDetailsOpen}
-                  onToggleDetails={() => setAgentDetailsOpen((open) => !open)}
-                  onDismiss={() => {
-                    setAgentDetailsOpen(false);
-                    setAgentStatusDismissed(true);
-                  }}
-                />
-              ) : null}
+              <Suspense fallback={null}>
+                {publicAgentUiEnabled &&
+                agentSession.status !== "idle" &&
+                !agentStatusDismissed ? (
+                  <LazyAgentPropertiesSection
+                    status={agentSession.status}
+                    claimCode={agentSession.claimCode}
+                    claimExpiresAt={agentSession.claimExpiresAt}
+                    scopes={agentSession.scopes}
+                    expiresAt={agentSession.expiresAt}
+                    error={agentSession.error}
+                    onPause={agentSession.pause}
+                    onResume={agentSession.resume}
+                    onReconnect={agentSession.reconnect}
+                    onNewConnection={agentSession.newConnection}
+                    onRevoke={agentSession.revoke}
+                    expanded={agentDetailsOpen}
+                    onToggleDetails={() => setAgentDetailsOpen((open) => !open)}
+                    onDismiss={() => {
+                      setAgentDetailsOpen(false);
+                      setAgentStatusDismissed(true);
+                    }}
+                  />
+                ) : null}
+              </Suspense>
             </div>
           </section>
         </aside>

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  awaitEditorReady,
   chooseComponent,
   clickCommand,
   downloadBytes,
@@ -84,6 +85,7 @@ test("writes a manual netlist reference into the placed Instance", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("resistor");
@@ -254,6 +256,7 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
 test("places a named vertical Power Rail from I", async ({ page }) => {
   await emulateDownloadOnlyBrowser(page);
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("vdd");
@@ -326,6 +329,7 @@ test("places the VDD power-port device as the default VDD entry", async ({
 }) => {
   await emulateDownloadOnlyBrowser(page);
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("vdd");
@@ -451,6 +455,7 @@ test("Escape closes the Insert dialog even when focus is outside it", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
 
   await page.keyboard.press("i");
@@ -557,6 +562,7 @@ test("carries a manual Value through placement and Q property editing", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("resistor");
@@ -749,6 +755,7 @@ test("keeps preview fixed while picking from the always-open catalog", async ({
 }) => {
   await page.setViewportSize({ width: 1100, height: 720 });
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
 
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
@@ -810,6 +817,7 @@ test("places MOS parameters and orientation without a hidden-label suppressor", 
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
 
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
@@ -875,6 +883,7 @@ test("keeps component placement active across independent canvas commits", async
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("resistor");
@@ -1251,6 +1260,7 @@ test("double-clicking a placed device opens Properties for editing", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("resistor");
@@ -1311,6 +1321,7 @@ test("double-clicking a catalog item applies it immediately", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByTestId("insert-component-resistor").dblclick();

@@ -1,5 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
 
+/** Wait until the route-split editor shell is ready to receive shortcuts. */
+export async function awaitEditorReady(page: Page): Promise<void> {
+  await page.getByTestId("schematic-canvas").waitFor();
+}
+
 export async function openMenu(page: Page, name: string): Promise<Locator> {
   const summary = page.locator("summary", { hasText: name }).filter({
     hasText: new RegExp(`^${name}$`, "u"),

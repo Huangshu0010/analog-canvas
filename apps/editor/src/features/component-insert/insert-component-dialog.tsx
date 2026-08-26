@@ -1,17 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { displayableInstanceValue } from "@icm/derived";
-import { renderSymbolDefinitionBody } from "@icm/render-svg";
 import type { SymbolDefinition } from "@icm/symbols";
 
-import { defaultRazaviSymbolVariantId } from "../../presentation/razavi-presentation";
 import {
   componentParameters,
   initialComponentParameterValues,
 } from "./component-parameters";
 import {
   componentCatalog,
-  findPaletteSymbol,
   libraryDescription,
   libraryDisplayName,
 } from "./symbol-catalog";
@@ -53,51 +50,6 @@ interface InsertChoice {
   readonly cellName?: string;
   readonly definitionId?: string;
   readonly masterName?: string;
-}
-
-export function ComponentPlacementPreview({
-  styleProfileId,
-  symbolId,
-  symbol,
-  position,
-  rotation,
-  mirror = "none",
-}: {
-  styleProfileId: string;
-  symbolId: string;
-  symbol?: SymbolDefinition;
-  position: { x: number; y: number };
-  rotation: 0 | 90 | 180 | 270;
-  mirror?: "none" | "x";
-}) {
-  const definition = symbol ?? findPaletteSymbol(styleProfileId, symbolId);
-  if (!definition) return null;
-  const variantId = defaultRazaviSymbolVariantId(definition.id);
-  const variant = definition.variants.find(
-    (candidate) => candidate.id === variantId,
-  );
-
-  return (
-    <g
-      data-testid="component-placement-preview"
-      className="component-placement-preview"
-      transform={`translate(${position.x} ${position.y}) rotate(${rotation})${
-        mirror === "x" ? " scale(-1 1)" : ""
-      }`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
-      dangerouslySetInnerHTML={{
-        __html: renderSymbolDefinitionBody(
-          definition,
-          variant?.hiddenPrimitiveParts,
-          variant?.additionalPrimitives,
-        ),
-      }}
-    />
-  );
 }
 
 export function InsertComponentDialog({

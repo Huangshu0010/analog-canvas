@@ -6,6 +6,7 @@ import { createEmptyProject } from "@icm/model";
 
 import { createRoutingDemoProject } from "../src/demos/routing-demo.js";
 import {
+  awaitEditorReady,
   chooseComponent,
   clickCommand,
   clickDrawTool,
@@ -282,6 +283,7 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   const search = dialog.getByLabel("Component search");
@@ -2102,6 +2104,7 @@ test("value display projects MOS W/L and passive values beside the reference", a
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("nmos");
