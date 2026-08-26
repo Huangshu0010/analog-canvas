@@ -78,7 +78,7 @@ complete browser suite. Every target also closes with `git diff --check` and
 
 ## License
 
-Copyright © 2026 Zengchun Chen and Zhishuai Zhang.
+Copyright © 2026 Zhishuai Zhang and Zengchun Chen.
 
 Except where otherwise noted, Analog Canvas is licensed under the
 [GNU Affero General Public License v3.0 only](LICENSE.md)
@@ -91,12 +91,12 @@ retain their respective copyright and license terms.
 
 If you use Analog Canvas in research, teaching, or another publication, cite:
 
-> Zengchun Chen and Zhishuai Zhang. _Analog Canvas_. 2026.
+> Zhishuai Zhang and Zengchun Chen. _Analog Canvas_. 2026.
 > Available at: https://github.com/chenzc24/Analog-Canvas
 
 ```bibtex
-@software{chen2026analogcanvas,
-  author = {Chen, Zengchun and Zhang, Zhishuai},
+@software{zhang2026analogcanvas,
+  author = {Zhang, Zhishuai and Chen, Zengchun},
   title = {Analog Canvas},
   year = {2026},
   url = {https://github.com/chenzc24/Analog-Canvas},
