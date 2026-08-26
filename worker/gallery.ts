@@ -21,7 +21,11 @@ import {
   upgradeSchema23To24WithReport,
 } from "@icm/project-protocol";
 import { renderDocumentSvg } from "@icm/render-svg";
-import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
+import {
+  builtInSymbols,
+  createProjectSymbolResolver,
+  type SymbolResolver,
+} from "@icm/symbols";
 import {
   CURRENT_PROJECT_SCHEMA_VERSION,
   type CircuitProject,
@@ -207,8 +211,6 @@ interface EntryRow {
   svg_text: string;
   netlistable: number;
 }
-
-const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 function summaryOf(
   row: EntryRow & { likes?: number; liked_by_viewer?: number },
@@ -1255,7 +1257,10 @@ function fieldText(value: unknown, maxLength: number): string | null {
   return trimmed.length <= maxLength ? trimmed : null;
 }
 
-function renderPreview(project: CircuitProject): string {
+function renderPreview(
+  project: CircuitProject,
+  resolver: SymbolResolver,
+): string {
   const topDocument = project.documents.find(
     (document) => document.id === project.topDocumentId,
   )!;
@@ -1369,8 +1374,9 @@ async function handleSubmission(
   } catch {
     return Response.json({ error: "invalid-project" }, { status: 400 });
   }
+  const projectResolver = createProjectSymbolResolver(project, builtInSymbols);
   if (!privileged) {
-    const report = evaluateSubmissionGates(project, resolver);
+    const report = evaluateSubmissionGates(project, projectResolver);
     if (!report.ok) {
       return Response.json(
         { error: "quality-gate", failures: report.failures },
@@ -1406,7 +1412,7 @@ async function handleSubmission(
         submitter_provider: user.provider,
         tags: wrapTags(sanitizeGalleryTags(body.tags)),
         project_text: serializeProject(project),
-        svg_text: renderPreview(project),
+        svg_text: renderPreview(project, projectResolver),
       },
     },
   );
@@ -1482,8 +1488,9 @@ async function handleEntryUpdate(
   } catch {
     return Response.json({ error: "invalid-project" }, { status: 400 });
   }
+  const projectResolver = createProjectSymbolResolver(project, builtInSymbols);
   if (!privileged) {
-    const report = evaluateSubmissionGates(project, resolver);
+    const report = evaluateSubmissionGates(project, projectResolver);
     if (!report.ok) {
       return Response.json(
         { error: "quality-gate", failures: report.failures },
@@ -1500,7 +1507,7 @@ async function handleEntryUpdate(
     author,
     description,
     projectText: serializeProject(project),
-    svgText: renderPreview(project),
+    svgText: renderPreview(project, projectResolver),
     schemaVersion: project.schemaVersion,
     status: nextStatus,
     tags: wrapTags(sanitizeGalleryTags(body.tags)),
