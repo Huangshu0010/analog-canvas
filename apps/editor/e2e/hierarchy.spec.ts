@@ -340,9 +340,7 @@ test("declares a top Formal Cell Pin and exports the top interface", async ({
   await expect(preflight).not.toContainText("MISSING_DEVICE_DEFINITION");
 });
 
-test("copies and independently deletes repeated Formal Cell Pin markers", async ({
-  page,
-}) => {
+test("copies and independently deletes Formal Cell Pins", async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.clear();
     window.sessionStorage.clear();
@@ -386,13 +384,13 @@ test("copies and independently deletes repeated Formal Cell Pin markers", async 
   }
   await expect(
     page.getByLabel("Cell Pin properties").getByLabel("Cell Pin name"),
-  ).toHaveValue("VIN");
+  ).toHaveValue("VIN_copy");
   await clickCommand(page, "Netlist", "Check Report…");
   await expect(
     page
       .getByRole("dialog", { name: "Check Report" })
       .getByTestId("netlist-preview"),
-  ).toContainText(".subckt Main VIN");
+  ).toContainText(".subckt Main VIN_copy");
 });
 
 test("edits a Cell Pin name and RichText presentation in place", async ({

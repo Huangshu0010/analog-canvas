@@ -23,7 +23,7 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("schematic clipboard", () => {
-  it("copies a Cell Pin as another marker of the same interface and Net", () => {
+  it("copies a Cell Pin with an independent interface and Base Net", () => {
     const document = createEmptyDocument("document-main", "Clipboard");
     document.instances.push({
       id: "P1",
@@ -52,6 +52,23 @@ describe("schematic clipboard", () => {
       ],
       formalParameters: [],
     };
+    document.annotations.push({
+      id: "cell-pin-label-p1",
+      kind: "instance-label",
+      binding: {
+        kind: "cell-terminal-name",
+        terminalId: "terminal-input",
+      },
+      anchor: {
+        kind: "object",
+        objectId: "P1",
+        localOffset: { x: 0, y: -20 },
+        fallbackPosition: { x: 100, y: 80 },
+      },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
 
     const clipboard = copySelection(document, ["P1"]);
     expect(clipboard).not.toBeNull();
@@ -69,10 +86,66 @@ describe("schematic clipboard", () => {
     );
 
     if (!result.ok) throw new Error(JSON.stringify(result, null, 2));
-    expect(result.document.netlist?.terminals).toMatchObject([
-      { interfaceInstanceIds: ["P1", "P1-copy-1"], name: "VIN" },
-    ]);
-    expect(result.document.nets).toHaveLength(1);
+    const originalTerminal = result.document.netlist?.terminals.find(
+      (terminal) => terminal.id === "terminal-input",
+    );
+    const copiedTerminal = result.document.netlist?.terminals.find((terminal) =>
+      terminal.interfaceInstanceIds.includes("P1-copy-1"),
+    );
+    expect(originalTerminal).toMatchObject({
+      name: "VIN",
+      netId: "net-input",
+      direction: "input",
+      interfaceInstanceIds: ["P1"],
+    });
+    expect(copiedTerminal).toMatchObject({
+      name: "VIN_copy",
+      direction: "input",
+      interfaceInstanceIds: ["P1-copy-1"],
+    });
+    expect(copiedTerminal?.id).not.toBe(originalTerminal?.id);
+    expect(copiedTerminal?.netId).not.toBe(originalTerminal?.netId);
+    expect(result.document.nets).toHaveLength(2);
+    expect(
+      result.document.annotations.find(
+        (annotation) =>
+          annotation.anchor.kind === "object" &&
+          annotation.anchor.objectId === "P1-copy-1",
+      )?.binding,
+    ).toEqual({
+      kind: "cell-terminal-name",
+      terminalId: copiedTerminal?.id,
+    });
+
+    const rename = executeTransaction(
+      result.document,
+      {
+        transactionId: "rename-copied-formal-pin",
+        documentId: result.document.id,
+        expectedRevision: result.document.revision,
+        actor: { kind: "human", id: "test" },
+        edits: [
+          {
+            kind: "update_cell_terminal",
+            terminalId: copiedTerminal!.id,
+            name: "VIN_COPY_RENAMED",
+            direction: "output",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    if (!rename.ok) throw new Error(JSON.stringify(rename, null, 2));
+    expect(
+      rename.document.netlist?.terminals.find(
+        (terminal) => terminal.id === "terminal-input",
+      ),
+    ).toMatchObject({ name: "VIN", direction: "input" });
+    expect(
+      rename.document.netlist?.terminals.find(
+        (terminal) => terminal.id === copiedTerminal?.id,
+      ),
+    ).toMatchObject({ name: "VIN_COPY_RENAMED", direction: "output" });
 
     const preview = clipboardPreviewDocument(
       document,
@@ -811,7 +884,7 @@ describe("a copy stands on its own", () => {
     expect(copy.schematicReference).not.toMatch(/copy/u);
   });
 
-  it("copies a Cell Pin as another marker of the same interface and Net", () => {
+  it("keeps a copied Cell Pin separate from its source", () => {
     const document = createEmptyDocument("document-main", "Copy");
     document.instances.push({
       id: "P1",
@@ -858,11 +931,37 @@ describe("a copy stands on its own", () => {
       result.document.nets.find((net) =>
         net.terminals.some((terminal) => terminal.instanceId === instanceId),
       );
-    expect(netOf("P1")?.id).toBe(netOf(copyId)?.id);
+    expect(netOf("P1")?.id).not.toBe(netOf(copyId)?.id);
     expect(
       result.document.netlist?.terminals.find((terminal) =>
         terminal.interfaceInstanceIds.includes(copyId),
       )?.name,
-    ).toBe("P12");
+    ).toBe("P12_copy");
+
+    const secondProposal = proposePaste(
+      result.document,
+      clipboard!,
+      { x: 240, y: 0 },
+      2,
+    );
+    const secondResult = executeTransaction(
+      result.document,
+      {
+        transactionId: "paste-port-again",
+        documentId: result.document.id,
+        expectedRevision: result.document.revision,
+        actor: { kind: "human", id: "test" },
+        edits: secondProposal.edits,
+      },
+      { symbolResolver: resolver },
+    );
+    if (!secondResult.ok)
+      throw new Error(JSON.stringify(secondResult.diagnostics));
+    const secondCopyId = secondProposal.instanceIds[0]!;
+    expect(
+      secondResult.document.netlist?.terminals.find((terminal) =>
+        terminal.interfaceInstanceIds.includes(secondCopyId),
+      )?.name,
+    ).toBe("P12_copy2");
   });
 });

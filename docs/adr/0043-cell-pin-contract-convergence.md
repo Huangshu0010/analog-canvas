@@ -2,6 +2,10 @@
 
 Status: accepted
 
+The clipboard-copy clause is superseded by
+[ADR 0045](0045-independent-cell-pin-copy.md). The unified Cell Pin model and
+explicit repeated-marker behavior remain accepted.
+
 Date: 2026-08-25
 
 Owners: `packages/model`, `packages/edit-engine`, `apps/editor`,
