@@ -99,10 +99,8 @@ import {
   type CameraRectInput,
 } from "../canvas/fit-view";
 import type { CanvasDragSession } from "../canvas/canvas-drag-session";
-import {
-  rankCanvasHits,
-  resolveCanvasHitAtPoint,
-} from "../canvas/canvas-hit-resolver";
+import { rankCanvasHits } from "../canvas/canvas-hit-resolver";
+import { createCanvasHitController } from "../canvas/canvas-hit-controller";
 import {
   type RouteStretchPreview,
   useWireInteraction,
@@ -2008,6 +2006,33 @@ export function App({
     setStatus,
   });
   const {
+    compositeSelectionOwnsHit,
+    handlePointerDown: handleCanvasHitPointerDown,
+  } = createCanvasHitController({
+    document,
+    visibleEndpoints,
+    selection: visualSelection,
+    selectedInternalRouteIds,
+    selectedInternalJunctionIds,
+    selectedInternalObjectIds,
+    getInteractionKind: () => getCurrentInteractionState().kind,
+    placementOwnsCanvas: Boolean(
+      (pendingSymbolId && pendingComponentPlacement) ||
+      vddRailMode ||
+      copyPlacement !== null,
+    ),
+    tool,
+    cellSymbolLayoutEnabled,
+    beginInstanceMove: beginMoveFromSelection,
+    beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
+    beginAnnotationDrag,
+    handleRoutePointerDown,
+    beginDraftingDrag,
+    selectEndpoint,
+    endpointStatusLabel: (endpoint) => endpointTestId(endpoint.endpoint),
+    setStatus,
+  });
+  const {
     fitView,
     zoomViewAtCenter,
     handleWheel,
@@ -2064,48 +2089,6 @@ export function App({
     clearSelectedEndpoint: () => setSelectedEndpoint(null),
     setStatus,
   });
-
-  function compositeSelectionOwnsHit(
-    kind: "instance" | "instance-label" | "annotation" | "route" | "junction",
-    id: string,
-  ): boolean {
-    // Any multi-object selection is composite, counted across every kind. The
-    // previous rule also required at least one Instance, so a marquee holding
-    // only Routes, Junctions, or Annotations was never treated as a group and
-    // dragging it moved just the grabbed object.
-    const hasCompositeSelection =
-      selectedIds.length +
-        visualSelection.routeIds.length +
-        visualSelection.junctionIds.length +
-        visualSelection.annotationIds.length +
-        visualSelection.draftingIds.length >
-      1;
-    if (!hasCompositeSelection) return false;
-    if (kind === "instance" || kind === "instance-label") {
-      return selectedIds.includes(id);
-    }
-    if (kind === "route") {
-      return (
-        visualSelection.routeIds.includes(id) ||
-        selectedInternalRouteIds.has(id)
-      );
-    }
-    if (kind === "junction") {
-      return (
-        visualSelection.junctionIds.includes(id) ||
-        selectedInternalJunctionIds.has(id)
-      );
-    }
-    const annotation = document.annotations.find(
-      (candidate) => candidate.id === id,
-    );
-    return Boolean(
-      visualSelection.annotationIds.includes(id) ||
-      (annotation?.anchor.kind === "object" &&
-        (selectedIds.includes(annotation.anchor.objectId) ||
-          selectedInternalObjectIds.has(annotation.anchor.objectId))),
-    );
-  }
 
   useEffect(() => {
     if (!selectedRouteId) setSelectedRouteSegmentIndex(null);
@@ -3034,124 +3017,6 @@ export function App({
       clearTransientCanvasState();
     };
   }, []);
-
-  function handleCanvasHitPointerDown(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ): void {
-    if (
-      (pendingSymbolId && pendingComponentPlacement) ||
-      vddRailMode ||
-      copyPlacement !== null
-    ) {
-      return;
-    }
-    if (getCurrentInteractionState().kind === "moving-selection") {
-      const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId) {
-        beginMoveFromSelection(event, primaryInstanceId, event.currentTarget);
-      } else {
-        beginVisualSelectionMoveFromSelection(
-          event,
-          visualSelection,
-          event.currentTarget,
-        );
-      }
-      return;
-    }
-    if (tool !== "pointer" || event.button !== 0) return;
-    if (
-      cellSymbolLayoutEnabled &&
-      (event.target as Element).closest(
-        '[data-testid="cell-symbol-layout-overlay"]',
-      )
-    ) {
-      // The canvas capture layer ranks the underlying scene through
-      // elementsFromPoint(). Layout grips intentionally outrank that scene so
-      // a selected hierarchy instance cannot start an ordinary move first.
-      return;
-    }
-    // Handles outrank the scene they sit on, the same way layout grips do.
-    // Testing only event.target missed a handle drawn under another hit
-    // surface — a Power Rail end handle sits beneath its Junction's endpoint
-    // circle — so this capture layer claimed the press and the rail moved
-    // instead of resizing. Rank the whole stack at the point instead.
-    const handleAtPoint = event.currentTarget.ownerDocument
-      .elementsFromPoint(event.clientX, event.clientY)
-      .some((element) => element.closest(".draft-handle, .route-handle"));
-    if (handleAtPoint) return;
-    const hit = resolveCanvasHitAtPoint(
-      event.currentTarget.ownerDocument,
-      { x: event.clientX, y: event.clientY },
-      event.altKey ? 1 : 0,
-    );
-    if (!hit || hit.kind === "handle") return;
-    const hitTarget = hit.element as SVGElement;
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (
-      !event.shiftKey &&
-      !event.ctrlKey &&
-      !event.metaKey &&
-      (hit.kind === "instance" ||
-        hit.kind === "instance-label" ||
-        hit.kind === "annotation" ||
-        hit.kind === "route" ||
-        hit.kind === "junction") &&
-      compositeSelectionOwnsHit(hit.kind, hit.id)
-    ) {
-      const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId) {
-        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
-        return;
-      }
-      // A marquee can hold only Routes, Junctions, and Annotations. Without an
-      // Instance to anchor the move, the press used to fall through to the
-      // single-object branches below and drag just the grabbed object out of
-      // its own selection.
-      const movePlan = planSelectionMove(document, visualSelection);
-      if (movePlan.previewObjectIds.length > 0) {
-        beginVisualSelectionMoveFromSelection(
-          event,
-          visualSelection,
-          hitTarget,
-        );
-        return;
-      }
-    }
-
-    if (hit.kind === "instance") {
-      beginMoveFromSelection(event, hit.id, hitTarget);
-      return;
-    }
-    if (hit.kind === "annotation") {
-      const annotation = document.annotations.find(
-        (candidate) => candidate.id === hit.id,
-      );
-      if (annotation) beginAnnotationDrag(event, annotation, hitTarget);
-      return;
-    }
-    if (hit.kind === "route") {
-      handleRoutePointerDown(event, hit.id, hitTarget);
-      return;
-    }
-    if (hit.kind === "drafting") {
-      const object = document.drafting?.objects.find(
-        (candidate) => candidate.id === hit.id,
-      );
-      if (object) beginDraftingDrag(event, object, hitTarget);
-      return;
-    }
-    const endpoint = visibleEndpoints.find(
-      (candidate) =>
-        candidate.endpoint.kind === "junction" &&
-        candidate.endpoint.junctionId === hit.id,
-    );
-    if (endpoint) {
-      selectEndpoint(endpoint);
-      setStatus(`Selected ${endpointTestId(endpoint.endpoint)}`);
-    }
-  }
 
   const editorCommands = createEditorCommandRouter({
     getContext: () => ({
