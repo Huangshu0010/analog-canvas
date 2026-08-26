@@ -173,18 +173,42 @@ const compactDifferentialTriangle = {
   topY: -15.0002,
   bottomY: 14.9993,
 };
+const FD_AMP_BODY_SCALE =
+  (opampTriangle.apexX - opampTriangle.leftX) /
+  (compactDifferentialTriangle.apexX - compactDifferentialTriangle.leftX);
+const opampCenterY = (opampTriangle.topY + opampTriangle.bottomY) / 2;
+const compactDifferentialCenterY =
+  (compactDifferentialTriangle.topY + compactDifferentialTriangle.bottomY) / 2;
 const scaleDifferentialPoint = ({ x, y }) => ({
   x:
     opampTriangle.leftX +
-    ((x - compactDifferentialTriangle.leftX) *
-      (opampTriangle.apexX - opampTriangle.leftX)) /
-      (compactDifferentialTriangle.apexX - compactDifferentialTriangle.leftX),
-  y:
-    opampTriangle.topY +
-    ((y - compactDifferentialTriangle.topY) *
-      (opampTriangle.bottomY - opampTriangle.topY)) /
-      (compactDifferentialTriangle.bottomY - compactDifferentialTriangle.topY),
+    (x - compactDifferentialTriangle.leftX) * FD_AMP_BODY_SCALE,
+  y: opampCenterY + (y - compactDifferentialCenterY) * FD_AMP_BODY_SCALE,
 });
+const scaledDifferentialTriangle = {
+  leftX: opampTriangle.leftX,
+  apexX: opampTriangle.apexX,
+  topY: scaleDifferentialPoint({
+    x: compactDifferentialTriangle.leftX,
+    y: compactDifferentialTriangle.topY,
+  }).y,
+  bottomY: scaleDifferentialPoint({
+    x: compactDifferentialTriangle.leftX,
+    y: compactDifferentialTriangle.bottomY,
+  }).y,
+  apexY: scaleDifferentialPoint({
+    x: compactDifferentialTriangle.apexX,
+    y: 0.000436,
+  }).y,
+};
+const coordinate = (value) => Number(value.toFixed(6));
+const differentialTrianglePathData =
+  `M ${coordinate(scaledDifferentialTriangle.leftX)} ` +
+  `${coordinate(scaledDifferentialTriangle.topY)} ` +
+  `L ${coordinate(scaledDifferentialTriangle.leftX)} ` +
+  `${coordinate(scaledDifferentialTriangle.bottomY)} ` +
+  `L ${coordinate(scaledDifferentialTriangle.apexX)} ` +
+  `${coordinate(scaledDifferentialTriangle.apexY)} Z`;
 const scaleDifferentialLine = (geometry) => ({
   from: scaleDifferentialPoint(geometry.from),
   to: scaleDifferentialPoint(geometry.to),
@@ -220,27 +244,47 @@ const halfwayAlongLead = (contact, pin) => ({
     ),
   },
 });
-const LEAD_JOIN_OVERLAP = 1.6;
+const TRIANGLE_STROKE_WIDTH = 2.4;
+const TRIANGLE_HALF_STROKE = TRIANGLE_STROKE_WIDTH / 2;
+const LEAD_JOIN_EPSILON = 0.05;
 const outputContact = (y) => {
   const reachesApexFromTop = y <= 0;
-  const edgeY = reachesApexFromTop ? opampTriangle.topY : opampTriangle.bottomY;
+  const edgeY = reachesApexFromTop
+    ? scaledDifferentialTriangle.topY
+    : scaledDifferentialTriangle.bottomY;
+  const apexY = scaledDifferentialTriangle.apexY;
   const ratio = reachesApexFromTop
-    ? (y - edgeY) / (0 - edgeY)
-    : (edgeY - y) / edgeY;
+    ? (y - edgeY) / (apexY - edgeY)
+    : (edgeY - y) / (edgeY - apexY);
   return {
     x:
-      opampTriangle.leftX + ratio * (opampTriangle.apexX - opampTriangle.leftX),
+      scaledDifferentialTriangle.leftX +
+      ratio *
+        (scaledDifferentialTriangle.apexX - scaledDifferentialTriangle.leftX),
     y,
   };
 };
 const inputLeadContact = (y) => ({
-  x: opampTriangle.leftX + LEAD_JOIN_OVERLAP,
+  x:
+    scaledDifferentialTriangle.leftX - TRIANGLE_HALF_STROKE + LEAD_JOIN_EPSILON,
   y,
 });
-const outputLeadContact = (y) => ({
-  ...outputContact(y),
-  x: outputContact(y).x - LEAD_JOIN_OVERLAP,
-});
+const outputLeadContact = (y) => {
+  const center = outputContact(y);
+  const edgeY =
+    y <= 0
+      ? scaledDifferentialTriangle.topY
+      : scaledDifferentialTriangle.bottomY;
+  const dx =
+    scaledDifferentialTriangle.apexX - scaledDifferentialTriangle.leftX;
+  const dy = Math.abs(scaledDifferentialTriangle.apexY - edgeY);
+  const horizontalStrokeReach =
+    (TRIANGLE_HALF_STROKE * Math.hypot(dx, dy)) / dy;
+  return {
+    ...center,
+    x: center.x + horizontalStrokeReach - LEAD_JOIN_EPSILON,
+  };
+};
 const inputLead = (pin, contact) => ({
   kind: "line",
   from: pin.at,
@@ -331,7 +375,7 @@ const differentialSymbol = (id, name, plusOutputAtBottom) => {
       ),
       {
         kind: "path",
-        data: geometry.trianglePathData,
+        data: differentialTrianglePathData,
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",

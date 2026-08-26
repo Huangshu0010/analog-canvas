@@ -235,11 +235,37 @@ describe("Razavi symbol catalog", () => {
     expect(invalid.success).toBe(false);
   });
 
-  it("shares the full Op Amp body and continuously joined compact leads", () => {
+  it("preserves the FD Amp angle at Op Amp scale with boundary-only joins", () => {
     const opampTriangle = requireRazaviCatalogSymbol("opamp").primitives.find(
       (primitive) => primitive.kind === "path",
     );
-    expect(opampTriangle).toBeDefined();
+    if (opampTriangle?.kind !== "path") {
+      throw new Error("Op Amp must retain its triangle path");
+    }
+    const pathPoints = (data: string) => {
+      const values = [...data.matchAll(/-?\d+(?:\.\d+)?/gu)].map((match) =>
+        Number(match[0]),
+      );
+      return {
+        leftTop: { x: values[0]!, y: values[1]! },
+        leftBottom: { x: values[2]!, y: values[3]! },
+        apex: { x: values[4]!, y: values[5]! },
+      };
+    };
+    const opampPoints = pathPoints(opampTriangle.data);
+    const opampWidth = opampPoints.apex.x - opampPoints.leftTop.x;
+    const originalFdAspect = (14.9998 - -20) / (14.9993 - -15.0002);
+    const distanceToEdge = (
+      point: { x: number; y: number },
+      from: { x: number; y: number },
+      to: { x: number; y: number },
+    ) =>
+      Math.abs(
+        (to.y - from.y) * point.x -
+          (to.x - from.x) * point.y +
+          to.x * from.y -
+          to.y * from.x,
+      ) / Math.hypot(to.y - from.y, to.x - from.x);
     for (const symbolId of [
       "opamp-differential",
       "opamp-differential-crossed",
@@ -269,7 +295,16 @@ describe("Razavi symbol catalog", () => {
           style: { strokeRole: "normal" },
         });
       }
-      expect(symbol.primitives[4]).toEqual(opampTriangle);
+      const triangle = symbol.primitives[4];
+      if (triangle?.kind !== "path") {
+        throw new Error("FD Amp must retain its triangle path");
+      }
+      const points = pathPoints(triangle.data);
+      const width = points.apex.x - points.leftTop.x;
+      const height = points.leftBottom.y - points.leftTop.y;
+      expect(width).toBeCloseTo(opampWidth, 6);
+      expect(width / height).toBeCloseTo(originalFdAspect, 5);
+      expect(triangle.style).toEqual(opampTriangle.style);
       const [topInput, bottomInput, topOutput, bottomOutput] =
         symbol.primitives.slice(0, 4);
       if (
@@ -280,10 +315,33 @@ describe("Razavi symbol catalog", () => {
       ) {
         throw new Error("FD Amp leads must remain line primitives");
       }
-      expect(topInput.to.x + 26.7979).toBeCloseTo(1.6, 6);
-      expect(bottomInput.to.x + 26.7979).toBeCloseTo(1.6, 6);
-      expect(3.2007399075137144 - topOutput.from.x).toBeCloseTo(1.6, 6);
-      expect(3.2021 - bottomOutput.from.x).toBeCloseTo(1.6, 6);
+      const triangleHalfStroke = 1.2;
+      expect(topInput.to.x).toBeLessThan(points.leftTop.x);
+      expect(bottomInput.to.x).toBeLessThan(points.leftBottom.x);
+      expect(
+        topInput.to.x - (points.leftTop.x - triangleHalfStroke),
+      ).toBeCloseTo(0.05, 6);
+      expect(
+        bottomInput.to.x - (points.leftBottom.x - triangleHalfStroke),
+      ).toBeCloseTo(0.05, 6);
+      const topCenterX =
+        points.leftTop.x +
+        ((topOutput.from.y - points.leftTop.y) /
+          (points.apex.y - points.leftTop.y)) *
+          (points.apex.x - points.leftTop.x);
+      const bottomCenterX =
+        points.leftBottom.x +
+        ((points.leftBottom.y - bottomOutput.from.y) /
+          (points.leftBottom.y - points.apex.y)) *
+          (points.apex.x - points.leftBottom.x);
+      expect(topOutput.from.x).toBeGreaterThan(topCenterX);
+      expect(bottomOutput.from.x).toBeGreaterThan(bottomCenterX);
+      expect(
+        distanceToEdge(topOutput.from, points.leftTop, points.apex),
+      ).toBeLessThan(triangleHalfStroke);
+      expect(
+        distanceToEdge(bottomOutput.from, points.leftBottom, points.apex),
+      ).toBeLessThan(triangleHalfStroke);
     }
   });
 
