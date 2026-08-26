@@ -197,17 +197,35 @@ const acrossAxis = (primitive) => ({
   from: { ...primitive.from, y: -primitive.from.y },
   to: { ...primitive.to, y: -primitive.to.y },
 });
+/** Keep the user-facing FD Amp leads compact without changing its core body. */
+const FD_AMP_LEAD_SCALE = 0.5;
+const CONNECTION_GRID = 10;
+const snapToConnectionGrid = (value) =>
+  Math.round(value / CONNECTION_GRID) * CONNECTION_GRID;
+const halfwayAlongLead = (contact, pin) => ({
+  ...pin,
+  at: {
+    x: snapToConnectionGrid(
+      contact.x + (pin.at.x - contact.x) * FD_AMP_LEAD_SCALE,
+    ),
+    y: snapToConnectionGrid(
+      contact.y + (pin.at.y - contact.y) * FD_AMP_LEAD_SCALE,
+    ),
+  },
+});
 const inputLead = (pin, sourceLead) => ({
   kind: "line",
   from: pin.at,
   to: sourceLead.to,
-  style: differentialNormal,
+  // Symbol DSL has no wire role; normal currently resolves to the Razavi wire
+  // width (1.6 logical units) and tracks that profile value.
+  style: normal,
 });
 const outputLead = (sourceLead, pin) => ({
   kind: "line",
   from: sourceLead.from,
   to: pin.at,
-  style: differentialNormal,
+  style: normal,
 });
 const sourceInputMarks = [
   taggedLine(differentialGeometry.input_plus_vertical, "input-polarity"),
@@ -220,22 +238,28 @@ const sourceOutputMarks = [
   taggedLine(differentialGeometry.output_plus_horizontal, "output-polarity"),
 ];
 const differentialSymbol = (id, name, plusOutputAtBottom) => {
-  const topInput = symbol.pins[1];
-  const bottomInput = symbol.pins[0];
-  const topOutput = {
+  const topInput = halfwayAlongLead(
+    differentialGeometry.input_plus.to,
+    symbol.pins[1],
+  );
+  const bottomInput = halfwayAlongLead(
+    differentialGeometry.input_minus.to,
+    symbol.pins[0],
+  );
+  const topOutput = halfwayAlongLead(differentialGeometry.output_minus.from, {
     name: "OUT-",
     role: "output",
     at: { x: geometry.output.to.x, y: -OUTPUT_PAIR_OFFSET },
     direction: "east",
     presentation: { visibility: "visible", leadLength: 20 },
-  };
-  const bottomOutput = {
+  });
+  const bottomOutput = halfwayAlongLead(differentialGeometry.output_plus.from, {
     name: "OUT+",
     role: "output",
     at: { x: geometry.output.to.x, y: OUTPUT_PAIR_OFFSET },
     direction: "east",
     presentation: { visibility: "visible", leadLength: 20 },
-  };
+  });
   const outputPins = plusOutputAtBottom
     ? [bottomOutput, topOutput]
     : [

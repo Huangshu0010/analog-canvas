@@ -13,7 +13,7 @@
       "name": "IN+",
       "role": "non-inverting-input",
       "at": {
-        "x": -50,
+        "x": -40,
         "y": -10
       },
       "direction": "west",
@@ -26,7 +26,7 @@
       "name": "IN-",
       "role": "inverting-input",
       "at": {
-        "x": -50,
+        "x": -40,
         "y": 10
       },
       "direction": "west",
@@ -39,7 +39,7 @@
       "name": "OUT+",
       "role": "output",
       "at": {
-        "x": 40,
+        "x": 20,
         "y": -10
       },
       "direction": "east",
@@ -52,7 +52,7 @@
       "name": "OUT-",
       "role": "output",
       "at": {
-        "x": 40,
+        "x": 20,
         "y": 10
       },
       "direction": "east",
@@ -66,7 +66,7 @@
     {
       "kind": "line",
       "from": {
-        "x": -50,
+        "x": -40,
         "y": -10
       },
       "to": {
@@ -74,7 +74,7 @@
         "y": -10
       },
       "style": {
-        "strokeWidth": 0.625137,
+        "strokeRole": "normal",
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -82,7 +82,7 @@
     {
       "kind": "line",
       "from": {
-        "x": -50,
+        "x": -40,
         "y": 10
       },
       "to": {
@@ -90,7 +90,7 @@
         "y": 10
       },
       "style": {
-        "strokeWidth": 0.625137,
+        "strokeRole": "normal",
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -102,11 +102,11 @@
         "y": -10
       },
       "to": {
-        "x": 40,
+        "x": 20,
         "y": -10
       },
       "style": {
-        "strokeWidth": 0.625137,
+        "strokeRole": "normal",
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -118,11 +118,11 @@
         "y": 10
       },
       "to": {
-        "x": 40,
+        "x": 20,
         "y": 10
       },
       "style": {
-        "strokeWidth": 0.625137,
+        "strokeRole": "normal",
         "lineCap": "butt",
         "lineJoin": "miter"
       }
