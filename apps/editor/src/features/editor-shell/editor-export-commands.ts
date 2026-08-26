@@ -1,0 +1,113 @@
+import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
+import { printDesignNetlist } from "@icm/netlist";
+import type { DesignNetlistIR, NetlistFormat } from "@icm/netlist";
+import type { SchematicDocument } from "@icm/model";
+import type { SymbolResolver } from "@icm/symbols";
+
+export interface EditorExportArtifact {
+  bytes: BlobPart;
+  mediaType: string;
+  extension: string;
+  report: string;
+}
+
+export type DesignNetlistExportPlan =
+  | { status: "blocked"; message: string }
+  | { status: "ready"; artifact: EditorExportArtifact };
+
+export function createSvgExportArtifact(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  projectName: string,
+): EditorExportArtifact {
+  const source = createFormalExportSource(document, resolver, {
+    title: projectName,
+  });
+  return {
+    bytes: source.svg,
+    mediaType: "image/svg+xml",
+    extension: "svg",
+    report: `Exported revision ${document.revision}`,
+  };
+}
+
+export function planDesignNetlistExport({
+  format,
+  ir,
+  warningsPresent,
+  warningsReviewed,
+  projectName,
+}: {
+  format: NetlistFormat;
+  ir: DesignNetlistIR | null;
+  warningsPresent: boolean;
+  warningsReviewed: boolean;
+  projectName: string;
+}): DesignNetlistExportPlan {
+  if (!ir) {
+    return {
+      status: "blocked",
+      message: "Resolve the Check Report findings before export",
+    };
+  }
+  if (warningsPresent && !warningsReviewed) {
+    return {
+      status: "blocked",
+      message: "Review the Check Report warnings before export",
+    };
+  }
+  const printed = printDesignNetlist(format, ir);
+  return {
+    status: "ready",
+    artifact: {
+      bytes: printed.text,
+      mediaType: printed.mediaType,
+      extension: printed.extension.slice(1),
+      report: `Download requested: ${safeExportBaseName(projectName)}${printed.extension}`,
+    },
+  };
+}
+
+export async function createRasterExportArtifact(
+  format: "png" | "pdf",
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  projectName: string,
+): Promise<EditorExportArtifact> {
+  const { exportFormalArtifactsInBrowser, rasterizeFormalSvgInBrowser } =
+    await import("@icm/exporters/browser");
+  const source = createFormalExportSource(document, resolver, {
+    title: projectName,
+  });
+  if (format === "png") {
+    const png = await rasterizeFormalSvgInBrowser(source);
+    return {
+      bytes: png.bytes as BlobPart,
+      mediaType: png.mediaType,
+      extension: "png",
+      report: `Exported PNG revision ${document.revision}`,
+    };
+  }
+  const { pdf } = await exportFormalArtifactsInBrowser(source);
+  return {
+    bytes: pdf as BlobPart,
+    mediaType: "application/pdf",
+    extension: "pdf",
+    report: `Exported PDF revision ${document.revision}`,
+  };
+}
+
+/** Deliver a prepared artifact through the browser download surface. */
+export function requestBrowserDownload(
+  artifact: EditorExportArtifact,
+  baseName: string,
+): void {
+  const url = URL.createObjectURL(
+    new Blob([artifact.bytes], { type: artifact.mediaType }),
+  );
+  const anchor = window.document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${safeExportBaseName(baseName)}.${artifact.extension}`;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}

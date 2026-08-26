@@ -35,8 +35,7 @@ import {
   type WireRoutingMode,
   type WireCornerOrder,
 } from "@icm/edit-engine";
-import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
-import { analyzeDesignNetlist, printDesignNetlist } from "@icm/netlist";
+import { analyzeDesignNetlist } from "@icm/netlist";
 import type { NetlistDiagnostic, NetlistFormat } from "@icm/netlist";
 import {
   buildProjectConnectivityIndex,
@@ -153,6 +152,12 @@ import {
 } from "../canvas/canvas-viewport";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
 import { draggedAnnotationAtPosition } from "../features/text-editing/annotation-drag-model";
+import {
+  createRasterExportArtifact,
+  createSvgExportArtifact,
+  planDesignNetlistExport,
+  requestBrowserDownload,
+} from "../features/editor-shell/editor-export-commands";
 import { ComponentPlacementPreview } from "../features/component-insert/component-placement-preview";
 import {
   cellInsertLaunch,
@@ -4144,20 +4149,6 @@ export function App({
     },
   });
 
-  function download(
-    bytes: BlobPart,
-    mediaType: string,
-    extension: string,
-    baseName = project.name,
-  ): void {
-    const url = URL.createObjectURL(new Blob([bytes], { type: mediaType }));
-    const anchor = window.document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${safeExportBaseName(baseName)}.${extension}`;
-    anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
-
   // Single entry point for selecting a drafting object. Editing is opened
   // separately (double-click/Enter) so selection and text caret ownership do
   // not fight drag gestures.
@@ -4949,11 +4940,9 @@ export function App({
   }
 
   function exportSvg(): void {
-    const source = createFormalExportSource(document, resolver, {
-      title: project.name,
-    });
-    download(source.svg, "image/svg+xml", "svg");
-    void reportExport(`Exported revision ${document.revision}`);
+    const artifact = createSvgExportArtifact(document, resolver, project.name);
+    requestBrowserDownload(artifact, project.name);
+    void reportExport(artifact.report);
   }
 
   /**
@@ -5016,45 +5005,35 @@ export function App({
     format: NetlistFormat,
     warningsReviewed = false,
   ): void {
-    if (!netlistAnalysis.ir) {
+    const plan = planDesignNetlistExport({
+      format,
+      ir: netlistAnalysis.ir,
+      warningsPresent:
+        netlistAnalysis.diagnostics.length > 0 ||
+        electricalDiagnostics.length > 0,
+      warningsReviewed,
+      projectName: project.name,
+    });
+    if (plan.status === "blocked") {
       setNetlistPreflightOpen(true);
-      setStatus("Resolve the Check Report findings before export");
+      setStatus(plan.message);
       return;
     }
-    if (
-      (netlistAnalysis.diagnostics.length > 0 ||
-        electricalDiagnostics.length > 0) &&
-      !warningsReviewed
-    ) {
-      setNetlistPreflightOpen(true);
-      setStatus("Review the Check Report warnings before export");
-      return;
-    }
-    const artifact = printDesignNetlist(format, netlistAnalysis.ir);
-    download(artifact.text, artifact.mediaType, artifact.extension.slice(1));
-    void reportExport(
-      `Download requested: ${safeExportBaseName(project.name)}${artifact.extension}`,
-    );
+    requestBrowserDownload(plan.artifact, project.name);
+    void reportExport(plan.artifact.report);
   }
 
   async function exportRaster(format: "png" | "pdf"): Promise<void> {
     setStatus(`Preparing ${format.toUpperCase()} export`);
     try {
-      const { exportFormalArtifactsInBrowser, rasterizeFormalSvgInBrowser } =
-        await import("@icm/exporters/browser");
-      const source = createFormalExportSource(document, resolver, {
-        title: project.name,
-      });
-      if (format === "png") {
-        const png = await rasterizeFormalSvgInBrowser(source);
-        download(png.bytes as BlobPart, png.mediaType, "png");
-      } else {
-        const { pdf } = await exportFormalArtifactsInBrowser(source);
-        download(pdf as BlobPart, "application/pdf", "pdf");
-      }
-      await reportExport(
-        `Exported ${format.toUpperCase()} revision ${document.revision}`,
+      const artifact = await createRasterExportArtifact(
+        format,
+        document,
+        resolver,
+        project.name,
       );
+      requestBrowserDownload(artifact, project.name);
+      await reportExport(artifact.report);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Export failed");
     }
