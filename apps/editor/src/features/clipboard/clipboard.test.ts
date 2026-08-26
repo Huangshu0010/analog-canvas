@@ -72,6 +72,7 @@ describe("schematic clipboard", () => {
 
     const clipboard = copySelection(document, ["P1"]);
     expect(clipboard).not.toBeNull();
+    expect(clipboard?.cellTerminalPastePolicy).toBe("independent");
     const proposal = proposePaste(document, clipboard!, { x: 80, y: 0 }, 1);
     const result = executeTransaction(
       document,
@@ -810,6 +811,7 @@ describe("copyWholeDocument", () => {
     expect(copySelection(document, [])).toBeNull();
 
     const whole = copyWholeDocument(document);
+    expect(whole?.cellTerminalPastePolicy).toBe("merge-by-name");
     expect(whole?.routes).toHaveLength(1);
     expect(whole?.routes[0]?.presentation).toBe("power-rail");
     expect(whole?.junctions).toHaveLength(2);
