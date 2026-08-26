@@ -239,6 +239,85 @@ async function submitOne(
   return payload.id;
 }
 
+describe("gallery data migrations", () => {
+  it("renames tokenzhang across entries and restorable versions once", () => {
+    const state = sqliteState();
+    new GalleryDO(state);
+    state.storage.sql.exec(
+      `INSERT INTO gallery_entries
+       (id, name, author, description, created_at, schema_version, status,
+        project_text, svg_text)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      "legacy-entry",
+      "Legacy",
+      "tokenzhang",
+      "",
+      "2026-08-01T00:00:00.000Z",
+      CURRENT_PROJECT_SCHEMA_VERSION,
+      "public",
+      projectText("Legacy"),
+      "<svg/>",
+      "other-entry",
+      "Other",
+      "Other Author",
+      "",
+      "2026-08-01T00:00:00.000Z",
+      CURRENT_PROJECT_SCHEMA_VERSION,
+      "recycled",
+      projectText("Other"),
+      "<svg/>",
+    );
+    state.storage.sql.exec(
+      `INSERT INTO gallery_entry_versions
+       (id, entry_id, version_no, name, author, description, schema_version,
+        project_text, svg_text, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      "legacy-version",
+      "legacy-entry",
+      1,
+      "Legacy",
+      "Token Zhang",
+      "",
+      CURRENT_PROJECT_SCHEMA_VERSION,
+      projectText("Legacy"),
+      "<svg/>",
+      "2026-08-01T00:00:00.000Z",
+    );
+    state.storage.sql.exec("DELETE FROM data_migrations");
+
+    new GalleryDO(state);
+    expect(
+      state.storage.sql
+        .exec<{ id: string; author: string }>(
+          "SELECT id, author FROM gallery_entries ORDER BY id",
+        )
+        .toArray(),
+    ).toEqual([
+      { id: "legacy-entry", author: "Zhishuai Zhang" },
+      { id: "other-entry", author: "Other Author" },
+    ]);
+    expect(
+      state.storage.sql
+        .exec<{ author: string }>(
+          "SELECT author FROM gallery_entry_versions WHERE id = 'legacy-version'",
+        )
+        .one().author,
+    ).toBe("Zhishuai Zhang");
+
+    state.storage.sql.exec(
+      "UPDATE gallery_entries SET author = 'Token Zhang' WHERE id = 'legacy-entry'",
+    );
+    new GalleryDO(state);
+    expect(
+      state.storage.sql
+        .exec<{ author: string }>(
+          "SELECT author FROM gallery_entries WHERE id = 'legacy-entry'",
+        )
+        .one().author,
+    ).toBe("Token Zhang");
+  });
+});
+
 describe("newest-first gallery feed", () => {
   async function galleryPage(
     env: Harness,

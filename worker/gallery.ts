@@ -212,6 +212,10 @@ interface EntryRow {
   netlistable: number;
 }
 
+const TOKENZHANG_BYLINE_MIGRATION =
+  "2026-08-26-tokenzhang-to-zhishuai-zhang";
+const TOKENZHANG_BYLINE = "Zhishuai Zhang";
+
 function summaryOf(
   row: EntryRow & { likes?: number; liked_by_viewer?: number },
 ): GalleryEntrySummary {
@@ -331,6 +335,35 @@ export class GalleryDO {
         // Column already present.
       }
     }
+    this.sql.exec(`
+      CREATE TABLE IF NOT EXISTS data_migrations (
+        id TEXT PRIMARY KEY,
+        applied_at TEXT NOT NULL
+      ) WITHOUT ROWID
+    `);
+    state.storage.transactionSync(() => {
+      const applied = this.sql
+        .exec<{ id: string }>(
+          "SELECT id FROM data_migrations WHERE id = ?",
+          TOKENZHANG_BYLINE_MIGRATION,
+        )
+        .toArray();
+      if (applied.length > 0) return;
+      // Keep every surface consistent, including recycled entries and the
+      // snapshots that can later be restored from version history.
+      for (const table of ["gallery_entries", "gallery_entry_versions"]) {
+        this.sql.exec(
+          `UPDATE ${table} SET author = ?
+           WHERE LOWER(REPLACE(TRIM(author), ' ', '')) = 'tokenzhang'`,
+          TOKENZHANG_BYLINE,
+        );
+      }
+      this.sql.exec(
+        "INSERT INTO data_migrations(id, applied_at) VALUES (?, ?)",
+        TOKENZHANG_BYLINE_MIGRATION,
+        new Date().toISOString(),
+      );
+    });
     // Direct publishing retired the review queue. An entry still waiting for
     // a reviewer would otherwise be stranded — listed nowhere, approvable by
     // nothing — so publish it, which is what its author asked for. An entry a
