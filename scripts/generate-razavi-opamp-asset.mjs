@@ -123,11 +123,11 @@ const assetSource = normalize(
 );
 
 /**
- * Figure 13.48 is the direct source for the fully differential body.  It is a
- * compact native triangle: its two outputs leave the sloping edges, rather
- * than a synthetic truncation of Figure 8.26's apex.  The source's displayed
- * input polarity is the input-swapped state of our persistent FD Amp contract;
- * retain the pin semantics and derive only the marks needed for each state.
+ * Figure 13.48 supplies the fully differential polarity layout and dual-output
+ * topology. Its printed triangle is compact, whereas the product contract is
+ * that FD Amp uses the same triangle body as the ordinary Razavi Op Amp
+ * (Figure 8.26). Scale only the Figure 13.48 polarity layout into that shared
+ * body; retain pin semantics and derive only marks needed for each state.
  */
 const differentialAuthority = manifest.vectorEvidence?.find(
   (candidate) =>
@@ -161,32 +161,39 @@ if (
   fail("Figure 13.48 differential op-amp evidence contract mismatch");
 }
 
-const differentialNormal = {
-  strokeWidth: Number(
-    (
-      differentialEvidence.selection.normalLineWidthPdfPt *
-      differentialEvidence.normalization.logicalUnitsPerPdfPoint
-    ).toFixed(6),
-  ),
-  lineCap: "butt",
-  lineJoin: "miter",
+const opampTriangle = {
+  leftX: -26.7979,
+  apexX: 23.2021,
+  topY: -24.9983,
+  bottomY: 25,
 };
-const differentialTriangle = {
-  strokeWidth: Number(
-    (
-      differentialEvidence.selection.triangleLineWidthPdfPt *
-      differentialEvidence.normalization.logicalUnitsPerPdfPoint
-    ).toFixed(6),
-  ),
-  lineCap: "butt",
-  lineJoin: "miter",
-  miterLimit: 4,
+const compactDifferentialTriangle = {
+  leftX: -20,
+  apexX: 14.9998,
+  topY: -15.0002,
+  bottomY: 14.9993,
 };
+const scaleDifferentialPoint = ({ x, y }) => ({
+  x:
+    opampTriangle.leftX +
+    ((x - compactDifferentialTriangle.leftX) *
+      (opampTriangle.apexX - opampTriangle.leftX)) /
+      (compactDifferentialTriangle.apexX - compactDifferentialTriangle.leftX),
+  y:
+    opampTriangle.topY +
+    ((y - compactDifferentialTriangle.topY) *
+      (opampTriangle.bottomY - opampTriangle.topY)) /
+      (compactDifferentialTriangle.bottomY - compactDifferentialTriangle.topY),
+});
+const scaleDifferentialLine = (geometry) => ({
+  from: scaleDifferentialPoint(geometry.from),
+  to: scaleDifferentialPoint(geometry.to),
+});
 const differentialLine = (geometry) => ({
   kind: "line",
   from: geometry.from,
   to: geometry.to,
-  style: differentialNormal,
+  style: normal,
 });
 const taggedLine = (geometry, part) => ({
   ...differentialLine(geometry),
@@ -213,47 +220,86 @@ const halfwayAlongLead = (contact, pin) => ({
     ),
   },
 });
-const inputLead = (pin, sourceLead) => ({
+const LEAD_JOIN_OVERLAP = 1.6;
+const outputContact = (y) => {
+  const reachesApexFromTop = y <= 0;
+  const edgeY = reachesApexFromTop ? opampTriangle.topY : opampTriangle.bottomY;
+  const ratio = reachesApexFromTop
+    ? (y - edgeY) / (0 - edgeY)
+    : (edgeY - y) / edgeY;
+  return {
+    x:
+      opampTriangle.leftX + ratio * (opampTriangle.apexX - opampTriangle.leftX),
+    y,
+  };
+};
+const inputLeadContact = (y) => ({
+  x: opampTriangle.leftX + LEAD_JOIN_OVERLAP,
+  y,
+});
+const outputLeadContact = (y) => ({
+  ...outputContact(y),
+  x: outputContact(y).x - LEAD_JOIN_OVERLAP,
+});
+const inputLead = (pin, contact) => ({
   kind: "line",
   from: pin.at,
-  to: sourceLead.to,
+  to: contact,
   // Symbol DSL has no wire role; normal currently resolves to the Razavi wire
   // width (1.6 logical units) and tracks that profile value.
   style: normal,
 });
-const outputLead = (sourceLead, pin) => ({
+const outputLead = (contact, pin) => ({
   kind: "line",
-  from: sourceLead.from,
+  from: contact,
   to: pin.at,
   style: normal,
 });
 const sourceInputMarks = [
-  taggedLine(differentialGeometry.input_plus_vertical, "input-polarity"),
-  taggedLine(differentialGeometry.input_plus_horizontal, "input-polarity"),
-  taggedLine(differentialGeometry.input_minus_horizontal, "input-polarity"),
+  taggedLine(
+    scaleDifferentialLine(differentialGeometry.input_plus_vertical),
+    "input-polarity",
+  ),
+  taggedLine(
+    scaleDifferentialLine(differentialGeometry.input_plus_horizontal),
+    "input-polarity",
+  ),
+  taggedLine(
+    scaleDifferentialLine(differentialGeometry.input_minus_horizontal),
+    "input-polarity",
+  ),
 ];
 const sourceOutputMarks = [
-  taggedLine(differentialGeometry.output_minus_horizontal, "output-polarity"),
-  taggedLine(differentialGeometry.output_plus_vertical, "output-polarity"),
-  taggedLine(differentialGeometry.output_plus_horizontal, "output-polarity"),
+  taggedLine(
+    scaleDifferentialLine(differentialGeometry.output_minus_horizontal),
+    "output-polarity",
+  ),
+  taggedLine(
+    scaleDifferentialLine(differentialGeometry.output_plus_vertical),
+    "output-polarity",
+  ),
+  taggedLine(
+    scaleDifferentialLine(differentialGeometry.output_plus_horizontal),
+    "output-polarity",
+  ),
 ];
 const differentialSymbol = (id, name, plusOutputAtBottom) => {
   const topInput = halfwayAlongLead(
-    differentialGeometry.input_plus.to,
+    inputLeadContact(-OUTPUT_PAIR_OFFSET),
     symbol.pins[1],
   );
   const bottomInput = halfwayAlongLead(
-    differentialGeometry.input_minus.to,
+    inputLeadContact(OUTPUT_PAIR_OFFSET),
     symbol.pins[0],
   );
-  const topOutput = halfwayAlongLead(differentialGeometry.output_minus.from, {
+  const topOutput = halfwayAlongLead(outputLeadContact(-OUTPUT_PAIR_OFFSET), {
     name: "OUT-",
     role: "output",
     at: { x: geometry.output.to.x, y: -OUTPUT_PAIR_OFFSET },
     direction: "east",
     presentation: { visibility: "visible", leadLength: 20 },
   });
-  const bottomOutput = halfwayAlongLead(differentialGeometry.output_plus.from, {
+  const bottomOutput = halfwayAlongLead(outputLeadContact(OUTPUT_PAIR_OFFSET), {
     name: "OUT+",
     role: "output",
     at: { x: geometry.output.to.x, y: OUTPUT_PAIR_OFFSET },
@@ -273,20 +319,25 @@ const differentialSymbol = (id, name, plusOutputAtBottom) => {
     viewBox: symbol.viewBox,
     pins: [bottomInput, topInput, ...outputPins],
     primitives: [
-      inputLead(topInput, differentialGeometry.input_plus),
-      inputLead(bottomInput, differentialGeometry.input_minus),
+      inputLead(topInput, inputLeadContact(-OUTPUT_PAIR_OFFSET)),
+      inputLead(bottomInput, inputLeadContact(OUTPUT_PAIR_OFFSET)),
       outputLead(
-        differentialGeometry.output_minus,
+        outputLeadContact(-OUTPUT_PAIR_OFFSET),
         outputPins.find((pin) => pin.at.y === -OUTPUT_PAIR_OFFSET),
       ),
       outputLead(
-        differentialGeometry.output_plus,
+        outputLeadContact(OUTPUT_PAIR_OFFSET),
         outputPins.find((pin) => pin.at.y === OUTPUT_PAIR_OFFSET),
       ),
       {
         kind: "path",
-        data: differentialGeometry.trianglePathData,
-        style: differentialTriangle,
+        data: geometry.trianglePathData,
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+          miterLimit: 4,
+        },
       },
       ...sourceInputMarks.map(acrossAxis),
       ...(plusOutputAtBottom
@@ -332,9 +383,10 @@ const differentialGeneration = {
   referencePath:
     "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
   converterPath: "scripts/generate-razavi-opamp-asset.mjs",
-  converterVersion: 3,
+  converterVersion: 4,
 };
 const differentialAuthorityPaths = [
+  "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
   "fixtures/visual-reference/razavi-reference-v1/differential-opamp-vector-source.json",
   "fixtures/visual-reference/razavi-reference-v1/differential-opamp-reference.png",
 ];
