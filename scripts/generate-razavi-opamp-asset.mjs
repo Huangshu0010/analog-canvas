@@ -270,20 +270,11 @@ const inputLeadContact = (y) => ({
   y,
 });
 const outputLeadContact = (y) => {
-  const center = outputContact(y);
-  const edgeY =
-    y <= 0
-      ? scaledDifferentialTriangle.topY
-      : scaledDifferentialTriangle.bottomY;
-  const dx =
-    scaledDifferentialTriangle.apexX - scaledDifferentialTriangle.leftX;
-  const dy = Math.abs(scaledDifferentialTriangle.apexY - edgeY);
-  const horizontalStrokeReach =
-    (TRIANGLE_HALF_STROKE * Math.hypot(dx, dy)) / dy;
-  return {
-    ...center,
-    x: center.x + horizontalStrokeReach - LEAD_JOIN_EPSILON,
-  };
+  // The lead is emitted before the triangle outline. Ending it on the sloped
+  // edge centerline gives the later, wider outline a real overlap to cover.
+  // Ending at the outline's outer boundary only makes the two antialiased
+  // strokes tangent and can leave a visible white seam in the browser.
+  return outputContact(y);
 };
 const inputLead = (pin, contact) => ({
   kind: "line",

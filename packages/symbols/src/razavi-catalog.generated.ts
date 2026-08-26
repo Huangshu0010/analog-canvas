@@ -586,7 +586,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential.symbol.json",
     assetHash:
-      "6668f52f1321486e38eb39a9cb198054a01aa28029d1f2b52f785974d569c48e",
+      "1834d79f79f660fcac0aa1ca78f8d4df2d21d955d0be835ed8db4f2f1a6eac1e",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -621,7 +621,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Fully differential textbook body; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-inputs-swapped.symbol.json",
     assetHash:
-      "df7e60beac37c542914fb3aa520a9ba9ab9fc610032eb367c32d394e7472365b",
+      "4d03985955a86f105b1b5d869eca637bc93675de0095b397306877021b9a007d",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -653,7 +653,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-crossed.symbol.json",
     assetHash:
-      "7ea8c345c3d255bbb1b0aa231c3c38b2bfbbb33d6b5be42f0fa4c28c0b1ceb58",
+      "94d7f6705e9e47fa3703cb0a4a54a15fa0ba00d71250d65d6abadad8f9a9ae4b",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -688,7 +688,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Output-polarity sibling of opamp-differential; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp-differential-crossed-inputs-swapped.symbol.json",
     assetHash:
-      "71004faaf94da0890b236d9f324eba51c649f6c8acef1c886dd1c50071c97e3d",
+      "7d33a47bf5fc704e0188e2f45699e0f82ac1b87d36d5baf52b1fee21aacc222c",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -3607,7 +3607,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 2.861138260545658,
+          x: -0.1350471602937411,
           y: -10,
         },
         to: {
@@ -3623,7 +3623,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 2.8685592527989323,
+          x: -0.12793020562090973,
           y: 10,
         },
         to: {
@@ -3851,7 +3851,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 2.861138260545658,
+          x: -0.1350471602937411,
           y: -10,
         },
         to: {
@@ -3867,7 +3867,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 2.8685592527989323,
+          x: -0.12793020562090973,
           y: 10,
         },
         to: {
@@ -4095,7 +4095,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 2.861138260545658,
+          x: -0.1350471602937411,
           y: -10,
         },
         to: {
@@ -4111,7 +4111,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 2.8685592527989323,
+          x: -0.12793020562090973,
           y: 10,
         },
         to: {
@@ -4339,7 +4339,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 2.861138260545658,
+          x: -0.1350471602937411,
           y: -10,
         },
         to: {
@@ -4355,7 +4355,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 2.8685592527989323,
+          x: -0.12793020562090973,
           y: 10,
         },
         to: {

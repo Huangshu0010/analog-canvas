@@ -334,14 +334,14 @@ describe("Razavi symbol catalog", () => {
         ((points.leftBottom.y - bottomOutput.from.y) /
           (points.leftBottom.y - points.apex.y)) *
           (points.apex.x - points.leftBottom.x);
-      expect(topOutput.from.x).toBeGreaterThan(topCenterX);
-      expect(bottomOutput.from.x).toBeGreaterThan(bottomCenterX);
+      expect(topOutput.from.x).toBeCloseTo(topCenterX, 5);
+      expect(bottomOutput.from.x).toBeCloseTo(bottomCenterX, 5);
       expect(
         distanceToEdge(topOutput.from, points.leftTop, points.apex),
-      ).toBeLessThan(triangleHalfStroke);
+      ).toBeCloseTo(0, 5);
       expect(
         distanceToEdge(bottomOutput.from, points.leftBottom, points.apex),
-      ).toBeLessThan(triangleHalfStroke);
+      ).toBeCloseTo(0, 5);
     }
   });
 
