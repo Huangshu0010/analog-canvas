@@ -18,6 +18,7 @@ import type {
   Point,
   Rotation,
   RouteBranch,
+  RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
 import {
@@ -62,6 +63,7 @@ import {
   translateObjectAnchoredAnnotation,
 } from "./transaction-instance-annotations.js";
 import { reconcileTransformDirectContacts } from "./transaction-direct-contact.js";
+import { nextPhysicalContactOperation } from "./transaction-connectivity-normalizer.js";
 import {
   addEndpointToNet,
   endpointOwnerNetId,
@@ -162,6 +164,252 @@ function retargetConnectivityEvidence(
     changedObjectIds.add(evidence.id);
     return false;
   });
+}
+
+type BaseNetMergeResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: "OBJECT_NOT_FOUND" | "EDIT_PRECONDITION";
+      message: string;
+      netIds: readonly string[];
+    };
+
+function mergeBaseNets(
+  draft: SchematicDocument,
+  targetNetId: string,
+  sourceNetId: string,
+  changedObjectIds: Set<string>,
+): BaseNetMergeResult {
+  if (targetNetId === sourceNetId) return { ok: true };
+  const target = draft.nets.find((net) => net.id === targetNetId);
+  const sourceIndex = draft.nets.findIndex((net) => net.id === sourceNetId);
+  const source = draft.nets[sourceIndex];
+  if (!target || !source) {
+    return {
+      ok: false,
+      code: "OBJECT_NOT_FOUND",
+      message: `Net merge target/source does not exist: ${targetNetId}, ${sourceNetId}`,
+      netIds: [targetNetId, sourceNetId],
+    };
+  }
+  const logicalNets = resolveDocumentLogicalNets(draft);
+  const targetPowerDomain =
+    logicalNets.byBaseNetId.get(target.id)?.powerDomain ?? "none";
+  const sourcePowerDomain =
+    logicalNets.byBaseNetId.get(source.id)?.powerDomain ?? "none";
+  if (
+    targetPowerDomain === "conflict" ||
+    sourcePowerDomain === "conflict" ||
+    (targetPowerDomain !== "none" &&
+      sourcePowerDomain !== "none" &&
+      targetPowerDomain !== sourcePowerDomain)
+  ) {
+    return {
+      ok: false,
+      code: "EDIT_PRECONDITION",
+      message: "Cannot merge Nets with incompatible power domains",
+      netIds: [target.id, source.id],
+    };
+  }
+  for (const instance of draft.instances) {
+    if (instance.mosBulkBinding?.netId === source.id) {
+      instance.mosBulkBinding.netId = target.id;
+      changedObjectIds.add(instance.id);
+    }
+  }
+  if (draft.mosBulkDefaults?.nmosNetId === source.id) {
+    draft.mosBulkDefaults.nmosNetId = target.id;
+  }
+  if (draft.mosBulkDefaults?.pmosNetId === source.id) {
+    draft.mosBulkDefaults.pmosNetId = target.id;
+  }
+  for (const terminal of draft.netlist?.terminals ?? []) {
+    if (terminal.netId === source.id) terminal.netId = target.id;
+  }
+  for (const terminal of source.terminals) {
+    if (
+      !target.terminals.some(
+        (candidate) =>
+          candidate.instanceId === terminal.instanceId &&
+          candidate.pinName === terminal.pinName,
+      )
+    ) {
+      target.terminals.push(structuredClone(terminal));
+    }
+  }
+  for (const route of draft.routes) {
+    if (route.netId === source.id) {
+      route.netId = target.id;
+      changedObjectIds.add(route.id);
+    }
+  }
+  for (const junction of draft.junctions) {
+    if (junction.netId === source.id) {
+      junction.netId = target.id;
+      changedObjectIds.add(junction.id);
+    }
+  }
+  for (const annotation of draft.annotations) {
+    if (annotation.netId === source.id) {
+      annotation.netId = target.id;
+      changedObjectIds.add(annotation.id);
+    }
+    if (
+      annotation.binding?.kind === "net-name" &&
+      annotation.binding.netId === source.id
+    ) {
+      annotation.binding = { kind: "net-name", netId: target.id };
+      changedObjectIds.add(annotation.id);
+    }
+  }
+  for (const group of draft.layoutGroups) {
+    const replaced = group.objectIds.includes(source.id);
+    group.objectIds = replaceLayoutReference(
+      group.objectIds,
+      source.id,
+      target.id,
+    );
+    if (replaced) changedObjectIds.add(group.id);
+  }
+  for (const constraint of draft.constraints) {
+    const replaced = constraint.objectIds.includes(source.id);
+    constraint.objectIds = replaceLayoutReference(
+      constraint.objectIds,
+      source.id,
+      target.id,
+    );
+    if (replaced) changedObjectIds.add(constraint.id);
+  }
+  retargetConnectivityEvidence(draft, source.id, target.id, changedObjectIds);
+  draft.nets.splice(sourceIndex, 1);
+  changedObjectIds.add(target.id);
+  changedObjectIds.add(source.id);
+  return { ok: true };
+}
+
+function removeNoConnectForEndpoint(
+  draft: SchematicDocument,
+  endpoint: RouteEndpoint,
+  changedObjectIds: Set<string>,
+): void {
+  if (endpoint.kind !== "terminal") return;
+  draft.noConnects = draft.noConnects.filter((noConnect) => {
+    const matches =
+      noConnect.endpoint.instanceId === endpoint.instanceId &&
+      noConnect.endpoint.pinName === endpoint.pinName;
+    if (matches) changedObjectIds.add(noConnect.id);
+    return !matches;
+  });
+}
+
+function preferredPhysicalMergeTarget(
+  draft: SchematicDocument,
+  leftNetId: string,
+  rightNetId: string,
+): readonly [targetNetId: string, sourceNetId: string] {
+  const logical = resolveDocumentLogicalNets(draft);
+  const score = (netId: string): number => {
+    const resolved = logical.byBaseNetId.get(netId);
+    return (
+      (resolved?.powerDomain !== undefined &&
+      resolved.powerDomain !== "none" &&
+      resolved.powerDomain !== "conflict"
+        ? 4
+        : 0) +
+      (resolved?.scope === "global" ? 2 : 0) +
+      (resolved?.name ? 1 : 0)
+    );
+  };
+  const leftScore = score(leftNetId);
+  const rightScore = score(rightNetId);
+  if (leftScore !== rightScore) {
+    return leftScore > rightScore
+      ? [leftNetId, rightNetId]
+      : [rightNetId, leftNetId];
+  }
+  return leftNetId.localeCompare(rightNetId, "en") <= 0
+    ? [leftNetId, rightNetId]
+    : [rightNetId, leftNetId];
+}
+
+function uniquePhysicalContactId(
+  draft: SchematicDocument,
+  kind: "net" | "route",
+  transactionId: string,
+  seed: string,
+): string {
+  const occupied = new Set([
+    ...draft.instances.map((object) => object.id),
+    ...draft.nets.map((object) => object.id),
+    ...draft.routes.map((object) => object.id),
+    ...draft.junctions.map((object) => object.id),
+    ...draft.noConnects.map((object) => object.id),
+    ...draft.annotations.map((object) => object.id),
+    ...draft.connectivityEvidence.map((object) => object.id),
+    ...draft.layoutGroups.map((object) => object.id),
+    ...draft.constraints.map((object) => object.id),
+    ...(draft.drafting?.objects.map((object) => object.id) ?? []),
+    ...(draft.netlist?.terminals.map((object) => object.id) ?? []),
+  ]);
+  let attempt = 0;
+  while (true) {
+    const id = deriveStableId(
+      kind,
+      draft.id,
+      "physical-contact",
+      transactionId,
+      seed,
+      String(attempt),
+    );
+    if (!occupied.has(id)) return id;
+    attempt += 1;
+  }
+}
+
+function physicalContactObjectIdsForTransaction(
+  transaction: EditTransaction,
+): Set<string> {
+  const result = new Set<string>();
+  for (const edit of transaction.edits) {
+    switch (edit.kind) {
+      case "add_instance":
+        result.add(edit.instance.id);
+        break;
+      case "set_instance_symbol":
+      case "place_instance":
+      case "move_instance":
+      case "rotate_instance":
+      case "mirror_instance":
+        result.add(edit.instanceId);
+        break;
+      case "align_instances":
+        edit.instanceIds.forEach((instanceId) => result.add(instanceId));
+        break;
+      case "set_route_points":
+      case "route_orthogonal":
+        result.add(edit.routeId);
+        break;
+      case "add_junction":
+      case "move_junction":
+        result.add(edit.junctionId);
+        break;
+      case "attach_endpoint_to_route":
+        result.add(
+          edit.endpoint.kind === "terminal"
+            ? edit.endpoint.instanceId
+            : edit.endpoint.junctionId,
+        );
+        result.add(edit.routeId);
+        break;
+      case "add_power_rail":
+        result.add(edit.routeId);
+        result.add(edit.startJunctionId);
+        result.add(edit.endJunctionId);
+        break;
+    }
+  }
+  return result;
 }
 
 function connectivityEvidenceNetIds(
@@ -2993,116 +3241,15 @@ export function executeTransaction(
             "Net merge requires two different Nets",
           );
         }
-        const target = draft.nets.find((net) => net.id === edit.targetNetId);
-        const sourceIndex = draft.nets.findIndex(
-          (net) => net.id === edit.sourceNetId,
-        );
-        const source = draft.nets[sourceIndex];
-        if (!target || !source) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Net merge target/source does not exist: ${edit.targetNetId}, ${edit.sourceNetId}`,
-          );
-        }
-        const logicalNets = resolveDocumentLogicalNets(draft);
-        const targetLogical = logicalNets.byBaseNetId.get(target.id);
-        const sourceLogical = logicalNets.byBaseNetId.get(source.id);
-        const targetPowerDomain = targetLogical?.powerDomain ?? "none";
-        const sourcePowerDomain = sourceLogical?.powerDomain ?? "none";
-        if (
-          targetPowerDomain === "conflict" ||
-          sourcePowerDomain === "conflict" ||
-          (targetPowerDomain !== "none" &&
-            sourcePowerDomain !== "none" &&
-            targetPowerDomain !== sourcePowerDomain)
-        ) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            "Cannot merge Nets with incompatible power domains",
-            [],
-            [target.id, source.id],
-          );
-        }
-        for (const instance of draft.instances) {
-          if (instance.mosBulkBinding?.netId === source.id) {
-            instance.mosBulkBinding.netId = target.id;
-            changedObjectIds.add(instance.id);
-          }
-        }
-        if (draft.mosBulkDefaults?.nmosNetId === source.id) {
-          draft.mosBulkDefaults.nmosNetId = target.id;
-        }
-        if (draft.mosBulkDefaults?.pmosNetId === source.id) {
-          draft.mosBulkDefaults.pmosNetId = target.id;
-        }
-        for (const terminal of draft.netlist?.terminals ?? []) {
-          if (terminal.netId === source.id) {
-            terminal.netId = target.id;
-          }
-        }
-        for (const terminal of source.terminals) {
-          if (
-            !target.terminals.some(
-              (candidate) =>
-                candidate.instanceId === terminal.instanceId &&
-                candidate.pinName === terminal.pinName,
-            )
-          ) {
-            target.terminals.push(structuredClone(terminal));
-          }
-        }
-        for (const route of draft.routes) {
-          if (route.netId === source.id) {
-            route.netId = target.id;
-            changedObjectIds.add(route.id);
-          }
-        }
-        for (const junction of draft.junctions) {
-          if (junction.netId === source.id) {
-            junction.netId = target.id;
-            changedObjectIds.add(junction.id);
-          }
-        }
-        for (const annotation of draft.annotations) {
-          if (annotation.netId === source.id) {
-            annotation.netId = target.id;
-            changedObjectIds.add(annotation.id);
-          }
-          if (
-            annotation.binding?.kind === "net-name" &&
-            annotation.binding.netId === source.id
-          ) {
-            annotation.binding = { kind: "net-name", netId: target.id };
-            changedObjectIds.add(annotation.id);
-          }
-        }
-        for (const group of draft.layoutGroups) {
-          const replaced = group.objectIds.includes(source.id);
-          group.objectIds = replaceLayoutReference(
-            group.objectIds,
-            source.id,
-            target.id,
-          );
-          if (replaced) changedObjectIds.add(group.id);
-        }
-        for (const constraint of draft.constraints) {
-          const replaced = constraint.objectIds.includes(source.id);
-          constraint.objectIds = replaceLayoutReference(
-            constraint.objectIds,
-            source.id,
-            target.id,
-          );
-          if (replaced) changedObjectIds.add(constraint.id);
-        }
-        retargetConnectivityEvidence(
+        const merge = mergeBaseNets(
           draft,
-          source.id,
-          target.id,
+          edit.targetNetId,
+          edit.sourceNetId,
           changedObjectIds,
         );
-        draft.nets.splice(sourceIndex, 1);
-        changedObjectIds.add(target.id);
-        changedObjectIds.add(source.id);
+        if (!merge.ok) {
+          return rejectAt(merge.code, merge.message, [], merge.netIds);
+        }
         connectivityChanged = true;
         break;
       }
@@ -3727,6 +3874,233 @@ export function executeTransaction(
     geometryChanged ||= directContact.geometryChanged;
     for (const routeId of directContact.changedRouteIds) {
       changedRouteIds.add(routeId);
+    }
+  }
+
+  if (resolver) {
+    // Keep geometry incidence separate from the broader transaction diff.
+    // Net merges retarget many Routes for bookkeeping, but that must not turn
+    // an otherwise local edit into a whole-document geometry repair.
+    const physicalContactObjectIds =
+      physicalContactObjectIdsForTransaction(transaction);
+    const suppressedPhysicalEndpointKeys = new Set(
+      transaction.edits.flatMap((edit) =>
+        edit.kind === "disconnect_endpoint" ? [endpointKey(edit.endpoint)] : [],
+      ),
+    );
+    const operationLimit = Math.max(
+      32,
+      (draft.instances.length + draft.junctions.length) *
+        Math.max(2, draft.routes.length + 1) *
+        2,
+    );
+    for (
+      let operationIndex = 0;
+      operationIndex < operationLimit;
+      operationIndex += 1
+    ) {
+      const operation = nextPhysicalContactOperation(
+        draft,
+        resolver,
+        physicalContactObjectIds,
+        suppressedPhysicalEndpointKeys,
+      );
+      if (!operation) break;
+
+      if (operation.kind === "connect-endpoints") {
+        let leftOwner = endpointOwnerNetId(draft, operation.left);
+        let rightOwner = endpointOwnerNetId(draft, operation.right);
+        if (!leftOwner && !rightOwner) {
+          const netId = uniquePhysicalContactId(
+            draft,
+            "net",
+            transaction.transactionId,
+            [endpointKey(operation.left), endpointKey(operation.right)]
+              .sort((left, right) => left.localeCompare(right, "en"))
+              .join("--"),
+          );
+          draft.nets.push({ id: netId, terminals: [] });
+          changedObjectIds.add(netId);
+          leftOwner = netId;
+          rightOwner = netId;
+        } else if (!leftOwner) {
+          leftOwner = rightOwner;
+        } else if (!rightOwner) {
+          rightOwner = leftOwner;
+        }
+        if (!leftOwner || !rightOwner) {
+          return rejectTransaction(
+            document,
+            "INVALID_RESULT",
+            "Physical contact normalization could not assign a Base Net",
+          );
+        }
+        if (leftOwner !== rightOwner) {
+          const [targetNetId, sourceNetId] = preferredPhysicalMergeTarget(
+            draft,
+            leftOwner,
+            rightOwner,
+          );
+          const merge = mergeBaseNets(
+            draft,
+            targetNetId,
+            sourceNetId,
+            changedObjectIds,
+          );
+          if (!merge.ok) {
+            return rejectTransaction(
+              document,
+              merge.code,
+              merge.message,
+              [],
+              merge.netIds,
+            );
+          }
+          leftOwner = targetNetId;
+          rightOwner = targetNetId;
+        }
+        addEndpointToNet(draft, leftOwner, operation.left);
+        addEndpointToNet(draft, rightOwner, operation.right);
+        removeNoConnectForEndpoint(draft, operation.left, changedObjectIds);
+        removeNoConnectForEndpoint(draft, operation.right, changedObjectIds);
+        changedObjectIds.add(leftOwner);
+        connectivityChanged = true;
+        continue;
+      }
+
+      let route = draft.routes.find(
+        (candidate) => candidate.id === operation.routeId,
+      );
+      if (!route) {
+        return rejectTransaction(
+          document,
+          "INVALID_RESULT",
+          `Physical contact Route disappeared: ${operation.routeId}`,
+        );
+      }
+      if (routeIsProtected(route)) {
+        return rejectTransaction(
+          document,
+          "EDIT_PRECONDITION",
+          `Cannot attach a physical contact to locked Route ${route.id}`,
+          [],
+          [route.id],
+        );
+      }
+      const endpointOwner = endpointOwnerNetId(draft, operation.endpoint);
+      if (endpointOwner && endpointOwner !== route.netId) {
+        const [targetNetId, sourceNetId] = preferredPhysicalMergeTarget(
+          draft,
+          endpointOwner,
+          route.netId,
+        );
+        const merge = mergeBaseNets(
+          draft,
+          targetNetId,
+          sourceNetId,
+          changedObjectIds,
+        );
+        if (!merge.ok) {
+          return rejectTransaction(
+            document,
+            merge.code,
+            merge.message,
+            [],
+            merge.netIds,
+          );
+        }
+        route = draft.routes.find(
+          (candidate) => candidate.id === operation.routeId,
+        );
+        if (!route) {
+          return rejectTransaction(
+            document,
+            "INVALID_RESULT",
+            `Physical contact Route disappeared after Net merge: ${operation.routeId}`,
+          );
+        }
+      }
+      const markerAnchors = captureRouteMarkerAnchors(draft, resolver).filter(
+        (anchor) => anchor.routeId === route.id,
+      );
+      const seed = `${route.id}:${endpointKey(operation.endpoint)}:${operation.point.x},${operation.point.y}`;
+      // Keep the original ID on the from-side so selection, drag state, and
+      // callers holding a revision-local Route address remain valid after an
+      // automatic split. Only the newly created far side needs a fresh ID.
+      const firstRouteId = route.id;
+      const secondRouteId = uniquePhysicalContactId(
+        draft,
+        "route",
+        transaction.transactionId,
+        `${seed}:second`,
+      );
+      const split = splitRoute(
+        draft,
+        route,
+        operation.endpoint,
+        operation.point,
+        firstRouteId,
+        secondRouteId,
+        operation.segmentIndex,
+        resolver,
+      );
+      if (typeof split === "string") {
+        return rejectTransaction(
+          document,
+          "EDIT_PRECONDITION",
+          split,
+          [],
+          [route.id],
+        );
+      }
+      addEndpointToNet(draft, route.netId, operation.endpoint);
+      const routeIndex = draft.routes.findIndex(
+        (candidate) => candidate.id === route!.id,
+      );
+      draft.routes.splice(routeIndex, 1, split.first, split.second);
+      retargetConnectivityEvidenceOwner(
+        draft,
+        route.id,
+        split.first.id,
+        changedObjectIds,
+      );
+      for (const candidate of [split.first, split.second]) {
+        const routeError = validateRoute(draft, candidate, resolver);
+        if (routeError) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            routeError,
+            [],
+            [candidate.id],
+          );
+        }
+      }
+      remapRouteMarkersAfterSplit(
+        draft,
+        resolver,
+        markerAnchors,
+        [split.first.id, split.second.id],
+        changedObjectIds,
+      );
+      removeNoConnectForEndpoint(draft, operation.endpoint, changedObjectIds);
+      for (const routeId of [route.id, split.first.id, split.second.id]) {
+        changedObjectIds.add(routeId);
+        changedRouteIds.add(routeId);
+      }
+      physicalContactObjectIds.add(split.first.id);
+      physicalContactObjectIds.add(split.second.id);
+      changedObjectIds.add(route.netId);
+      connectivityChanged = true;
+      geometryChanged = true;
+
+      if (operationIndex === operationLimit - 1) {
+        return rejectTransaction(
+          document,
+          "INVALID_RESULT",
+          "Physical contact normalization did not converge",
+        );
+      }
     }
   }
 

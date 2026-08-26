@@ -47,8 +47,9 @@ export interface DocumentContactEvidence {
 /**
  * One pairwise projection of a confirmed same-Net {@link CoincidentContact}.
  * It is the transform-time input used to detect when a previously confirmed
- * direct contact has been separated. New contact intent remains an explicit
- * authoring operation.
+ * direct contact has been separated. Gained contacts are committed by the Edit
+ * Engine's transaction connectivity normalizer; this read model continues to
+ * describe only already-confirmed same-Net contacts.
  */
 export interface DirectContactPair {
   id: string;

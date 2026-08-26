@@ -396,11 +396,14 @@ describe("component placement electrical contacts", () => {
     });
     expect(removed.document.connectivityEvidence).toEqual([]);
 
+    // Reusing the designator is the behavior under test. Keep the marker away
+    // from the surviving route anchor: exact physical contact would correctly
+    // rejoin that conductor under the transaction connectivity contract.
     const vddPort = {
       id: "VDD2",
       symbolId: "vdd-port",
       placement: {
-        position: { x: 100, y: 100 },
+        position: { x: 300, y: 100 },
         rotation: 0 as const,
         mirror: "none" as const,
       },

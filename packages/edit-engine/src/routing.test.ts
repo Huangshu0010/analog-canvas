@@ -864,6 +864,11 @@ describe("routing Edit Engine", () => {
 
   it("turns a multi-part selection as one body about a shared pivot", () => {
     const document = documentFixture();
+    for (const instance of document.instances.filter(
+      (candidate) => !["A", "B"].includes(candidate.id),
+    )) {
+      if (instance.placement) instance.placement.position.x += 1_000;
+    }
     // A and B sit side by side on y=300; a quarter turn about their shared
     // centre has to stand them up, not merely spin each symbol where it is.
     const plan = proposeGroupRotationEdits(document, resolver, ["A", "B"], 90);
@@ -2024,7 +2029,7 @@ describe("routing Edit Engine", () => {
     ]);
   });
 
-  it("splits only the explicitly targeted conductor at a crossing", () => {
+  it("rejects a Junction dot that would join conflicting crossing Nets", () => {
     const document = documentFixture();
     document.routes = [
       {
@@ -2065,20 +2070,12 @@ describe("routing Edit Engine", () => {
     );
 
     expect(result).toMatchObject({
-      ok: true,
-      document: {
-        junctions: [{ id: "ambiguous-dot", netId: "net-h" }],
+      ok: false,
+      error: {
+        code: "INVALID_RESULT",
+        message: "Transaction introduces conflicting Logical Net names",
       },
     });
-    if (!result.ok) throw new Error("Targeted crossing split failed");
-    expect(result.document.routes.map((route) => route.id)).toEqual([
-      "route-h-a",
-      "route-h-b",
-      "route-v",
-    ]);
-    expect(
-      result.document.routes.find((route) => route.id === "route-v"),
-    ).toEqual(document.routes[1]);
   });
 
   it("accepts an arbitrary-angle route and still needs its context", () => {
@@ -2703,5 +2700,104 @@ describe("routing Edit Engine", () => {
       ),
     ).toMatchObject({ terminals: [{ instanceId: "D" }] });
     expect(result.document.sourceStatus).toBe("connectivity-modified");
+  });
+
+  it("allows a signal detached from Ground to be reconnected to VDD", () => {
+    const document = createEmptyDocument(
+      "power-reassignment-after-cut",
+      "Power reassignment after cut",
+    );
+    document.instances.push(
+      { id: "GND1", symbolId: "ground", placement: null },
+      { id: "SIG", symbolId: "resistor", placement: null },
+      { id: "VDD1", symbolId: "vdd-port", placement: null },
+    );
+    document.nets.push(
+      {
+        id: "net-ground",
+        terminals: [
+          { instanceId: "GND1", pinName: "0" },
+          { instanceId: "SIG", pinName: "1" },
+        ],
+      },
+      {
+        id: "net-vdd",
+        terminals: [{ instanceId: "VDD1", pinName: "P" }],
+      },
+    );
+    document.routes.push({
+      id: "route-ground-signal",
+      netId: "net-ground",
+      from: { kind: "terminal", instanceId: "GND1", pinName: "0" },
+      to: { kind: "terminal", instanceId: "SIG", pinName: "1" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+    document.connectivityEvidence.push(
+      {
+        id: "claim-ground",
+        kind: "name-claim",
+        netId: "net-ground",
+        name: "0",
+        scope: "global",
+        powerDomain: "ground",
+        owner: { kind: "power-marker", objectId: "GND1" },
+      },
+      {
+        id: "claim-vdd",
+        kind: "name-claim",
+        netId: "net-vdd",
+        name: "VDD",
+        scope: "global",
+        powerDomain: "vdd",
+        owner: { kind: "power-marker", objectId: "VDD1" },
+      },
+    );
+
+    const cut = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        { kind: "cut_connection", routeId: "route-ground-signal" },
+      ]),
+    );
+    if (!cut.ok) {
+      throw new Error(
+        JSON.stringify({ error: cut.error, diagnostics: cut.diagnostics }),
+      );
+    }
+
+    const signalNet = cut.document.nets.find((net) =>
+      net.terminals.some(
+        (terminal) => terminal.instanceId === "SIG" && terminal.pinName === "1",
+      ),
+    );
+    expect(signalNet).toBeDefined();
+    expect(
+      resolveDocumentLogicalNets(cut.document).byBaseNetId.get(signalNet!.id)
+        ?.powerDomain,
+    ).toBe("none");
+    expect(
+      cut.document.connectivityEvidence.find(
+        (evidence) => evidence.id === "claim-ground",
+      ),
+    ).toMatchObject({ netId: "net-ground" });
+
+    const reconnected = executeTransaction(
+      cut.document,
+      transaction(cut.document.id, cut.document.revision, [
+        {
+          kind: "merge_nets",
+          targetNetId: "net-vdd",
+          sourceNetId: signalNet!.id,
+        },
+      ]),
+    );
+    expect(reconnected.ok).toBe(true);
+    if (!reconnected.ok) return;
+    expect(
+      resolveDocumentLogicalNets(reconnected.document).byBaseNetId.get(
+        "net-vdd",
+      )?.powerDomain,
+    ).toBe("vdd");
   });
 });
