@@ -154,6 +154,7 @@ import {
   NetHighlightOverlay,
 } from "../canvas/editor-canvas-overlays";
 import { EditorSelectionHitTargets } from "../canvas/editor-selection-hit-targets";
+import { EditorEndpointHitTargets } from "../canvas/editor-endpoint-hit-targets";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
 import { draggedAnnotationAtPosition } from "../features/text-editing/annotation-drag-model";
 import {
@@ -8020,111 +8021,28 @@ export function App({
                 onAnnotationPointerDown={beginAnnotationDrag}
                 onAnnotationEdit={beginAnnotationTextEditing}
               >
-                {wiringEndpoints.map((candidate) => {
-                  const powerRailEnds =
-                    selectedRoute?.presentation === "power-rail"
-                      ? (derivePowerRailComponent(document, selectedRoute.id)
-                          ?.endpointJunctionIds.map((junctionId) =>
-                            document.junctions.find(
-                              (junction) => junction.id === junctionId,
-                            ),
-                          )
-                          .filter(
-                            (
-                              junction,
-                            ): junction is NonNullable<typeof junction> =>
-                              Boolean(junction),
-                          )
-                          .sort(
-                            (left, right) => left.position.x - right.position.x,
-                          ) ?? [])
-                      : [];
-                  const candidateJunctionId =
-                    candidate.endpoint.kind === "junction"
-                      ? candidate.endpoint.junctionId
-                      : null;
-                  const powerRailEndIndex =
-                    candidateJunctionId !== null
-                      ? powerRailEnds.findIndex(
-                          (junction) => junction.id === candidateJunctionId,
-                        )
-                      : -1;
-                  return (
-                    <circle
-                      key={`${candidate.netId}:${endpointTestId(candidate.endpoint)}`}
-                      data-testid={endpointTestId(candidate.endpoint)}
-                      data-canvas-hit-kind={
-                        candidate.endpoint.kind === "junction"
-                          ? "junction"
-                          : undefined
-                      }
-                      data-canvas-hit-id={
-                        candidate.endpoint.kind === "junction"
-                          ? candidate.endpoint.junctionId
-                          : undefined
-                      }
-                      data-drag-object-id={
-                        candidate.endpoint.kind === "junction"
-                          ? candidate.endpoint.junctionId
-                          : undefined
-                      }
-                      className={
-                        tool === "wire" ||
-                        (candidate.endpoint.kind === "junction" &&
-                          supplementalSelection.junctionIds.includes(
-                            candidate.endpoint.junctionId,
-                          )) ||
-                        (selectedEndpoint?.endpoint.kind === "junction" &&
-                          candidate.endpoint.kind === "junction" &&
-                          selectedEndpoint.endpoint.junctionId ===
-                            candidate.endpoint.junctionId)
-                          ? "endpoint-hit active"
-                          : "endpoint-hit"
-                      }
-                      cx={candidate.connection.contactPoint.x}
-                      cy={candidate.connection.contactPoint.y}
-                      r={4}
-                      onClick={(event) => event.stopPropagation()}
-                      onContextMenu={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        selectEndpoint(candidate);
-                        setStatus(
-                          `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
-                        );
-                      }}
-                      onPointerDown={(event) => {
-                        if (
-                          tool === "pointer" &&
-                          selectedRoute &&
-                          powerRailEndIndex >= 0
-                        ) {
-                          beginRouteStretch(
-                            event,
-                            selectedRoute.id,
-                            selectedRouteSegmentIndex ?? 0,
-                            powerRailEndIndex === 0
-                              ? "resize-power-rail-start"
-                              : "resize-power-rail-end",
-                          );
-                          return;
-                        }
-                        if (
-                          tool === "pointer" &&
-                          candidate.endpoint.kind === "junction"
-                        ) {
-                          event.stopPropagation();
-                          selectEndpoint(candidate);
-                          setStatus(
-                            `Selected ${endpointTestId(candidate.endpoint)}`,
-                          );
-                          return;
-                        }
-                        handleWireEndpoint(event, candidate);
-                      }}
-                    />
-                  );
-                })}
+                <EditorEndpointHitTargets
+                  document={document}
+                  endpoints={wiringEndpoints}
+                  tool={tool}
+                  selectedRoute={selectedRoute}
+                  selectedRouteSegmentIndex={selectedRouteSegmentIndex}
+                  selectedEndpoint={selectedEndpoint}
+                  supplementalJunctionIds={supplementalSelection.junctionIds}
+                  endpointLabel={endpointTestId}
+                  onEndpointActions={(candidate) => {
+                    selectEndpoint(candidate);
+                    setStatus(
+                      `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
+                    );
+                  }}
+                  onPowerRailStretch={beginRouteStretch}
+                  onJunctionSelect={(candidate) => {
+                    selectEndpoint(candidate);
+                    setStatus(`Selected ${endpointTestId(candidate.endpoint)}`);
+                  }}
+                  onWireEndpoint={handleWireEndpoint}
+                />
               </EditorSelectionHitTargets>
               {(document.drafting?.objects ?? []).map((object) => {
                 // WP-R5/P1: every drafting object gets a selectable/deletable hit
