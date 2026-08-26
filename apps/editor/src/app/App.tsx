@@ -154,7 +154,10 @@ import {
 } from "../canvas/editor-canvas-overlays";
 import { EditorSelectionHitTargets } from "../canvas/editor-selection-hit-targets";
 import { EditorEndpointHitTargets } from "../canvas/editor-endpoint-hit-targets";
-import { EditorDraftingHitTargets } from "../canvas/editor-drafting-hit-targets";
+import {
+  EditorDraftingHandles,
+  EditorDraftingHitTargets,
+} from "../canvas/editor-drafting-hit-targets";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
 import { draggedAnnotationAtPosition } from "../features/text-editing/annotation-drag-model";
 import {
@@ -292,7 +295,6 @@ import {
   marqueeMode,
   marqueeSelection,
 } from "../features/selection/marquee-selection";
-import { quadraticMidpoint } from "../features/drafting/drafting-path";
 import {
   resolveEditorShortcut,
   stepBoundedScale,
@@ -8078,183 +8080,13 @@ export function App({
                 }}
                 onTextEdit={beginDraftingTextEditing}
               />
-              {selectedDraftingId
-                ? (() => {
-                    const object = document.drafting?.objects.find(
-                      (candidate) => candidate.id === selectedDraftingId,
-                    );
-                    if (!object || object.locked) return null;
-                    const geometry = resolveDraftingObjectGeometry(
-                      document,
-                      resolver,
-                      object,
-                    );
-                    if (object.kind === "arrow" && geometry.kind === "arrow") {
-                      return (
-                        <g
-                          data-testid={`drafting-handles-${object.id}`}
-                          data-canvas-hit-kind="handle"
-                          data-canvas-hit-id={`drafting-handles-${object.id}`}
-                        >
-                          <circle
-                            className="draft-handle"
-                            data-testid={`draft-handle-from-${object.id}`}
-                            cx={geometry.from.x}
-                            cy={geometry.from.y}
-                            r="5"
-                            onPointerDown={(event) =>
-                              beginDraftingHandleDrag(event, object, {
-                                kind: "from",
-                              })
-                            }
-                          />
-                          {geometry.points.slice(1, -1).map((point, index) => (
-                            <circle
-                              key={`draft-arrow-waypoint-${index}`}
-                              className="draft-handle"
-                              data-testid={`draft-handle-waypoint-${index}-${object.id}`}
-                              cx={point.x}
-                              cy={point.y}
-                              r="5"
-                              onPointerDown={(event) =>
-                                beginDraftingHandleDrag(event, object, {
-                                  kind: "waypoint",
-                                  index,
-                                })
-                              }
-                            />
-                          ))}
-                          {geometry.points.slice(0, -1).map((point, index) => {
-                            const next = geometry.points[index + 1]!;
-                            const midpoint = quadraticMidpoint(
-                              point,
-                              geometry.curveControls[index] ?? null,
-                              next,
-                            );
-                            return (
-                              <rect
-                                key={`draft-arrow-segment-${index}`}
-                                className="draft-handle draft-midpoint-handle"
-                                data-testid={`draft-handle-segment-${index}-${object.id}`}
-                                x={midpoint.x - 3}
-                                y={midpoint.y - 3}
-                                width="6"
-                                height="6"
-                                transform={`rotate(45 ${midpoint.x} ${midpoint.y})`}
-                                onPointerDown={(event) =>
-                                  beginDraftingHandleDrag(event, object, {
-                                    kind: "curve",
-                                    index,
-                                  })
-                                }
-                              />
-                            );
-                          })}
-                          <circle
-                            className="draft-handle"
-                            data-testid={`draft-handle-to-${object.id}`}
-                            cx={geometry.to.x}
-                            cy={geometry.to.y}
-                            r="5"
-                            onPointerDown={(event) =>
-                              beginDraftingHandleDrag(event, object, {
-                                kind: "to",
-                              })
-                            }
-                          />
-                        </g>
-                      );
-                    }
-                    if (
-                      object.kind === "construction-line" &&
-                      geometry.kind === "construction-line"
-                    ) {
-                      return (
-                        <g
-                          data-testid={`drafting-handles-${object.id}`}
-                          data-canvas-hit-kind="handle"
-                          data-canvas-hit-id={`drafting-handles-${object.id}`}
-                        >
-                          {geometry.vertices.map((vertex, index) => (
-                            <circle
-                              key={`draft-vx-${index}`}
-                              className="draft-handle"
-                              data-testid={`draft-handle-vx-${index}-${object.id}`}
-                              cx={vertex.x}
-                              cy={vertex.y}
-                              r="5"
-                              onPointerDown={(event) =>
-                                beginDraftingHandleDrag(event, object, {
-                                  kind: "vertex",
-                                  index,
-                                })
-                              }
-                              onDoubleClick={(event) => {
-                                event.stopPropagation();
-                                deleteConstructionVertex(object, index);
-                              }}
-                            />
-                          ))}
-                          {geometry.vertices
-                            .slice(0, -1)
-                            .map((vertex, index) => {
-                              const next = geometry.vertices[index + 1]!;
-                              const midpoint = quadraticMidpoint(
-                                vertex,
-                                geometry.curveControls[index] ?? null,
-                                next,
-                              );
-                              return (
-                                <rect
-                                  key={`draft-line-segment-${index}`}
-                                  className="draft-handle draft-midpoint-handle"
-                                  data-testid={`draft-handle-segment-${index}-${object.id}`}
-                                  x={midpoint.x - 3}
-                                  y={midpoint.y - 3}
-                                  width="6"
-                                  height="6"
-                                  transform={`rotate(45 ${midpoint.x} ${midpoint.y})`}
-                                  onPointerDown={(event) =>
-                                    beginDraftingHandleDrag(event, object, {
-                                      kind: "curve",
-                                      index,
-                                    })
-                                  }
-                                />
-                              );
-                            })}
-                        </g>
-                      );
-                    }
-                    if (
-                      object.kind === "rectangle" &&
-                      geometry.kind === "rectangle"
-                    ) {
-                      return (
-                        <g data-testid={`drafting-handles-${object.id}`}>
-                          {geometry.corners.map((corner, index) => (
-                            <rect
-                              key={`draft-rectangle-corner-${index}`}
-                              className="draft-handle"
-                              data-testid={`draft-handle-corner-${index}-${object.id}`}
-                              x={corner.x - 4}
-                              y={corner.y - 4}
-                              width="8"
-                              height="8"
-                              onPointerDown={(event) =>
-                                beginDraftingHandleDrag(event, object, {
-                                  kind: "rectangle-corner",
-                                  index,
-                                })
-                              }
-                            />
-                          ))}
-                        </g>
-                      );
-                    }
-                    return null;
-                  })()
-                : null}
+              <EditorDraftingHandles
+                document={document}
+                resolver={resolver}
+                selectedDraftingId={selectedDraftingId}
+                onHandlePointerDown={beginDraftingHandleDrag}
+                onDeleteVertex={deleteConstructionVertex}
+              />
               {boxPreview ? (
                 <rect
                   data-testid={
