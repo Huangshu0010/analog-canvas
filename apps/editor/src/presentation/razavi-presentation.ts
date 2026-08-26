@@ -1,5 +1,6 @@
 import { executeTransaction, type SchematicEdit } from "@icm/edit-engine";
 import {
+  hasExplicitMosBulkRoute,
   mosBulkShouldBeVisible,
   resolveDetachedMosBulkDefault,
   resolveMosBulkConnection,
@@ -39,6 +40,9 @@ export function razaviManualBulkConnectionEdits(
   const instanceIds = instances
     .filter((instance) => {
       const resolution = resolveMosBulkConnection(document, instance);
+      if (hasExplicitMosBulkRoute(document, instance.id)) {
+        return instance.mosBulkBinding !== undefined;
+      }
       const configuredNetId =
         instance.symbolId === "nmos"
           ? document.mosBulkDefaults?.nmosNetId

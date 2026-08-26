@@ -2563,6 +2563,106 @@ describe("routing Edit Engine", () => {
     ).toHaveLength(1);
   });
 
+  it("deletes an entire split bulk route family and restores the default without orphaning ordinary wire", () => {
+    const document = createEmptyDocument("bulk-delete", "Bulk Delete");
+    document.instances.push(
+      {
+        id: "M1",
+        symbolId: "nmos",
+        symbolVariantId: "textbook-3terminal",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        mosBulkBinding: { origin: "cell-default", netId: "net-vss" },
+      },
+      {
+        id: "GND1",
+        symbolId: "ground",
+        placement: {
+          position: { x: 300, y: 110 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+    );
+    document.nets.push({
+      id: "net-vss",
+      terminals: [
+        { instanceId: "M1", pinName: "B" },
+        { instanceId: "GND1", pinName: "0" },
+      ],
+    });
+    document.junctions.push(
+      { id: "J1", netId: "net-vss", position: { x: 150, y: 100 } },
+      { id: "J2", netId: "net-vss", position: { x: 200, y: 100 } },
+    );
+    document.routes.push(
+      {
+        id: "bulk-near",
+        netId: "net-vss",
+        from: { kind: "terminal", instanceId: "M1", pinName: "B" },
+        to: { kind: "junction", junctionId: "J1" },
+        waypoints: [{ x: 100, y: 100 }],
+        segmentModes: ["escape", "manual"],
+        presentation: "bulk-dashed",
+      },
+      {
+        id: "bulk-distal",
+        netId: "net-vss",
+        from: { kind: "junction", junctionId: "J1" },
+        to: { kind: "junction", junctionId: "J2" },
+        waypoints: [],
+        segmentModes: ["manual"],
+        presentation: "bulk-dashed",
+      },
+      {
+        id: "route-ui-112",
+        netId: "net-vss",
+        from: { kind: "junction", junctionId: "J2" },
+        to: { kind: "terminal", instanceId: "GND1", pinName: "0" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+    document.connectivityEvidence.push({
+      id: "claim-ground",
+      kind: "name-claim",
+      netId: "net-vss",
+      name: "0",
+      scope: "global",
+      powerDomain: "ground",
+      owner: { kind: "power-marker", objectId: "GND1" },
+    });
+    document.mosBulkDefaults = { nmosNetId: "net-vss" };
+
+    const deletion = proposeVisualRouteDeletion(document, ["bulk-distal"], []);
+    expect(deletion.routeIds).toEqual(["bulk-distal", "bulk-near"]);
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, deletion.edits),
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes).toMatchObject([{ id: "route-ui-112" }]);
+    const defaultNetId = result.document.mosBulkDefaults?.nmosNetId;
+    expect(
+      result.document.instances.find((instance) => instance.id === "M1")
+        ?.mosBulkBinding,
+    ).toEqual({ origin: "cell-default", netId: defaultNetId });
+    expect(
+      result.document.nets.find((net) => net.id === defaultNetId)?.terminals,
+    ).toEqual(
+      expect.arrayContaining([
+        { instanceId: "M1", pinName: "B" },
+        { instanceId: "GND1", pinName: "0" },
+      ]),
+    );
+  });
+
   it("physically splits a global-Net Route instead of hiding the cut behind global Evidence", () => {
     const document = documentFixture();
     const net = document.nets.find((candidate) => candidate.id === "net-v")!;

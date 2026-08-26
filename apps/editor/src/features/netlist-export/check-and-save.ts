@@ -1,5 +1,6 @@
 import type { SchematicEdit } from "@icm/edit-engine";
 import {
+  hasExplicitMosBulkRoute,
   resolveDocumentLogicalNets,
   resolveDetachedMosBulkDefault,
   resolveMosBulkConnection,
@@ -59,6 +60,9 @@ function pendingDefaultCount(
   return document.instances.filter((instance) => {
     if (instance.symbolId !== symbolId || instance.placement === null)
       return false;
+    if (hasExplicitMosBulkRoute(document, instance.id)) {
+      return instance.mosBulkBinding !== undefined;
+    }
     const resolution = resolveMosBulkConnection(document, instance);
     return Boolean(
       resolution &&

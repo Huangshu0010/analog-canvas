@@ -22,6 +22,7 @@ import type {
 } from "@icm/model";
 import {
   endpointKey,
+  hasExplicitMosBulkRoute,
   isMosBulkRoute,
   logicalNetContractIssueKey,
   mosBulkKind,
@@ -596,6 +597,12 @@ function reconcileMaterializedMosBulkBindings(
   let changed = false;
   for (const instance of draft.instances) {
     if (instance.mosBulkBinding?.origin !== "cell-default") continue;
+    if (hasExplicitMosBulkRoute(draft, instance.id)) {
+      delete instance.mosBulkBinding;
+      changedObjectIds.add(instance.id);
+      changed = true;
+      continue;
+    }
     const kind = mosBulkKind(instance);
     const targetNetId =
       kind === "nmos"
@@ -3216,6 +3223,19 @@ export function executeTransaction(
                 terminal.instanceId === instance.id && terminal.pinName === "B",
             ),
           );
+
+          // A visible dashed body connection is user-authored and therefore
+          // owns B even when it happens to land on the configured default Net.
+          // Repair stale dual ownership by releasing only the policy metadata;
+          // the explicit Net membership and Route geometry remain untouched.
+          if (hasExplicitMosBulkRoute(draft, instance.id)) {
+            if (instance.mosBulkBinding) {
+              delete instance.mosBulkBinding;
+              changedObjectIds.add(instance.id);
+              connectivityChanged = true;
+            }
+            continue;
+          }
 
           // Imported four-node MOS data already carries a real B terminal.
           // When the three-terminal presentation hides that terminal and it

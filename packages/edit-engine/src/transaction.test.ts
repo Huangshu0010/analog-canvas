@@ -682,6 +682,54 @@ describe("Edit Transaction envelope", () => {
     ]);
   });
 
+  it("releases stale default ownership when a visible bulk route owns B", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: { position: { x: 100, y: 100 }, rotation: 0, mirror: "none" },
+      mosBulkBinding: { origin: "cell-default", netId: "net-vss" },
+    });
+    document.nets.push({
+      id: "net-vss",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+    document.junctions.push({
+      id: "J1",
+      netId: "net-vss",
+      position: { x: 180, y: 100 },
+    });
+    document.routes.push({
+      id: "bulk-route",
+      netId: "net-vss",
+      from: { kind: "terminal", instanceId: "M1", pinName: "B" },
+      to: { kind: "junction", junctionId: "J1" },
+      waypoints: [{ x: 100, y: 100 }],
+      segmentModes: ["escape", "manual"],
+      presentation: "bulk-dashed",
+    });
+    document.mosBulkDefaults = { nmosNetId: "net-vss" };
+
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [{ kind: "reconcile_mos_bulk", instanceIds: ["M1"] }],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.instances[0]?.mosBulkBinding).toBeUndefined();
+    expect(result.document.nets[0]?.terminals).toContainEqual({
+      instanceId: "M1",
+      pinName: "B",
+    });
+    expect(result.document.routes).toEqual(document.routes);
+  });
+
   it("repairs a legacy imported B-only split using shared source provenance", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({

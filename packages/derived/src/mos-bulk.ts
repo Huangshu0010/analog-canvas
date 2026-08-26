@@ -43,17 +43,97 @@ export function isMosBulkTerminal(
   return Boolean(instance && mosBulkKind(instance));
 }
 
-/** A dashed Route is meaningful only when it visibly represents MOS bulk. */
+export interface MosBulkRouteFamily {
+  routeIds: string[];
+  instanceIds: string[];
+}
+
+function bulkFamilyContactKeys(
+  document: SchematicDocument,
+  route: RouteBranch,
+): string[] {
+  return [route.from, route.to].flatMap((endpoint) => {
+    if (endpoint.kind === "junction")
+      return [`junction:${endpoint.junctionId}`];
+    return isMosBulkTerminal(document, endpoint)
+      ? [`terminal:${endpoint.instanceId}:B`]
+      : [];
+  });
+}
+
+/**
+ * Resolve every dashed segment in the connected visual path that originates
+ * at one or more MOS B terminals. Route splitting can move the B terminal off
+ * the selected segment, so direct terminal incidence is not a sufficient
+ * family test.
+ */
+export function deriveMosBulkRouteFamily(
+  document: SchematicDocument,
+  seedRoute: RouteBranch,
+): MosBulkRouteFamily | undefined {
+  if (seedRoute.presentation !== "bulk-dashed") return undefined;
+  const routeIds = new Set([seedRoute.id]);
+  const contactKeys = new Set(bulkFamilyContactKeys(document, seedRoute));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const route of document.routes) {
+      if (route.presentation !== "bulk-dashed" || routeIds.has(route.id)) {
+        continue;
+      }
+      const routeKeys = bulkFamilyContactKeys(document, route);
+      if (!routeKeys.some((key) => contactKeys.has(key))) continue;
+      routeIds.add(route.id);
+      routeKeys.forEach((key) => contactKeys.add(key));
+      changed = true;
+    }
+  }
+  const familyRoutes = document.routes.filter((route) =>
+    routeIds.has(route.id),
+  );
+  const instanceIds = new Set(
+    familyRoutes.flatMap((route) =>
+      [route.from, route.to].flatMap((endpoint) =>
+        isMosBulkTerminal(document, endpoint) && endpoint.kind === "terminal"
+          ? [endpoint.instanceId]
+          : [],
+      ),
+    ),
+  );
+  if (instanceIds.size === 0) return undefined;
+  return {
+    routeIds: [...routeIds].sort((left, right) =>
+      left.localeCompare(right, "en"),
+    ),
+    instanceIds: [...instanceIds].sort((left, right) =>
+      left.localeCompare(right, "en"),
+    ),
+  };
+}
+
+export function hasExplicitMosBulkRoute(
+  document: SchematicDocument,
+  instanceId: string,
+): boolean {
+  return document.routes.some(
+    (route) =>
+      route.presentation === "bulk-dashed" &&
+      [route.from, route.to].some(
+        (endpoint) =>
+          endpoint.kind === "terminal" &&
+          endpoint.instanceId === instanceId &&
+          endpoint.pinName === "B" &&
+          isMosBulkTerminal(document, endpoint),
+      ),
+  );
+}
+
+/** A dashed Route is meaningful only when it belongs to a MOS bulk family. */
 export function isMosBulkRoute(
   document: SchematicDocument,
   route: RouteBranch,
 ): boolean {
-  return (
-    route.presentation === "bulk-dashed" &&
-    [route.from, route.to].some((endpoint) =>
-      isMosBulkTerminal(document, endpoint),
-    )
-  );
+  return deriveMosBulkRouteFamily(document, route) !== undefined;
 }
 
 /**
@@ -79,7 +159,9 @@ export function resolveMosBulkConnection(
     ),
   );
   if (connectedNet) {
-    const origin = instance.mosBulkBinding;
+    const origin = hasExplicitMosBulkRoute(document, instance.id)
+      ? undefined
+      : instance.mosBulkBinding;
     return {
       status: origin?.netId === connectedNet.id ? origin.origin : "explicit",
       instance,
