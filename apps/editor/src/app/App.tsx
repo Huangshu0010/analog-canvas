@@ -18,7 +18,6 @@ import {
   planDeleteCell,
   planRemoveCellTerminalMarkers,
   planEditCellTerminalAnnotation,
-  planSetMosModelTarget,
   planCellReset,
   type SchematicEdit,
   type CellResetPlan,
@@ -65,7 +64,6 @@ import type {
 import {
   createEmptyProject,
   createId,
-  defaultDraftTextDocument,
   foldNetName,
   flattenRichText,
   semanticTextDocument,
@@ -90,7 +88,6 @@ import {
   externalSubcircuitSymbolId,
   findUnsupportedProjectSymbolIds,
   hierarchicalSymbolId,
-  resolvePdkSymbolMapping,
   resolvePdkSymbolMappingForTerminalOrder,
   reviewedSky130MosModelSuggestions,
 } from "@icm/symbols";
@@ -215,7 +212,6 @@ import {
   LazyVersionHistoryDialog,
 } from "./lazy-editor-dialogs";
 import {
-  bindingForEditedModel,
   netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
 } from "../features/netlist-export/netlist-authoring";
@@ -326,6 +322,7 @@ import {
 } from "../features/selection/selection-inspection-model";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
 import { createPropertyEditPlanner } from "../features/properties/property-edit-planner";
+import { createSelectionPropertyCommands } from "../features/properties/selection-property-commands";
 import {
   LIBRARY_WIDTH_MAX,
   LIBRARY_WIDTH_MIN,
@@ -359,8 +356,6 @@ import {
   annotationAnchor,
   annotationHitBox,
   attachmentAtPoint,
-  defaultInstanceLabel,
-  defaultInstanceValue,
   effectiveRouteAttachment,
   endpointNetId,
   instanceValueAnnotation,
@@ -1147,6 +1142,29 @@ export function App({
     document,
     resolver,
     routeGeometryRecords,
+    setStatus,
+  });
+  const {
+    referenceLabelVisibilityEdits,
+    valueVisibilityEdits,
+    updateSelectedModelTarget,
+    updateSelectedSchematicName,
+    updateSelectedReference,
+    deleteSelectedAnnotation,
+    reverseSelectedCurrentArrow,
+  } = createSelectionPropertyCommands({
+    project,
+    document,
+    resolver,
+    selectedInstance,
+    selectedInstanceIsMos:
+      selectedPropertyDevice?.symbolId === "nmos" ||
+      selectedPropertyDevice?.symbolId === "pmos",
+    selectedAnnotation,
+    commitStructure,
+    transact,
+    replaceAnnotationSelection: (ids) =>
+      replaceSelectionKind("annotation", ids),
     setStatus,
   });
   const {
@@ -3400,224 +3418,6 @@ export function App({
     setDraftingInspectorSegment(null);
     setDraftingTangentInput(null);
     setDraftingBearingInput(null);
-  }
-
-  function referenceLabelVisibilityEdits(
-    instanceIds: readonly string[],
-    visible: boolean,
-  ): SchematicEdit[] {
-    const edits: SchematicEdit[] = [];
-    for (const instanceId of instanceIds) {
-      const instance = document.instances.find(
-        (item) => item.id === instanceId,
-      );
-      if (!instance) continue;
-      const label = instanceLabelAnnotationFor(document, instanceId);
-      if (label) {
-        const { visible: _currentVisibility, ...rest } = label;
-        edits.push({
-          kind: "upsert_schematic_annotation",
-          annotation: visible ? rest : { ...rest, visible: false },
-        });
-      } else if (visible) {
-        const created = defaultInstanceLabel(
-          document,
-          instance,
-          resolver,
-          styleProfile,
-        );
-        if (created) {
-          edits.push({
-            kind: "upsert_schematic_annotation",
-            annotation: created,
-          });
-        }
-      }
-    }
-    return edits;
-  }
-
-  function valueVisibilityEdits(
-    source: SchematicDocument,
-    instanceIds: readonly string[],
-    visible: boolean,
-  ): SchematicEdit[] {
-    const edits: SchematicEdit[] = [];
-    for (const instanceId of instanceIds) {
-      const instance = source.instances.find((item) => item.id === instanceId);
-      if (!instance) continue;
-      const value = instanceValueAnnotation(source, instanceId);
-      if (value) {
-        const { visible: _currentVisibility, ...rest } = value;
-        if (visible) {
-          edits.push({
-            kind: "upsert_schematic_annotation",
-            annotation: rest,
-          });
-        } else {
-          edits.push({
-            kind: "upsert_schematic_annotation",
-            annotation: { ...rest, visible: false },
-          });
-        }
-      } else if (visible) {
-        const created = defaultInstanceValue(
-          source,
-          instance,
-          resolver,
-          styleProfile,
-        );
-        if (created) {
-          edits.push({
-            kind: "upsert_schematic_annotation",
-            annotation: created,
-          });
-        }
-      }
-    }
-    return edits;
-  }
-
-  function updateSelectedModelTarget(value: string): void {
-    if (!selectedInstance?.netlist) return;
-    if (
-      selectedPropertyDevice?.symbolId === "nmos" ||
-      selectedPropertyDevice?.symbolId === "pmos"
-    ) {
-      try {
-        const edits = planSetMosModelTarget(
-          project,
-          document.id,
-          selectedInstance.id,
-          value,
-        );
-        if (edits.length === 0) return;
-        if (commitStructure("set-mos-model-target", edits)) {
-          const target = value.trim();
-          const mapping = target
-            ? resolvePdkSymbolMapping(target, 4)
-            : undefined;
-          setStatus(
-            mapping
-              ? `Set external X target ${target}`
-              : target
-                ? `Set model target ${target}`
-                : `Cleared model target for ${selectedInstance.id}`,
-          );
-        }
-      } catch (error) {
-        setStatus(
-          error instanceof Error
-            ? error.message
-            : "Could not set MOS model target",
-        );
-      }
-      return;
-    }
-    const binding = bindingForEditedModel(selectedInstance.symbolId, value);
-    const nextBinding = binding ?? null;
-    const currentBinding = selectedInstance.netlist.binding ?? null;
-    if (JSON.stringify(nextBinding) === JSON.stringify(currentBinding)) return;
-    if (
-      transact([
-        {
-          kind: "set_instance_binding",
-          instanceId: selectedInstance.id,
-          binding: nextBinding,
-        },
-      ]).ok
-    ) {
-      setStatus(
-        nextBinding?.kind === "model"
-          ? `Set model target ${nextBinding.name}`
-          : `Cleared model target for ${selectedInstance.id}`,
-      );
-    }
-  }
-
-  function updateSelectedSchematicName(value: string): void {
-    if (!selectedInstance) return;
-    const content = defaultDraftTextDocument(value.trim());
-    if (
-      JSON.stringify(selectedInstance.schematicName ?? null) ===
-      JSON.stringify(content)
-    ) {
-      return;
-    }
-    if (
-      transact([
-        {
-          kind: "set_instance_schematic_name",
-          instanceId: selectedInstance.id,
-          content,
-        },
-      ]).ok
-    ) {
-      setStatus(`Renamed schematic label to ${value.trim()}`);
-    }
-  }
-
-  function updateSelectedReference(value: string): void {
-    if (!selectedInstance?.netlist) return;
-    const reference = value.trim();
-    if (!reference) {
-      setStatus("Netlist reference cannot be empty");
-      return;
-    }
-    if (reference === selectedInstance.netlist.reference) return;
-    if (
-      transact([
-        {
-          kind: "set_instance_reference",
-          instanceId: selectedInstance.id,
-          reference,
-        },
-      ]).ok
-    ) {
-      setStatus(`Set netlist reference to ${reference}`);
-    }
-  }
-
-  /*
-   * Text sessions use one persistence proposal for both annotation and
-   * drafting owners. The tagged target keeps their typed edit differences at
-   * the boundary rather than branching through the floating editor lifecycle.
-   */
-  function deleteSelectedAnnotation(): void {
-    if (!selectedAnnotation) return;
-    const result = transact([
-      {
-        kind: "remove_schematic_annotation",
-        annotationId: selectedAnnotation.id,
-      },
-    ]);
-    if (result.ok) replaceSelectionKind("annotation", []);
-  }
-
-  function reverseSelectedCurrentArrow(): void {
-    if (!selectedAnnotation || !isRoutedMarker(selectedAnnotation)) {
-      return;
-    }
-    const attachment = effectiveRouteAttachment(selectedAnnotation);
-    if (!attachment) return;
-    const direction: "forward" | "reverse" =
-      attachment.direction === "forward" ? "reverse" : "forward";
-    // A route-marker stores direction on its route VisualAnchor.
-    const anchor =
-      selectedAnnotation.kind === "route-marker" &&
-      selectedAnnotation.anchor.kind === "route"
-        ? { ...selectedAnnotation.anchor, direction }
-        : selectedAnnotation.anchor;
-    const result = transact([
-      {
-        kind: "upsert_schematic_annotation",
-        annotation: {
-          ...selectedAnnotation,
-          anchor,
-        },
-      },
-    ]);
-    if (result.ok) setStatus(`Current arrow points ${direction}`);
   }
 
   function exportSvg(): void {

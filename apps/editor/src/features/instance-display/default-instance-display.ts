@@ -22,6 +22,23 @@ export interface DefaultInstanceDisplayOptions {
   readonly formalTerminalId?: string;
 }
 
+/** Find the authored reference/name projection owned by one Instance. */
+export function instanceLabelAnnotationFor(
+  document: SchematicDocument,
+  instanceId: string,
+): Annotation | undefined {
+  return document.annotations.find(
+    (annotation) =>
+      (annotation.kind === "instance-label" ||
+        annotation.kind === "net-label") &&
+      (annotation.binding?.kind === "instance-schematic-name" ||
+        annotation.binding?.kind === "cell-terminal-name" ||
+        annotation.binding?.kind === "net-name") &&
+      annotation.anchor.kind === "object" &&
+      annotation.anchor.objectId === instanceId,
+  );
+}
+
 /**
  * One editor policy for default labels. Electrical facts remain in the typed
  * Instance/Cell model; this factory only creates their visual projections.
