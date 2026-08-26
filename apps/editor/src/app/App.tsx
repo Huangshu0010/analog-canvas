@@ -8,7 +8,6 @@ import type {
 import {
   compileWireDraft,
   createFreeWireAnchor,
-  createRouteWireAnchor,
   proposeEndpointRouteAttachment,
   proposeLooseRouteTranslation,
   proposePowerRailEndpointResize,
@@ -22,8 +21,6 @@ import {
   type SchematicEdit,
   type CellResetPlan,
   type WireSource,
-  type WireRoutingMode,
-  type WireCornerOrder,
 } from "@icm/edit-engine";
 import { analyzeDesignNetlist } from "@icm/netlist";
 import type { NetlistDiagnostic, NetlistFormat } from "@icm/netlist";
@@ -347,7 +344,7 @@ import {
   isRoutedMarker,
   looseRouteAnchorIds,
 } from "../features/wiring/route-interaction-geometry";
-import { resolveWireCanvasSnap as resolveWireCanvasSnapModel } from "../features/wiring/wire-canvas-snap";
+import { useWireCanvasController } from "../features/wiring/use-wire-canvas-controller";
 import type { ScreenFlip } from "../interaction/shortcut-orientation";
 import {
   buildDraftingAnchors,
@@ -834,15 +831,6 @@ export function App({
   const [workspaceSlots, setWorkspaceSlots] = useState<
     readonly WorkspaceSlot[]
   >([]);
-  /**
-   * The corner shape is a standing authoring preference, not per-wire state:
-   * picking the wire tool again reset it, so a chosen diagonal had to be
-   * re-selected for every single wire.
-   */
-  const lastWireShapeRef = useRef<{
-    routingMode: WireRoutingMode;
-    cornerOrder: WireCornerOrder;
-  }>({ routingMode: "orthogonal", cornerOrder: "auto" });
   const [selectedEndpoint, setSelectedEndpoint] = useState<WireSource | null>(
     null,
   );
@@ -1494,6 +1482,7 @@ export function App({
     [document.id, projectConnectivityIndex],
   );
   const {
+    createRouteAnchor,
     beginRouteStretch,
     drawSelectedMosBulk,
     deleteSelectedRouteConnection,
@@ -1539,7 +1528,6 @@ export function App({
     pointFromClient,
     logicalRadiusForPixels,
     contactComponents,
-    createRouteAnchor: routeAnchor,
   });
   const cellInsertCandidates = useMemo(
     () =>
@@ -1972,6 +1960,51 @@ export function App({
     selectAnnotation: (id) => selectOnly("annotation", [id]),
     clearSelectedEndpoint: () => setSelectedEndpoint(null),
     transact,
+    setStatus,
+  });
+  const {
+    resolveWireCanvasSnap,
+    cycleWireCornerShape,
+    applyWireCanvasPoint,
+    handleRoutePointerDown,
+  } = useWireCanvasController({
+    document,
+    resolver,
+    wiringEndpoints,
+    routeGeometryRecords,
+    contactComponents,
+    wireSource,
+    wireWaypoints,
+    wireDraftSteps,
+    wireRoutingMode,
+    wireCornerOrder,
+    tool,
+    vddRailMode,
+    componentPlacementPending: Boolean(
+      pendingSymbolId && pendingComponentPlacement,
+    ),
+    selectedInstanceIds: selectedIds,
+    selection: visualSelection,
+    getInteractionKind: () => getCurrentInteractionState().kind,
+    beginInstanceMove: beginMoveFromSelection,
+    beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
+    cancelInteraction,
+    handleWireRoutePointerDown,
+    selectRoute,
+    beginRouteStretch,
+    createRouteAnchor,
+    pointFromClient: (clientX, clientY, svg) =>
+      pointFromClient(clientX, clientY, svg, false),
+    logicalRadiusForPixels,
+    paintSnapGuides,
+    setWireSource,
+    setWirePreviewPoint,
+    setWireDraftSteps,
+    commitWire,
+    fixWirePoint,
+    finishWireAtPoint,
+    setWireRoutingMode,
+    setWireCornerOrder,
     setStatus,
   });
   const {
@@ -2935,90 +2968,6 @@ export function App({
     );
   }
 
-  function routeAnchor(
-    routeId: string,
-    point: Point,
-    segmentIndex: number,
-  ): WireSource {
-    const route = document.routes.find(
-      (candidate) => candidate.id === routeId,
-    )!;
-    const suffix = nextRoutingSuffix();
-    // Route taps are persisted geometry. Snap the projected screen hit back to
-    // the document grid before splitRoute validates it, avoiding sub-pixel SVG
-    // transform residue at an otherwise exact corner.
-    return createRouteWireAnchor(
-      document,
-      route,
-      point,
-      segmentIndex,
-      document.presentation.grid,
-      suffix,
-    );
-  }
-
-  function handleRoutePointerDown(
-    event: ReactPointerEvent<SVGElement>,
-    routeId: string,
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (vddRailMode || (pendingSymbolId && pendingComponentPlacement)) return;
-    if (
-      getCurrentInteractionState().kind === "moving-selection" &&
-      selectedIds.length > 0
-    ) {
-      const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId)
-        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
-      return;
-    }
-    if (tool !== "pointer") {
-      handleWireRoutePointerDown(event, routeId, hitTarget);
-      return;
-    }
-    event.stopPropagation();
-    if (event.altKey) {
-      setStatus("Snap suppressed while Alt is held");
-      return;
-    }
-    const routeRecord = routeGeometryRecords.find(
-      (candidate) => candidate.route.id === routeId,
-    );
-    if (!routeRecord) return;
-    const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
-    const pointer = pointFromClient(event.clientX, event.clientY, svg, false);
-    const tap = resolveRouteTap(
-      routeRecord.geometry,
-      pointer,
-      logicalRadiusForPixels(svg, 7),
-    );
-    const segmentIndex = tap?.address.segmentIndex ?? 0;
-    if (getCurrentInteractionState().kind === "moving-selection") {
-      const movePlan = planSelectionMove(document, visualSelection);
-      if (movePlan.previewObjectIds.length > 0) {
-        beginVisualSelectionMoveFromSelection(
-          event,
-          visualSelection,
-          hitTarget,
-        );
-        return;
-      }
-      cancelInteraction();
-    }
-    selectRoute(routeId, segmentIndex);
-    beginRouteStretch(
-      event,
-      routeId,
-      segmentIndex,
-      routeRecord.route.presentation === "power-rail"
-        ? "move-power-rail"
-        : looseRouteAnchorIds(document, routeRecord.route) !== null
-          ? "move-loose-route"
-          : "stretch-segment",
-      hitTarget,
-    );
-  }
-
   function pointFromClient(
     clientX: number,
     clientY: number,
@@ -3085,153 +3034,6 @@ export function App({
       clearTransientCanvasState();
     };
   }, []);
-
-  function resolveWireCanvasSnap(
-    point: Point,
-    svg: SVGSVGElement,
-    suppressSnap: boolean,
-  ) {
-    return resolveWireCanvasSnapModel(
-      {
-        document,
-        resolver,
-        wiringEndpoints,
-        routeGeometryRecords,
-        contactComponents,
-        wireSource,
-        wireWaypoints,
-        captureTolerance: logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
-      },
-      point,
-      suppressSnap,
-    );
-  }
-
-  /**
-   * One middle-click steps the corner through the shapes a wire actually
-   * turns with: horizontal-first, vertical-first, then the 45° diagonal. The
-   * click used to reach only the diagonal, so the two orthogonal elbows were
-   * unreachable without the Corner menu.
-   */
-  // Re-arm the remembered corner shape on a fresh wire. Activating the wire
-  // tool builds a clean state, which dropped the choice; this restores it
-  // without touching a wire already in progress.
-  useEffect(() => {
-    if (tool !== "wire" || wireSource !== null || wireDraftSteps.length > 0)
-      return;
-    const remembered = lastWireShapeRef.current;
-    if (remembered.routingMode !== wireRoutingMode)
-      setWireRoutingMode(remembered.routingMode);
-    if (remembered.cornerOrder !== wireCornerOrder)
-      setWireCornerOrder(remembered.cornerOrder);
-  }, [
-    tool,
-    wireSource,
-    wireDraftSteps.length,
-    wireRoutingMode,
-    wireCornerOrder,
-    setWireRoutingMode,
-    setWireCornerOrder,
-  ]);
-
-  function cycleWireCornerShape(): void {
-    // "auto" is where every wire starts, so it has to be a named stop on the
-    // cycle: leaving it out made findIndex return -1 and the first press land
-    // on entry 0. That press was also invisible, because a first leg drawn by
-    // "auto" already runs horizontal — hence vertical first comes next, so
-    // every press visibly redraws the preview.
-    const shapes = [
-      {
-        routingMode: "orthogonal" as const,
-        cornerOrder: "auto" as const,
-        label: "auto",
-      },
-      {
-        routingMode: "orthogonal" as const,
-        cornerOrder: "vertical-first" as const,
-        label: "vertical first",
-      },
-      {
-        routingMode: "orthogonal" as const,
-        cornerOrder: "horizontal-first" as const,
-        label: "horizontal first",
-      },
-      {
-        routingMode: "octilinear" as const,
-        cornerOrder: "diagonal-first" as const,
-        label: "45° diagonal",
-      },
-      {
-        routingMode: "free" as const,
-        cornerOrder: "auto" as const,
-        label: "any angle",
-      },
-    ];
-    const index = shapes.findIndex(
-      (shape) =>
-        shape.routingMode === wireRoutingMode &&
-        shape.cornerOrder === wireCornerOrder,
-    );
-    const next = shapes[(index + 1) % shapes.length]!;
-    lastWireShapeRef.current = next;
-    if (next.routingMode !== wireRoutingMode)
-      setWireRoutingMode(next.routingMode);
-    setWireCornerOrder(next.cornerOrder);
-    setStatus(`Wire corner: ${next.label}`);
-  }
-
-  function applyWireCanvasPoint(
-    rawPoint: Point,
-    svg: SVGSVGElement,
-    suppressSnap: boolean,
-    finish: boolean,
-  ): void {
-    const resolved = resolveWireCanvasSnap(rawPoint, svg, suppressSnap);
-    paintSnapGuides([]);
-    // A double-click ends the wire and never begins one. Landing on an
-    // endpoint or an existing Route already commits on the first click, so
-    // without this the finishing gesture started a fresh wire at that point
-    // and drawing appeared to continue.
-    if (finish && !wireSource) return;
-    if (resolved.ambiguous) {
-      setStatus(
-        "Ambiguous connection: choose one endpoint or conductor away from the overlap",
-      );
-      return;
-    }
-    if (resolved.endpoint) {
-      if (!wireSource) {
-        setWireSource(resolved.endpoint, document.revision);
-        setWirePreviewPoint(resolved.endpoint.connection.contactPoint);
-        setWireDraftSteps([]);
-      } else if (
-        endpointKey(wireSource.endpoint) !==
-        endpointKey(resolved.endpoint.endpoint)
-      ) {
-        commitWire(resolved.endpoint);
-      } else {
-        setStatus("Choose a different endpoint");
-      }
-      return;
-    }
-    if (resolved.route) {
-      const anchor = routeAnchor(
-        resolved.route.routeId,
-        resolved.route.point,
-        resolved.route.segmentIndex,
-      );
-      if (!wireSource) {
-        setWireSource(anchor, document.revision);
-        setWirePreviewPoint(anchor.connection.contactPoint);
-        setWireDraftSteps([]);
-      } else {
-        commitWire(anchor);
-      }
-      return;
-    }
-    if (finish) finishWireAtPoint(resolved.point);
-    else fixWirePoint(resolved.point);
-  }
 
   function handleCanvasHitPointerDown(
     event: ReactPointerEvent<SVGSVGElement>,

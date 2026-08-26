@@ -8,6 +8,7 @@ import {
   type WireDraftStep,
   createConnectivityProposal,
   createFreeWireAnchor,
+  createRouteWireAnchor,
   gateConnectivityProposal,
   proposeVisualRouteDeletion,
   proposeLooseRouteTranslation,
@@ -108,11 +109,6 @@ export interface UseWireInteractionOptions {
   ) => Point;
   logicalRadiusForPixels: (svg: SVGSVGElement, pixels: number) => number;
   contactComponents: Parameters<typeof resolveElectricalContactTargets>[3];
-  createRouteAnchor: (
-    routeId: string,
-    point: Point,
-    segmentIndex: number,
-  ) => WireSource;
 }
 
 /**
@@ -149,6 +145,26 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     createNet: boolean,
   ): WireSource =>
     createFreeWireAnchor(point, netId, createNet, options.nextRoutingSuffix());
+
+  const routeAnchor = (
+    routeId: string,
+    point: Point,
+    segmentIndex: number,
+  ): WireSource => {
+    const route = options.document.routes.find(
+      (candidate) => candidate.id === routeId,
+    )!;
+    // Persisted route taps must be projected back onto the document grid;
+    // createRouteWireAnchor owns that normalization and split validation.
+    return createRouteWireAnchor(
+      options.document,
+      route,
+      point,
+      segmentIndex,
+      options.document.presentation.grid,
+      options.nextRoutingSuffix(),
+    );
+  };
 
   const commitWire = (candidate: WireSource): void => {
     if (!options.wireSource) return;
@@ -724,11 +740,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
       );
       return;
     }
-    const anchor = options.createRouteAnchor(
-      routeId,
-      tapPoint,
-      tap.address.segmentIndex,
-    );
+    const anchor = routeAnchor(routeId, tapPoint, tap.address.segmentIndex);
     if (!options.wireSource) {
       options.setWireSource(anchor, options.document.revision);
       options.setWirePreviewPoint(tapPoint);
@@ -775,6 +787,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
   };
 
   return {
+    createRouteAnchor: routeAnchor,
     beginRouteStretch,
     commitWire,
     completeRouteStretch,
