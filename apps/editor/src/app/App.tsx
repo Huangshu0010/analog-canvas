@@ -139,7 +139,6 @@ import {
 } from "../features/wiring/use-wire-interaction";
 import {
   centerOfBounds,
-  clamp,
   closestPointOnSegment,
   normalizedBearing,
   normalizedRect,
@@ -147,6 +146,7 @@ import {
   serializePolylinePoints,
 } from "../canvas/canvas-geometry";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
+import { draggedAnnotationAtPosition } from "../features/text-editing/annotation-drag-model";
 import { ComponentPlacementPreview } from "../features/component-insert/component-placement-preview";
 import {
   cellInsertLaunch,
@@ -349,15 +349,12 @@ import {
   attachmentAtPoint,
   defaultInstanceLabel,
   defaultInstanceValue,
-  dragNetLabelAttachmentAtPoint,
-  dragRouteAttachmentAtPoint,
   effectiveRouteAttachment,
   endpointNetId,
   instanceHitBox,
   instanceValueAnnotation,
   isRoutedMarker,
   looseRouteAnchorIds,
-  NET_LABEL_MAX_NORMAL_OFFSET,
   routeTapPoint,
 } from "../features/wiring/route-interaction-geometry";
 import { reflectOrientation } from "../interaction/shortcut-orientation";
@@ -2940,167 +2937,6 @@ export function App({
     );
   }
 
-  function constrainAnnotationPosition(
-    annotation: Annotation,
-    candidate: DerivedPoint,
-  ): Point {
-    if (
-      (annotation.kind === "instance-label" ||
-        annotation.kind === "instance-value") &&
-      annotation.anchor.kind === "object"
-    ) {
-      const anchor = annotation.anchor;
-      const instance = document.instances.find(
-        (item) => item.id === anchor.objectId,
-      );
-      if (instance?.placement) {
-        const resolved = resolver.resolve(
-          instance.symbolId,
-          instance.symbolVariantId,
-        );
-        const radius = Math.ceil(
-          Math.max(
-            resolved?.definition.viewBox.width ?? 60,
-            resolved?.definition.viewBox.height ?? 60,
-          ) /
-            2 +
-            30,
-        );
-        return snapGridPoint(
-          {
-            x: clamp(
-              candidate.x,
-              instance.placement.position.x - radius,
-              instance.placement.position.x + radius,
-            ),
-            y: clamp(
-              candidate.y,
-              instance.placement.position.y - radius,
-              instance.placement.position.y + radius,
-            ),
-          },
-          document.presentation.grid,
-        );
-      }
-    }
-    if (annotation.kind === "net-label" && annotation.netId) {
-      const candidates = routeGeometryRecords
-        .filter(({ route }) => route.netId === annotation.netId)
-        .flatMap(({ geometry }) =>
-          geometry.centerline
-            .slice(0, -1)
-            .map((from, index) =>
-              closestPointOnSegment(
-                candidate,
-                from,
-                geometry.centerline[index + 1]!,
-              ),
-            ),
-        );
-      const closest = candidates.sort((left, right) => {
-        const leftDistance =
-          (left.x - candidate.x) ** 2 + (left.y - candidate.y) ** 2;
-        const rightDistance =
-          (right.x - candidate.x) ** 2 + (right.y - candidate.y) ** 2;
-        return leftDistance - rightDistance;
-      })[0];
-      if (closest) {
-        return snapGridPoint(
-          {
-            x: clamp(
-              candidate.x,
-              closest.x - NET_LABEL_MAX_NORMAL_OFFSET,
-              closest.x + NET_LABEL_MAX_NORMAL_OFFSET,
-            ),
-            y: clamp(
-              candidate.y,
-              closest.y - NET_LABEL_MAX_NORMAL_OFFSET,
-              closest.y + NET_LABEL_MAX_NORMAL_OFFSET,
-            ),
-          },
-          document.presentation.grid,
-        );
-      }
-    }
-    return snapGridPoint(candidate, document.presentation.grid);
-  }
-
-  function draggedAnnotationAtPosition(
-    annotation: Annotation,
-    candidate: DerivedPoint,
-  ): Annotation {
-    const currentAttachment = effectiveRouteAttachment(annotation);
-    if (isRoutedMarker(annotation) && currentAttachment) {
-      const attached = dragRouteAttachmentAtPoint(
-        routeGeometryRecords,
-        candidate,
-        currentAttachment,
-      );
-      if (!attached) return annotation;
-      const anchor =
-        annotation.anchor.kind === "route"
-          ? {
-              ...annotation.anchor,
-              segmentIndex: attached.routeAttachment.segmentIndex,
-              t: attached.routeAttachment.t,
-              normalOffset: attached.routeAttachment.normalOffset,
-              direction: attached.routeAttachment.direction,
-              fallbackPosition: attached.position,
-            }
-          : annotation.anchor;
-      return {
-        ...annotation,
-        anchor,
-      };
-    }
-    if (annotation.kind === "net-label" && annotation.anchor.kind === "route") {
-      const attached = dragNetLabelAttachmentAtPoint(
-        routeGeometryRecords,
-        candidate,
-        annotation.anchor.routeId,
-      );
-      if (!attached) return annotation;
-      return {
-        ...annotation,
-        anchor: {
-          ...annotation.anchor,
-          segmentIndex: attached.segmentIndex,
-          t: attached.t,
-          normalOffset: attached.normalOffset,
-          fallbackPosition: attached.labelPosition,
-        },
-      };
-    }
-
-    const position = constrainAnnotationPosition(annotation, candidate);
-    if (annotation.anchor.kind === "object") {
-      const anchor = annotation.anchor;
-      const instance = document.instances.find(
-        (item) => item.id === anchor.objectId,
-      );
-      if (instance?.placement) {
-        return {
-          ...annotation,
-          anchor: {
-            ...annotation.anchor,
-            localOffset: {
-              x: position.x - instance.placement.position.x,
-              y: position.y - instance.placement.position.y,
-            },
-            fallbackPosition: position,
-          },
-        };
-      }
-    }
-    return {
-      ...annotation,
-      anchor:
-        annotation.anchor.kind === "free"
-          ? { kind: "free", position }
-          : { ...annotation.anchor, fallbackPosition: position },
-    };
-  }
-
   function beginAnnotationDrag(
     event: ReactPointerEvent<SVGElement>,
     annotation: Annotation,
@@ -3213,6 +3049,7 @@ export function App({
       {
         kind: "upsert_schematic_annotation",
         annotation: draggedAnnotationAtPosition(
+          { document, resolver, routeGeometryRecords },
           annotation,
           snapGridPoint(position, document.presentation.grid),
         ),
