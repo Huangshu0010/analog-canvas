@@ -235,6 +235,39 @@ describe("Razavi symbol catalog", () => {
     expect(invalid.success).toBe(false);
   });
 
+  it("keeps FD Amp leads compact and at the current wire width", () => {
+    for (const symbolId of [
+      "opamp-differential",
+      "opamp-differential-crossed",
+    ]) {
+      const symbol = requireRazaviCatalogSymbol(symbolId);
+      expect(symbol.pins).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: "IN+",
+            at: { x: -40, y: 10 },
+          }),
+          expect.objectContaining({
+            name: "IN-",
+            at: { x: -40, y: -10 },
+          }),
+          expect.objectContaining({
+            at: { x: 20, y: -10 },
+          }),
+          expect.objectContaining({
+            at: { x: 20, y: 10 },
+          }),
+        ]),
+      );
+      for (const primitive of symbol.primitives.slice(0, 4)) {
+        expect(primitive).toMatchObject({
+          kind: "line",
+          style: { strokeRole: "normal" },
+        });
+      }
+    }
+  });
+
   it("uses reviewed catalog objects as the sole built-in product library", () => {
     expect(razaviCatalogSymbols).toHaveLength(36);
     for (const catalogSymbol of razaviProductSymbols) {
