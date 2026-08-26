@@ -1,0 +1,267 @@
+import { resolveDraftingObjectGeometry } from "@icm/derived";
+import type { DraftingObject, SchematicDocument } from "@icm/model";
+import type { SymbolResolver } from "@icm/symbols";
+
+import { normalizedBearing } from "../../canvas/canvas-geometry";
+import { ToolIcon } from "../editor-shell/tool-icon";
+import type { DraftingStylePatch } from "./drafting-manipulation";
+import { quadraticTangentAngle } from "./drafting-path";
+
+export interface DraftingPropertiesPanelProps {
+  document: SchematicDocument;
+  resolver: SymbolResolver;
+  object: DraftingObject;
+  inspectorSegment: { objectId: string; index: number } | null;
+  tangentInput: { key: string; value: string } | null;
+  bearingInput: { objectId: string; value: string } | null;
+  onInspectorSegmentChange: (
+    value: { objectId: string; index: number } | null,
+  ) => void;
+  onTangentInputChange: (value: { key: string; value: string } | null) => void;
+  onBearingInputChange: (
+    value: { objectId: string; value: string } | null,
+  ) => void;
+  onStyleChange: (patch: DraftingStylePatch) => void;
+  onTangentAngleChange: (angle: number) => void;
+  onBearingChange: (bearing: number) => void;
+  onReverse: () => void;
+  onRotate: () => void;
+  onToggleLock: () => void;
+}
+
+/** Property editor for authored arrows, construction lines, and rectangles. */
+export function DraftingPropertiesPanel({
+  document,
+  resolver,
+  object,
+  inspectorSegment,
+  tangentInput,
+  bearingInput,
+  onInspectorSegmentChange,
+  onTangentInputChange,
+  onBearingInputChange,
+  onStyleChange,
+  onTangentAngleChange,
+  onBearingChange,
+  onReverse,
+  onRotate,
+  onToggleLock,
+}: DraftingPropertiesPanelProps) {
+  const geometry = resolveDraftingObjectGeometry(document, resolver, object);
+  if (
+    geometry.kind !== "arrow" &&
+    geometry.kind !== "construction-line" &&
+    geometry.kind !== "rectangle"
+  ) {
+    return null;
+  }
+  const lineStyle =
+    object.styleOverride?.lineStyle ??
+    (object.kind === "construction-line" || object.kind === "rectangle"
+      ? object.lineStyle
+      : "solid");
+  const isRectangle = geometry.kind === "rectangle";
+  const points = isRectangle ? geometry.corners : geometry.points;
+  const curveControls = isRectangle
+    ? points.slice(0, -1).map(() => null)
+    : geometry.curveControls;
+  const segmentIndex =
+    inspectorSegment?.objectId === object.id
+      ? inspectorSegment.index
+      : Math.max(0, curveControls.findIndex(Boolean));
+  const tangentAngle = isRectangle
+    ? 0
+    : quadraticTangentAngle(
+        points[segmentIndex]!,
+        curveControls[segmentIndex] ?? null,
+        points[segmentIndex + 1]!,
+      );
+  const tangentInputKey = `${object.id}:${segmentIndex}`;
+  const realizedAngleText = String(Math.round(tangentAngle * 10) / 10);
+  const tangentInputValue =
+    tangentInput?.key === tangentInputKey
+      ? tangentInput.value
+      : realizedAngleText;
+  const bearing = isRectangle
+    ? geometry.rotation
+    : normalizedBearing(points[0]!, points[1]!);
+  const realizedBearingText = String(Math.round(bearing * 10) / 10);
+  const bearingInputValue =
+    bearingInput?.objectId === object.id
+      ? bearingInput.value
+      : realizedBearingText;
+
+  return (
+    <section
+      className="context-actions drawing-properties"
+      aria-label="Drawing style"
+      data-testid="drafting-properties"
+    >
+      <h2>Drawing style</h2>
+      <label>
+        Line style
+        <select
+          aria-label="Line style"
+          value={lineStyle}
+          disabled={object.locked}
+          onChange={(event) =>
+            onStyleChange({
+              lineStyle: event.currentTarget.value as
+                "solid" | "dashed" | "dotted",
+            })
+          }
+        >
+          <option value="solid">Solid</option>
+          <option value="dashed">Dashed</option>
+          <option value="dotted">Dotted</option>
+        </select>
+      </label>
+      <label>
+        Stroke width
+        <select
+          aria-label="Stroke width"
+          value={String(object.styleOverride?.strokeScale ?? 1)}
+          disabled={object.locked}
+          onChange={(event) =>
+            onStyleChange({
+              strokeScale: Number(event.currentTarget.value) as
+                0.75 | 1 | 1.5 | 2,
+            })
+          }
+        >
+          <option value="0.75">0.75×</option>
+          <option value="1">1×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2×</option>
+        </select>
+      </label>
+      {object.kind === "construction-line" && points.length > 2 ? (
+        <label>
+          Curve segment
+          <select
+            aria-label="Curve segment"
+            value={String(segmentIndex)}
+            disabled={object.locked}
+            onChange={(event) => {
+              onInspectorSegmentChange({
+                objectId: object.id,
+                index: Number(event.currentTarget.value),
+              });
+              onTangentInputChange(null);
+            }}
+          >
+            {points.slice(0, -1).map((_, index) => (
+              <option key={index} value={index}>
+                Segment {index + 1}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {!isRectangle ? (
+        <label>
+          Tangent angle (°)
+          <input
+            aria-label="Tangent angle"
+            type="number"
+            min="0"
+            max="170"
+            step="1"
+            value={tangentInputValue}
+            disabled={object.locked}
+            placeholder={realizedAngleText}
+            onFocus={() =>
+              onTangentInputChange({ key: tangentInputKey, value: "" })
+            }
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              onTangentInputChange({ key: tangentInputKey, value });
+              const angle = Number(value);
+              if (value !== "" && Number.isFinite(angle)) {
+                onTangentAngleChange(angle);
+              }
+            }}
+            onBlur={() => onTangentInputChange(null)}
+          />
+        </label>
+      ) : null}
+      <label>
+        Bearing (°)
+        <input
+          aria-label="Drawing bearing"
+          type="number"
+          min="0"
+          max="359"
+          step="1"
+          value={bearingInputValue}
+          disabled={object.locked}
+          placeholder={realizedBearingText}
+          onFocus={() =>
+            onBearingInputChange({ objectId: object.id, value: "" })
+          }
+          onChange={(event) => {
+            const value = event.currentTarget.value;
+            onBearingInputChange({ objectId: object.id, value });
+            const nextBearing = Number(value);
+            if (value !== "" && Number.isFinite(nextBearing)) {
+              onBearingChange(nextBearing);
+            }
+          }}
+          onBlur={() => onBearingInputChange(null)}
+        />
+      </label>
+      {object.kind === "arrow" ? (
+        <>
+          <label>
+            Arrow head
+            <select
+              aria-label="Arrow head"
+              value={object.styleOverride?.arrowHead ?? "filled"}
+              disabled={object.locked}
+              onChange={(event) =>
+                onStyleChange({
+                  arrowHead: event.currentTarget.value as
+                    "none" | "filled" | "open",
+                })
+              }
+            >
+              <option value="none">No head</option>
+              <option value="filled">Filled</option>
+              <option value="open">Open</option>
+            </select>
+          </label>
+          <label>
+            Arrow head size
+            <select
+              aria-label="Arrow head size"
+              value={String(object.styleOverride?.arrowHeadScale ?? 1)}
+              disabled={object.locked}
+              onChange={(event) =>
+                onStyleChange({
+                  arrowHeadScale: Number(event.currentTarget.value) as
+                    0.75 | 1 | 1.25 | 1.5,
+                })
+              }
+            >
+              <option value="0.75">0.75×</option>
+              <option value="1">1×</option>
+              <option value="1.25">1.25×</option>
+              <option value="1.5">1.5×</option>
+            </select>
+          </label>
+          <button type="button" disabled={object.locked} onClick={onReverse}>
+            Reverse
+          </button>
+        </>
+      ) : null}
+      <button type="button" disabled={object.locked} onClick={onRotate}>
+        <ToolIcon name="rotate" />
+        Rotate
+      </button>
+      <button type="button" onClick={onToggleLock}>
+        <ToolIcon name="lock" />
+        {object.locked ? "Unlock" : "Lock"}
+      </button>
+    </section>
+  );
+}

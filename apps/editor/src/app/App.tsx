@@ -134,7 +134,6 @@ import {
 import {
   centerOfBounds,
   closestPointOnSegment,
-  normalizedBearing,
   normalizedRect,
   polylineBounds,
   serializePolylinePoints,
@@ -165,6 +164,7 @@ import {
 } from "../features/component-insert/insert-launch";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
 import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
+import { PlacementTrayPanel } from "../features/component-insert/placement-tray-panel";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
 import {
@@ -267,6 +267,7 @@ import type {
   DraftingStylePatch,
 } from "../features/drafting/drafting-manipulation";
 import { DraftingCreatePreview } from "../features/drafting/drafting-create-preview";
+import { DraftingPropertiesPanel } from "../features/drafting/drafting-properties-panel";
 import {
   proposeRectangleLabel,
   rectangleInteriorAt,
@@ -279,7 +280,6 @@ import {
 import {
   draftingPathData,
   quadraticMidpoint,
-  quadraticTangentAngle,
 } from "../features/drafting/drafting-path";
 import {
   resolveEditorShortcut,
@@ -3491,25 +3491,6 @@ export function App({
         error instanceof Error ? error.message : "Could not return to tray",
       );
     }
-  }
-
-  function placementTrayIdentity(
-    instance: SchematicDocument["instances"][number],
-  ): string {
-    const formalName = document.netlist?.terminals.find((terminal) =>
-      terminal.interfaceInstanceIds.includes(instance.id),
-    )?.name;
-    const schematicName = flattenRichText(
-      instance.schematicName ?? { runs: [] },
-    );
-    const reference =
-      instance.schematicReference ?? instance.netlist?.reference ?? null;
-    const secondary = formalName ?? schematicName;
-    const identity =
-      reference && secondary && reference !== secondary
-        ? `${reference} · ${secondary}`
-        : (reference ?? secondary ?? "Unreferenced");
-    return `${identity} · ${instance.symbolId}`;
   }
 
   function selectionVisualMoveEdits(
@@ -7596,370 +7577,58 @@ export function App({
                   ) : null}
                 </section>
               ) : null}
-              {selectedDrafting
-                ? (() => {
-                    const geometry = resolveDraftingObjectGeometry(
-                      document,
-                      resolver,
-                      selectedDrafting,
-                    );
-                    if (
-                      geometry.kind !== "arrow" &&
-                      geometry.kind !== "construction-line" &&
-                      geometry.kind !== "rectangle"
-                    ) {
-                      return null;
-                    }
-                    const lineStyle =
-                      selectedDrafting.styleOverride?.lineStyle ??
-                      (selectedDrafting.kind === "construction-line" ||
-                      selectedDrafting.kind === "rectangle"
-                        ? selectedDrafting.lineStyle
-                        : "solid");
-                    const isRectangle = geometry.kind === "rectangle";
-                    const points = isRectangle
-                      ? geometry.corners
-                      : geometry.points;
-                    const curveControls = isRectangle
-                      ? points.slice(0, -1).map(() => null)
-                      : geometry.curveControls;
-                    const segmentIndex =
-                      draftingInspectorSegment?.objectId === selectedDrafting.id
-                        ? draftingInspectorSegment.index
-                        : Math.max(0, curveControls.findIndex(Boolean));
-                    const tangentAngle = isRectangle
-                      ? 0
-                      : quadraticTangentAngle(
-                          points[segmentIndex]!,
-                          curveControls[segmentIndex] ?? null,
-                          points[segmentIndex + 1]!,
-                        );
-                    const tangentInputKey = `${selectedDrafting.id}:${segmentIndex}`;
-                    const realizedAngleText = String(
-                      Math.round(tangentAngle * 10) / 10,
-                    );
-                    const tangentInputValue =
-                      draftingTangentInput?.key === tangentInputKey
-                        ? draftingTangentInput.value
-                        : realizedAngleText;
-                    const bearing = isRectangle
-                      ? geometry.rotation
-                      : normalizedBearing(points[0]!, points[1]!);
-                    const realizedBearingText = String(
-                      Math.round(bearing * 10) / 10,
-                    );
-                    const bearingInputValue =
-                      draftingBearingInput?.objectId === selectedDrafting.id
-                        ? draftingBearingInput.value
-                        : realizedBearingText;
-                    return (
-                      <section
-                        className="context-actions drawing-properties"
-                        aria-label="Drawing style"
-                        data-testid="drafting-properties"
-                      >
-                        <h2>Drawing style</h2>
-                        <label>
-                          Line style
-                          <select
-                            aria-label="Line style"
-                            value={lineStyle}
-                            disabled={selectedDrafting.locked}
-                            onChange={(event) =>
-                              setDraftingStyle({
-                                lineStyle: event.currentTarget.value as
-                                  "solid" | "dashed" | "dotted",
-                              })
-                            }
-                          >
-                            <option value="solid">Solid</option>
-                            <option value="dashed">Dashed</option>
-                            <option value="dotted">Dotted</option>
-                          </select>
-                        </label>
-                        <label>
-                          Stroke width
-                          <select
-                            aria-label="Stroke width"
-                            value={String(
-                              selectedDrafting.styleOverride?.strokeScale ?? 1,
-                            )}
-                            disabled={selectedDrafting.locked}
-                            onChange={(event) =>
-                              setDraftingStyle({
-                                strokeScale: Number(
-                                  event.currentTarget.value,
-                                ) as 0.75 | 1 | 1.5 | 2,
-                              })
-                            }
-                          >
-                            <option value="0.75">0.75×</option>
-                            <option value="1">1×</option>
-                            <option value="1.5">1.5×</option>
-                            <option value="2">2×</option>
-                          </select>
-                        </label>
-                        {selectedDrafting.kind === "construction-line" &&
-                        points.length > 2 ? (
-                          <label>
-                            Curve segment
-                            <select
-                              aria-label="Curve segment"
-                              value={String(segmentIndex)}
-                              disabled={selectedDrafting.locked}
-                              onChange={(event) => {
-                                setDraftingInspectorSegment({
-                                  objectId: selectedDrafting.id,
-                                  index: Number(event.currentTarget.value),
-                                });
-                                setDraftingTangentInput(null);
-                              }}
-                            >
-                              {points.slice(0, -1).map((_, index) => (
-                                <option key={index} value={index}>
-                                  Segment {index + 1}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        ) : null}
-                        {!isRectangle ? (
-                          <label>
-                            Tangent angle (°)
-                            <input
-                              aria-label="Tangent angle"
-                              type="number"
-                              min="0"
-                              max="170"
-                              step="1"
-                              value={tangentInputValue}
-                              disabled={selectedDrafting.locked}
-                              placeholder={realizedAngleText}
-                              onFocus={() => {
-                                setDraftingTangentInput({
-                                  key: tangentInputKey,
-                                  value: "",
-                                });
-                              }}
-                              onChange={(event) => {
-                                const value = event.currentTarget.value;
-                                setDraftingTangentInput({
-                                  key: tangentInputKey,
-                                  value,
-                                });
-                                const angle = Number(value);
-                                if (value !== "" && Number.isFinite(angle)) {
-                                  setDraftingTangentAngle(angle);
-                                }
-                              }}
-                              onBlur={() => setDraftingTangentInput(null)}
-                            />
-                          </label>
-                        ) : null}
-                        <label>
-                          Bearing (°)
-                          <input
-                            aria-label="Drawing bearing"
-                            type="number"
-                            min="0"
-                            max="359"
-                            step="1"
-                            value={bearingInputValue}
-                            disabled={selectedDrafting.locked}
-                            placeholder={realizedBearingText}
-                            onFocus={() =>
-                              setDraftingBearingInput({
-                                objectId: selectedDrafting.id,
-                                value: "",
-                              })
-                            }
-                            onChange={(event) => {
-                              const value = event.currentTarget.value;
-                              setDraftingBearingInput({
-                                objectId: selectedDrafting.id,
-                                value,
-                              });
-                              const bearing = Number(value);
-                              if (value !== "" && Number.isFinite(bearing)) {
-                                setDraftingBearing(bearing);
-                              }
-                            }}
-                            onBlur={() => setDraftingBearingInput(null)}
-                          />
-                        </label>
-                        {selectedDrafting.kind === "arrow" ? (
-                          <>
-                            <label>
-                              Arrow head
-                              <select
-                                aria-label="Arrow head"
-                                value={
-                                  selectedDrafting.styleOverride?.arrowHead ??
-                                  "filled"
-                                }
-                                disabled={selectedDrafting.locked}
-                                onChange={(event) =>
-                                  setDraftingStyle({
-                                    arrowHead: event.currentTarget.value as
-                                      "none" | "filled" | "open",
-                                  })
-                                }
-                              >
-                                <option value="none">No head</option>
-                                <option value="filled">Filled</option>
-                                <option value="open">Open</option>
-                              </select>
-                            </label>
-                            <label>
-                              Arrow head size
-                              <select
-                                aria-label="Arrow head size"
-                                value={String(
-                                  selectedDrafting.styleOverride
-                                    ?.arrowHeadScale ?? 1,
-                                )}
-                                disabled={selectedDrafting.locked}
-                                onChange={(event) =>
-                                  setDraftingStyle({
-                                    arrowHeadScale: Number(
-                                      event.currentTarget.value,
-                                    ) as 0.75 | 1 | 1.25 | 1.5,
-                                  })
-                                }
-                              >
-                                <option value="0.75">0.75×</option>
-                                <option value="1">1×</option>
-                                <option value="1.25">1.25×</option>
-                                <option value="1.5">1.5×</option>
-                              </select>
-                            </label>
-                            <button
-                              type="button"
-                              disabled={selectedDrafting.locked}
-                              onClick={() => {
-                                const { from, to } = selectedDrafting;
-                                transact([
-                                  {
-                                    kind: "upsert_drafting_object",
-                                    object: {
-                                      ...selectedDrafting,
-                                      from: to,
-                                      to: from,
-                                      waypoints: [
-                                        ...(selectedDrafting.waypoints ?? []),
-                                      ].reverse(),
-                                      curveControls: [
-                                        ...(selectedDrafting.curveControls ??
-                                          []),
-                                      ].reverse(),
-                                    },
-                                  },
-                                ]);
-                              }}
-                            >
-                              Reverse
-                            </button>
-                          </>
-                        ) : null}
-                        <button
-                          type="button"
-                          disabled={selectedDrafting.locked}
-                          onClick={() =>
-                            editorCommands.execute({ id: "transform.rotate" })
-                          }
-                        >
-                          <ToolIcon name="rotate" />
-                          Rotate
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => toggleDraftingLock(selectedDrafting)}
-                        >
-                          <ToolIcon name="lock" />
-                          {selectedDrafting.locked ? "Unlock" : "Lock"}
-                        </button>
-                      </section>
-                    );
-                  })()
-                : null}
-              <section
-                className="context-actions placement-tray"
-                aria-label="Placement Tray"
-              >
-                <div className="placement-tray-heading">
-                  <h2>Placement Tray</h2>
-                  <span
-                    className="placement-tray-count"
-                    aria-label={`${unplaced.length} retained ${
-                      unplaced.length === 1 ? "Instance" : "Instances"
-                    }`}
-                  >
-                    {unplaced.length}
-                  </span>
-                </div>
-                <div className="component-mirror-row">
-                  <button
-                    type="button"
-                    onClick={placeAllFromTray}
-                    disabled={unplaced.length === 0}
-                  >
-                    Place all
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      returnInstancesToTray(
-                        returnablePlacedInstances.map(
-                          (instance) => instance.id,
-                        ),
-                      )
-                    }
-                    disabled={returnablePlacedInstances.length === 0}
-                  >
-                    Return all
-                  </button>
-                </div>
-                {unplaced.length > 0 ? (
-                  <div className="placement-tray-list">
-                    {unplaced.map((instance) => (
-                      <div
-                        className="placement-tray-entry"
-                        draggable
-                        data-testid={`unplaced-${instance.id}`}
-                        key={instance.id}
-                        onDragStart={(event) => {
-                          event.dataTransfer.setData(
-                            "application/x-icm-instance",
-                            instance.id,
-                          );
-                          event.dataTransfer.effectAllowed = "move";
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            selectOnly("instance", [instance.id]);
-                            setStatus(
-                              `Selected ${placementTrayIdentity(instance)}`,
-                            );
-                          }}
-                        >
-                          {placementTrayIdentity(instance)}
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Place ${placementTrayIdentity(instance)} from tray`}
-                          onClick={() =>
-                            beginRetainedInstancePlacementFromHook(instance.id)
-                          }
-                        >
-                          Place…
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </section>
+              {selectedDrafting ? (
+                <DraftingPropertiesPanel
+                  document={document}
+                  resolver={resolver}
+                  object={selectedDrafting}
+                  inspectorSegment={draftingInspectorSegment}
+                  tangentInput={draftingTangentInput}
+                  bearingInput={draftingBearingInput}
+                  onInspectorSegmentChange={setDraftingInspectorSegment}
+                  onTangentInputChange={setDraftingTangentInput}
+                  onBearingInputChange={setDraftingBearingInput}
+                  onStyleChange={setDraftingStyle}
+                  onTangentAngleChange={setDraftingTangentAngle}
+                  onBearingChange={setDraftingBearing}
+                  onReverse={() => {
+                    if (selectedDrafting.kind !== "arrow") return;
+                    const { from, to } = selectedDrafting;
+                    transact([
+                      {
+                        kind: "upsert_drafting_object",
+                        object: {
+                          ...selectedDrafting,
+                          from: to,
+                          to: from,
+                          waypoints: [
+                            ...(selectedDrafting.waypoints ?? []),
+                          ].reverse(),
+                          curveControls: [
+                            ...(selectedDrafting.curveControls ?? []),
+                          ].reverse(),
+                        },
+                      },
+                    ]);
+                  }}
+                  onRotate={() =>
+                    editorCommands.execute({ id: "transform.rotate" })
+                  }
+                  onToggleLock={() => toggleDraftingLock(selectedDrafting)}
+                />
+              ) : null}
+              <PlacementTrayPanel
+                document={document}
+                unplaced={unplaced}
+                returnablePlaced={returnablePlacedInstances}
+                onPlaceAll={placeAllFromTray}
+                onReturnAll={returnInstancesToTray}
+                onSelect={(instance, label) => {
+                  selectOnly("instance", [instance.id]);
+                  setStatus(`Selected ${label}`);
+                }}
+                onPlace={beginRetainedInstancePlacementFromHook}
+              />
               {selectedRouteId ? (
                 <section className="context-actions" aria-label="Route actions">
                   <h2>Electrical route</h2>
