@@ -43,6 +43,50 @@ function hierarchyInstance(
 }
 
 describe("Project structural transaction", () => {
+  it("accepts a Gallery-sized nested document transaction within its bound", () => {
+    const project = createEmptyProject("gallery-sized-project", "Gallery");
+    const edits = Array.from({ length: 272 }, () => ({
+      kind: "set_presentation_style" as const,
+      styleProfileId: "razavi-textbook-v1",
+    }));
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "gallery-sized-paste",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "human-local" },
+      edits: [
+        {
+          kind: "transact_document",
+          documentId: project.documents[0]!.id,
+          expectedRevision: project.documents[0]!.revision,
+          edits,
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+
+    const oversized = executeProjectTransaction(project, {
+      transactionId: "oversized-gallery-paste",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "human-local" },
+      edits: [
+        {
+          kind: "transact_document",
+          documentId: project.documents[0]!.id,
+          expectedRevision: project.documents[0]!.revision,
+          edits: Array.from({ length: 1_025 }, () => edits[0]!),
+        },
+      ],
+    });
+    expect(oversized).toMatchObject({
+      ok: false,
+      error: { code: "INVALID_TRANSACTION" },
+    });
+  });
+
   it("deletes a Cell Pin and automatically disconnects every caller", () => {
     const project = createEmptyProject("project", "Project");
     const child = createEmptyDocument("document-child", "Child");

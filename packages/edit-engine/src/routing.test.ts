@@ -2281,6 +2281,95 @@ describe("routing Edit Engine", () => {
     }
   });
 
+  it("keeps repeated markers of one Cell Pin together when a route is cut", () => {
+    const document = createEmptyDocument(
+      "repeated-cell-pin-cut",
+      "Repeated Cell pin cut",
+    );
+    document.instances.push(
+      {
+        id: "P1",
+        symbolId: "port",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+      {
+        id: "P2",
+        symbolId: "port",
+        placement: {
+          position: { x: 100, y: 300 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+      {
+        id: "R1",
+        symbolId: "resistor",
+        placement: {
+          position: { x: 300, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
+    );
+    document.nets.push({
+      id: "net-vin",
+      terminals: [
+        { instanceId: "P1", pinName: "P" },
+        { instanceId: "P2", pinName: "P" },
+        { instanceId: "R1", pinName: "1" },
+      ],
+    });
+    document.netlist!.terminals.push({
+      id: "terminal-vin",
+      name: "VIN",
+      netId: "net-vin",
+      direction: "input",
+      interfaceInstanceIds: ["P1", "P2"],
+    });
+    document.routes.push({
+      id: "route-vin-r1",
+      netId: "net-vin",
+      from: { kind: "terminal", instanceId: "P1", pinName: "P" },
+      to: { kind: "terminal", instanceId: "R1", pinName: "1" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        { kind: "cut_connection", routeId: "route-vin-r1" },
+      ]),
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const cellTerminal = result.document.netlist!.terminals[0]!;
+    expect(cellTerminal).toMatchObject({
+      netId: "net-vin",
+      interfaceInstanceIds: ["P1", "P2"],
+    });
+    expect(
+      result.document.nets.find((net) => net.id === "net-vin")?.terminals,
+    ).toEqual([
+      { instanceId: "P1", pinName: "P" },
+      { instanceId: "P2", pinName: "P" },
+    ]);
+    expect(
+      result.document.nets.find((net) =>
+        net.terminals.some(
+          (terminal) =>
+            terminal.instanceId === "R1" && terminal.pinName === "1",
+        ),
+      )?.id,
+    ).not.toBe("net-vin");
+  });
+
   it("removes redundant cycle geometry without splitting the Net", () => {
     const document = documentFixture();
     document.routes = [
