@@ -5,6 +5,28 @@ export async function awaitEditorReady(page: Page): Promise<void> {
   await page.getByTestId("schematic-canvas").waitFor();
 }
 
+/** Wait for the recovery coordinator to finish creating its owned IDB store. */
+export async function awaitRecoveryStoreReady(page: Page): Promise<void> {
+  await page.waitForFunction(async () => {
+    const databases = await indexedDB.databases();
+    if (
+      !databases.some((database) => database.name === "analog-canvas-recovery")
+    ) {
+      return false;
+    }
+    return new Promise<boolean>((resolve) => {
+      const request = indexedDB.open("analog-canvas-recovery");
+      request.onerror = () => resolve(false);
+      request.onsuccess = () => {
+        const database = request.result;
+        const ready = database.objectStoreNames.contains("browser-recovery-v2");
+        database.close();
+        resolve(ready);
+      };
+    });
+  });
+}
+
 export async function openMenu(page: Page, name: string): Promise<Locator> {
   const summary = page.locator("summary", { hasText: name }).filter({
     hasText: new RegExp(`^${name}$`, "u"),

@@ -293,6 +293,7 @@ test("repeating A or K preserves the current drafting session", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   const canvas = page.getByTestId("schematic-canvas");
 
   await page.keyboard.press("a");

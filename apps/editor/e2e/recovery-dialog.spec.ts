@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import {
+  awaitEditorReady,
+  awaitRecoveryStoreReady,
   chooseComponent,
   clickCommand,
   emulateDownloadOnlyBrowser,
@@ -32,6 +34,8 @@ async function seedRecoveryRecords(
   page: Page,
   records: SeedRecord[],
 ): Promise<void> {
+  await awaitEditorReady(page);
+  await awaitRecoveryStoreReady(page);
   await page.evaluate(async (entries) => {
     const seeds = entries as SeedRecord[];
     await new Promise<void>((resolvePromise, rejectPromise) => {

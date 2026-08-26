@@ -630,6 +630,7 @@ test("command move turns a component while locally stretching its boundary wire"
 
 test("P shortcut starts Cell Pin placement", async ({ page }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   const canvas = page.getByTestId("schematic-canvas");
   await page.keyboard.press("p");
   // No setup dialog: the shortcut goes straight to the placement cursor.
@@ -657,6 +658,7 @@ test("Cell Pin deletion releases its interface and Base Net lifecycle", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   const canvas = page.getByTestId("schematic-canvas");
 
   const placeNamedPort = async (
