@@ -14,7 +14,11 @@ import {
 } from "@icm/symbols";
 import { z } from "zod";
 
-import { SchematicEditSchema, type EditActor } from "./edit-schema.js";
+import {
+  MAX_SCHEMATIC_EDITS_PER_TRANSACTION,
+  SchematicEditSchema,
+  type EditActor,
+} from "./edit-schema.js";
 import { executeTransaction } from "./transaction.js";
 import { planInstanceSymbolGeometryRouteFollow } from "./transaction-route-follow.js";
 import type {
@@ -52,7 +56,10 @@ export const ProjectStructureEditSchema = z.discriminatedUnion("kind", [
     kind: z.literal("transact_document"),
     documentId: z.string().min(1),
     expectedRevision: z.number().int().nonnegative(),
-    edits: z.array(SchematicEditSchema).min(1).max(256),
+    edits: z
+      .array(SchematicEditSchema)
+      .min(1)
+      .max(MAX_SCHEMATIC_EDITS_PER_TRANSACTION),
   }),
 ]);
 

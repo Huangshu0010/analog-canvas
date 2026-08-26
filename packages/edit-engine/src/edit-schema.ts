@@ -138,7 +138,7 @@ export const BulkInstanceNetlistAssignmentSchema = z
       (assignment.unset?.length ?? 0) > 0,
     "Bulk assignment must change a typed netlist field",
   );
-/** Bounded atomic alternative to expanding a bulk request into 256 edits. */
+/** Bounded atomic alternative to expanding one bulk request into many edits. */
 export const BulkPatchInstanceNetlistEditSchema = z.strictObject({
   kind: z.literal("bulk_patch_instance_netlist"),
   assignments: z.array(BulkInstanceNetlistAssignmentSchema).min(1).max(5000),
@@ -418,13 +418,21 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   RedoEditSchema,
 ]);
 
+// Whole-document Gallery placement compiles one bounded edit per imported
+// object. Dense but legitimate circuits can exceed 256 edits, so keep a
+// deliberate denial-of-service ceiling while allowing current library scenes.
+export const MAX_SCHEMATIC_EDITS_PER_TRANSACTION = 1024;
+
 export const EditTransactionSchema = z.strictObject({
   transactionId: StableIdSchema,
   documentId: StableIdSchema,
   expectedRevision: z.number().int().nonnegative(),
   actor: EditActorSchema,
   dryRun: z.boolean().optional(),
-  edits: z.array(SchematicEditSchema).min(1).max(256),
+  edits: z
+    .array(SchematicEditSchema)
+    .min(1)
+    .max(MAX_SCHEMATIC_EDITS_PER_TRANSACTION),
 });
 
 export type EditActor = z.infer<typeof EditActorSchema>;
