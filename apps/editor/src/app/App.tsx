@@ -228,6 +228,7 @@ import {
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { CellManagerDialog } from "../features/hierarchy/cell-manager-dialog";
+import { HierarchyToolbar } from "../features/hierarchy/hierarchy-toolbar";
 import { NetlistPreflightDialog } from "../features/netlist-export/netlist-preflight-dialog";
 import { parseProject, serializeProject } from "@icm/project-protocol";
 import { DocumentSettingsSection } from "../features/editor-shell/document-settings-section";
@@ -2226,6 +2227,21 @@ export function App({
     );
     resetInteractionState();
     setStatus(`Opened Cell ${nextDocument.name}`);
+  }
+
+  function selectDocumentFromHierarchy(nextDocumentId: string): void {
+    const paths = findHierarchyPaths(
+      projectConnectivityIndex,
+      project.topDocumentId,
+      nextDocumentId,
+    );
+    setDocumentStack(paths?.length === 1 ? [...paths[0]!] : []);
+    switchDocument(nextDocumentId);
+    if (paths && paths.length > 1) {
+      setStatus(
+        `Opened shared Cell without caller context (${paths.length} instance paths)`,
+      );
+    }
   }
 
   function openInstanceFromTable(documentId: string, instanceId: string): void {
@@ -8143,82 +8159,19 @@ export function App({
             setSelectionOpen(true);
           }}
         />
-        {project.documents.length > 1 ||
-        documentStack.length > 0 ||
-        hasHierarchyEnterSelection ? (
-          <div className="toolbar-row" aria-label="Document hierarchy">
-            <div
-              className="document-nav"
-              aria-label="Cell navigation"
-              data-testid="cell-navigation"
-            >
-              <button
-                type="button"
-                onClick={returnToParentDocument}
-                disabled={documentStack.length === 0}
-                title="Return to the parent Cell (Shift+E)"
-              >
-                Up
-              </button>
-              <button
-                type="button"
-                onClick={returnToTopDocument}
-                disabled={document.id === project.topDocumentId}
-                title="Return to the top Cell"
-              >
-                Top
-              </button>
-              <select
-                aria-label="Cells"
-                data-testid="document-selector"
-                value={document.id}
-                onChange={(event) => {
-                  const nextDocumentId = event.currentTarget.value;
-                  const paths = findHierarchyPaths(
-                    projectConnectivityIndex,
-                    project.topDocumentId,
-                    nextDocumentId,
-                  );
-                  setDocumentStack(paths?.length === 1 ? [...paths[0]!] : []);
-                  switchDocument(nextDocumentId);
-                  if (paths && paths.length > 1) {
-                    setStatus(
-                      `Opened shared Cell without caller context (${paths.length} instance paths)`,
-                    );
-                  }
-                }}
-              >
-                {project.documents.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.id === project.topDocumentId
-                      ? `${candidate.name} (top)`
-                      : candidate.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={enterSelectedHierarchy}
-                disabled={!hasHierarchyEnterSelection}
-                title="Enter the selected Cell, or create one from a rectangle (E)"
-              >
-                Enter Cell
-              </button>
-              <div className="cell-command-row" data-testid="cell-command-menu">
-                <button type="button" onClick={() => setCellManagerOpen(true)}>
-                  Manage Cells…
-                </button>
-                <button
-                  type="button"
-                  onClick={placeCellInstance}
-                  disabled={project.documents.length < 2}
-                >
-                  Place Cell
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <HierarchyToolbar
+          documents={project.documents}
+          activeDocumentId={document.id}
+          topDocumentId={project.topDocumentId}
+          navigationDepth={documentStack.length}
+          canEnter={hasHierarchyEnterSelection}
+          onUp={returnToParentDocument}
+          onTop={returnToTopDocument}
+          onSelectDocument={selectDocumentFromHierarchy}
+          onEnter={enterSelectedHierarchy}
+          onManageCells={() => setCellManagerOpen(true)}
+          onPlaceCell={placeCellInstance}
+        />
         <div data-testid="editor-test-telemetry" hidden>
           <output data-testid="selected-internal-route-count">
             {internalSelection.routeIds.length}
