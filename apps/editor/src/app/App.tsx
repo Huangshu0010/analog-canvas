@@ -109,20 +109,7 @@ import {
   logicalRadiusForCanvasPixels,
   replaceCanvasSnapGuides,
 } from "../canvas/canvas-viewport";
-import {
-  CanvasGridOverlay,
-  CanvasInputPlanes,
-  NetHighlightOverlay,
-} from "../canvas/editor-canvas-overlays";
-import { EditorSelectionHitTargets } from "../canvas/editor-selection-hit-targets";
-import { EditorEndpointHitTargets } from "../canvas/editor-endpoint-hit-targets";
-import { EditorRouteHandles } from "../canvas/editor-route-handles";
-import { EditorCellSymbolLayoutOverlay } from "../canvas/editor-cell-symbol-layout-overlay";
-import { EditorWiringOverlay } from "../canvas/editor-wiring-overlay";
-import {
-  EditorDraftingHandles,
-  EditorDraftingHitTargets,
-} from "../canvas/editor-drafting-hit-targets";
+import { EditorCanvasSurface } from "../canvas/editor-canvas-surface";
 import { createAnnotationDragController } from "../features/text-editing/annotation-drag-controller";
 import {
   createEditorFileCommands,
@@ -216,10 +203,6 @@ import {
   createDraftingDragController,
   type DraftingHandlePreview,
 } from "../features/drafting/drafting-drag-controller";
-import {
-  EditorInteractionPreviews,
-  EditorPlacementPreview,
-} from "../canvas/editor-transient-preview-overlays";
 import {
   resolveEditorShortcut,
   stepBoundedScale,
@@ -4159,260 +4142,233 @@ export function App({
               : null
           }
         />
-        <section className="canvas-panel">
-          {canvasIsEmpty ? (
-            <div
-              className="canvas-empty-state"
-              data-testid="canvas-empty-state"
-            >
-              <strong>Start a schematic</strong>
-              <span>
-                Press <kbd>I</kbd> to insert a component or <kbd>W</kbd> to
-                wire.
-              </span>
-            </div>
-          ) : null}
-          <svg
-            className={[
-              "schematic-canvas",
-              tool === "wire" ? "wire-mode" : "",
-              pendingSymbolId || vddRailMode || copyPlacement
-                ? "component-mode"
-                : "",
-              tool === "arrow" ||
-              tool === "construction-line" ||
-              tool === "rectangle"
-                ? "drawing-mode"
-                : "",
-              projectedMovePreviewDocument ? "semantic-move-preview" : "",
-              panPreview ? "pan-mode" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            data-testid="schematic-canvas"
-            role="img"
-            aria-label="Schematic canvas"
-            viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-            {...canvasEventHandlers}
-          >
-            <CanvasGridOverlay visible={gridDotsVisible} viewBox={viewBox} />
-            <g dangerouslySetInnerHTML={sceneInnerHtml} />
-            {selectedCellSymbolLayout ? (
-              <EditorCellSymbolLayoutOverlay
-                placement={selectedCellSymbolLayout.instance.placement!}
-                body={selectedCellSymbolLayout.body}
-                pins={selectedCellSymbolLayout.pins.map(
-                  ({ terminal, pin }) => ({
-                    terminalId: terminal.id,
-                    pin,
-                  }),
-                )}
-                onDragStart={beginCellSymbolLayoutDrag}
-              />
-            ) : null}
-            <NetHighlightOverlay
-              highlight={highlightedNet}
-              document={document}
-              resolver={resolver}
-              routeGeometryRecords={routeGeometryRecords}
-            />
-            {copyPreviewInnerHtml !== null ? (
-              <g
-                data-testid="copy-placement-preview"
-                className="copy-placement-preview"
-                dangerouslySetInnerHTML={copyPreviewInnerHtml}
-              />
-            ) : null}
-            <CanvasInputPlanes
-              tool={tool}
-              viewBox={viewBox}
-              componentPlacementActive={Boolean(
-                pendingSymbolId || vddRailMode || copyPlacement,
-              )}
-              copyPlacementActive={copyPlacement !== null}
-            />
-            <g data-layer="editor-overlay">
-              <EditorPlacementPreview
-                vddRailMode={vddRailMode}
-                vddRailStart={vddRailStart}
-                previewPoint={componentPreviewPoint}
-                powerRailStrokeWidth={styleProfile.strokes.powerRail}
-                styleProfileId={document.presentation.styleProfileId}
-                pendingSymbolId={pendingSymbolId}
-                {...(pendingPlacementSymbol
-                  ? { pendingSymbol: pendingPlacementSymbol }
-                  : {})}
-                rotation={componentPlacementRotation}
-                mirror={componentPlacementMirror}
-              />
-              <EditorWiringOverlay
-                netLabelEditorOpen={netLabelEditorOpen}
-                selectedRouteId={selectedRouteId}
-                selectedRouteSegmentIndex={selectedRouteSegmentIndex}
-                routeGeometryRecords={routeGeometryRecords}
-                netLabelDraft={netLabelDraft}
-                netLabelEditorInputRef={netLabelEditorInputRef}
-                onNetLabelDraftChange={updateNetLabelDraft}
-                onNetLabelSubmit={commitNetLabelEditing}
-                onNetLabelEscape={() => {
-                  applyNetLabel();
-                  setNetLabelEditorOpen(false);
-                }}
-                flightlines={displayedFlightlines}
-                onFlightlineClick={handleFlightline}
-                wireDraftPoints={wireDraftPoints}
-                bulkRoutePreview={
-                  wireSource?.routePresentation === "bulk-dashed"
+        <EditorCanvasSurface
+          empty={canvasIsEmpty}
+          className={[
+            "schematic-canvas",
+            tool === "wire" ? "wire-mode" : "",
+            pendingSymbolId || vddRailMode || copyPlacement
+              ? "component-mode"
+              : "",
+            tool === "arrow" ||
+            tool === "construction-line" ||
+            tool === "rectangle"
+              ? "drawing-mode"
+              : "",
+            projectedMovePreviewDocument ? "semantic-move-preview" : "",
+            panPreview ? "pan-mode" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
+          eventHandlers={canvasEventHandlers}
+          grid={{ visible: gridDotsVisible, viewBox }}
+          sceneInnerHtml={sceneInnerHtml}
+          cellSymbolLayout={
+            selectedCellSymbolLayout
+              ? {
+                  placement: selectedCellSymbolLayout.instance.placement!,
+                  body: selectedCellSymbolLayout.body,
+                  pins: selectedCellSymbolLayout.pins.map(
+                    ({ terminal, pin }) => ({
+                      terminalId: terminal.id,
+                      pin,
+                    }),
+                  ),
+                  onDragStart: beginCellSymbolLayoutDrag,
                 }
-                snapGuideLayerRef={snapGuideLayerRef}
-              />
-              <EditorRouteHandles
-                document={document}
-                routeGeometryRecords={routeGeometryRecords}
-                selectedRouteId={selectedRouteId}
-                selectedRouteSegmentIndex={selectedRouteSegmentIndex}
-                routeStretchPreview={routeStretchPreview}
-                tool={tool}
-                onHandlePointerDown={(event, routeId, segmentIndex, intent) => {
-                  const primaryInstanceId = selectedIds.at(-1);
-                  if (
-                    primaryInstanceId &&
-                    compositeSelectionOwnsHit("route", routeId)
-                  ) {
-                    beginMoveFromSelection(event, primaryInstanceId);
-                    return;
-                  }
-                  beginRouteStretch(event, routeId, segmentIndex, intent);
-                }}
-              />
-              <EditorSelectionHitTargets
-                document={document}
-                resolver={resolver}
-                routeGeometryRecords={routeGeometryRecords}
-                styleProfile={styleProfile}
-                tool={tool}
-                selectedInstanceIds={selectedIds}
-                selectedRouteId={selectedRouteId}
-                supplementalRouteIds={supplementalSelection.routeIds}
-                selectedInternalRouteIds={selectedInternalRouteIds}
-                selectedAnnotationId={selectedAnnotationId}
-                supplementalAnnotationIds={supplementalSelection.annotationIds}
-                cellSymbolLayoutInstanceId={
-                  cellSymbolLayoutEnabled
-                    ? (selectedInstance?.id ?? null)
-                    : null
+              : null
+          }
+          netHighlight={{
+            highlight: highlightedNet,
+            document,
+            resolver,
+            routeGeometryRecords,
+          }}
+          copyPreviewInnerHtml={copyPreviewInnerHtml}
+          inputPlanes={{
+            tool,
+            viewBox,
+            componentPlacementActive: Boolean(
+              pendingSymbolId || vddRailMode || copyPlacement,
+            ),
+            copyPlacementActive: copyPlacement !== null,
+          }}
+          placementPreview={{
+            vddRailMode,
+            vddRailStart,
+            previewPoint: componentPreviewPoint,
+            powerRailStrokeWidth: styleProfile.strokes.powerRail,
+            styleProfileId: document.presentation.styleProfileId,
+            pendingSymbolId,
+            ...(pendingPlacementSymbol
+              ? { pendingSymbol: pendingPlacementSymbol }
+              : {}),
+            rotation: componentPlacementRotation,
+            mirror: componentPlacementMirror,
+          }}
+          wiring={{
+            netLabelEditorOpen,
+            selectedRouteId,
+            selectedRouteSegmentIndex,
+            routeGeometryRecords,
+            netLabelDraft,
+            netLabelEditorInputRef,
+            onNetLabelDraftChange: updateNetLabelDraft,
+            onNetLabelSubmit: commitNetLabelEditing,
+            onNetLabelEscape: () => {
+              applyNetLabel();
+              setNetLabelEditorOpen(false);
+            },
+            flightlines: displayedFlightlines,
+            onFlightlineClick: handleFlightline,
+            wireDraftPoints,
+            bulkRoutePreview: wireSource?.routePresentation === "bulk-dashed",
+            snapGuideLayerRef,
+          }}
+          routeHandles={{
+            document,
+            routeGeometryRecords,
+            selectedRouteId,
+            selectedRouteSegmentIndex,
+            routeStretchPreview,
+            tool,
+            onHandlePointerDown: (event, routeId, segmentIndex, intent) => {
+              const primaryInstanceId = selectedIds.at(-1);
+              if (
+                primaryInstanceId &&
+                compositeSelectionOwnsHit("route", routeId)
+              ) {
+                beginMoveFromSelection(event, primaryInstanceId);
+                return;
+              }
+              beginRouteStretch(event, routeId, segmentIndex, intent);
+            },
+          }}
+          selectionHitLayer={{
+            selection: {
+              document,
+              resolver,
+              routeGeometryRecords,
+              styleProfile,
+              tool,
+              selectedInstanceIds: selectedIds,
+              selectedRouteId,
+              supplementalRouteIds: supplementalSelection.routeIds,
+              selectedInternalRouteIds,
+              selectedAnnotationId,
+              supplementalAnnotationIds: supplementalSelection.annotationIds,
+              cellSymbolLayoutInstanceId: cellSymbolLayoutEnabled
+                ? (selectedInstance?.id ?? null)
+                : null,
+              onInstanceClick: (instance, additive) => {
+                if (suppressInstanceClick.current) {
+                  suppressInstanceClick.current = false;
+                  return;
                 }
-                onInstanceClick={(instance, additive) => {
-                  if (suppressInstanceClick.current) {
-                    suppressInstanceClick.current = false;
-                    return;
-                  }
-                  selectInstanceFromSelection(instance.id, additive);
-                }}
-                onInstanceOpen={(instance) => {
-                  if (referencedDocumentId(project, instance))
-                    enterHierarchy(instance.id);
-                  else inspectInstance(instance.id);
-                }}
-                onInstancePointerDown={(event, instance) =>
-                  beginMoveFromSelection(event, instance.id)
-                }
-                onRoutePointerDown={handleRoutePointerDown}
-                onAnnotationPointerDown={beginAnnotationDrag}
-                onAnnotationEdit={beginAnnotationTextEditing}
-              >
-                <EditorEndpointHitTargets
-                  document={document}
-                  endpoints={wiringEndpoints}
-                  tool={tool}
-                  selectedRoute={selectedRoute}
-                  selectedRouteSegmentIndex={selectedRouteSegmentIndex}
-                  selectedEndpoint={selectedEndpoint}
-                  supplementalJunctionIds={supplementalSelection.junctionIds}
-                  endpointLabel={endpointTestId}
-                  onEndpointActions={(candidate) => {
-                    selectEndpoint(candidate);
-                    setStatus(
-                      `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
-                    );
-                  }}
-                  onPowerRailStretch={beginRouteStretch}
-                  onJunctionSelect={(candidate) => {
-                    selectEndpoint(candidate);
-                    setStatus(`Selected ${endpointTestId(candidate.endpoint)}`);
-                  }}
-                  onWireEndpoint={handleWireEndpoint}
-                />
-              </EditorSelectionHitTargets>
-              <EditorDraftingHitTargets
-                document={document}
-                resolver={resolver}
-                tool={tool}
-                selectedDraftingId={selectedDraftingId}
-                supplementalDraftingIds={supplementalSelection.draftingIds}
-                onPointerDown={(event, object, draggable) => {
-                  if (draggable) beginDraftingDrag(event, object);
-                  else {
-                    event.stopPropagation();
-                    selectDraftingObject(object.id);
-                  }
-                }}
-                onConstructionLineEdit={(event, object) => {
-                  event.stopPropagation();
-                  insertConstructionVertex(
-                    object,
-                    pointFromClient(
-                      event.clientX,
-                      event.clientY,
-                      event.currentTarget.ownerSVGElement!,
-                    ),
-                  );
-                }}
-                onArrowEdit={(event, object) => {
-                  event.stopPropagation();
-                  insertArrowWaypoint(
-                    object,
-                    pointFromClient(
-                      event.clientX,
-                      event.clientY,
-                      event.currentTarget.ownerSVGElement!,
-                    ),
-                  );
-                }}
-                onTextEdit={beginDraftingTextEditing}
-              />
-              <EditorDraftingHandles
-                document={document}
-                resolver={resolver}
-                selectedDraftingId={selectedDraftingId}
-                onHandlePointerDown={beginDraftingHandleDrag}
-                onDeleteVertex={deleteConstructionVertex}
-              />
-              <EditorInteractionPreviews
-                boxPreview={boxPreview}
-                draftingSource={draftingSource}
-                draftingWaypoints={draftingWaypoints}
-                draftingHover={draftingHover}
-                draftingSnapPoint={draftingSnapPoint}
-                tool={tool}
-                styleProfile={styleProfile}
-                wirePreviewPoint={wirePreviewPoint}
-                textEditing={textEditing}
-                textEditingBounds={textEditingBounds}
-                viewBox={viewBox}
-                textEditingLocked={textEditingLocked}
-                onTextUpdate={updateTextEditing}
-                onTextCommit={commitTextEditing}
-                onTextDelete={deleteTextEditing}
-                {...(editingAnnotation &&
-                isRoutedMarker(editingAnnotation) &&
-                effectiveRouteAttachment(editingAnnotation)
-                  ? { onReverseCurrentArrow: reverseSelectedCurrentArrow }
-                  : {})}
-              />
-            </g>
-          </svg>
-        </section>
+                selectInstanceFromSelection(instance.id, additive);
+              },
+              onInstanceOpen: (instance) => {
+                if (referencedDocumentId(project, instance))
+                  enterHierarchy(instance.id);
+                else inspectInstance(instance.id);
+              },
+              onInstancePointerDown: (event, instance) =>
+                beginMoveFromSelection(event, instance.id),
+              onRoutePointerDown: handleRoutePointerDown,
+              onAnnotationPointerDown: beginAnnotationDrag,
+              onAnnotationEdit: beginAnnotationTextEditing,
+            },
+            endpoints: {
+              document,
+              endpoints: wiringEndpoints,
+              tool,
+              selectedRoute,
+              selectedRouteSegmentIndex,
+              selectedEndpoint,
+              supplementalJunctionIds: supplementalSelection.junctionIds,
+              endpointLabel: endpointTestId,
+              onEndpointActions: (candidate) => {
+                selectEndpoint(candidate);
+                setStatus(
+                  `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
+                );
+              },
+              onPowerRailStretch: beginRouteStretch,
+              onJunctionSelect: (candidate) => {
+                selectEndpoint(candidate);
+                setStatus(`Selected ${endpointTestId(candidate.endpoint)}`);
+              },
+              onWireEndpoint: handleWireEndpoint,
+            },
+          }}
+          draftingHitTargets={{
+            document,
+            resolver,
+            tool,
+            selectedDraftingId,
+            supplementalDraftingIds: supplementalSelection.draftingIds,
+            onPointerDown: (event, object, draggable) => {
+              if (draggable) beginDraftingDrag(event, object);
+              else {
+                event.stopPropagation();
+                selectDraftingObject(object.id);
+              }
+            },
+            onConstructionLineEdit: (event, object) => {
+              event.stopPropagation();
+              insertConstructionVertex(
+                object,
+                pointFromClient(
+                  event.clientX,
+                  event.clientY,
+                  event.currentTarget.ownerSVGElement!,
+                ),
+              );
+            },
+            onArrowEdit: (event, object) => {
+              event.stopPropagation();
+              insertArrowWaypoint(
+                object,
+                pointFromClient(
+                  event.clientX,
+                  event.clientY,
+                  event.currentTarget.ownerSVGElement!,
+                ),
+              );
+            },
+            onTextEdit: beginDraftingTextEditing,
+          }}
+          draftingHandles={{
+            document,
+            resolver,
+            selectedDraftingId,
+            onHandlePointerDown: beginDraftingHandleDrag,
+            onDeleteVertex: deleteConstructionVertex,
+          }}
+          interactionPreviews={{
+            boxPreview,
+            draftingSource,
+            draftingWaypoints,
+            draftingHover,
+            draftingSnapPoint,
+            tool,
+            styleProfile,
+            wirePreviewPoint,
+            textEditing,
+            textEditingBounds,
+            viewBox,
+            textEditingLocked,
+            onTextUpdate: updateTextEditing,
+            onTextCommit: commitTextEditing,
+            onTextDelete: deleteTextEditing,
+            ...(editingAnnotation &&
+            isRoutedMarker(editingAnnotation) &&
+            effectiveRouteAttachment(editingAnnotation)
+              ? { onReverseCurrentArrow: reverseSelectedCurrentArrow }
+              : {}),
+          }}
+        />
       </div>
       <EditorStatusbar
         status={status}
