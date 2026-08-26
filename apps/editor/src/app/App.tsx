@@ -152,6 +152,7 @@ import {
 import { EditorSelectionHitTargets } from "../canvas/editor-selection-hit-targets";
 import { EditorEndpointHitTargets } from "../canvas/editor-endpoint-hit-targets";
 import { EditorRouteHandles } from "../canvas/editor-route-handles";
+import { EditorCellSymbolLayoutOverlay } from "../canvas/editor-cell-symbol-layout-overlay";
 import {
   EditorDraftingHandles,
   EditorDraftingHitTargets,
@@ -7659,78 +7660,19 @@ export function App({
           >
             <CanvasGridOverlay visible={gridDotsVisible} viewBox={viewBox} />
             <g dangerouslySetInnerHTML={sceneInnerHtml} />
-            {selectedCellSymbolLayout
-              ? (() => {
-                  const placement =
-                    selectedCellSymbolLayout.instance.placement!;
-                  const world = (point: { x: number; y: number }) =>
-                    transformPoint(point, placement.position, placement);
-                  const bodyCorner = world({
-                    x: selectedCellSymbolLayout.body.right,
-                    y: selectedCellSymbolLayout.body.bottom,
-                  });
-                  return (
-                    <g
-                      className="cell-symbol-layout-overlay"
-                      data-testid="cell-symbol-layout-overlay"
-                    >
-                      <circle
-                        data-testid="cell-symbol-body-handle"
-                        className="cell-symbol-layout-handle body"
-                        cx={bodyCorner.x}
-                        cy={bodyCorner.y}
-                        r="5"
-                        onPointerDown={(event) =>
-                          beginCellSymbolLayoutDrag(event, "body")
-                        }
-                      />
-                      {selectedCellSymbolLayout.pins.map(
-                        ({ terminal, pin }) => {
-                          const bodyPoint =
-                            pin.direction === "west"
-                              ? {
-                                  x: selectedCellSymbolLayout.body.left,
-                                  y: pin.at.y,
-                                }
-                              : pin.direction === "east"
-                                ? {
-                                    x: selectedCellSymbolLayout.body.right,
-                                    y: pin.at.y,
-                                  }
-                                : pin.direction === "north"
-                                  ? {
-                                      x: pin.at.x,
-                                      y: selectedCellSymbolLayout.body.top,
-                                    }
-                                  : {
-                                      x: pin.at.x,
-                                      y: selectedCellSymbolLayout.body.bottom,
-                                    };
-                          const pinPoint = world(bodyPoint);
-                          return (
-                            <g key={terminal.id}>
-                              <circle
-                                data-testid={`cell-symbol-pin-handle-${terminal.id}`}
-                                className="cell-symbol-layout-handle pin"
-                                cx={pinPoint.x}
-                                cy={pinPoint.y}
-                                r="4.5"
-                                onPointerDown={(event) =>
-                                  beginCellSymbolLayoutDrag(
-                                    event,
-                                    "pin",
-                                    terminal.id,
-                                  )
-                                }
-                              />
-                            </g>
-                          );
-                        },
-                      )}
-                    </g>
-                  );
-                })()
-              : null}
+            {selectedCellSymbolLayout ? (
+              <EditorCellSymbolLayoutOverlay
+                placement={selectedCellSymbolLayout.instance.placement!}
+                body={selectedCellSymbolLayout.body}
+                pins={selectedCellSymbolLayout.pins.map(
+                  ({ terminal, pin }) => ({
+                    terminalId: terminal.id,
+                    pin,
+                  }),
+                )}
+                onDragStart={beginCellSymbolLayoutDrag}
+              />
+            ) : null}
             <NetHighlightOverlay
               highlight={highlightedNet}
               document={document}
