@@ -131,7 +131,6 @@ import {
 import {
   closestPointOnSegment,
   normalizedRect,
-  serializePolylinePoints,
 } from "../canvas/canvas-geometry";
 import {
   classifyCanvasGestureStart,
@@ -153,6 +152,7 @@ import { EditorSelectionHitTargets } from "../canvas/editor-selection-hit-target
 import { EditorEndpointHitTargets } from "../canvas/editor-endpoint-hit-targets";
 import { EditorRouteHandles } from "../canvas/editor-route-handles";
 import { EditorCellSymbolLayoutOverlay } from "../canvas/editor-cell-symbol-layout-overlay";
+import { EditorWiringOverlay } from "../canvas/editor-wiring-overlay";
 import {
   EditorDraftingHandles,
   EditorDraftingHitTargets,
@@ -7726,92 +7726,27 @@ export function App({
                   mirror={componentPlacementMirror}
                 />
               ) : null}
-              {netLabelEditorOpen && selectedRoute
-                ? (() => {
-                    const geometry = routeGeometryRecords.find(
-                      ({ route }) => route.id === selectedRoute.id,
-                    )?.geometry;
-                    if (!geometry) return null;
-                    const segmentIndex = Math.min(
-                      selectedRouteSegmentIndex ?? 0,
-                      geometry.centerline.length - 2,
-                    );
-                    const from = geometry.centerline[segmentIndex]!;
-                    const to = geometry.centerline[segmentIndex + 1]!;
-                    const x = Math.round((from.x + to.x) / 2 - 58);
-                    const y = Math.round((from.y + to.y) / 2 - 34);
-                    return (
-                      <foreignObject
-                        data-testid="net-label-editor"
-                        x={x}
-                        y={y}
-                        width="116"
-                        height="32"
-                      >
-                        <form
-                          className="net-label-editor"
-                          onPointerDown={(event) => event.stopPropagation()}
-                          onSubmit={(event) => {
-                            event.preventDefault();
-                            commitNetLabelEditing();
-                          }}
-                        >
-                          <input
-                            ref={netLabelEditorInputRef}
-                            aria-label="Net Label"
-                            value={netLabelDraft}
-                            onChange={(event) =>
-                              updateNetLabelDraft(event.currentTarget.value)
-                            }
-                            onKeyDown={(event) => {
-                              if (event.key === "Escape") {
-                                event.preventDefault();
-                                // Escape saves the edit like Enter does.
-                                applyNetLabel();
-                                setNetLabelEditorOpen(false);
-                              }
-                            }}
-                          />
-                        </form>
-                      </foreignObject>
-                    );
-                  })()
-                : null}
-              {displayedFlightlines.map((flightline) => (
-                <g key={flightline.id}>
-                  <line
-                    data-testid="flightline-hit"
-                    className="flightline-hit"
-                    data-net-id={flightline.netId}
-                    x1={flightline.fromPoint.x}
-                    y1={flightline.fromPoint.y}
-                    x2={flightline.toPoint.x}
-                    y2={flightline.toPoint.y}
-                    onClick={(event) => handleFlightline(event, flightline)}
-                  />
-                  <line
-                    data-testid="flightline"
-                    className="flightline"
-                    data-net-id={flightline.netId}
-                    x1={flightline.fromPoint.x}
-                    y1={flightline.fromPoint.y}
-                    x2={flightline.toPoint.x}
-                    y2={flightline.toPoint.y}
-                  />
-                </g>
-              ))}
-              {wireDraftPoints.length >= 2 ? (
-                <polyline
-                  data-testid="wire-preview"
-                  className={
-                    wireSource?.routePresentation === "bulk-dashed"
-                      ? "wire-preview bulk-route-preview"
-                      : "wire-preview"
-                  }
-                  points={serializePolylinePoints(wireDraftPoints)}
-                />
-              ) : null}
-              <g ref={snapGuideLayerRef} data-layer="snap-guides" />
+              <EditorWiringOverlay
+                netLabelEditorOpen={netLabelEditorOpen}
+                selectedRouteId={selectedRouteId}
+                selectedRouteSegmentIndex={selectedRouteSegmentIndex}
+                routeGeometryRecords={routeGeometryRecords}
+                netLabelDraft={netLabelDraft}
+                netLabelEditorInputRef={netLabelEditorInputRef}
+                onNetLabelDraftChange={updateNetLabelDraft}
+                onNetLabelSubmit={commitNetLabelEditing}
+                onNetLabelEscape={() => {
+                  applyNetLabel();
+                  setNetLabelEditorOpen(false);
+                }}
+                flightlines={displayedFlightlines}
+                onFlightlineClick={handleFlightline}
+                wireDraftPoints={wireDraftPoints}
+                bulkRoutePreview={
+                  wireSource?.routePresentation === "bulk-dashed"
+                }
+                snapGuideLayerRef={snapGuideLayerRef}
+              />
               <EditorRouteHandles
                 document={document}
                 routeGeometryRecords={routeGeometryRecords}
