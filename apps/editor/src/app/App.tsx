@@ -10,8 +10,6 @@ import type {
   AgentHostSemanticIntentRequest,
   AgentHostSemanticIntentResult,
 } from "@icm/agent-adapter";
-import { deviceDescriptor } from "@icm/devices";
-
 import {
   compileWireDraft,
   createFreeWireAnchor,
@@ -53,7 +51,6 @@ import {
   endpointKey,
   findHierarchyPath,
   findHierarchyPaths,
-  hasDifferentialInputs,
   isMosBulkTerminal,
   isSchematicAnnotationVisible,
   isVisibleEndpoint,
@@ -314,8 +311,11 @@ import {
 import { useRecoveryCoordinator } from "../document/recovery-coordinator";
 import { requestProjectDownload } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
+import {
+  deriveSelectionInspectionModel,
+  type SupplementalSelection,
+} from "../features/selection/selection-inspection-model";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
-import { capacitorPlatePropertyRows } from "../features/properties/capacitor-plate-properties";
 import {
   LIBRARY_WIDTH_MAX,
   LIBRARY_WIDTH_MIN,
@@ -427,8 +427,6 @@ interface DraftingHandlePreview {
   objectId: string;
   object: DraftingObject;
 }
-
-type SupplementalSelection = Omit<VisualSelection, "instanceIds">;
 
 const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
   routeIds: [],
@@ -1050,7 +1048,42 @@ export function App({
   const returnablePlacedInstances = document.instances.filter(
     (instance) => instance.placement !== null,
   );
-  const selectedIds = visualSelection.instanceIds;
+  const {
+    selectedIds,
+    supplementalSelection,
+    selectedRouteId,
+    selectedAnnotationId,
+    selectedDraftingId,
+    selectedInstance,
+    selectedInstanceHasDifferentialInputs,
+    selectedHierarchyCell,
+    selectedDevice,
+    selectedCapacitorPlateRows,
+    selectedExternalSubcircuit,
+    selectedExternalMosMapping,
+    selectedPropertyDevice,
+    selectedRoute,
+    selectedRouteNetLabels,
+    selectedRouteNetLabel,
+    selectedAnnotation,
+    selectedNetLabelBinding,
+    selectedDrafting,
+    hasHierarchyEnterSelection,
+    hasRotatableSelection,
+    hasMirrorableSelection,
+    hasInspectableSelection,
+    selectionShelfSummary,
+    selectedNoConnect,
+    selectedEndpointNetId,
+    selectedHighlightNetId,
+    selectedHighlightEndpoint,
+  } = deriveSelectionInspectionModel({
+    project,
+    document,
+    resolver,
+    selection: visualSelection,
+    selectedEndpoint,
+  });
   const projectConnectivityIndex = useMemo(
     () => buildProjectConnectivityIndex(project, resolver),
     [project, resolver],
@@ -1107,57 +1140,6 @@ export function App({
       }).search(searchQuery),
     [project, projectConnectivityIndex, searchQuery],
   );
-  const supplementalSelection: SupplementalSelection = {
-    routeIds: visualSelection.routeIds,
-    junctionIds: visualSelection.junctionIds,
-    annotationIds: visualSelection.annotationIds,
-    draftingIds: visualSelection.draftingIds,
-  };
-  const selectedRouteId = visualSelection.routeIds.at(-1) ?? null;
-  const selectedAnnotationId = visualSelection.annotationIds.at(-1) ?? null;
-  const selectedDraftingId = visualSelection.draftingIds.at(-1) ?? null;
-  const selectedId = selectedIds.at(-1) ?? null;
-  const selectedInstance =
-    selectedIds.length === 1
-      ? document.instances.find((instance) => instance.id === selectedId)
-      : undefined;
-  const selectedInstanceHasDifferentialInputs = (() => {
-    if (!selectedInstance) return false;
-    const resolved = resolver.resolve(selectedInstance.symbolId);
-    return resolved ? hasDifferentialInputs(resolved) : false;
-  })();
-  const selectedHierarchyCell = selectedInstance
-    ? project.documents.find(
-        (candidate) =>
-          candidate.id === referencedDocumentId(project, selectedInstance),
-      )
-    : undefined;
-  const selectedDevice = selectedInstance
-    ? deviceDescriptor(selectedInstance.symbolId)
-    : undefined;
-  const selectedCapacitorPlateRows = selectedInstance
-    ? capacitorPlatePropertyRows(document, selectedInstance)
-    : null;
-  const selectedBinding = selectedInstance?.netlist?.binding;
-  const selectedExternalSubcircuit =
-    selectedBinding?.kind === "external-subcircuit"
-      ? project.externalSubcircuitDefinitions.find(
-          (definition) => definition.id === selectedBinding.definitionId,
-        )
-      : undefined;
-  const selectedExternalMosMapping = selectedExternalSubcircuit
-    ? selectedExternalSubcircuit.presentation
-      ? undefined
-      : resolvePdkSymbolMappingForTerminalOrder(
-          selectedExternalSubcircuit.name,
-          selectedExternalSubcircuit.terminals.map((terminal) => terminal.name),
-        )
-    : undefined;
-  const selectedPropertyDevice =
-    selectedDevice ??
-    (selectedExternalMosMapping
-      ? deviceDescriptor(selectedExternalMosMapping.symbolId)
-      : undefined);
   const selectedCellSymbolLayout = useMemo(() => {
     if (
       !cellSymbolLayoutEnabled ||
@@ -1195,46 +1177,6 @@ export function App({
     selectedHierarchyCell,
     selectedInstance,
   ]);
-  const selectedRoute = selectedRouteId
-    ? document.routes.find((route) => route.id === selectedRouteId)
-    : undefined;
-  // Labels are electrically associated with a Net, not intrinsically with a
-  // Route. The editor's own label id is useful as a preference only: imported
-  // projects and older documents legitimately use arbitrary annotation ids.
-  const selectedRouteNetLabels = selectedRoute
-    ? document.annotations.filter(
-        (annotation) =>
-          annotation.kind === "net-label" &&
-          annotation.netId === selectedRoute.netId,
-      )
-    : [];
-  const selectedRouteNetLabel = selectedRoute
-    ? (selectedRouteNetLabels.find(
-        (annotation) => annotation.id === `net-label-${selectedRoute.id}`,
-      ) ??
-      selectedRouteNetLabels.find(
-        (annotation) =>
-          resolveNetLabelBinding(document, resolver, annotation)?.routeId ===
-          selectedRoute.id,
-      ))
-    : undefined;
-  const selectedAnnotation = selectedAnnotationId
-    ? document.annotations.find(
-        (annotation) => annotation.id === selectedAnnotationId,
-      )
-    : undefined;
-  const selectedNetLabelBinding = selectedAnnotation
-    ? resolveNetLabelBinding(document, resolver, selectedAnnotation)
-    : null;
-  const selectedDrafting = selectedDraftingId
-    ? document.drafting?.objects.find(
-        (object) => object.id === selectedDraftingId,
-      )
-    : undefined;
-  const hasHierarchyEnterSelection = Boolean(
-    (selectedInstance && referencedDocumentId(project, selectedInstance)) ||
-    selectedDrafting?.kind === "rectangle",
-  );
   const {
     addAdditionalParameter,
     additionalParameterDraft,
@@ -1355,53 +1297,6 @@ export function App({
       }
     },
   });
-  const hasRotatableSelection =
-    selectedIds.some((id) =>
-      document.instances.some(
-        (instance) => instance.id === id && instance.placement !== null,
-      ),
-    ) ||
-    visualSelection.draftingIds.some((id) => {
-      const object = document.drafting?.objects.find(
-        (candidate) => candidate.id === id,
-      );
-      return (
-        object?.kind === "arrow" ||
-        object?.kind === "construction-line" ||
-        object?.kind === "rectangle"
-      );
-    });
-  const hasMirrorableSelection = selectedIds.some((id) =>
-    document.instances.some(
-      (instance) => instance.id === id && instance.placement !== null,
-    ),
-  );
-  const hasInspectableSelection = Boolean(
-    selectedIds.length > 0 ||
-    selectedRoute ||
-    selectedAnnotation ||
-    selectedDrafting ||
-    selectedEndpoint,
-  );
-  const selectionShelfSummary = selectedInstance
-    ? `${selectedInstance.id} · ${selectedInstance.symbolId}`
-    : selectedIds.length > 1
-      ? `${selectedIds.length} components`
-      : selectedRoute
-        ? `Route · ${
-            resolveDocumentLogicalNets(document).byBaseNetId.get(
-              selectedRoute.netId,
-            )?.name ?? selectedRoute.netId
-          }`
-        : selectedAnnotation
-          ? `Annotation · ${selectedAnnotation.kind}`
-          : selectedDrafting
-            ? `Drawing · ${selectedDrafting.kind}`
-            : selectedEndpoint?.endpoint.kind === "junction"
-              ? "Junction"
-              : selectedEndpoint
-                ? "Endpoint"
-                : "None";
   const selectedInstanceLabel = selectedInstance
     ? instanceLabelAnnotationFor(document, selectedInstance.id)
     : undefined;
@@ -1435,26 +1330,6 @@ export function App({
       : false;
   });
   const styleProfile = resolveDocumentStyleProfile(document.presentation);
-  const selectedNoConnect =
-    selectedEndpoint && selectedEndpoint.endpoint.kind !== "junction"
-      ? document.noConnects.find(
-          (noConnect) =>
-            endpointKey(noConnect.endpoint) ===
-            endpointKey(selectedEndpoint.endpoint),
-        )
-      : undefined;
-  const selectedEndpointNetId = selectedEndpoint
-    ? endpointNetId(document, selectedEndpoint.endpoint)
-    : null;
-  const selectedHighlightNetId =
-    selectedRoute?.netId ??
-    selectedEndpointNetId ??
-    selectedNetLabelBinding?.netId ??
-    null;
-  const selectedHighlightEndpoint =
-    selectedRoute?.from ??
-    selectedEndpoint?.endpoint ??
-    selectedNetLabelBinding?.endpoint;
   const selectedHighlightIsActive = Boolean(
     selectedHighlightNetId &&
     highlightedNetOrigin?.documentId === document.id &&
