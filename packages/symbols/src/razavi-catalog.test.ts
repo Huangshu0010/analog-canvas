@@ -235,7 +235,7 @@ describe("Razavi symbol catalog", () => {
     expect(invalid.success).toBe(false);
   });
 
-  it("preserves the FD Amp angle at Op Amp scale with boundary-only joins", () => {
+  it("keeps the enlarged FD Amp angle, pair spacing, and joined leads", () => {
     const opampTriangle = requireRazaviCatalogSymbol("opamp").primitives.find(
       (primitive) => primitive.kind === "path",
     );
@@ -275,17 +275,17 @@ describe("Razavi symbol catalog", () => {
         expect.arrayContaining([
           expect.objectContaining({
             name: "IN+",
-            at: { x: -40, y: 10 },
+            at: { x: -50, y: 20 },
           }),
           expect.objectContaining({
             name: "IN-",
-            at: { x: -40, y: -10 },
+            at: { x: -50, y: -20 },
           }),
           expect.objectContaining({
-            at: { x: 20, y: -10 },
+            at: { x: 10, y: -20 },
           }),
           expect.objectContaining({
-            at: { x: 20, y: 10 },
+            at: { x: 10, y: 20 },
           }),
         ]),
       );
@@ -302,9 +302,55 @@ describe("Razavi symbol catalog", () => {
       const points = pathPoints(triangle.data);
       const width = points.apex.x - points.leftTop.x;
       const height = points.leftBottom.y - points.leftTop.y;
-      expect(width).toBeCloseTo(opampWidth, 6);
+      expect(width).toBeCloseTo(opampWidth * 1.4, 6);
+      expect((points.leftTop.x + points.apex.x) / 2).toBeCloseTo(
+        (opampPoints.leftTop.x + opampPoints.apex.x) / 2,
+        6,
+      );
       expect(width / height).toBeCloseTo(originalFdAspect, 5);
       expect(triangle.style).toEqual(opampTriangle.style);
+      const edgeXAtY = (y: number) =>
+        y <= points.apex.y
+          ? points.leftTop.x +
+            ((y - points.leftTop.y) / (points.apex.y - points.leftTop.y)) *
+              width
+          : points.leftBottom.x +
+            ((points.leftBottom.y - y) /
+              (points.leftBottom.y - points.apex.y)) *
+              width;
+      for (const primitive of symbol.primitives.filter(
+        (candidate) => candidate.part === "output-polarity",
+      )) {
+        if (primitive.kind !== "line") continue;
+        expect(primitive.from.x).toBeLessThan(edgeXAtY(primitive.from.y));
+        expect(primitive.to.x).toBeLessThan(edgeXAtY(primitive.to.y));
+      }
+      const lowerInputMark = symbol.primitives.find(
+        (primitive) =>
+          primitive.kind === "line" &&
+          primitive.part === "input-polarity" &&
+          primitive.from.y === primitive.to.y &&
+          primitive.from.y > 0,
+      );
+      const lowerOutputMark = symbol.primitives.find(
+        (primitive) =>
+          primitive.kind === "line" &&
+          primitive.part === "output-polarity" &&
+          primitive.from.y === primitive.to.y &&
+          primitive.from.y > 0,
+      );
+      if (lowerInputMark?.kind !== "line" || lowerOutputMark?.kind !== "line") {
+        throw new Error("FD Amp lower polarity marks must remain line pairs");
+      }
+      expect(lowerInputMark.from.y).toBeGreaterThan(15);
+      expect(lowerInputMark.from.y).toBeLessThan(16);
+      expect(lowerOutputMark.from.y).toBeGreaterThan(15);
+      expect(lowerOutputMark.from.y).toBeLessThan(16);
+      const lowerInputCenterX =
+        (lowerInputMark.from.x + lowerInputMark.to.x) / 2;
+      const lowerOutputCenterX =
+        (lowerOutputMark.from.x + lowerOutputMark.to.x) / 2;
+      expect(lowerOutputCenterX - lowerInputCenterX).toBeGreaterThan(10);
       const [topInput, bottomInput, topOutput, bottomOutput] =
         symbol.primitives.slice(0, 4);
       if (
@@ -316,6 +362,8 @@ describe("Razavi symbol catalog", () => {
         throw new Error("FD Amp leads must remain line primitives");
       }
       const triangleHalfStroke = 1.2;
+      expect(topInput.to.x - topInput.from.x).toBeCloseTo(12.0521, 6);
+      expect(bottomInput.to.x - bottomInput.from.x).toBeCloseTo(12.0521, 6);
       expect(topInput.to.x).toBeLessThan(points.leftTop.x);
       expect(bottomInput.to.x).toBeLessThan(points.leftBottom.x);
       expect(
