@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import "../gallery.css";
 
 import { fetchSessionUser } from "./account";
 import { GalleryChrome } from "./gallery-chrome";

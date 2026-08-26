@@ -5,6 +5,7 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
+import "../editor.css";
 import type {
   AgentHostSemanticIntentRequest,
   AgentHostSemanticIntentResult,

@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import "../analytics.css";
 import land from "../data/land-110m.json";
 import {
   landPathsForWorld,

@@ -4,5 +4,7 @@
   "nodeCryptoExternalized": false,
   "projectDataIsolation": "clean",
   "galleryEditorCodeLoaded": false,
-  "editorCodeLoaded": true
+  "editorCodeLoaded": true,
+  "galleryEditorStylesLoaded": false,
+  "editorStylesLoaded": true
 }
