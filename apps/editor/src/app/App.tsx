@@ -77,10 +77,8 @@ import {
   defaultDraftTextDocument,
   foldNetName,
   flattenRichText,
-  inverseTransformPoint,
   snapGridPoint,
   semanticTextDocument,
-  transformPoint,
 } from "@icm/model";
 import type {
   Annotation,
@@ -166,6 +164,7 @@ import {
 } from "../features/editor-shell/editor-export-commands";
 import { EditorStatusbar } from "../features/editor-shell/editor-statusbar";
 import { EditorTestTelemetry } from "../features/editor-shell/editor-test-telemetry";
+import { useCellSymbolLayout } from "../features/hierarchy/use-cell-symbol-layout";
 import {
   cellInsertLaunch,
   fullInsertLaunch,
@@ -770,16 +769,6 @@ export function App({
     setAgentStatusDismissed(false);
   }, [agentSession.status, publicAgentUiEnabled]);
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
-  const [cellSymbolLayoutEnabled, setCellSymbolLayoutEnabled] = useState(false);
-  const [
-    cellSymbolLayoutTargetInstanceId,
-    setCellSymbolLayoutTargetInstanceId,
-  ] = useState<string | null>(null);
-  const [cellSymbolLayoutDrag, setCellSymbolLayoutDrag] = useState<{
-    kind: "body" | "pin";
-    pointerId: number;
-    terminalId?: string;
-  } | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [wireOptionsOpen, setWireOptionsOpen] = useState(false);
   const [routingGuidanceView, setRoutingGuidanceView] = useState<
@@ -1150,43 +1139,25 @@ export function App({
       }).search(searchQuery),
     [project, projectConnectivityIndex, searchQuery],
   );
-  const selectedCellSymbolLayout = useMemo(() => {
-    if (
-      !cellSymbolLayoutEnabled ||
-      !selectedInstance?.placement ||
-      !selectedHierarchyCell?.netlist
-    ) {
-      return null;
-    }
-    const definition = resolver.resolve(selectedInstance.symbolId)?.definition;
-    const body = definition?.primitives.find(
-      (primitive) => primitive.kind === "polygon",
-    );
-    if (!definition || !body || body.kind !== "polygon") return null;
-    const xs = body.points.map((point) => point.x);
-    const ys = body.points.map((point) => point.y);
-    return {
-      child: selectedHierarchyCell,
-      instance: selectedInstance,
-      body: {
-        left: Math.min(...xs),
-        right: Math.max(...xs),
-        top: Math.min(...ys),
-        bottom: Math.max(...ys),
-      },
-      pins: selectedHierarchyCell.netlist.terminals.flatMap((terminal) => {
-        const pin = definition.pins.find(
-          (candidate) => candidate.name === terminal.name,
-        );
-        return pin ? [{ terminal, pin }] : [];
-      }),
-    };
-  }, [
-    cellSymbolLayoutEnabled,
-    resolver,
-    selectedHierarchyCell,
+  const {
+    enabled: cellSymbolLayoutEnabled,
+    layout: selectedCellSymbolLayout,
+    activeDragPointerId: cellSymbolLayoutDragPointerId,
+    cancelDrag: cancelCellSymbolLayoutDrag,
+    exit: exitCellSymbolLayout,
+    toggle: toggleCellSymbolLayout,
+    beginDrag: beginCellSymbolLayoutDrag,
+    completeDrag: completeCellSymbolLayoutDrag,
+  } = useCellSymbolLayout({
     selectedInstance,
-  ]);
+    child: selectedHierarchyCell,
+    resolver,
+    selectionOpen,
+    canvasPointFromEvent: (event) =>
+      pointFromClient(event.clientX, event.clientY, event.currentTarget),
+    setBodySize: setCellSymbolBodySize,
+    setPortPlacement: setCellSymbolPortPlacement,
+  });
   const {
     netLabelForRoute,
     netLabelEditsForRoute,
@@ -1913,27 +1884,6 @@ export function App({
   }, [selectedRouteId]);
 
   useEffect(() => {
-    if (!cellSymbolLayoutEnabled) return;
-    // Symbol geometry is definition-level, but its canvas grips belong to one
-    // selected parent instance. Do not let them survive a selection change.
-    if (
-      selectedInstance?.id !== cellSymbolLayoutTargetInstanceId ||
-      !selectedHierarchyCell?.netlist
-    ) {
-      exitCellSymbolLayout();
-    }
-  }, [
-    cellSymbolLayoutEnabled,
-    cellSymbolLayoutTargetInstanceId,
-    selectedHierarchyCell?.netlist,
-    selectedInstance?.id,
-  ]);
-
-  useEffect(() => {
-    if (!selectionOpen && cellSymbolLayoutEnabled) exitCellSymbolLayout();
-  }, [cellSymbolLayoutEnabled, selectionOpen]);
-
-  useEffect(() => {
     const pruned = pruneVisualSelection(visualSelection, document);
     if (pruned !== visualSelection) replaceSelection(pruned);
   }, [document, visualSelection]);
@@ -2136,84 +2086,6 @@ export function App({
       launch: cellInsertLaunch(),
     });
     setStatus("Choose a Cell, then place it on the canvas");
-  }
-
-  function exitCellSymbolLayout(): void {
-    setCellSymbolLayoutDrag(null);
-    setCellSymbolLayoutEnabled(false);
-    setCellSymbolLayoutTargetInstanceId(null);
-  }
-
-  function toggleCellSymbolLayout(): void {
-    if (cellSymbolLayoutEnabled) {
-      exitCellSymbolLayout();
-      return;
-    }
-    if (!selectedHierarchyCell || !selectedInstance?.placement) return;
-    setCellSymbolLayoutTargetInstanceId(selectedInstance.id);
-    setCellSymbolLayoutEnabled(true);
-  }
-
-  function beginCellSymbolLayoutDrag(
-    event: ReactPointerEvent<SVGCircleElement>,
-    kind: "body" | "pin",
-    terminalId?: string,
-  ): void {
-    if (!selectedCellSymbolLayout) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setCellSymbolLayoutDrag({
-      kind,
-      pointerId: event.pointerId,
-      ...(terminalId ? { terminalId } : {}),
-    });
-  }
-
-  function completeCellSymbolLayoutDrag(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ): boolean {
-    const drag = cellSymbolLayoutDrag;
-    const layout = selectedCellSymbolLayout;
-    if (!drag || drag.pointerId !== event.pointerId || !layout) return false;
-    const point = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget,
-    );
-    const local = inverseTransformPoint(
-      point,
-      layout.instance.placement!.position,
-      layout.instance.placement!,
-    );
-    setCellSymbolLayoutDrag(null);
-    if (drag.kind === "body") {
-      setCellSymbolBodySize(
-        layout.child,
-        Math.max(10, snapCoordinate(Math.abs(local.x) * 2, 10)),
-        Math.max(10, snapCoordinate(Math.abs(local.y) * 2, 10)),
-      );
-      return true;
-    }
-    if (!drag.terminalId) return true;
-    if (drag.kind === "pin") {
-      const distances = [
-        ["west", Math.abs(local.x - layout.body.left)],
-        ["east", Math.abs(local.x - layout.body.right)],
-        ["north", Math.abs(local.y - layout.body.top)],
-        ["south", Math.abs(local.y - layout.body.bottom)],
-      ] as const;
-      const side = distances.reduce((closest, candidate) =>
-        candidate[1] < closest[1] ? candidate : closest,
-      )[0];
-      const offset = snapCoordinate(
-        side === "west" || side === "east" ? local.y : local.x,
-        10,
-      );
-      setCellSymbolPortPlacement(layout.child, drag.terminalId, side, offset);
-      return true;
-    }
-    return true;
   }
 
   const selectedFormalTerminal = selectedInstance
@@ -5283,9 +5155,9 @@ export function App({
   function finishCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
     if (
       event.type === "pointercancel" &&
-      cellSymbolLayoutDrag?.pointerId === event.pointerId
+      cellSymbolLayoutDragPointerId === event.pointerId
     ) {
-      setCellSymbolLayoutDrag(null);
+      cancelCellSymbolLayoutDrag();
       return;
     }
     if (completeCellSymbolLayoutDrag(event)) return;
