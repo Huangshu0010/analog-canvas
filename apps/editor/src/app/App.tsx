@@ -178,6 +178,7 @@ import {
   ComponentIdentityProperties,
   componentTargetDescription,
 } from "../features/properties/component-identity-properties";
+import { ComponentElectricalProperties } from "../features/properties/component-electrical-properties";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
 import {
@@ -242,7 +243,6 @@ import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-
 import { HierarchyToolbar } from "../features/hierarchy/hierarchy-toolbar";
 import { createProjectStructureCommands } from "../features/hierarchy/project-structure-commands";
 import { DocumentSettingsSection } from "../features/editor-shell/document-settings-section";
-import { derivedFingerWidth } from "../features/properties/finger-width";
 import type { PublishGalleryDraft } from "../features/editor-shell/publish-gallery-dialog";
 import {
   publishProjectToGallery,
@@ -6978,195 +6978,46 @@ export function App({
                     onReferenceChange={updateSelectedReference}
                     onModelTargetChange={updateSelectedModelTarget}
                   />
-                  <div
-                    className="property-card property-electrical-section"
-                    aria-label="Component parameters and display"
-                  >
-                    <div className="property-section-heading">Parameters</div>
-                    <div className="component-parameter-grid">
-                      {propertyParametersForInstance(selectedInstance).map(
-                        (parameter, index) => (
-                          <label key={parameter.key} title={parameter.help}>
-                            <span className="property-parameter-name">
-                              {parameter.label}
-                              {parameter.unit ? ` / ${parameter.unit}` : ""}
-                              <em>({parameter.help})</em>
-                            </span>
-                            <input
-                              ref={
-                                index === 0 ? instanceValueInputRef : undefined
-                              }
-                              aria-label={`Component ${parameter.label.toLowerCase()}`}
-                              inputMode={parameter.inputMode}
-                              value={
-                                instancePropertyDraft.parameters[
-                                  parameter.key
-                                ] ?? ""
-                              }
-                              placeholder={parameter.placeholder}
-                              onChange={(event) => {
-                                const value = event.currentTarget.value;
-                                updateInstancePropertyDraft((current) => ({
-                                  ...current,
-                                  parameters: {
-                                    ...current.parameters,
-                                    [parameter.key]: value,
-                                  },
-                                }));
-                              }}
-                            />
-                          </label>
-                        ),
-                      )}
-                    </div>
-                    {(() => {
-                      // Finger width is shown, never stored: deriving it from
-                      // the authored W and NF keeps W = FW x NF true by
-                      // construction instead of by keeping two values agreed.
-                      const fingerWidth = derivedFingerWidth(
-                        instancePropertyDraft.parameters.w,
-                        instancePropertyDraft.parameters.nf,
-                      );
-                      return fingerWidth ? (
-                        <p
-                          className="property-derived-note"
-                          data-testid="derived-finger-width"
-                        >
-                          Finger width {fingerWidth} · W = FW × NF
-                        </p>
-                      ) : null;
-                    })()}
-                    <div className="property-display-card">
-                      <div className="property-section-heading">Display</div>
-                      <div
-                        className="display-toggle-row"
-                        aria-label="Component display toggles"
-                      >
-                        <DisplayToggle
-                          label={
-                            selectedInstance.symbolId === "port" ||
-                            selectedInstance.symbolId === "port-filled"
-                              ? "Port label"
-                              : "Reference"
-                          }
-                          checked={
-                            selectedInstanceLabel !== undefined &&
-                            selectedInstanceLabel.visible !== false
-                          }
-                          onChange={(checked) =>
-                            setReferenceLabelsVisible(
-                              [selectedInstance.id],
-                              checked,
-                            )
-                          }
-                        />
-                        <DisplayToggle
-                          label="Value"
-                          checked={
-                            selectedInstanceValue !== null &&
-                            selectedInstanceValue.visible !== false
-                          }
-                          disabled={!selectedInstanceValueAvailable}
-                          help={
-                            selectedInstanceValueAvailable
-                              ? undefined
-                              : "Set the device parameters first"
-                          }
-                          onChange={(checked) => {
-                            if (checked) {
-                              showSelectedInstanceValue();
-                            } else {
-                              setValueLabelsVisible(
-                                [selectedInstance.id],
-                                false,
-                              );
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                    {selectedInstance.netlist ? (
-                      <details className="property-details property-details-inline">
-                        <summary>
-                          <span>Advanced parameters</span>
-                          <small>{additionalParameterDraft.length}</small>
-                        </summary>
-                        <div
-                          className="additional-parameters"
-                          aria-label="Additional parameters"
-                        >
-                          <small>
-                            Model- or dialect-specific raw values. Apply commits
-                            all rows as one undoable edit.
-                          </small>
-                          {additionalParameterDraft.map((parameter, index) => (
-                            <div
-                              className="component-geometry-row"
-                              key={parameter.id}
-                            >
-                              <label>
-                                Name
-                                <input
-                                  aria-label={`Additional parameter name ${index + 1}`}
-                                  value={parameter.name}
-                                  onChange={(event) =>
-                                    updateAdditionalParameter(parameter.id, {
-                                      name: event.currentTarget.value,
-                                    })
-                                  }
-                                />
-                              </label>
-                              <label>
-                                Value
-                                <input
-                                  aria-label={`Additional parameter value ${index + 1}`}
-                                  value={parameter.value}
-                                  onChange={(event) =>
-                                    updateAdditionalParameter(parameter.id, {
-                                      value: event.currentTarget.value,
-                                    })
-                                  }
-                                />
-                              </label>
-                              <button
-                                type="button"
-                                aria-label={`Remove additional parameter ${index + 1}`}
-                                onClick={() =>
-                                  removeAdditionalParameter(parameter.id)
-                                }
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ))}
-                          <div className="component-mirror-row">
-                            <button
-                              type="button"
-                              onClick={addAdditionalParameter}
-                            >
-                              Add parameter
-                            </button>
-                            {additionalParameterDraftChanges ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={applyAdditionalParameters}
-                                >
-                                  Apply parameters
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={cancelAdditionalParameters}
-                                >
-                                  Cancel parameter edits
-                                </button>
-                              </>
-                            ) : null}
-                          </div>
-                        </div>
-                      </details>
-                    ) : null}
-                  </div>
+                  <ComponentElectricalProperties
+                    instance={selectedInstance}
+                    parameters={propertyParametersForInstance(selectedInstance)}
+                    parameterValues={instancePropertyDraft.parameters}
+                    firstInputRef={instanceValueInputRef}
+                    referenceVisible={
+                      selectedInstanceLabel !== undefined &&
+                      selectedInstanceLabel.visible !== false
+                    }
+                    valueVisible={
+                      selectedInstanceValue !== null &&
+                      selectedInstanceValue.visible !== false
+                    }
+                    valueAvailable={selectedInstanceValueAvailable}
+                    additionalParameters={additionalParameterDraft}
+                    additionalParametersChanged={
+                      additionalParameterDraftChanges
+                    }
+                    onParameterChange={(key, value) =>
+                      updateInstancePropertyDraft((current) => ({
+                        ...current,
+                        parameters: {
+                          ...current.parameters,
+                          [key]: value,
+                        },
+                      }))
+                    }
+                    onReferenceVisibilityChange={(checked) =>
+                      setReferenceLabelsVisible([selectedInstance.id], checked)
+                    }
+                    onValueVisibilityChange={(checked) => {
+                      if (checked) showSelectedInstanceValue();
+                      else setValueLabelsVisible([selectedInstance.id], false);
+                    }}
+                    onAdditionalParameterChange={updateAdditionalParameter}
+                    onAdditionalParameterRemove={removeAdditionalParameter}
+                    onAdditionalParameterAdd={addAdditionalParameter}
+                    onAdditionalParametersApply={applyAdditionalParameters}
+                    onAdditionalParametersCancel={cancelAdditionalParameters}
+                  />
                   {selectedInstance.importProvenance ? (
                     <div
                       className="property-card"
