@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import "../editor.css";
 import type {
@@ -132,30 +132,12 @@ import { EditorStatusbar } from "../features/editor-shell/editor-statusbar";
 import { EditorTestTelemetry } from "../features/editor-shell/editor-test-telemetry";
 import { useCellSymbolLayout } from "../features/hierarchy/use-cell-symbol-layout";
 import {
-  AnnotationActionsSection,
-  EndpointActionsSection,
-  GroupDisplayToggles,
-  MosBulkConnectionSection,
-  RouteActionsSection,
-  RoutingGuidanceSection,
-} from "../features/selection/selection-context-actions";
-import {
   cellInsertLaunch,
   fullInsertLaunch,
 } from "../features/component-insert/insert-launch";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
-import { PlacementTrayPanel } from "../features/component-insert/placement-tray-panel";
 import { createPlacementTrayCommands } from "../features/component-insert/placement-tray-commands";
-import {
-  CellSymbolLayoutProperties,
-  FormalPortProperties,
-} from "../features/properties/component-structure-properties";
-import {
-  ComponentIdentityProperties,
-  componentTargetDescription,
-} from "../features/properties/component-identity-properties";
-import { ComponentElectricalProperties } from "../features/properties/component-electrical-properties";
-import { ComponentPlacementProperties } from "../features/properties/component-placement-properties";
+import { componentTargetDescription } from "../features/properties/component-identity-properties";
 import {
   constrainedPowerRailEndpoint,
   constructVddRailEdits,
@@ -178,8 +160,8 @@ import {
   isTypingTarget,
   RenderCrashProbe,
 } from "./editor-runtime-helpers";
-import { LazyAgentPropertiesSection } from "./lazy-editor-dialogs";
 import { EditorDialogLayer } from "./editor-dialog-layer";
+import { EditorPropertiesDock } from "./editor-properties-dock";
 import {
   netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
@@ -204,7 +186,6 @@ import { createGalleryExampleCommands } from "../features/editor-shell/gallery-e
 import { HierarchyToolbar } from "../features/hierarchy/hierarchy-toolbar";
 import { createEditorNavigationController } from "../features/hierarchy/editor-navigation-controller";
 import { createProjectStructureCommands } from "../features/hierarchy/project-structure-commands";
-import { DocumentSettingsSection } from "../features/editor-shell/document-settings-section";
 import type { PublishGalleryDraft } from "../features/editor-shell/publish-gallery-dialog";
 import {
   publishProjectToGallery,
@@ -239,7 +220,6 @@ import {
   EditorInteractionPreviews,
   EditorPlacementPreview,
 } from "../canvas/editor-transient-preview-overlays";
-import { DraftingPropertiesPanel } from "../features/drafting/drafting-properties-panel";
 import {
   proposeRectangleLabel,
   rectangleInteriorAt,
@@ -291,12 +271,7 @@ import {
   type ProjectedInstanceMove,
   useSelectionInteraction,
 } from "../features/selection/use-selection-interaction";
-import {
-  NetTraceSection,
-  ProjectDiagnosticsSection,
-  SelectionInspectorDetails,
-  summarizeVisualDiagnostics,
-} from "../features/selection/selection-inspector-details";
+import { summarizeVisualDiagnostics } from "../features/selection/selection-inspector-details";
 import {
   hasVisualSelection,
   pruneVisualSelection,
@@ -3727,61 +3702,36 @@ export function App({
             }}
           />
         ) : null}
-        <aside
-          className={selectionOpen ? "selection-dock open" : "selection-dock"}
-          aria-label="Properties"
-          role="complementary"
-        >
-          <section className="selection-shelf" aria-label="Selection">
-            <button
-              type="button"
-              ref={selectionShelfRef}
-              className="selection-shelf-header"
-              data-testid="selection-shelf"
-              aria-expanded={selectionOpen}
-              onClick={() => {
-                if (selectionOpen) exitCellSymbolLayout();
-                // Narrow layouts have room for one side panel. Whichever the
-                // user just asked for wins, rather than one of them always
-                // outranking the other and appearing not to open at all.
-                else if (compactLayout) setCompactLibraryPanelOpen(false);
-                setSelectionOpen((current) => !current);
-                if (selectionOpen) setImportReviewOpen(false);
-              }}
-            >
-              <span className="selection-shelf-title">
-                <ToolIcon name="inspect" />
-                <span>Properties</span>
-                {publicAgentUiEnabled &&
-                agentSession.status !== "idle" &&
-                !agentStatusDismissed ? (
-                  <span
-                    className={`agent-shelf-indicator ${
-                      agentSession.status === "revoked" ||
-                      agentSession.status === "expired"
-                        ? "terminal"
-                        : ""
-                    }`}
-                    title={`Agent: ${agentSession.status}`}
-                    aria-label={`Agent: ${agentSession.status}`}
-                  />
-                ) : null}
-              </span>
-              <span className="selection-shelf-summary">
-                {selectionShelfSummary}
-                {hasInspectableSelection ? (
-                  <span
-                    className="selection-shelf-indicator"
-                    aria-hidden="true"
-                  />
-                ) : null}
-              </span>
-            </button>
-            <div className="selection-panel" hidden={!selectionOpen}>
-              {documentSettingsOpen ? (
-                <DocumentSettingsSection
-                  document={document}
-                  onApplyStyle={(styleOverrides) => {
+        <EditorPropertiesDock
+          open={selectionOpen}
+          shelfRef={selectionShelfRef}
+          onToggle={() => {
+            if (selectionOpen) exitCellSymbolLayout();
+            // Narrow layouts have room for one side panel. Whichever the user
+            // just asked for wins.
+            else if (compactLayout) setCompactLibraryPanelOpen(false);
+            setSelectionOpen((current) => !current);
+            if (selectionOpen) setImportReviewOpen(false);
+          }}
+          summary={selectionShelfSummary}
+          hasInspectableSelection={hasInspectableSelection}
+          agentIndicator={
+            publicAgentUiEnabled &&
+            agentSession.status !== "idle" &&
+            !agentStatusDismissed
+              ? {
+                  status: agentSession.status,
+                  terminal:
+                    agentSession.status === "revoked" ||
+                    agentSession.status === "expired",
+                }
+              : null
+          }
+          documentSettings={
+            documentSettingsOpen
+              ? {
+                  document,
+                  onApplyStyle: (styleOverrides) => {
                     const result = transact([
                       {
                         kind: "set_presentation_style",
@@ -3796,97 +3746,85 @@ export function App({
                           : "Reset document style to profile defaults",
                       );
                     }
-                  }}
-                  onChangeBulkDefault={updateMosBulkDefault}
-                />
-              ) : null}
-              <MosBulkConnectionSection
-                connection={
-                  selectedInstance && selectedBulkResolution
-                    ? `${selectedInstance.id}.B → ${
-                        selectedBulkResolution.net
-                          ? (resolveDocumentLogicalNets(
-                              document,
-                            ).byBaseNetId.get(selectedBulkResolution.net.id)
-                              ?.name ?? selectedBulkResolution.net.id)
-                          : "unresolved"
-                      } · ${selectedBulkResolution.status}`
-                    : null
+                  },
+                  onChangeBulkDefault: updateMosBulkDefault,
                 }
-                explicitRouteVisible={Boolean(selectedHiddenBulkNet)}
-                onDraw={drawSelectedMosBulk}
-              />
-              <RoutingGuidanceSection
-                total={flightlines.length}
-                displayed={displayedFlightlines.length}
-                view={routingGuidanceView}
-                onViewChange={setRoutingGuidanceView}
-              />
-              {!hasInspectableSelection ? (
-                <p className="inspect-empty">Select an object to inspect.</p>
-              ) : null}
-              <GroupDisplayToggles
-                active={selectedIds.length > 1}
-                referencesVisible={selectedGroupLabelsAllVisible}
-                valuesVisible={selectedGroupValuesAllVisible}
-                valuesAvailable={selectedGroupValueAvailable}
-                onReferencesVisibleChange={(visible) =>
-                  setReferenceLabelsVisible(selectedIds, visible)
-                }
-                onValuesVisibleChange={(visible) =>
-                  setValueLabelsVisible(selectedIds, visible)
-                }
-              />
-              {selectedInstance ? (
-                <section
-                  className="property-section component-properties"
-                  aria-label="Component properties"
-                >
-                  {selectedFormalTerminal ? (
-                    <FormalPortProperties
-                      terminal={selectedFormalTerminal}
-                      revision={document.revision}
-                      onRename={renameSelectedFormalPort}
-                      onDirectionChange={updateCellPinDirection}
-                    />
-                  ) : null}
-                  {selectedHierarchyCell ? (
-                    <CellSymbolLayoutProperties
-                      cell={selectedHierarchyCell}
-                      enabled={cellSymbolLayoutEnabled}
-                      onToggle={toggleCellSymbolLayout}
-                      onBodySizeChange={(width, height) =>
-                        setCellSymbolBodySize(
-                          selectedHierarchyCell,
-                          width,
-                          height,
-                        )
+              : null
+          }
+          mosBulk={{
+            connection:
+              selectedInstance && selectedBulkResolution
+                ? `${selectedInstance.id}.B → ${
+                    selectedBulkResolution.net
+                      ? (resolveDocumentLogicalNets(document).byBaseNetId.get(
+                          selectedBulkResolution.net.id,
+                        )?.name ?? selectedBulkResolution.net.id)
+                      : "unresolved"
+                  } · ${selectedBulkResolution.status}`
+                : null,
+            explicitRouteVisible: Boolean(selectedHiddenBulkNet),
+            onDraw: drawSelectedMosBulk,
+          }}
+          routingGuidance={{
+            total: flightlines.length,
+            displayed: displayedFlightlines.length,
+            view: routingGuidanceView,
+            onViewChange: setRoutingGuidanceView,
+          }}
+          groupDisplay={{
+            active: selectedIds.length > 1,
+            referencesVisible: selectedGroupLabelsAllVisible,
+            valuesVisible: selectedGroupValuesAllVisible,
+            valuesAvailable: selectedGroupValueAvailable,
+            onReferencesVisibleChange: (visible) =>
+              setReferenceLabelsVisible(selectedIds, visible),
+            onValuesVisibleChange: (visible) =>
+              setValueLabelsVisible(selectedIds, visible),
+          }}
+          component={
+            selectedInstance
+              ? {
+                  formalPort: selectedFormalTerminal
+                    ? {
+                        terminal: selectedFormalTerminal,
+                        revision: document.revision,
+                        onRename: renameSelectedFormalPort,
+                        onDirectionChange: updateCellPinDirection,
                       }
-                      onPortPlacementChange={(terminalId, side, offset) =>
-                        setCellSymbolPortPlacement(
-                          selectedHierarchyCell,
-                          terminalId,
-                          side,
-                          offset,
-                        )
+                    : null,
+                  cellSymbolLayout: selectedHierarchyCell
+                    ? {
+                        cell: selectedHierarchyCell,
+                        enabled: cellSymbolLayoutEnabled,
+                        onToggle: toggleCellSymbolLayout,
+                        onBodySizeChange: (width, height) =>
+                          setCellSymbolBodySize(
+                            selectedHierarchyCell,
+                            width,
+                            height,
+                          ),
+                        onPortPlacementChange: (terminalId, side, offset) =>
+                          setCellSymbolPortPlacement(
+                            selectedHierarchyCell,
+                            terminalId,
+                            side,
+                            offset,
+                          ),
                       }
-                    />
-                  ) : null}
-                  <ComponentIdentityProperties
-                    instance={selectedInstance}
-                    revision={document.revision}
-                    cellName={document.netlist?.name ?? document.name}
-                    formalTerminalSelected={Boolean(selectedFormalTerminal)}
-                    portNet={
-                      selectedPortNet
-                        ? {
-                            id: selectedPortNet.id,
-                            logicalName: selectedPortLogicalName ?? "",
-                            supply: Boolean(selectedSupplyMarker),
-                          }
-                        : null
-                    }
-                    targetDescription={
+                    : null,
+                  identity: {
+                    instance: selectedInstance,
+                    revision: document.revision,
+                    cellName: document.netlist?.name ?? document.name,
+                    formalTerminalSelected: Boolean(selectedFormalTerminal),
+                    portNet: selectedPortNet
+                      ? {
+                          id: selectedPortNet.id,
+                          logicalName: selectedPortLogicalName ?? "",
+                          supply: Boolean(selectedSupplyMarker),
+                        }
+                      : null,
+                    targetDescription:
                       selectedInstance.netlist &&
                       !(
                         selectedInstance.netlist.binding?.kind === "model" ||
@@ -3898,10 +3836,9 @@ export function App({
                             selectedHierarchyCell?.netlist?.name,
                             selectedExternalSubcircuit?.name,
                           )
-                        : null
-                    }
-                    capacitorPlateRows={selectedCapacitorPlateRows}
-                    modelTarget={
+                        : null,
+                    capacitorPlateRows: selectedCapacitorPlateRows,
+                    modelTarget:
                       selectedInstance.netlist &&
                       (selectedInstance.netlist.binding?.kind === "model" ||
                         selectedDevice?.targetPolicy === "required-model" ||
@@ -3930,86 +3867,74 @@ export function App({
                               selectedExternalMosMapping,
                             ),
                           }
-                        : null
-                    }
-                    onMarkerNameChange={(value) =>
-                      commitElectricalMarkerName(selectedInstance.id, value)
-                    }
-                    onSchematicNameChange={updateSelectedSchematicName}
-                    onReferenceChange={updateSelectedReference}
-                    onModelTargetChange={updateSelectedModelTarget}
-                  />
-                  <ComponentElectricalProperties
-                    instance={selectedInstance}
-                    parameters={propertyParametersForInstance(selectedInstance)}
-                    parameterValues={instancePropertyDraft.parameters}
-                    firstInputRef={instanceValueInputRef}
-                    referenceVisible={
+                        : null,
+                    onMarkerNameChange: (value) =>
+                      commitElectricalMarkerName(selectedInstance.id, value),
+                    onSchematicNameChange: updateSelectedSchematicName,
+                    onReferenceChange: updateSelectedReference,
+                    onModelTargetChange: updateSelectedModelTarget,
+                  },
+                  electrical: {
+                    instance: selectedInstance,
+                    parameters: propertyParametersForInstance(selectedInstance),
+                    parameterValues: instancePropertyDraft.parameters,
+                    firstInputRef: instanceValueInputRef,
+                    referenceVisible:
                       selectedInstanceLabel !== undefined &&
-                      selectedInstanceLabel.visible !== false
-                    }
-                    valueVisible={
+                      selectedInstanceLabel.visible !== false,
+                    valueVisible:
                       selectedInstanceValue !== null &&
-                      selectedInstanceValue.visible !== false
-                    }
-                    valueAvailable={selectedInstanceValueAvailable}
-                    additionalParameters={additionalParameterDraft}
-                    additionalParametersChanged={
-                      additionalParameterDraftChanges
-                    }
-                    onParameterChange={(key, value) =>
+                      selectedInstanceValue.visible !== false,
+                    valueAvailable: selectedInstanceValueAvailable,
+                    additionalParameters: additionalParameterDraft,
+                    additionalParametersChanged:
+                      additionalParameterDraftChanges,
+                    onParameterChange: (key, value) =>
                       updateInstancePropertyDraft((current) => ({
                         ...current,
                         parameters: {
                           ...current.parameters,
                           [key]: value,
                         },
-                      }))
-                    }
-                    onReferenceVisibilityChange={(checked) =>
-                      setReferenceLabelsVisible([selectedInstance.id], checked)
-                    }
-                    onValueVisibilityChange={(checked) => {
+                      })),
+                    onReferenceVisibilityChange: (checked) =>
+                      setReferenceLabelsVisible([selectedInstance.id], checked),
+                    onValueVisibilityChange: (checked) => {
                       if (checked) showSelectedInstanceValue();
                       else setValueLabelsVisible([selectedInstance.id], false);
-                    }}
-                    onAdditionalParameterChange={updateAdditionalParameter}
-                    onAdditionalParameterRemove={removeAdditionalParameter}
-                    onAdditionalParameterAdd={addAdditionalParameter}
-                    onAdditionalParametersApply={applyAdditionalParameters}
-                    onAdditionalParametersCancel={cancelAdditionalParameters}
-                  />
-                  <ComponentPlacementProperties
-                    instance={selectedInstance}
-                    x={instancePropertyDraft.x}
-                    y={instancePropertyDraft.y}
-                    rotation={instancePropertyDraft.rotation}
-                    draftChanged={hasInstancePropertyDraftChanges}
-                    onXChange={(x) =>
+                    },
+                    onAdditionalParameterChange: updateAdditionalParameter,
+                    onAdditionalParameterRemove: removeAdditionalParameter,
+                    onAdditionalParameterAdd: addAdditionalParameter,
+                    onAdditionalParametersApply: applyAdditionalParameters,
+                    onAdditionalParametersCancel: cancelAdditionalParameters,
+                  },
+                  placement: {
+                    instance: selectedInstance,
+                    x: instancePropertyDraft.x,
+                    y: instancePropertyDraft.y,
+                    rotation: instancePropertyDraft.rotation,
+                    draftChanged: hasInstancePropertyDraftChanges,
+                    onXChange: (x) =>
                       updateInstancePropertyDraft((current) => ({
                         ...current,
                         x,
-                      }))
-                    }
-                    onYChange={(y) =>
+                      })),
+                    onYChange: (y) =>
                       updateInstancePropertyDraft((current) => ({
                         ...current,
                         y,
-                      }))
-                    }
-                    onRotate={() =>
-                      editorCommands.execute({ id: "transform.rotate" })
-                    }
-                    onMirror={(direction) =>
+                      })),
+                    onRotate: () =>
+                      editorCommands.execute({ id: "transform.rotate" }),
+                    onMirror: (direction) =>
                       editorCommands.execute({
                         id: "transform.mirror",
                         direction,
-                      })
-                    }
-                    onReturnToTray={() =>
-                      returnInstancesToTray([selectedInstance.id])
-                    }
-                    {...(differentialOutputSibling(selectedInstance.symbolId)
+                      }),
+                    onReturnToTray: () =>
+                      returnInstancesToTray([selectedInstance.id]),
+                    ...(differentialOutputSibling(selectedInstance.symbolId)
                       ? {
                           onSwapOutputs: () =>
                             transact(
@@ -4019,8 +3944,8 @@ export function App({
                               ),
                             ),
                         }
-                      : {})}
-                    {...(selectedInstanceHasDifferentialInputs &&
+                      : {}),
+                    ...(selectedInstanceHasDifferentialInputs &&
                     differentialInputSibling(selectedInstance.symbolId)
                       ? {
                           onSwapInputs: () =>
@@ -4031,158 +3956,153 @@ export function App({
                               ),
                             ),
                         }
-                      : {})}
-                    onDiscard={discardInstancePropertyDraft}
-                  />
-                </section>
-              ) : null}
-              {selectedDrafting ? (
-                <DraftingPropertiesPanel
-                  document={document}
-                  resolver={resolver}
-                  object={selectedDrafting}
-                  inspectorSegment={draftingInspectorSegment}
-                  tangentInput={draftingTangentInput}
-                  bearingInput={draftingBearingInput}
-                  onInspectorSegmentChange={setDraftingInspectorSegment}
-                  onTangentInputChange={setDraftingTangentInput}
-                  onBearingInputChange={setDraftingBearingInput}
-                  onStyleChange={setDraftingStyle}
-                  onTangentAngleChange={setDraftingTangentAngle}
-                  onBearingChange={setDraftingBearing}
-                  onReverse={reverseSelectedDrafting}
-                  onRotate={() =>
-                    editorCommands.execute({ id: "transform.rotate" })
-                  }
-                  onToggleLock={() => toggleDraftingLock(selectedDrafting)}
-                />
-              ) : null}
-              <PlacementTrayPanel
-                document={document}
-                unplaced={unplaced}
-                returnablePlaced={returnablePlacedInstances}
-                onPlaceAll={placeAllFromTray}
-                onReturnAll={returnInstancesToTray}
-                onSelect={(instance, label) => {
-                  selectOnly("instance", [instance.id]);
-                  setStatus(`Selected ${label}`);
-                }}
-                onPlace={beginRetainedInstancePlacementFromHook}
-              />
-              <RouteActionsSection
-                active={selectedRouteId !== null}
-                netLabelInputRef={netLabelPropertyInputRef}
-                netLabel={netLabelDraft}
-                highlightActive={selectedHighlightIsActive}
-                onNetLabelChange={updateNetLabelDraft}
-                onDeleteNetLabel={deleteSelectedRouteNetLabel}
-                onAddCurrentArrow={addCurrentArrow}
-                onToggleHighlight={toggleHighlightedNet}
-                onDeleteWire={deleteSelectedRouteConnection}
-              />
-              <EndpointActionsSection
-                kind={
-                  selectedEndpoint
-                    ? selectedEndpoint.endpoint.kind === "junction"
-                      ? "junction"
-                      : "terminal"
-                    : null
+                      : {}),
+                    onDiscard: discardInstancePropertyDraft,
+                  },
                 }
-                noConnect={Boolean(selectedNoConnect)}
-                endpointNetId={selectedEndpointNetId}
-                onDisconnect={() => disconnectSelectedEndpoint(false)}
-                onDeleteConnection={() => disconnectSelectedEndpoint(true)}
-                onToggleNoConnect={toggleSelectedNoConnectFromSelection}
-                onDeleteJunction={deleteSelectedJunctionFromSelection}
-              />
-              <AnnotationActionsSection
-                kind={
-                  selectedAnnotation && isRoutedMarker(selectedAnnotation)
-                    ? "current-arrow"
-                    : selectedAnnotation && selectedNetLabelBinding
-                      ? "net-label"
-                      : null
+              : null
+          }
+          drafting={
+            selectedDrafting
+              ? {
+                  document,
+                  resolver,
+                  object: selectedDrafting,
+                  inspectorSegment: draftingInspectorSegment,
+                  tangentInput: draftingTangentInput,
+                  bearingInput: draftingBearingInput,
+                  onInspectorSegmentChange: setDraftingInspectorSegment,
+                  onTangentInputChange: setDraftingTangentInput,
+                  onBearingInputChange: setDraftingBearingInput,
+                  onStyleChange: setDraftingStyle,
+                  onTangentAngleChange: setDraftingTangentAngle,
+                  onBearingChange: setDraftingBearing,
+                  onReverse: reverseSelectedDrafting,
+                  onRotate: () =>
+                    editorCommands.execute({ id: "transform.rotate" }),
+                  onToggleLock: () => toggleDraftingLock(selectedDrafting),
                 }
-                highlightActive={selectedHighlightIsActive}
-                onReverseCurrentArrow={reverseSelectedCurrentArrow}
-                onDeleteCurrentArrow={deleteSelectedAnnotation}
-                onToggleHighlight={toggleHighlightedNet}
-              />
-              <ProjectDiagnosticsSection
-                snapshot={liveDiagnosticSnapshot}
-                documentLabel={(documentId) =>
-                  project.documents.find(
-                    (candidate) => candidate.id === documentId,
-                  )?.name ?? documentId
-                }
-                onSelectDiagnostic={jumpToProjectDiagnostic}
-              />
-              {highlightedTrace && highlightedTrace.hops.length > 0 ? (
-                <NetTraceSection
-                  trace={highlightedTrace}
-                  documentLabel={(documentId) =>
+              : null
+          }
+          placementTray={{
+            document,
+            unplaced,
+            returnablePlaced: returnablePlacedInstances,
+            onPlaceAll: placeAllFromTray,
+            onReturnAll: returnInstancesToTray,
+            onSelect: (instance, label) => {
+              selectOnly("instance", [instance.id]);
+              setStatus(`Selected ${label}`);
+            },
+            onPlace: beginRetainedInstancePlacementFromHook,
+          }}
+          routeActions={{
+            active: selectedRouteId !== null,
+            netLabelInputRef: netLabelPropertyInputRef,
+            netLabel: netLabelDraft,
+            highlightActive: selectedHighlightIsActive,
+            onNetLabelChange: updateNetLabelDraft,
+            onDeleteNetLabel: deleteSelectedRouteNetLabel,
+            onAddCurrentArrow: addCurrentArrow,
+            onToggleHighlight: toggleHighlightedNet,
+            onDeleteWire: deleteSelectedRouteConnection,
+          }}
+          endpointActions={{
+            kind: selectedEndpoint
+              ? selectedEndpoint.endpoint.kind === "junction"
+                ? "junction"
+                : "terminal"
+              : null,
+            noConnect: Boolean(selectedNoConnect),
+            endpointNetId: selectedEndpointNetId,
+            onDisconnect: () => disconnectSelectedEndpoint(false),
+            onDeleteConnection: () => disconnectSelectedEndpoint(true),
+            onToggleNoConnect: toggleSelectedNoConnectFromSelection,
+            onDeleteJunction: deleteSelectedJunctionFromSelection,
+          }}
+          annotationActions={{
+            kind:
+              selectedAnnotation && isRoutedMarker(selectedAnnotation)
+                ? "current-arrow"
+                : selectedAnnotation && selectedNetLabelBinding
+                  ? "net-label"
+                  : null,
+            highlightActive: selectedHighlightIsActive,
+            onReverseCurrentArrow: reverseSelectedCurrentArrow,
+            onDeleteCurrentArrow: deleteSelectedAnnotation,
+            onToggleHighlight: toggleHighlightedNet,
+          }}
+          diagnostics={{
+            snapshot: liveDiagnosticSnapshot,
+            documentLabel: (documentId) =>
+              project.documents.find((candidate) => candidate.id === documentId)
+                ?.name ?? documentId,
+            onSelectDiagnostic: jumpToProjectDiagnostic,
+          }}
+          netTrace={
+            highlightedTrace && highlightedTrace.hops.length > 0
+              ? {
+                  trace: highlightedTrace,
+                  documentLabel: (documentId) =>
                     project.documents.find(
                       (candidate) => candidate.id === documentId,
-                    )?.name ?? documentId
-                  }
-                  onNavigateHop={navigateTraceHop}
-                />
-              ) : null}
-              {importReviewOpen ? (
-                <section className="import-review" aria-label="Import Review">
-                  <h2>Import Review</h2>
-                  <SelectionInspectorDetails
-                    snapshot={{
-                      selected:
-                        selectedIds.length > 0
-                          ? selectedIds.join(", ")
-                          : (selectedRouteId ?? selectedAnnotationId ?? "None"),
-                      internalRouteCount: internalSelection.routeIds.length,
-                      revision: document.revision,
-                      sourceStatus: document.sourceStatus,
-                      documentCount: project.documents.length,
-                      activeDocumentId: document.id,
-                      activeInstanceCount: document.instances.length,
-                      projectInstanceCount,
-                      netCount: document.nets.length,
-                      tool,
-                      flightlineCount: flightlines.length,
-                      crossingCount: crossings.length,
-                      annotationCount: document.annotations.length,
-                      status,
-                    }}
-                    importReport={importReport}
-                  />
-                </section>
-              ) : null}
-              <Suspense fallback={null}>
-                {publicAgentUiEnabled &&
-                agentSession.status !== "idle" &&
-                !agentStatusDismissed ? (
-                  <LazyAgentPropertiesSection
-                    status={agentSession.status}
-                    claimCode={agentSession.claimCode}
-                    claimExpiresAt={agentSession.claimExpiresAt}
-                    scopes={agentSession.scopes}
-                    expiresAt={agentSession.expiresAt}
-                    error={agentSession.error}
-                    onPause={agentSession.pause}
-                    onResume={agentSession.resume}
-                    onReconnect={agentSession.reconnect}
-                    onNewConnection={agentSession.newConnection}
-                    onRevoke={agentSession.revoke}
-                    expanded={agentDetailsOpen}
-                    onToggleDetails={() => setAgentDetailsOpen((open) => !open)}
-                    onDismiss={() => {
-                      setAgentDetailsOpen(false);
-                      setAgentStatusDismissed(true);
-                    }}
-                  />
-                ) : null}
-              </Suspense>
-            </div>
-          </section>
-        </aside>
+                    )?.name ?? documentId,
+                  onNavigateHop: navigateTraceHop,
+                }
+              : null
+          }
+          importReview={
+            importReviewOpen
+              ? {
+                  snapshot: {
+                    selected:
+                      selectedIds.length > 0
+                        ? selectedIds.join(", ")
+                        : (selectedRouteId ?? selectedAnnotationId ?? "None"),
+                    internalRouteCount: internalSelection.routeIds.length,
+                    revision: document.revision,
+                    sourceStatus: document.sourceStatus,
+                    documentCount: project.documents.length,
+                    activeDocumentId: document.id,
+                    activeInstanceCount: document.instances.length,
+                    projectInstanceCount,
+                    netCount: document.nets.length,
+                    tool,
+                    flightlineCount: flightlines.length,
+                    crossingCount: crossings.length,
+                    annotationCount: document.annotations.length,
+                    status,
+                  },
+                  importReport,
+                }
+              : null
+          }
+          agent={
+            publicAgentUiEnabled &&
+            agentSession.status !== "idle" &&
+            !agentStatusDismissed
+              ? {
+                  status: agentSession.status,
+                  claimCode: agentSession.claimCode,
+                  claimExpiresAt: agentSession.claimExpiresAt,
+                  scopes: agentSession.scopes,
+                  expiresAt: agentSession.expiresAt,
+                  error: agentSession.error,
+                  onPause: agentSession.pause,
+                  onResume: agentSession.resume,
+                  onReconnect: agentSession.reconnect,
+                  onNewConnection: agentSession.newConnection,
+                  onRevoke: agentSession.revoke,
+                  expanded: agentDetailsOpen,
+                  onToggleDetails: () => setAgentDetailsOpen((open) => !open),
+                  onDismiss: () => {
+                    setAgentDetailsOpen(false);
+                    setAgentStatusDismissed(true);
+                  },
+                }
+              : null
+          }
+        />
         <section className="canvas-panel">
           {canvasIsEmpty ? (
             <div
