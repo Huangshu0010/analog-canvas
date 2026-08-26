@@ -240,7 +240,7 @@ import {
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import { HierarchyToolbar } from "../features/hierarchy/hierarchy-toolbar";
-import { parseProject, serializeProject } from "@icm/project-protocol";
+import { parseProject } from "@icm/project-protocol";
 import { DocumentSettingsSection } from "../features/editor-shell/document-settings-section";
 import { derivedFingerWidth } from "../features/properties/finger-width";
 import type { PublishGalleryDraft } from "../features/editor-shell/publish-gallery-dialog";
@@ -263,7 +263,7 @@ import {
   type LibraryProjectExample,
 } from "../examples/library-examples";
 import { useDocumentController } from "../document/document-controller";
-import { projectChangeToken } from "../document/project-session-lifecycle";
+import { useProjectFileLifecycle } from "../document/use-project-file-lifecycle";
 import {
   applyDraftingHandle,
   applyDraftingStylePatch,
@@ -317,7 +317,6 @@ import { planMosBulkDefaultUpdate } from "../features/component-insert/mos-bulk-
 import { planCheckBulkDefaults } from "../features/netlist-export/check-and-save";
 import {
   listWorkspaceShelf,
-  openWorkspaceSlot,
   saveToWorkspaceShelf,
   type WorkspaceSlot,
 } from "../features/editor-shell/workspace-shelf";
@@ -329,22 +328,7 @@ import {
   razaviMosPresentationEdits,
 } from "../presentation/razavi-presentation";
 import { useRecoveryCoordinator } from "../document/recovery-coordinator";
-import type {
-  BrowserRecoveryFormalFileHint,
-  BrowserRecoverySource,
-} from "../document/browser-recovery-contract";
-import {
-  downloadTextArtifact,
-  formatProjectOpenDiagnostics,
-  requestProjectDownload,
-  resaveProjectArtifact,
-  saveProjectArtifact,
-  stageProjectFile,
-  type ProjectFileState,
-  type ProjectSaveTarget,
-} from "../document/project-file-service";
-import type { BrowserRecoveryGeneration } from "../document/browser-recovery-contract";
-import { projectFileBaseName } from "../document/project-file-service";
+import { requestProjectDownload } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
 import { capacitorPlatePropertyRows } from "../features/properties/capacitor-plate-properties";
@@ -413,7 +397,6 @@ const DEFAULT_VIEWBOX: GridRect = { x: 0, y: 0, width: 960, height: 640 };
 const RECENT_COMPONENTS_STORAGE_KEY = "icm.recent-components.v1";
 const LIBRARY_PANEL_STORAGE_KEY = "icm.library-panel-open.v1";
 const LIBRARY_WIDTH_STORAGE_KEY = "icm.library-panel-width.v1";
-const REFRESH_RESTORE_STORAGE_KEY = "icm.restore-after-refresh.v1";
 const COMPACT_LAYOUT_MEDIA_QUERY = "(max-width: 860px)";
 const DRAG_START_DISTANCE_PX = 4;
 /**
@@ -469,21 +452,6 @@ const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
   annotationIds: [],
   draftingIds: [],
 };
-
-interface ReplaceGuardState {
-  intent: string;
-  perform: () => void | Promise<void>;
-}
-
-interface FormalProjectBaseline {
-  project: CircuitProject;
-  viewBox: GridRect;
-}
-
-interface PreviousProjectSnapshot extends FormalProjectBaseline {
-  fileState: ProjectFileState;
-  formalBaseline: FormalProjectBaseline | null;
-}
 
 export interface AppProps {
   project?: CircuitProject;
@@ -551,16 +519,6 @@ export function App({
     helpButtonRef,
     helpCloseRef,
   });
-  const [restoreAfterRefresh] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const requested =
-      window.sessionStorage.getItem(REFRESH_RESTORE_STORAGE_KEY) === "true";
-    if (requested) {
-      window.sessionStorage.removeItem(REFRESH_RESTORE_STORAGE_KEY);
-    }
-    return requested;
-  });
-
   const visibleLibraryPanelOpen = compactLayout
     ? compactLibraryPanelOpen
     : libraryPanelOpen;
@@ -593,27 +551,6 @@ export function App({
     };
   }, [visibleLibraryPanelOpen]);
 
-  const refreshRestoreAttemptedRef = useRef(false);
-  // Formal-file lifecycle of the current working copy, orthogonal to recovery
-  // state: a commit makes it dirty again, only a confirmed File System
-  // Access close or an explicit download transitions it out of dirty.
-  const [fileState, setFileState] = useState<ProjectFileState>("new");
-  // Where this working copy was last written, so Save writes back instead of
-  // asking again. A runtime capability, never persisted: it is dropped
-  // whenever the whole project is replaced, and it dies with the tab.
-  const saveTargetRef = useRef<ProjectSaveTarget | null>(null);
-  const [formalProjectBaseline, setFormalProjectBaseline] =
-    useState<FormalProjectBaseline | null>(null);
-  const fileStateBaselineRef = useRef<{
-    session: string;
-    token: string;
-  } | null>(null);
-  const [previousProject, setPreviousProject] =
-    useState<PreviousProjectSnapshot | null>(null);
-  const [replaceGuard, setReplaceGuard] = useState<ReplaceGuardState | null>(
-    null,
-  );
-  const [recoveryDialogOpen, setRecoveryDialogOpen] = useState(false);
   const [recoveryFailureDismissed, setRecoveryFailureDismissed] =
     useState(false);
   const {
@@ -782,6 +719,64 @@ export function App({
       }),
     [editorDocumentController, projectSessionId],
   );
+  const {
+    fileState,
+    formalProjectBaseline,
+    previousProject,
+    replaceGuard,
+    recoveryDialogOpen,
+    setRecoveryDialogOpen,
+    isDirtyWork,
+    replaceActiveProject,
+    saveProjectFile,
+    reportExport,
+    guardDirtyReplacement,
+    cancelReplaceGuard,
+    confirmReplaceGuard,
+    downloadCurrentProjectFromGuard,
+    createNewProject,
+    restorePreviousProject,
+    revertToFormalProjectBaseline,
+    openRecoveryDialog,
+    restoreRecoverySession,
+    downloadRecoveryBackup,
+    deleteRecoverySessionFromDialog,
+    refreshApp,
+    openProjectFile,
+    openShelvedCircuit,
+  } = useProjectFileLifecycle({
+    project,
+    projectSessionId,
+    viewBox,
+    defaultViewBox: DEFAULT_VIEWBOX,
+    setStatus,
+    recovery: {
+      ready: recoveryReady,
+      sessions: recoverySessions,
+      workingCopyId: recoveryWorkingCopyId,
+      stage: stageRecovery,
+      cancelPending: cancelRecovery,
+      flushNow: flushRecovery,
+      beginWorkingCopy: beginRecoveryWorkingCopy,
+      noteFormalFileHint: noteRecoveryFormalFileHint,
+      discover: discoverRecovery,
+      readSessionProject: readRecoveryProject,
+      deleteSession: deleteRecoverySession,
+    },
+    installProject: (nextProject, nextViewBox) => {
+      browserAgentFileHost.clear();
+      setAgentFileCandidate(null);
+      setImportReport(null);
+      setImportReviewOpen(false);
+      setGalleryEntryContext(null);
+      const nextDocument = replaceProject(nextProject);
+      documentViewBoxes.current = new Map();
+      setDocumentStack([]);
+      setViewBox(nextViewBox, nextDocument.presentation.grid);
+      resetInteractionState();
+      return nextDocument;
+    },
+  });
   const agentSession = useAgentSession({
     enabled: publicAgentUiEnabled,
     project,
@@ -3150,68 +3145,6 @@ export function App({
     switchDocument(project.topDocumentId);
   }
 
-  function replaceActiveProject(
-    nextProject: CircuitProject,
-    nextViewBox: GridRect = DEFAULT_VIEWBOX,
-    options: {
-      source?: BrowserRecoverySource;
-      keepWorkingCopy?: boolean;
-      formalFileHint?: BrowserRecoveryFormalFileHint;
-      rememberPrevious?: boolean;
-      fileState?: ProjectFileState;
-      formalBaseline?: FormalProjectBaseline | null;
-    } = {},
-  ): SchematicDocument {
-    if (options.rememberPrevious !== false) {
-      setPreviousProject({
-        project: structuredClone(project),
-        viewBox: { ...viewBox },
-        fileState,
-        formalBaseline: formalProjectBaseline
-          ? {
-              project: structuredClone(formalProjectBaseline.project),
-              viewBox: { ...formalProjectBaseline.viewBox },
-            }
-          : null,
-      });
-    }
-    // Drop any pending recovery write for the outgoing project so it cannot
-    // revive after Save/Discard/Open/Import/Restore/demo-load swaps the
-    // project, then give the incoming project its own working-copy identity
-    // (an explicit-refresh restore keeps the identity it is continuing).
-    cancelRecovery();
-    if (options.keepWorkingCopy !== true) {
-      beginRecoveryWorkingCopy(options.source ?? "new");
-    }
-    if (options.formalFileHint !== undefined) {
-      noteRecoveryFormalFileHint(options.formalFileHint);
-    }
-    browserAgentFileHost.clear();
-    setAgentFileCandidate(null);
-    setImportReport(null);
-    setImportReviewOpen(false);
-    setGalleryEntryContext(null);
-    const prepared = materializeRazaviProjectBulkConnections(nextProject);
-    const nextDocument = replaceProject(prepared.project);
-    documentViewBoxes.current = new Map();
-    setDocumentStack([]);
-    setViewBox(nextViewBox, nextDocument.presentation.grid);
-    resetInteractionState();
-    // The incoming project has no file of its own yet; keeping the outgoing
-    // one's location would let a later Save quietly overwrite a different
-    // circuit's file.
-    saveTargetRef.current = null;
-    setFileState(
-      options.fileState ??
-        (options.source === "opened-file" ? "opened" : "new"),
-    );
-    setFormalProjectBaseline(options.formalBaseline ?? null);
-    // Seed the incoming working copy immediately; the outgoing project's
-    // stored records are retained under its own session.
-    stageRecovery(prepared.project);
-    return nextDocument;
-  }
-
   function approveAgentFileCandidate(): void {
     if (!agentFileCandidate) return;
     const meta = agentFileCandidate;
@@ -5139,417 +5072,6 @@ export function App({
     anchor.download = `${safeExportBaseName(baseName)}.${extension}`;
     anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
-
-  async function saveProjectFile(options: { pickLocation?: boolean } = {}) {
-    // Saving or downloading never clears the browser recovery copies. Only a
-    // confirmed File System Access close reports a confirmed write; the
-    // fallback download is reported as requested, not saved.
-    const outcome = await saveProjectArtifact(
-      project,
-      {},
-      options.pickLocation ? null : saveTargetRef.current,
-    );
-    if (outcome.status === "write-confirmed") {
-      saveTargetRef.current = outcome.target ?? null;
-      setFormalProjectBaseline({
-        project: structuredClone(project),
-        viewBox: { ...viewBox },
-      });
-      noteRecoveryFormalFileHint({
-        name: outcome.fileName,
-        lastConfirmedWriteAt: outcome.at,
-      });
-      setFileState("write-confirmed");
-      setStatus(`Saved ${outcome.fileName} (write confirmed)`);
-      return;
-    }
-    if (outcome.status === "download-requested") {
-      // The browser cannot confirm durable download completion, but this is
-      // still the exact formal snapshot the user requested and may revert to
-      // during the current session.
-      setFormalProjectBaseline({
-        project: structuredClone(project),
-        viewBox: { ...viewBox },
-      });
-      noteRecoveryFormalFileHint({
-        name: outcome.fileName,
-        lastDownloadRequestedAt: new Date().toISOString(),
-      });
-      setFileState("download-requested");
-      setStatus(`Download requested: ${outcome.fileName}`);
-      return;
-    }
-    if (outcome.status === "picker-cancelled") {
-      setStatus("Save cancelled");
-      return;
-    }
-    if (outcome.status === "permission-denied") {
-      setStatus(
-        `Save location unavailable and download failed: ${outcome.message}`,
-      );
-      return;
-    }
-    if (outcome.status === "write-failed") {
-      setFileState("write-failed");
-      setStatus(
-        `Save failed at ${outcome.stage}: ${outcome.message} — recovery kept; download the Project instead`,
-      );
-      return;
-    }
-    if (outcome.status === "target-unavailable") {
-      // Only the silent path reports this; an explicit save falls back to
-      // the picker rather than reaching here.
-      setStatus("Save location is no longer available — choose one again");
-      return;
-    }
-    setStatus(`Project could not be serialized: ${outcome.message}`);
-  }
-
-  /**
-   * Exporting is the strongest signal we get that a circuit matters, so it is
-   * the right moment to make sure the project file is not left behind. When a
-   * location is already granted the write happens silently; otherwise this
-   * says so rather than opening a picker nobody asked for.
-   */
-  async function reportExport(message: string): Promise<void> {
-    if (!isDirtyWork()) {
-      setStatus(message);
-      return;
-    }
-    const target = saveTargetRef.current;
-    if (target) {
-      const outcome = await resaveProjectArtifact(project, target);
-      if (outcome.status === "write-confirmed") {
-        noteRecoveryFormalFileHint({
-          name: outcome.fileName,
-          lastConfirmedWriteAt: outcome.at,
-        });
-        setFileState("write-confirmed");
-        setStatus(`${message} — also saved ${outcome.fileName}`);
-        return;
-      }
-    }
-    setStatus(`${message} — the Project file still has unsaved changes`);
-  }
-
-  function isDirtyWork(): boolean {
-    return fileState === "dirty" || fileState === "write-failed";
-  }
-
-  /** Protect outgoing dirty work before every live Project replacement. */
-  async function guardDirtyReplacement(
-    intent: string,
-    perform: () => void | Promise<void>,
-  ): Promise<void> {
-    if (!isDirtyWork()) {
-      await perform();
-      return;
-    }
-    stageRecovery(project);
-    // Recovery is best-effort safety, never authorization to discard the
-    // foreground Project. Even a confirmed write still requires a choice.
-    await flushRecovery();
-    setReplaceGuard({ intent, perform });
-  }
-
-  function cancelReplaceGuard(): void {
-    setReplaceGuard(null);
-  }
-
-  function confirmReplaceGuard(): void {
-    const guard = replaceGuard;
-    if (!guard) return;
-    setReplaceGuard(null);
-    void guard.perform();
-  }
-
-  function downloadCurrentProjectFromGuard(): void {
-    const outcome = requestProjectDownload(project);
-    if (outcome.status === "download-requested") {
-      setFileState("download-requested");
-      setStatus(`Download requested: ${outcome.fileName}`);
-    } else {
-      setStatus(`Download failed: ${outcome.message}`);
-    }
-  }
-
-  function createNewProject(): void {
-    void guardDirtyReplacement("Create a new Project", () => {
-      const next = createEmptyProject(
-        createId("project"),
-        "New Circuit",
-        createId("document"),
-      );
-      replaceActiveProject(next, DEFAULT_VIEWBOX, { source: "new" });
-      setStatus("Created a new Project · Previous Project is available");
-    });
-  }
-
-  function restorePreviousProject(): void {
-    const previous = previousProject;
-    if (!previous) return;
-    void guardDirtyReplacement(`Return to ${previous.project.name}`, () => {
-      const restored = replaceActiveProject(
-        previous.project,
-        previous.viewBox,
-        {
-          source: "recovered",
-          fileState: previous.fileState,
-          formalBaseline: previous.formalBaseline,
-        },
-      );
-      setStatus(
-        `Returned to Previous Project ${previous.project.name} at revision ${restored.revision}`,
-      );
-    });
-  }
-
-  function revertToFormalProjectBaseline(): void {
-    const baseline = formalProjectBaseline;
-    if (!baseline || !isDirtyWork()) return;
-    void guardDirtyReplacement("Revert to the last saved Project", () => {
-      const restored = replaceActiveProject(
-        baseline.project,
-        baseline.viewBox,
-        {
-          source: "opened-file",
-          fileState: "opened",
-          formalBaseline: baseline,
-        },
-      );
-      setStatus(`Reverted to saved Project revision ${restored.revision}`);
-    });
-  }
-
-  function openRecoveryDialog(): void {
-    // Refresh summaries so the dialog reflects records written after the
-    // startup discovery (including this session's own latest commits).
-    void (async () => {
-      await discoverRecovery();
-      setRecoveryDialogOpen(true);
-    })();
-  }
-
-  function restoreRecoverySession(
-    workingCopyId: string,
-    generation: BrowserRecoveryGeneration,
-  ): void {
-    void (async () => {
-      const read = await readRecoveryProject(workingCopyId, generation);
-      if (read.status !== "valid") {
-        setStatus(
-          read.status === "unsupported-schema"
-            ? "Recovery uses a newer Project schema and cannot be restored; download it instead"
-            : `Recovery is not readable: ${
-                read.status === "missing" ? "no stored record" : read.message
-              }`,
-        );
-        return;
-      }
-      const unsupported = findUnsupportedProjectSymbolIds(
-        read.project,
-        builtInSymbols,
-      );
-      if (unsupported.length > 0) {
-        setStatus(
-          `Recovery uses unsupported non-Razavi symbols: ${unsupported.join(", ")}`,
-        );
-        return;
-      }
-      await guardDirtyReplacement(
-        `Restore recovered Project ${read.project.name}`,
-        async () => {
-          // Restoring forks a fresh working copy instead of overwriting the
-          // stored record another tab may still be writing.
-          const recoveredDocument = replaceActiveProject(
-            read.project,
-            DEFAULT_VIEWBOX,
-            { source: "recovered" },
-          );
-          setRecoveryDialogOpen(false);
-          await discoverRecovery();
-          setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
-        },
-      );
-    })();
-  }
-
-  function downloadRecoveryBackup(
-    workingCopyId: string,
-    generation: BrowserRecoveryGeneration,
-  ): void {
-    void (async () => {
-      const read = await readRecoveryProject(workingCopyId, generation);
-      const summary = recoverySessions.find(
-        (session) => session.workingCopyId === workingCopyId,
-      );
-      if (read.status === "valid" || read.status === "unsupported-schema") {
-        const text =
-          read.status === "valid" ? read.record.projectText : read.projectText;
-        const name =
-          summary?.projectName ??
-          (read.status === "valid" ? read.record.projectName : "recovery");
-        const fileName = `${projectFileBaseName(name)}-backup.icproj.json`;
-        const outcome = downloadTextArtifact(text, fileName);
-        setStatus(
-          outcome.status === "download-requested"
-            ? `Download requested: ${outcome.fileName}`
-            : `Download failed: ${outcome.message}`,
-        );
-        return;
-      }
-      setStatus(
-        `Backup not available: ${
-          read.status === "missing" ? "no stored record" : read.message
-        }`,
-      );
-    })();
-  }
-
-  function deleteRecoverySessionFromDialog(workingCopyId: string): void {
-    void (async () => {
-      const removed = await deleteRecoverySession(workingCopyId);
-      await discoverRecovery();
-      setStatus(
-        removed ? "Deleted recovery copy" : "Could not delete recovery copy",
-      );
-    })();
-  }
-
-  useEffect(() => {
-    if (!restoreAfterRefresh || !recoveryReady) return;
-    if (refreshRestoreAttemptedRef.current) return;
-    refreshRestoreAttemptedRef.current = true;
-    void (async () => {
-      // An explicit in-app Refresh may restore only the exact working copy
-      // recorded for that refresh, validated before installation.
-      const read = await readRecoveryProject(recoveryWorkingCopyId, "latest");
-      if (read.status !== "valid") {
-        setStatus("No restorable recovery was found for this refresh");
-        return;
-      }
-      const unsupported = findUnsupportedProjectSymbolIds(
-        read.project,
-        builtInSymbols,
-      );
-      if (unsupported.length > 0) {
-        setStatus(
-          `Recovery uses unsupported non-Razavi symbols: ${unsupported.join(", ")}`,
-        );
-        return;
-      }
-      const restoredDocument = replaceActiveProject(
-        read.project,
-        DEFAULT_VIEWBOX,
-        {
-          source: "recovered",
-          keepWorkingCopy: true,
-          rememberPrevious: false,
-        },
-      );
-      setStatus(`Restored recovery revision ${restoredDocument.revision}`);
-    })();
-  }, [restoreAfterRefresh, recoveryReady, recoveryWorkingCopyId]);
-
-  const currentProjectChangeToken = projectChangeToken(project);
-
-  // Any Document or Project-structure revision inside one session makes the
-  // working copy dirty. A replacement changes projectSessionId and establishes
-  // a new observation baseline without confusing it with Document Undo.
-  useEffect(() => {
-    const baseline = fileStateBaselineRef.current;
-    if (baseline === null || baseline.session !== projectSessionId) {
-      fileStateBaselineRef.current = {
-        session: projectSessionId,
-        token: currentProjectChangeToken,
-      };
-      return;
-    }
-    if (baseline.token !== currentProjectChangeToken) {
-      fileStateBaselineRef.current = {
-        session: projectSessionId,
-        token: currentProjectChangeToken,
-      };
-      setFileState("dirty");
-    }
-  }, [currentProjectChangeToken, projectSessionId]);
-
-  function refreshApp(): void {
-    void (async () => {
-      stageRecovery(project);
-      // Wait for the IndexedDB write to settle before reloading; recovery
-      // correctness otherwise does not depend on last-moment page events.
-      await flushRecovery();
-      window.sessionStorage.setItem(REFRESH_RESTORE_STORAGE_KEY, "true");
-      window.location.reload();
-    })();
-  }
-
-  async function openProjectFile(
-    file: File | null,
-    options: { allowExactCurrentReplacement?: boolean } = {},
-  ): Promise<void> {
-    if (!file) return;
-    const staged = await stageProjectFile(file, (candidate) =>
-      findUnsupportedProjectSymbolIds(candidate, builtInSymbols),
-    );
-    if (staged.status === "rejected") {
-      // Validate a candidate before asking permission to replace the current
-      // Project. Invalid input never creates a destructive-choice dialog.
-      setStatus(
-        `Project not opened — ${formatProjectOpenDiagnostics(staged.diagnostics)}`,
-      );
-      return;
-    }
-    const performOpen = () => {
-      // A successful open retains the outgoing Project's recovery records
-      // and immediately seeds the incoming Project's own working copy.
-      replaceActiveProject(staged.project, DEFAULT_VIEWBOX, {
-        source: "opened-file",
-        formalFileHint: { name: staged.fileName },
-        formalBaseline: {
-          project: structuredClone(staged.project),
-          viewBox: { ...DEFAULT_VIEWBOX },
-        },
-      });
-      if (staged.migrated) setFileState("dirty");
-      setStatus(
-        staged.migrated
-          ? `Opened and upgraded ${staged.fileName} from schema ${staged.sourceSchemaVersion} to schema ${staged.project.schemaVersion} — save the Project to keep the upgrade`
-          : `Opened ${staged.fileName} at revision ${staged.topDocumentRevision}`,
-      );
-    };
-    if (
-      options.allowExactCurrentReplacement &&
-      serializeProject(staged.project) === serializeProject(project)
-    ) {
-      performOpen();
-      return;
-    }
-    await guardDirtyReplacement(`Open ${file.name}`, performOpen);
-  }
-
-  /** Open a shelved circuit through the same staging path a file uses. */
-  async function openShelvedCircuit(slot: WorkspaceSlot): Promise<void> {
-    const fetched = await openWorkspaceSlot(slot.id);
-    if (fetched.status !== "opened") {
-      setStatus(
-        fetched.status === "signed-out"
-          ? "Sign in again to open your shelf"
-          : fetched.status === "not-found"
-            ? "That shelved circuit is no longer there"
-            : `Could not reach your shelf (${fetched.message})`,
-      );
-      return;
-    }
-    await openProjectFile(
-      {
-        name: `${fetched.name}.icproj.json`,
-        text: () => Promise.resolve(fetched.projectText),
-      } as unknown as File,
-      { allowExactCurrentReplacement: true },
-    );
   }
 
   // Single entry point for selecting a drafting object. Editing is opened
