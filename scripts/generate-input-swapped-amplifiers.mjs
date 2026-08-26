@@ -58,7 +58,7 @@ const midpoint = (primitive) => ({
  */
 function isInputMark(primitive, centerX) {
   if (primitive.part === "input-polarity") return true;
-  if (primitive.part === "output-polarity") return false;
+  if (primitive.part !== undefined) return false;
   if (primitive.kind !== "line") return false;
   const length = Math.hypot(
     primitive.to.x - primitive.from.x,

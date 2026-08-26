@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import {
   executeProjectTransaction,
-  planRemoveCellTerminalMarkers,
+  planRemoveCellTerminals,
 } from "@icm/edit-engine";
 import { createEmptyProject } from "@icm/model";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
@@ -90,10 +90,12 @@ function deleteScene(
   sequence: number,
 ): CircuitProject {
   const document = project.documents[0]!;
-  const markerIds = document.netlist!.terminals.flatMap((terminal) =>
-    terminal.interfaceInstanceIds.filter((instanceId) =>
+  const terminalIds = document.netlist!.terminals.flatMap((terminal) =>
+    terminal.interfaceInstanceIds.some((instanceId) =>
       scene.instanceIds.includes(instanceId),
-    ),
+    )
+      ? [terminal.id]
+      : [],
   );
   const deletionEdits = proposeVisualSelectionDeletion(
     document,
@@ -106,10 +108,10 @@ function deleteScene(
     projectId: project.id,
     expectedStructureRevision: project.structureRevision,
     actor: { kind: "human", id: "test" },
-    edits: planRemoveCellTerminalMarkers(
+    edits: planRemoveCellTerminals(
       project,
       document.id,
-      markerIds,
+      terminalIds,
       deletionEdits,
     ),
   });
@@ -117,13 +119,14 @@ function deleteScene(
   return result.project;
 }
 
-test("places Gallery A, B, A with name-based interfaces and deletes each scene", () => {
+test("places Gallery A, B, A as independent pins and deletes each scene", () => {
   const sceneA = example("current-mirror-loaded-differential-pair");
   const sceneB = example("fully-differential-two-stage-op-amp");
-  const expectedNames = new Set([
+  const expectedNames = [
     ...sceneA.netlist!.terminals.map((terminal) => terminal.name),
     ...sceneB.netlist!.terminals.map((terminal) => terminal.name),
-  ]);
+    ...sceneA.netlist!.terminals.map((terminal) => terminal.name),
+  ].sort();
   let project = createEmptyProject("mixed-gallery", "Mixed Gallery");
 
   const firstA = placeScene(project, sceneA, 1);
@@ -133,30 +136,26 @@ test("places Gallery A, B, A with name-based interfaces and deletes each scene",
   const secondA = placeScene(project, sceneA, 3);
   project = secondA.project;
 
+  const placedTerminals = project.documents[0]!.netlist!.terminals;
+  expect(placedTerminals.map((terminal) => terminal.name).sort()).toEqual(
+    expectedNames,
+  );
   expect(
-    new Set(
-      project.documents[0]!.netlist!.terminals.map((terminal) => terminal.name),
+    placedTerminals.every(
+      (terminal) => terminal.interfaceInstanceIds.length === 1,
     ),
-  ).toEqual(expectedNames);
-  for (const sourceTerminal of sceneA.netlist!.terminals) {
-    expect(
-      project.documents[0]!.netlist!.terminals.find(
-        (terminal) => terminal.name === sourceTerminal.name,
-      )?.interfaceInstanceIds,
-    ).toHaveLength(2);
-  }
-  for (const sourceTerminal of sceneB.netlist!.terminals) {
-    expect(
-      project.documents[0]!.netlist!.terminals.find(
-        (terminal) => terminal.name === sourceTerminal.name,
-      )?.interfaceInstanceIds,
-    ).toHaveLength(1);
-  }
+  ).toBe(true);
+  expect(new Set(placedTerminals.map((terminal) => terminal.id)).size).toBe(
+    placedTerminals.length,
+  );
+  expect(new Set(placedTerminals.map((terminal) => terminal.netId)).size).toBe(
+    placedTerminals.length,
+  );
 
   project = deleteScene(project, onlyB.scene, 1);
-  expect(
-    project.documents[0]!.netlist!.terminals.map((terminal) => terminal.name),
-  ).toEqual(sceneA.netlist!.terminals.map((terminal) => terminal.name));
+  expect(project.documents[0]!.netlist!.terminals).toHaveLength(
+    sceneA.netlist!.terminals.length * 2,
+  );
 
   project = deleteScene(project, firstA.scene, 2);
   expect(project.documents[0]!.netlist!.terminals).toHaveLength(

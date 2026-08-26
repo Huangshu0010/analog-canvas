@@ -40,7 +40,7 @@ describe("Gallery and example commands", () => {
 
     expect(input.cancelAllTransientInteraction).toHaveBeenCalledOnce();
     expect(input.beginCopyPlacement).toHaveBeenCalledWith(
-      expect.objectContaining({ cellTerminalPastePolicy: "merge-by-name" }),
+      expect.objectContaining({ instances: imported.documents[0]!.instances }),
       { x: 100, y: 80 },
     );
     expect(input.setStatus).toHaveBeenCalledWith(

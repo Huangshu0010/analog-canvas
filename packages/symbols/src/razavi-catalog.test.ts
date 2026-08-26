@@ -235,11 +235,37 @@ describe("Razavi symbol catalog", () => {
     expect(invalid.success).toBe(false);
   });
 
-  it("shares the full Op Amp body and continuously joined compact leads", () => {
+  it("keeps the enlarged FD Amp angle, pair spacing, and joined leads", () => {
     const opampTriangle = requireRazaviCatalogSymbol("opamp").primitives.find(
       (primitive) => primitive.kind === "path",
     );
-    expect(opampTriangle).toBeDefined();
+    if (opampTriangle?.kind !== "path") {
+      throw new Error("Op Amp must retain its triangle path");
+    }
+    const pathPoints = (data: string) => {
+      const values = [...data.matchAll(/-?\d+(?:\.\d+)?/gu)].map((match) =>
+        Number(match[0]),
+      );
+      return {
+        leftTop: { x: values[0]!, y: values[1]! },
+        leftBottom: { x: values[2]!, y: values[3]! },
+        apex: { x: values[4]!, y: values[5]! },
+      };
+    };
+    const opampPoints = pathPoints(opampTriangle.data);
+    const opampWidth = opampPoints.apex.x - opampPoints.leftTop.x;
+    const originalFdAspect = (14.9998 - -20) / (14.9993 - -15.0002);
+    const distanceToEdge = (
+      point: { x: number; y: number },
+      from: { x: number; y: number },
+      to: { x: number; y: number },
+    ) =>
+      Math.abs(
+        (to.y - from.y) * point.x -
+          (to.x - from.x) * point.y +
+          to.x * from.y -
+          to.y * from.x,
+      ) / Math.hypot(to.y - from.y, to.x - from.x);
     for (const symbolId of [
       "opamp-differential",
       "opamp-differential-crossed",
@@ -249,17 +275,17 @@ describe("Razavi symbol catalog", () => {
         expect.arrayContaining([
           expect.objectContaining({
             name: "IN+",
-            at: { x: -40, y: 10 },
+            at: { x: -50, y: 20 },
           }),
           expect.objectContaining({
             name: "IN-",
-            at: { x: -40, y: -10 },
+            at: { x: -50, y: -20 },
           }),
           expect.objectContaining({
-            at: { x: 20, y: -10 },
+            at: { x: 10, y: -20 },
           }),
           expect.objectContaining({
-            at: { x: 20, y: 10 },
+            at: { x: 10, y: 20 },
           }),
         ]),
       );
@@ -269,7 +295,62 @@ describe("Razavi symbol catalog", () => {
           style: { strokeRole: "normal" },
         });
       }
-      expect(symbol.primitives[4]).toEqual(opampTriangle);
+      const triangle = symbol.primitives[4];
+      if (triangle?.kind !== "path") {
+        throw new Error("FD Amp must retain its triangle path");
+      }
+      const points = pathPoints(triangle.data);
+      const width = points.apex.x - points.leftTop.x;
+      const height = points.leftBottom.y - points.leftTop.y;
+      expect(width).toBeCloseTo(opampWidth * 1.4, 6);
+      expect((points.leftTop.x + points.apex.x) / 2).toBeCloseTo(
+        (opampPoints.leftTop.x + opampPoints.apex.x) / 2,
+        6,
+      );
+      expect(width / height).toBeCloseTo(originalFdAspect, 5);
+      expect(triangle.style).toEqual(opampTriangle.style);
+      const edgeXAtY = (y: number) =>
+        y <= points.apex.y
+          ? points.leftTop.x +
+            ((y - points.leftTop.y) / (points.apex.y - points.leftTop.y)) *
+              width
+          : points.leftBottom.x +
+            ((points.leftBottom.y - y) /
+              (points.leftBottom.y - points.apex.y)) *
+              width;
+      for (const primitive of symbol.primitives.filter(
+        (candidate) => candidate.part === "output-polarity",
+      )) {
+        if (primitive.kind !== "line") continue;
+        expect(primitive.from.x).toBeLessThan(edgeXAtY(primitive.from.y));
+        expect(primitive.to.x).toBeLessThan(edgeXAtY(primitive.to.y));
+      }
+      const lowerInputMark = symbol.primitives.find(
+        (primitive) =>
+          primitive.kind === "line" &&
+          primitive.part === "input-polarity" &&
+          primitive.from.y === primitive.to.y &&
+          primitive.from.y > 0,
+      );
+      const lowerOutputMark = symbol.primitives.find(
+        (primitive) =>
+          primitive.kind === "line" &&
+          primitive.part === "output-polarity" &&
+          primitive.from.y === primitive.to.y &&
+          primitive.from.y > 0,
+      );
+      if (lowerInputMark?.kind !== "line" || lowerOutputMark?.kind !== "line") {
+        throw new Error("FD Amp lower polarity marks must remain line pairs");
+      }
+      expect(lowerInputMark.from.y).toBeGreaterThan(15);
+      expect(lowerInputMark.from.y).toBeLessThan(16);
+      expect(lowerOutputMark.from.y).toBeGreaterThan(15);
+      expect(lowerOutputMark.from.y).toBeLessThan(16);
+      const lowerInputCenterX =
+        (lowerInputMark.from.x + lowerInputMark.to.x) / 2;
+      const lowerOutputCenterX =
+        (lowerOutputMark.from.x + lowerOutputMark.to.x) / 2;
+      expect(lowerOutputCenterX - lowerInputCenterX).toBeGreaterThan(10);
       const [topInput, bottomInput, topOutput, bottomOutput] =
         symbol.primitives.slice(0, 4);
       if (
@@ -280,10 +361,35 @@ describe("Razavi symbol catalog", () => {
       ) {
         throw new Error("FD Amp leads must remain line primitives");
       }
-      expect(topInput.to.x + 26.7979).toBeCloseTo(1.6, 6);
-      expect(bottomInput.to.x + 26.7979).toBeCloseTo(1.6, 6);
-      expect(3.2007399075137144 - topOutput.from.x).toBeCloseTo(1.6, 6);
-      expect(3.2021 - bottomOutput.from.x).toBeCloseTo(1.6, 6);
+      const triangleHalfStroke = 1.2;
+      expect(topInput.to.x - topInput.from.x).toBeCloseTo(12.0521, 6);
+      expect(bottomInput.to.x - bottomInput.from.x).toBeCloseTo(12.0521, 6);
+      expect(topInput.to.x).toBeLessThan(points.leftTop.x);
+      expect(bottomInput.to.x).toBeLessThan(points.leftBottom.x);
+      expect(
+        topInput.to.x - (points.leftTop.x - triangleHalfStroke),
+      ).toBeCloseTo(0.05, 6);
+      expect(
+        bottomInput.to.x - (points.leftBottom.x - triangleHalfStroke),
+      ).toBeCloseTo(0.05, 6);
+      const topCenterX =
+        points.leftTop.x +
+        ((topOutput.from.y - points.leftTop.y) /
+          (points.apex.y - points.leftTop.y)) *
+          (points.apex.x - points.leftTop.x);
+      const bottomCenterX =
+        points.leftBottom.x +
+        ((points.leftBottom.y - bottomOutput.from.y) /
+          (points.leftBottom.y - points.apex.y)) *
+          (points.apex.x - points.leftBottom.x);
+      expect(topOutput.from.x).toBeCloseTo(topCenterX, 5);
+      expect(bottomOutput.from.x).toBeCloseTo(bottomCenterX, 5);
+      expect(
+        distanceToEdge(topOutput.from, points.leftTop, points.apex),
+      ).toBeCloseTo(0, 5);
+      expect(
+        distanceToEdge(bottomOutput.from, points.leftBottom, points.apex),
+      ).toBeCloseTo(0, 5);
     }
   });
 

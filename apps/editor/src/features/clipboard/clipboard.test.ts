@@ -72,7 +72,6 @@ describe("schematic clipboard", () => {
 
     const clipboard = copySelection(document, ["P1"]);
     expect(clipboard).not.toBeNull();
-    expect(clipboard?.cellTerminalPastePolicy).toBe("independent");
     const proposal = proposePaste(document, clipboard!, { x: 80, y: 0 }, 1);
     const result = executeTransaction(
       document,
@@ -100,7 +99,7 @@ describe("schematic clipboard", () => {
       interfaceInstanceIds: ["P1"],
     });
     expect(copiedTerminal).toMatchObject({
-      name: "VIN_copy",
+      name: "VIN",
       direction: "input",
       interfaceInstanceIds: ["P1-copy-1"],
     });
@@ -811,7 +810,6 @@ describe("copyWholeDocument", () => {
     expect(copySelection(document, [])).toBeNull();
 
     const whole = copyWholeDocument(document);
-    expect(whole?.cellTerminalPastePolicy).toBe("merge-by-name");
     expect(whole?.routes).toHaveLength(1);
     expect(whole?.routes[0]?.presentation).toBe("power-rail");
     expect(whole?.junctions).toHaveLength(2);
@@ -938,7 +936,7 @@ describe("a copy stands on its own", () => {
       result.document.netlist?.terminals.find((terminal) =>
         terminal.interfaceInstanceIds.includes(copyId),
       )?.name,
-    ).toBe("P12_copy");
+    ).toBe("P12");
 
     const secondProposal = proposePaste(
       result.document,
@@ -964,6 +962,6 @@ describe("a copy stands on its own", () => {
       secondResult.document.netlist?.terminals.find((terminal) =>
         terminal.interfaceInstanceIds.includes(secondCopyId),
       )?.name,
-    ).toBe("P12_copy2");
+    ).toBe("P12");
   });
 });

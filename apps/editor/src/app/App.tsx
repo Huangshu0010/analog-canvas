@@ -15,7 +15,7 @@ import {
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
   planDeleteCell,
-  planRemoveCellTerminalMarkers,
+  planRemoveCellTerminals,
   planEditCellTerminalAnnotation,
   planCellReset,
   type SchematicEdit,
@@ -2251,10 +2251,10 @@ export function App({
   function deleteSelectedFormalPort(): void {
     if (!selectedFormalTerminal || !selectedInstance) return;
     try {
-      const edits = planRemoveCellTerminalMarkers(
+      const edits = planRemoveCellTerminals(
         project,
         document.id,
-        [selectedInstance.id],
+        [selectedFormalTerminal.id],
         proposeConnectedInstanceDeletion(
           document,
           resolver,
@@ -2284,11 +2284,6 @@ export function App({
       deleteSelectionFromSelection();
       return;
     }
-    const selectedFormalMarkerIds = formalTerminals.flatMap((terminal) =>
-      terminal.interfaceInstanceIds.filter((instanceId) =>
-        visualSelection.instanceIds.includes(instanceId),
-      ),
-    );
     try {
       const deletionEdits = proposeVisualSelectionDeletion(
         document,
@@ -2296,14 +2291,14 @@ export function App({
         visualSelection,
         ++uniqueSuffixCounter.current,
       );
-      if (selectedFormalMarkerIds.length > 0) {
+      if (formalTerminals.length > 0) {
         if (
           commitStructure(
             "delete-cell-pin-selection",
-            planRemoveCellTerminalMarkers(
+            planRemoveCellTerminals(
               project,
               document.id,
-              selectedFormalMarkerIds,
+              formalTerminals.map((terminal) => terminal.id),
               deletionEdits,
             ),
           )

@@ -36,14 +36,8 @@ export interface SchematicClipboard {
   instances: Instance[];
   cellTerminals: CellNetlistTerminal[];
   /**
-   * Ordinary selection copies create independently editable Cell Pins. A
-   * whole-Document import instead composes scenes by their declared interface,
-   * so matching Cell Pin names join the existing terminal and Base Net.
-   */
-  cellTerminalPastePolicy: "independent" | "merge-by-name";
-  /**
-   * Nets entirely inside the copied selection. They are duplicated (or merged
-   * by name) when the copy is committed.
+   * Nets entirely inside the copied selection. They are duplicated when the
+   * copy is committed.
    */
   nets: Net[];
   /**
@@ -356,7 +350,6 @@ export function copyWholeDocument(
   return structuredClone({
     instances: document.instances,
     cellTerminals: document.netlist?.terminals ?? [],
-    cellTerminalPastePolicy: "merge-by-name",
     nets: document.nets.filter((net) => netIds.has(net.id)),
     boundaryNets: [],
     routes: document.routes,
@@ -401,7 +394,6 @@ export function copySelection(
   const annotationIds = new Set(annotations.map((annotation) => annotation.id));
   return structuredClone({
     instances,
-    cellTerminalPastePolicy: "independent",
     cellTerminals:
       document.netlist?.terminals.flatMap((terminal) => {
         const interfaceInstanceIds = terminal.interfaceInstanceIds.filter(
@@ -536,35 +528,6 @@ function pastedSchematicReference(
   }
   reserved.add(candidate.toLowerCase());
   return candidate;
-}
-
-/**
- * A copied Cell Pin is a new formal interface, not another visual projection
- * of the source terminal. Preserve the source name when pasting into another
- * Document where it is free; an in-place copy receives a stable, readable
- * suffix instead. Cell-terminal names are unique case-insensitively.
- */
-function pastedCellTerminalName(
-  sourceName: string,
-  occupiedNames: Set<string>,
-): string {
-  const claim = (candidate: string): string | null => {
-    const folded = candidate.toLowerCase();
-    if (occupiedNames.has(folded)) return null;
-    occupiedNames.add(folded);
-    return candidate;
-  };
-  const unchanged = claim(sourceName);
-  if (unchanged) return unchanged;
-
-  let ordinal = 1;
-  while (true) {
-    const suffix = ordinal === 1 ? "_copy" : `_copy${ordinal}`;
-    const candidate = `${sourceName.slice(0, 128 - suffix.length)}${suffix}`;
-    const available = claim(candidate);
-    if (available) return available;
-    ordinal += 1;
-  }
 }
 
 /**
@@ -772,55 +735,14 @@ export function proposePaste(
     ]),
   );
   const errors: string[] = [];
-  const targetTerminalBySourceId = new Map(
-    clipboard.cellTerminalPastePolicy === "merge-by-name"
-      ? clipboard.cellTerminals.flatMap((terminal) => {
-          const existing = document.netlist?.terminals.find(
-            (candidate) =>
-              candidate.id === terminal.id ||
-              candidate.name.toLowerCase() === terminal.name.toLowerCase(),
-          );
-          return existing ? [[terminal.id, existing] as const] : [];
-        })
-      : [],
-  );
   const terminalIds = new Map(
     clipboard.cellTerminals.map((terminal) => [
       terminal.id,
-      targetTerminalBySourceId.get(terminal.id)?.id ??
-        uniqueCopyId(terminal.id, sequence, occupied),
+      uniqueCopyId(terminal.id, sequence, occupied),
     ]),
   );
-  const occupiedTerminalNames = new Set(
-    (document.netlist?.terminals ?? []).map((terminal) =>
-      terminal.name.toLowerCase(),
-    ),
-  );
-  const terminalNames = new Map(
-    clipboard.cellTerminals.map((terminal) => [
-      terminal.id,
-      targetTerminalBySourceId.get(terminal.id)?.name ??
-        pastedCellTerminalName(terminal.name, occupiedTerminalNames),
-    ]),
-  );
-  const existingAnchors = new Map<string, RouteEndpoint>();
   for (const net of clipboard.nets) {
-    const formalTerminal = clipboard.cellTerminals.find(
-      (terminal) => terminal.netId === net.id,
-    );
-    const existingTerminal = formalTerminal
-      ? targetTerminalBySourceId.get(formalTerminal.id)
-      : undefined;
-    if (existingTerminal) {
-      netIds.set(net.id, existingTerminal.netId);
-      const existingNet = document.nets.find(
-        (candidate) => candidate.id === existingTerminal.netId,
-      );
-      const anchor = existingNet ? firstNetEndpoint(existingNet) : null;
-      if (anchor) existingAnchors.set(net.id, anchor);
-    } else {
-      netIds.set(net.id, uniqueCopyId(net.id, sequence, occupied));
-    }
+    netIds.set(net.id, uniqueCopyId(net.id, sequence, occupied));
   }
   const objectIds = new Map<string, string>([
     ...instanceIds,
@@ -875,28 +797,15 @@ export function proposePaste(
       },
     );
     if (copiedMarkerIds.length === 0) continue;
-    const existingTerminal = targetTerminalBySourceId.get(terminal.id);
-    edits.push(
-      existingTerminal
-        ? {
-            kind: "update_cell_terminal",
-            terminalId: existingTerminal.id,
-            interfaceInstanceIds: [
-              ...existingTerminal.interfaceInstanceIds,
-              ...copiedMarkerIds,
-            ],
-          }
-        : {
-            kind: "add_cell_terminal",
-            terminal: {
-              ...terminal,
-              id: terminalIds.get(terminal.id)!,
-              name: terminalNames.get(terminal.id)!,
-              netId: netIds.get(terminal.netId) ?? terminal.netId,
-              interfaceInstanceIds: copiedMarkerIds,
-            },
-          },
-    );
+    edits.push({
+      kind: "add_cell_terminal",
+      terminal: {
+        ...terminal,
+        id: terminalIds.get(terminal.id)!,
+        netId: netIds.get(terminal.netId) ?? terminal.netId,
+        interfaceInstanceIds: copiedMarkerIds,
+      },
+    });
   }
 
   for (const net of clipboard.nets) {
@@ -906,16 +815,7 @@ export function proposePaste(
       pinName: terminal.pinName,
     }));
     const netId = netIds.get(net.id)!;
-    const existingAnchor = existingAnchors.get(net.id);
-    if (existingAnchor) {
-      for (const terminal of mappedTerminals) {
-        edits.push({
-          kind: "connect_endpoints",
-          from: existingAnchor,
-          to: terminal,
-        });
-      }
-    } else if (mappedTerminals[0]) {
+    if (mappedTerminals[0]) {
       edits.push({
         kind: "connect_endpoints",
         from: mappedTerminals[0],
