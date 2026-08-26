@@ -275,20 +275,12 @@ import { useDocumentController } from "../document/document-controller";
 import { useProjectFileLifecycle } from "../document/use-project-file-lifecycle";
 import {
   applyDraftingHandle,
-  applyDraftingStylePatch,
-  deleteConstructionVertex as deleteConstructionVertexObject,
   draftingDragOrigin,
-  insertArrowWaypoint as insertArrowWaypointObject,
-  insertConstructionVertex as insertConstructionVertexObject,
   rotateDraftingObject,
-  setDraftingBearing as setDraftingObjectBearing,
-  setDraftingTangentAngle as setDraftingObjectTangentAngle,
   translateDraftingObject,
 } from "../features/drafting/drafting-manipulation";
-import type {
-  DraftingHandle,
-  DraftingStylePatch,
-} from "../features/drafting/drafting-manipulation";
+import type { DraftingHandle } from "../features/drafting/drafting-manipulation";
+import { createDraftingCommands } from "../features/drafting/drafting-commands";
 import {
   EditorInteractionPreviews,
   EditorPlacementPreview,
@@ -1843,6 +1835,36 @@ export function App({
     document.routes.length === 0 &&
     document.annotations.length === 0 &&
     (document.drafting?.objects.length ?? 0) === 0;
+  const {
+    insertConstructionVertex,
+    insertArrowWaypoint,
+    deleteConstructionVertex,
+    setDraftingStyle,
+    setDraftingTangentAngle,
+    setDraftingBearing,
+    toggleDraftingLock,
+    addPlainText,
+    addCurrentArrow,
+    reverseSelectedDrafting,
+  } = createDraftingCommands({
+    document,
+    resolver,
+    viewBox,
+    selection: visualSelection,
+    selectedDrafting,
+    inspectorSegment: draftingInspectorSegment,
+    selectedRoute,
+    selectedRouteSegmentIndex,
+    routeGeometryRecords,
+    transact,
+    setStatus,
+    nextId: (prefix) => {
+      uniqueSuffixCounter.current += 1;
+      return `${prefix}-${uniqueSuffixCounter.current}`;
+    },
+    beginTextEditing: beginDraftingTextEditing,
+    selectAnnotation: (id) => selectOnly("annotation", [id]),
+  });
 
   function compositeSelectionOwnsHit(
     kind: "instance" | "instance-label" | "annotation" | "route" | "junction",
@@ -4271,319 +4293,6 @@ export function App({
     });
   }
 
-  // Insert a vertex on a construction line at the clicked point, on the nearest
-  // segment. Commits one transaction. Used by the construction-line hit shape's
-  // double-click handler.
-  function insertConstructionVertex(
-    object: Extract<DraftingObject, { kind: "construction-line" }>,
-    point: Point,
-  ): void {
-    const next = insertConstructionVertexObject(object, point);
-    if (!next) return;
-    // An explicit vertex is a straightening operation for the selected
-    // segment. It avoids silently reinterpreting a Bézier control after the
-    // segment count changes.
-    transact([
-      {
-        kind: "upsert_drafting_object",
-        object: next.object,
-      },
-    ]);
-    setStatus(`Inserted vertex ${next.index}`);
-  }
-
-  // Free arrows share the same midpoint editing model as construction lines.
-  // The inserted point is deliberately a waypoint, never an endpoint anchor:
-  // an attached arrow endpoint therefore remains attached after reshaping.
-  function insertArrowWaypoint(
-    object: Extract<DraftingObject, { kind: "arrow" }>,
-    point: Point,
-  ): void {
-    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
-    if (geometry.kind !== "arrow") return;
-    const next = insertArrowWaypointObject(object, geometry, point);
-    if (!next) return;
-    transact([
-      {
-        kind: "upsert_drafting_object",
-        object: next.object,
-      },
-    ]);
-    setStatus(`Inserted arrow bend ${next.index + 1}`);
-  }
-
-  // Delete a vertex from a construction line by index; refuse below 2 vertices.
-  function deleteConstructionVertex(
-    object: Extract<DraftingObject, { kind: "construction-line" }>,
-    index: number,
-  ): void {
-    const next = deleteConstructionVertexObject(object, index);
-    if (next.kind === "minimum") {
-      setStatus("A construction line needs at least two vertices");
-      return;
-    }
-    if (next.kind !== "updated") return;
-    transact([{ kind: "upsert_drafting_object", object: next.object }]);
-    setStatus(`Deleted vertex ${index}`);
-  }
-
-  // Apply a bounded style change to the selected drafting object(s). `patch` is
-  // merged into styleOverride (undefined keys clear that property). One
-  // upsert_drafting_object transaction per object. Applies to free arrows and
-  // construction lines; route current markers keep their own binding.
-  function setDraftingStyle(patch: DraftingStylePatch): void {
-    const ids = visualSelection.draftingIds;
-    if (ids.length === 0) return;
-    const edits: SchematicEdit[] = [];
-    for (const id of ids) {
-      const object = document.drafting?.objects.find(
-        (candidate) => candidate.id === id,
-      );
-      if (!object) continue;
-      const nextObject = applyDraftingStylePatch(object, patch);
-      if (!nextObject) continue;
-      edits.push({
-        kind: "upsert_drafting_object",
-        object: nextObject,
-      });
-    }
-    if (edits.length > 0) {
-      const result = transact(edits);
-      if (result.ok) setStatus("Updated drawing style");
-    } else if (ids.length > 0) {
-      setStatus("Drawing is locked; unlock it before editing its style");
-    }
-  }
-
-  function setDraftingTangentAngle(angleDegrees: number): void {
-    if (
-      !selectedDrafting ||
-      selectedDrafting.locked ||
-      (selectedDrafting.kind !== "arrow" &&
-        selectedDrafting.kind !== "construction-line") ||
-      !Number.isFinite(angleDegrees)
-    ) {
-      return;
-    }
-    const geometry = resolveDraftingObjectGeometry(
-      document,
-      resolver,
-      selectedDrafting,
-    );
-    if (geometry.kind !== selectedDrafting.kind) return;
-    const index =
-      draftingInspectorSegment?.objectId === selectedDrafting.id
-        ? draftingInspectorSegment.index
-        : Math.max(0, geometry.curveControls.findIndex(Boolean));
-    if (index >= geometry.points.length - 1) return;
-    const next = setDraftingObjectTangentAngle(
-      selectedDrafting,
-      geometry,
-      index,
-      angleDegrees,
-      document.presentation.grid,
-    );
-    if (!next) return;
-    transact([
-      {
-        kind: "upsert_drafting_object",
-        object: next,
-      },
-    ]);
-  }
-
-  function setDraftingBearing(bearingDegrees: number): void {
-    if (
-      !selectedDrafting ||
-      selectedDrafting.locked ||
-      (selectedDrafting.kind !== "arrow" &&
-        selectedDrafting.kind !== "construction-line" &&
-        selectedDrafting.kind !== "rectangle") ||
-      !Number.isFinite(bearingDegrees)
-    ) {
-      return;
-    }
-    const geometry = resolveDraftingObjectGeometry(
-      document,
-      resolver,
-      selectedDrafting,
-    );
-    const next = setDraftingObjectBearing(
-      selectedDrafting,
-      geometry,
-      bearingDegrees,
-      document.presentation.grid,
-    );
-    if (next.kind === "attached-arrow") {
-      setStatus(
-        "An attached arrow cannot rotate without detaching its endpoints",
-      );
-      return;
-    }
-    if (next.kind !== "updated") return;
-    transact([{ kind: "upsert_drafting_object", object: next.object }]);
-  }
-
-  function toggleDraftingLock(object: DraftingObject): void {
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: { ...object, locked: !object.locked },
-      },
-    ]);
-    if (result?.ok) {
-      setStatus(
-        object.locked
-          ? "Drawing unlocked; it can now be edited or deleted"
-          : "Drawing locked; unlock it before editing or deleting",
-      );
-    }
-  }
-
-  function addPlainText(): void {
-    uniqueSuffixCounter.current += 1;
-    const id = `note-${uniqueSuffixCounter.current}`;
-    const position = snapGridPoint(
-      {
-        x: Math.round(viewBox.x + viewBox.width / 2),
-        y: Math.round(viewBox.y + viewBox.height - 20),
-      },
-      document.presentation.grid,
-    );
-    const textObject: Extract<DraftingObject, { kind: "text" }> = {
-      id,
-      kind: "text",
-      locked: false,
-      zIndex: 0,
-      anchor: { kind: "free", position },
-      content: defaultDraftTextDocument("Design note"),
-      alignment: "middle",
-      rotation: 0,
-      typographyToken: "label",
-    };
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: textObject,
-      },
-    ]);
-    if (result.ok) {
-      beginDraftingTextEditing(textObject);
-      setStatus(`Added drafting text ${id}`);
-    }
-  }
-
-  function addConstructionLine(): void {
-    uniqueSuffixCounter.current += 1;
-    const id = `construction-${uniqueSuffixCounter.current}`;
-    const center = snapGridPoint(
-      {
-        x: Math.round(viewBox.x + viewBox.width / 2),
-        y: Math.round(viewBox.y + viewBox.height / 2),
-      },
-      document.presentation.grid,
-    );
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: {
-          id,
-          kind: "construction-line",
-          locked: false,
-          zIndex: 0,
-          anchor: { kind: "free", position: center },
-          points: [
-            { x: center.x - 80, y: center.y },
-            { x: center.x + 80, y: center.y },
-          ],
-          lineStyle: "dashed",
-        },
-      },
-    ]);
-    if (result.ok) setStatus(`Added construction line ${id}`);
-  }
-
-  function addFreeArrow(): void {
-    uniqueSuffixCounter.current += 1;
-    const id = `arrow-${uniqueSuffixCounter.current}`;
-    const center = snapGridPoint(
-      {
-        x: Math.round(viewBox.x + viewBox.width / 2),
-        y: Math.round(viewBox.y + viewBox.height / 2),
-      },
-      document.presentation.grid,
-    );
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: {
-          id,
-          kind: "arrow",
-          locked: false,
-          zIndex: 0,
-          anchor: { kind: "free", position: center },
-          from: { kind: "free", position: { x: center.x - 60, y: center.y } },
-          to: { kind: "free", position: { x: center.x + 60, y: center.y } },
-        },
-      },
-    ]);
-    if (result.ok) setStatus(`Added free arrow ${id}`);
-  }
-
-  function addCurrentArrow(): void {
-    if (!selectedRoute) {
-      setStatus("Select a wire segment before adding a current arrow");
-      return;
-    }
-    const segmentIndex = Math.min(
-      selectedRouteSegmentIndex ?? 0,
-      selectedRoute.segmentModes.length - 1,
-    );
-    const record = routeGeometryRecords.find(
-      ({ route }) => route.id === selectedRoute.id,
-    );
-    const from = record?.geometry.centerline[segmentIndex];
-    const to = record?.geometry.centerline[segmentIndex + 1];
-    if (!from || !to) {
-      setStatus("Selected wire segment cannot accept a current arrow");
-      return;
-    }
-    uniqueSuffixCounter.current += 1;
-    const id = `current-${uniqueSuffixCounter.current}`;
-    const fallbackPosition = snapGridPoint(
-      { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 },
-      document.presentation.grid,
-    );
-    const result = transact([
-      {
-        kind: "upsert_schematic_annotation",
-        annotation: {
-          id,
-          kind: "route-marker",
-          markerKind: "current",
-          content: semanticTextDocument("I_x", "route-marker"),
-          anchor: {
-            kind: "route",
-            routeId: selectedRoute.id,
-            segmentIndex,
-            t: 0.5,
-            normalOffset: -14,
-            direction: "forward",
-            orientation: "follow",
-            fallbackPosition,
-          },
-          alignment: "middle",
-          rotation: 0,
-          locked: false,
-        },
-      },
-    ]);
-    if (result.ok) {
-      selectOnly("annotation", [id]);
-      setStatus(`Added current arrow on ${selectedRoute.id}`);
-    }
-  }
-
   function referenceLabelVisibilityEdits(
     instanceIds: readonly string[],
     visible: boolean,
@@ -6902,26 +6611,7 @@ export function App({
                   onStyleChange={setDraftingStyle}
                   onTangentAngleChange={setDraftingTangentAngle}
                   onBearingChange={setDraftingBearing}
-                  onReverse={() => {
-                    if (selectedDrafting.kind !== "arrow") return;
-                    const { from, to } = selectedDrafting;
-                    transact([
-                      {
-                        kind: "upsert_drafting_object",
-                        object: {
-                          ...selectedDrafting,
-                          from: to,
-                          to: from,
-                          waypoints: [
-                            ...(selectedDrafting.waypoints ?? []),
-                          ].reverse(),
-                          curveControls: [
-                            ...(selectedDrafting.curveControls ?? []),
-                          ].reverse(),
-                        },
-                      },
-                    ]);
-                  }}
+                  onReverse={reverseSelectedDrafting}
                   onRotate={() =>
                     editorCommands.execute({ id: "transform.rotate" })
                   }
