@@ -2,6 +2,10 @@
 
 Status: accepted
 
+The clipboard-copy clause is superseded by
+[ADR 0045](0045-independent-cell-pin-copy.md). Explicitly authored repeated
+markers remain part of this decision.
+
 Date: 2026-08-21
 
 Owners: `packages/model`, `packages/project-protocol`,

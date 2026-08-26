@@ -42,12 +42,15 @@ other directions are balanced automatically. The symbol body and pin placement
 adapt without a separate interface editor.
 
 Each visible marker remains an ordinary Instance for selection, move, wiring,
-copy, and deletion. Copying a Cell Pin, or placing the same Pin name again,
-creates another visual marker for the same formal terminal and Net. The
-`.subckt` interface still contains that Pin exactly once. Repeated names that
-only name an internal Net use Net Labels instead. The Cell terminal adds stable
-identity, ordering, and the Net binding used by parent blocks and netlist
-export.
+copy, and deletion. Copying a Cell Pin creates a new formal terminal with an
+independent stable identity, name, direction, and internal Base Net. An
+in-place copy receives a unique name such as `VIN_copy`; later edits to either
+Pin do not affect the other. As with every copied connected component, a Pin
+whose Net crosses the selection boundary remains attached to that existing
+Net, but its formal interface identity is still independent. Explicitly
+placing the same Pin name again remains the way to create another visual marker
+for one shared formal terminal. Repeated names that only name an internal Net
+use Net Labels instead.
 
 Renaming that annotation updates all connected parent Instances atomically.
 Deleting a Cell Pin removes its terminal and automatically detaches every child

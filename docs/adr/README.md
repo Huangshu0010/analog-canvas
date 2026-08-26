@@ -93,6 +93,9 @@ visual markers for one formal terminal is
 The separation of imported source provenance from electrical equivalence, and
 the reviewed external-master ERC classification, is
 [`0044-imported-source-provenance.md`](0044-imported-source-provenance.md).
+The independent Cell-Pin clipboard identity decision, partially superseding
+the copy clauses of ADRs 0037 and 0043, is
+[`0045-independent-cell-pin-copy.md`](0045-independent-cell-pin-copy.md).
 The arbitrary-angle Route authoring decision is
 [`0039-any-angle-route-authoring.md`](0039-any-angle-route-authoring.md).
 
