@@ -165,6 +165,7 @@ import {
   requestBrowserDownload,
 } from "../features/editor-shell/editor-export-commands";
 import { EditorStatusbar } from "../features/editor-shell/editor-statusbar";
+import { EditorTestTelemetry } from "../features/editor-shell/editor-test-telemetry";
 import {
   cellInsertLaunch,
   fullInsertLaunch,
@@ -6277,40 +6278,27 @@ export function App({
           onManageCells={() => setCellManagerOpen(true)}
           onPlaceCell={placeCellInstance}
         />
-        <div data-testid="editor-test-telemetry" hidden>
-          <output data-testid="selected-internal-route-count">
-            {internalSelection.routeIds.length}
-          </output>
-          <output data-testid="revision">{document.revision}</output>
-          <output data-testid="source-status">{document.sourceStatus}</output>
-          <output data-testid="document-count">
-            {project.documents.length}
-          </output>
-          <output data-testid="active-document-id">{document.id}</output>
-          <output data-testid="active-instance-count">
-            {document.instances.length}
-          </output>
-          <output data-testid="instance-count">{projectInstanceCount}</output>
-          <output data-testid="net-count">{document.nets.length}</output>
-          <output data-testid="active-tool">{tool}</output>
-          <output data-testid="flightline-count">{flightlines.length}</output>
-          <output data-testid="displayed-flightline-count">
-            {displayedFlightlines.length}
-          </output>
-          <output data-testid="crossing-count">{crossings.length}</output>
-          <output data-testid="annotation-count">
-            {document.annotations.length}
-          </output>
-          <output data-testid="structural-diagnostic-count">
-            {visualDiagnosticSummary.structural.length}
-          </output>
-          <output data-testid="visual-diagnostic-count">
-            {visualDiagnosticSummary.observations.length}
-          </output>
-          <output data-testid="blocking-diagnostic-count">
-            {visualDiagnosticSummary.blockingCount}
-          </output>
-        </div>
+        <EditorTestTelemetry
+          snapshot={{
+            selectedInternalRouteCount: internalSelection.routeIds.length,
+            revision: document.revision,
+            sourceStatus: document.sourceStatus,
+            documentCount: project.documents.length,
+            activeDocumentId: document.id,
+            activeInstanceCount: document.instances.length,
+            instanceCount: projectInstanceCount,
+            netCount: document.nets.length,
+            activeTool: tool,
+            flightlineCount: flightlines.length,
+            displayedFlightlineCount: displayedFlightlines.length,
+            crossingCount: crossings.length,
+            annotationCount: document.annotations.length,
+            structuralDiagnosticCount:
+              visualDiagnosticSummary.structural.length,
+            visualDiagnosticCount: visualDiagnosticSummary.observations.length,
+            blockingDiagnosticCount: visualDiagnosticSummary.blockingCount,
+          }}
+        />
       </header>
       <Suspense fallback={null}>
         {helpOpen ? (
