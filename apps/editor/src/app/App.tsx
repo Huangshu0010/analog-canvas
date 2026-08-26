@@ -166,6 +166,14 @@ import { EditorStatusbar } from "../features/editor-shell/editor-statusbar";
 import { EditorTestTelemetry } from "../features/editor-shell/editor-test-telemetry";
 import { useCellSymbolLayout } from "../features/hierarchy/use-cell-symbol-layout";
 import {
+  AnnotationActionsSection,
+  EndpointActionsSection,
+  GroupDisplayToggles,
+  MosBulkConnectionSection,
+  RouteActionsSection,
+  RoutingGuidanceSection,
+} from "../features/selection/selection-context-actions";
+import {
   cellInsertLaunch,
   fullInsertLaunch,
 } from "../features/component-insert/insert-launch";
@@ -183,7 +191,6 @@ import {
 import { ComponentElectricalProperties } from "../features/properties/component-electrical-properties";
 import { ComponentPlacementProperties } from "../features/properties/component-placement-properties";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
-import { DisplayToggle } from "../features/component-insert/display-toggle";
 import {
   constrainedPowerRailEndpoint,
   constructVddRailEdits,
@@ -6645,98 +6652,43 @@ export function App({
                   onChangeBulkDefault={updateMosBulkDefault}
                 />
               ) : null}
-              {selectedInstance && selectedBulkResolution ? (
-                <section
-                  className="context-actions"
-                  aria-label="MOS bulk connection"
-                >
-                  <h2>Bulk</h2>
-                  <button
-                    type="button"
-                    className="bulk-draw-action"
-                    data-testid="draw-bulk-connection"
-                    onClick={drawSelectedMosBulk}
-                  >
-                    Draw bulk connection
-                  </button>
-                  <p>
-                    {selectedInstance.id}.B →{" "}
-                    {selectedBulkResolution.net
-                      ? (resolveDocumentLogicalNets(document).byBaseNetId.get(
-                          selectedBulkResolution.net.id,
-                        )?.name ?? selectedBulkResolution.net.id)
-                      : "unresolved"}
-                    {" · "}
-                    {selectedBulkResolution.status}
-                  </p>
-                  {selectedHiddenBulkNet ? (
-                    <p>Explicit bulk is shown with a Razavi dashed route.</p>
-                  ) : null}
-                </section>
-              ) : null}
-              {flightlines.length > 0 ? (
-                <section
-                  className="context-actions"
-                  aria-label="Routing guidance"
-                >
-                  <h2>Imported routing guidance</h2>
-                  <div className="component-mirror-row">
-                    {(
-                      [
-                        ["focused", "Focused"],
-                        ["all", "All"],
-                        ["hidden", "Hide"],
-                      ] as const
-                    ).map(([view, label]) => (
-                      <button
-                        type="button"
-                        aria-pressed={routingGuidanceView === view}
-                        key={view}
-                        onClick={() => setRoutingGuidanceView(view)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <small>
-                    {displayedFlightlines.length} shown / {flightlines.length}{" "}
-                    derived. Guidance exists only for imported Nets.
-                  </small>
-                </section>
-              ) : null}
+              <MosBulkConnectionSection
+                connection={
+                  selectedInstance && selectedBulkResolution
+                    ? `${selectedInstance.id}.B → ${
+                        selectedBulkResolution.net
+                          ? (resolveDocumentLogicalNets(
+                              document,
+                            ).byBaseNetId.get(selectedBulkResolution.net.id)
+                              ?.name ?? selectedBulkResolution.net.id)
+                          : "unresolved"
+                      } · ${selectedBulkResolution.status}`
+                    : null
+                }
+                explicitRouteVisible={Boolean(selectedHiddenBulkNet)}
+                onDraw={drawSelectedMosBulk}
+              />
+              <RoutingGuidanceSection
+                total={flightlines.length}
+                displayed={displayedFlightlines.length}
+                view={routingGuidanceView}
+                onViewChange={setRoutingGuidanceView}
+              />
               {!hasInspectableSelection ? (
                 <p className="inspect-empty">Select an object to inspect.</p>
               ) : null}
-              {selectedIds.length > 1 ? (
-                <section
-                  className="property-section"
-                  aria-label="Group display toggles"
-                >
-                  <div className="property-section-heading">Canvas labels</div>
-                  <div className="display-toggle-row">
-                    <DisplayToggle
-                      label="Reference"
-                      checked={selectedGroupLabelsAllVisible}
-                      onChange={(checked) =>
-                        setReferenceLabelsVisible(selectedIds, checked)
-                      }
-                    />
-                    <DisplayToggle
-                      label="Value"
-                      checked={selectedGroupValuesAllVisible}
-                      disabled={!selectedGroupValueAvailable}
-                      help={
-                        selectedGroupValueAvailable
-                          ? undefined
-                          : "Fill device parameters first"
-                      }
-                      onChange={(checked) =>
-                        setValueLabelsVisible(selectedIds, checked)
-                      }
-                    />
-                  </div>
-                </section>
-              ) : null}
+              <GroupDisplayToggles
+                active={selectedIds.length > 1}
+                referencesVisible={selectedGroupLabelsAllVisible}
+                valuesVisible={selectedGroupValuesAllVisible}
+                valuesAvailable={selectedGroupValueAvailable}
+                onReferencesVisibleChange={(visible) =>
+                  setReferenceLabelsVisible(selectedIds, visible)
+                }
+                onValuesVisibleChange={(visible) =>
+                  setValueLabelsVisible(selectedIds, visible)
+                }
+              />
               {selectedInstance ? (
                 <section
                   className="property-section component-properties"
@@ -6988,115 +6940,45 @@ export function App({
                 }}
                 onPlace={beginRetainedInstancePlacementFromHook}
               />
-              {selectedRouteId ? (
-                <section className="context-actions" aria-label="Route actions">
-                  <h2>Electrical route</h2>
-                  <label>
-                    Electrical Net label
-                    <input
-                      ref={netLabelPropertyInputRef}
-                      aria-label="Electrical Net label"
-                      value={netLabelDraft}
-                      onChange={(event) =>
-                        updateNetLabelDraft(event.currentTarget.value)
-                      }
-                    />
-                  </label>
-                  <button type="button" onClick={deleteSelectedRouteNetLabel}>
-                    Delete Net label
-                  </button>
-                  <button type="button" onClick={addCurrentArrow}>
-                    Add current arrow
-                  </button>
-                  <button type="button" onClick={toggleHighlightedNet}>
-                    {selectedHighlightIsActive
-                      ? "Clear Net highlight (H)"
-                      : "Highlight Net (H)"}
-                  </button>
-                  <button type="button" onClick={deleteSelectedRouteConnection}>
-                    Delete wire
-                  </button>
-                </section>
-              ) : null}
-              {selectedEndpoint &&
-              selectedEndpoint.endpoint.kind !== "junction" ? (
-                <section
-                  className="context-actions"
-                  aria-label="Endpoint actions"
-                >
-                  <h2>Endpoint</h2>
-                  <button
-                    type="button"
-                    onClick={() => disconnectSelectedEndpoint(false)}
-                  >
-                    Disconnect endpoint
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => disconnectSelectedEndpoint(true)}
-                  >
-                    Delete connection
-                  </button>
-                  <button
-                    type="button"
-                    onClick={toggleSelectedNoConnectFromSelection}
-                    disabled={
-                      !selectedNoConnect && selectedEndpointNetId !== null
-                    }
-                  >
-                    {selectedNoConnect ? "Clear No Connect" : "Mark No Connect"}
-                  </button>
-                  {!selectedNoConnect && selectedEndpointNetId ? (
-                    <small>
-                      Disconnect this endpoint before marking No Connect.
-                    </small>
-                  ) : null}
-                </section>
-              ) : null}
-              {selectedEndpoint?.endpoint.kind === "junction" ? (
-                <section
-                  className="context-actions"
-                  aria-label="Junction actions"
-                >
-                  <h2>Junction</h2>
-                  <button
-                    type="button"
-                    onClick={deleteSelectedJunctionFromSelection}
-                  >
-                    Delete junction and attached wires
-                  </button>
-                </section>
-              ) : null}
-              {selectedAnnotation && isRoutedMarker(selectedAnnotation) ? (
-                <section
-                  className="context-actions"
-                  aria-label="Current arrow actions"
-                >
-                  <h2>Current arrow</h2>
-                  <button type="button" onClick={reverseSelectedCurrentArrow}>
-                    Reverse direction (X)
-                  </button>
-                  <small>Drag to slide along the wire or move its label.</small>
-                  <button type="button" onClick={deleteSelectedAnnotation}>
-                    Delete current arrow
-                  </button>
-                </section>
-              ) : null}
-              {selectedAnnotation &&
-              !isRoutedMarker(selectedAnnotation) &&
-              selectedNetLabelBinding ? (
-                <section
-                  className="context-actions"
-                  aria-label="Annotation actions"
-                >
-                  <h2>Annotation</h2>
-                  <button type="button" onClick={toggleHighlightedNet}>
-                    {selectedHighlightIsActive
-                      ? "Clear Net highlight (H)"
-                      : "Highlight Net (H)"}
-                  </button>
-                </section>
-              ) : null}
+              <RouteActionsSection
+                active={selectedRouteId !== null}
+                netLabelInputRef={netLabelPropertyInputRef}
+                netLabel={netLabelDraft}
+                highlightActive={selectedHighlightIsActive}
+                onNetLabelChange={updateNetLabelDraft}
+                onDeleteNetLabel={deleteSelectedRouteNetLabel}
+                onAddCurrentArrow={addCurrentArrow}
+                onToggleHighlight={toggleHighlightedNet}
+                onDeleteWire={deleteSelectedRouteConnection}
+              />
+              <EndpointActionsSection
+                kind={
+                  selectedEndpoint
+                    ? selectedEndpoint.endpoint.kind === "junction"
+                      ? "junction"
+                      : "terminal"
+                    : null
+                }
+                noConnect={Boolean(selectedNoConnect)}
+                endpointNetId={selectedEndpointNetId}
+                onDisconnect={() => disconnectSelectedEndpoint(false)}
+                onDeleteConnection={() => disconnectSelectedEndpoint(true)}
+                onToggleNoConnect={toggleSelectedNoConnectFromSelection}
+                onDeleteJunction={deleteSelectedJunctionFromSelection}
+              />
+              <AnnotationActionsSection
+                kind={
+                  selectedAnnotation && isRoutedMarker(selectedAnnotation)
+                    ? "current-arrow"
+                    : selectedAnnotation && selectedNetLabelBinding
+                      ? "net-label"
+                      : null
+                }
+                highlightActive={selectedHighlightIsActive}
+                onReverseCurrentArrow={reverseSelectedCurrentArrow}
+                onDeleteCurrentArrow={deleteSelectedAnnotation}
+                onToggleHighlight={toggleHighlightedNet}
+              />
               <ProjectDiagnosticsSection
                 snapshot={liveDiagnosticSnapshot}
                 documentLabel={(documentId) =>
