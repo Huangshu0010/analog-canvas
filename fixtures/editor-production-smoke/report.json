@@ -2,5 +2,9 @@
   "mounted": true,
   "consoleErrors": [],
   "nodeCryptoExternalized": false,
-  "projectDataIsolation": "clean"
+  "projectDataIsolation": "clean",
+  "galleryEditorCodeLoaded": false,
+  "editorCodeLoaded": true,
+  "galleryEditorStylesLoaded": false,
+  "editorStylesLoaded": true
 }

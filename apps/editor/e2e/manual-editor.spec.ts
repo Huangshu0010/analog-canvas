@@ -6,6 +6,7 @@ import { createEmptyProject } from "@icm/model";
 
 import { createRoutingDemoProject } from "../src/demos/routing-demo.js";
 import {
+  awaitEditorReady,
   chooseComponent,
   clickCommand,
   clickDrawTool,
@@ -282,6 +283,7 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   const search = dialog.getByLabel("Component search");
@@ -628,6 +630,7 @@ test("command move turns a component while locally stretching its boundary wire"
 
 test("P shortcut starts Cell Pin placement", async ({ page }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   const canvas = page.getByTestId("schematic-canvas");
   await page.keyboard.press("p");
   // No setup dialog: the shortcut goes straight to the placement cursor.
@@ -655,6 +658,7 @@ test("Cell Pin deletion releases its interface and Base Net lifecycle", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   const canvas = page.getByTestId("schematic-canvas");
 
   const placeNamedPort = async (
@@ -2102,6 +2106,7 @@ test("value display projects MOS W/L and passive values beside the reference", a
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   await dialog.getByLabel("Component search").fill("nmos");

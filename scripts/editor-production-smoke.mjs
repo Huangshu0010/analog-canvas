@@ -23,6 +23,40 @@ async function builtJavaScriptContains(needle) {
   return contents.some((content) => content.includes(needle));
 }
 
+async function loadedJavaScriptContains(page, needle) {
+  const paths = await page.evaluate(() =>
+    performance
+      .getEntriesByType("resource")
+      .map((entry) => new URL(entry.name).pathname)
+      .filter((pathname) => pathname.endsWith(".js")),
+  );
+  const uniquePaths = [...new Set(paths)];
+  const contents = await Promise.all(
+    uniquePaths.map(async (pathname) => {
+      const relativePath = pathname.replace(/^\/+/, "");
+      return readFile(resolve(editorDist, relativePath), "utf8");
+    }),
+  );
+  return contents.some((content) => content.includes(needle));
+}
+
+async function loadedStylesheetContains(page, needle) {
+  const paths = await page.evaluate(() =>
+    performance
+      .getEntriesByType("resource")
+      .map((entry) => new URL(entry.name).pathname)
+      .filter((pathname) => pathname.endsWith(".css")),
+  );
+  const uniquePaths = [...new Set(paths)];
+  const contents = await Promise.all(
+    uniquePaths.map(async (pathname) => {
+      const relativePath = pathname.replace(/^\/+/, "");
+      return readFile(resolve(editorDist, relativePath), "utf8");
+    }),
+  );
+  return contents.some((content) => content.includes(needle));
+}
+
 async function main() {
   const expected = check
     ? JSON.parse(await readFile(reportPath, "utf8"))
@@ -33,6 +67,10 @@ async function main() {
   const consoleErrors = [];
   let mounted = false;
   let projectDataIsolation = "unchecked";
+  let galleryEditorCodeLoaded = true;
+  let editorCodeLoaded = false;
+  let galleryEditorStylesLoaded = true;
+  let editorStylesLoaded = false;
   try {
     server = await preview({
       root: editorRoot,
@@ -54,12 +92,25 @@ async function main() {
     await page.waitForSelector('[data-testid="gallery-feed"]', {
       timeout: 10_000,
     });
+    galleryEditorCodeLoaded = await loadedJavaScriptContains(
+      page,
+      "schematic-canvas",
+    );
+    galleryEditorStylesLoaded = await loadedStylesheetContains(
+      page,
+      ".schematic-canvas",
+    );
     await page.goto(new URL("editor", url).href, {
       waitUntil: "networkidle",
     });
     await page.waitForSelector('[data-testid="schematic-canvas"]', {
       timeout: 10_000,
     });
+    editorCodeLoaded = await loadedJavaScriptContains(page, "schematic-canvas");
+    editorStylesLoaded = await loadedStylesheetContains(
+      page,
+      ".schematic-canvas",
+    );
     mounted = true;
     // Browser recovery is Project data and must never leak into the PWA
     // asset caches (Cache Storage) or the service-worker precache.
@@ -94,6 +145,10 @@ async function main() {
     consoleErrors,
     nodeCryptoExternalized,
     projectDataIsolation,
+    galleryEditorCodeLoaded,
+    editorCodeLoaded,
+    galleryEditorStylesLoaded,
+    editorStylesLoaded,
   };
 
   if (check) {
@@ -109,6 +164,18 @@ async function main() {
     await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
   }
   if (!report.mounted) throw new Error("Production editor did not mount");
+  if (report.galleryEditorCodeLoaded) {
+    throw new Error("Gallery loaded the editor route bundle eagerly");
+  }
+  if (!report.editorCodeLoaded) {
+    throw new Error("Editor route did not load its editor bundle");
+  }
+  if (report.galleryEditorStylesLoaded) {
+    throw new Error("Gallery loaded the editor stylesheet eagerly");
+  }
+  if (!report.editorStylesLoaded) {
+    throw new Error("Editor route did not load its editor stylesheet");
+  }
   if (report.consoleErrors.length > 0) {
     throw new Error(
       `Production smoke console errors:\n${report.consoleErrors.join("\n")}`,

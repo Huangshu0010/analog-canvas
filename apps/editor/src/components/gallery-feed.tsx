@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import "../gallery.css";
 
 import { renderDocumentSvg } from "@icm/render-svg";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";

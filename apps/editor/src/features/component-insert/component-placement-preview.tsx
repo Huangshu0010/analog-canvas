@@ -1,0 +1,52 @@
+import { renderSymbolDefinitionBody } from "@icm/render-svg";
+import type { SymbolDefinition } from "@icm/symbols";
+
+import { defaultRazaviSymbolVariantId } from "../../presentation/razavi-presentation";
+import { findPaletteSymbol } from "./symbol-catalog";
+
+export interface ComponentPlacementPreviewProps {
+  styleProfileId: string;
+  symbolId: string;
+  symbol?: SymbolDefinition;
+  position: { x: number; y: number };
+  rotation: 0 | 90 | 180 | 270;
+  mirror?: "none" | "x";
+}
+
+export function ComponentPlacementPreview({
+  styleProfileId,
+  symbolId,
+  symbol,
+  position,
+  rotation,
+  mirror = "none",
+}: ComponentPlacementPreviewProps) {
+  const definition = symbol ?? findPaletteSymbol(styleProfileId, symbolId);
+  if (!definition) return null;
+  const variantId = defaultRazaviSymbolVariantId(definition.id);
+  const variant = definition.variants.find(
+    (candidate) => candidate.id === variantId,
+  );
+
+  return (
+    <g
+      data-testid="component-placement-preview"
+      className="component-placement-preview"
+      transform={`translate(${position.x} ${position.y}) rotate(${rotation})${
+        mirror === "x" ? " scale(-1 1)" : ""
+      }`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      dangerouslySetInnerHTML={{
+        __html: renderSymbolDefinitionBody(
+          definition,
+          variant?.hiddenPrimitiveParts,
+          variant?.additionalPrimitives,
+        ),
+      }}
+    />
+  );
+}

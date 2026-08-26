@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 
 import {
+  awaitEditorReady,
   chooseComponent,
   clickCommand,
   clickDrawTool,
@@ -292,6 +293,7 @@ test("repeating A or K preserves the current drafting session", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   const canvas = page.getByTestId("schematic-canvas");
 
   await page.keyboard.press("a");
@@ -562,6 +564,7 @@ test("R creates a selectable, styleable rectangle with four resize handles", asy
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("r");
   await clickCreate(page, { x: 220, y: 220 }, { x: 380, y: 320 });
   await expect(page.getByTestId("revision")).toHaveText("1");
@@ -645,6 +648,7 @@ test("E converts a rectangle into a navigable hierarchical Cell", async ({
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("r");
   await clickCreate(page, { x: 220, y: 220 }, { x: 380, y: 320 });
 
@@ -900,6 +904,7 @@ test("double-click inside a rectangle writes a centered, anchored label", async 
   page,
 }) => {
   await page.goto("/editor");
+  await awaitEditorReady(page);
   await page.keyboard.press("r");
   await clickCreate(page, { x: 220, y: 220 }, { x: 380, y: 320 });
   await expect(page.getByTestId("revision")).toHaveText("1");
