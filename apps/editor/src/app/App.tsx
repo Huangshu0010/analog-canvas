@@ -1,9 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import type {
-  CSSProperties,
-  DragEvent,
-  PointerEvent as ReactPointerEvent,
-} from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import "../editor.css";
 import type {
   AgentHostSemanticIntentRequest,
@@ -24,7 +20,6 @@ import {
   planEditCellTerminalAnnotation,
   planSetMosModelTarget,
   planCellReset,
-  planInstanceUnplacement,
   type SchematicEdit,
   type CellResetPlan,
   type WireSource,
@@ -175,8 +170,8 @@ import {
   fullInsertLaunch,
 } from "../features/component-insert/insert-launch";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
-import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
 import { PlacementTrayPanel } from "../features/component-insert/placement-tray-panel";
+import { createPlacementTrayCommands } from "../features/component-insert/placement-tray-commands";
 import {
   CellSymbolLayoutProperties,
   FormalPortProperties,
@@ -187,7 +182,6 @@ import {
 } from "../features/properties/component-identity-properties";
 import { ComponentElectricalProperties } from "../features/properties/component-electrical-properties";
 import { ComponentPlacementProperties } from "../features/properties/component-placement-properties";
-import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
 import {
   constrainedPowerRailEndpoint,
   constructVddRailEdits,
@@ -1688,6 +1682,26 @@ export function App({
     selection: visualSelection,
     transact,
     setStatus,
+  });
+  const {
+    handleDrop,
+    placeAll: placeAllFromTray,
+    returnToTray: returnInstancesToTray,
+  } = createPlacementTrayCommands({
+    document,
+    resolver,
+    styleProfile,
+    viewBox,
+    pointFromDrop: (event) =>
+      pointFromClient(event.clientX, event.clientY, event.currentTarget),
+    transact,
+    selectInstance: (id) => selectOnly("instance", [id]),
+    resetSelection,
+    setStatus,
+    nextSuffix: () => {
+      uniqueSuffixCounter.current += 1;
+      return uniqueSuffixCounter.current;
+    },
   });
   const {
     beginCopyPlacement: beginCopyPlacementFromSelection,
@@ -3389,110 +3403,6 @@ export function App({
     if (endpoint) {
       selectEndpoint(endpoint);
       setStatus(`Selected ${endpointTestId(endpoint.endpoint)}`);
-    }
-  }
-
-  function handleDrop(event: DragEvent<SVGSVGElement>): void {
-    event.preventDefault();
-    const instanceId = event.dataTransfer.getData("application/x-icm-instance");
-    if (!instanceId) {
-      return;
-    }
-    const placement = {
-      position: pointFromClient(
-        event.clientX,
-        event.clientY,
-        event.currentTarget,
-      ),
-      rotation: 0 as const,
-      mirror: "none" as const,
-    };
-    const instance = document.instances.find(
-      (candidate) => candidate.id === instanceId,
-    );
-    const displayAnnotations = instance
-      ? missingDefaultInstanceDisplayAnnotations(
-          document,
-          { ...instance, placement },
-          resolver,
-          styleProfile,
-        )
-      : [];
-    transact([
-      {
-        kind: "place_instance",
-        instanceId,
-        placement,
-      },
-      ...displayAnnotations.map((annotation) => ({
-        kind: "upsert_schematic_annotation" as const,
-        annotation,
-      })),
-    ]);
-    selectOnly("instance", [instanceId]);
-  }
-
-  function placeAllFromTray(): void {
-    const edits = planPlaceAllUnplacedInstances(document, viewBox);
-    if (edits.length === 0) {
-      setStatus("The Placement Tray is empty");
-      return;
-    }
-    const displayEdits = edits.flatMap((edit) => {
-      if (edit.kind !== "place_instance") return [];
-      const instance = document.instances.find(
-        (candidate) => candidate.id === edit.instanceId,
-      );
-      if (!instance) return [];
-      return missingDefaultInstanceDisplayAnnotations(
-        document,
-        { ...instance, placement: edit.placement },
-        resolver,
-        styleProfile,
-      ).map((annotation) => ({
-        kind: "upsert_schematic_annotation" as const,
-        annotation,
-      }));
-    });
-    if (transact([...edits, ...displayEdits]).ok) {
-      resetSelection();
-      setStatus(
-        `Placed ${edits.length} retained ${edits.length === 1 ? "Instance" : "Instances"} in a deterministic canvas grid`,
-      );
-    }
-  }
-
-  function returnInstancesToTray(instanceIds: readonly string[]): void {
-    if (instanceIds.length === 0) {
-      setStatus("There are no returnable placed Instances");
-      return;
-    }
-    try {
-      const edits = planInstanceUnplacement(
-        document,
-        resolver,
-        instanceIds,
-        ++uniqueSuffixCounter.current,
-      );
-      if (edits.length === 0) {
-        setStatus("Those Instances are already retained in the Placement Tray");
-        return;
-      }
-      if (transact(edits).ok) {
-        resetSelection();
-        const returnedFormalPort = instanceIds.some((instanceId) =>
-          document.netlist?.terminals.some((terminal) =>
-            terminal.interfaceInstanceIds.includes(instanceId),
-          ),
-        );
-        setStatus(
-          `Returned ${instanceIds.length} ${instanceIds.length === 1 ? "Instance" : "Instances"} to the Placement Tray; ${returnedFormalPort ? "Cell interfaces and " : ""}electrical facts were retained`,
-        );
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not return to tray",
-      );
     }
   }
 
