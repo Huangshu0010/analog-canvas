@@ -66,3 +66,13 @@ jobs:
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
           ADMIN_EMAILS_EXTRA: ${{ secrets.ADMIN_EMAILS_EXTRA }}
+      - name: Verify production deployment
+        run: |
+          curl --fail --silent --show-error \
+            --retry 5 --retry-delay 2 --retry-all-errors \
+            --max-time 20 \
+            https://analog-canvas.tokenzhang.com/ >/dev/null
+          curl --fail --silent --show-error \
+            --retry 5 --retry-delay 2 --retry-all-errors \
+            --max-time 20 \
+            https://analog-canvas.tokenzhang.com/api/agent/mcp-manifest.json >/dev/null

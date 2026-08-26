@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "../..");
 const defaultCatalogPath = resolve(root, "config/validation-gates.json");
+const safeCiE2eArg = /^apps\/editor\/e2e\/[A-Za-z0-9._/-]+\.spec\.ts$/u;
 
 function normalized(path) {
   return path.replaceAll("\\", "/").replace(/^\.\//u, "");
@@ -49,6 +50,11 @@ export async function loadGateCatalog(path = defaultCatalogPath) {
     for (const group of gate.groups ?? []) {
       if (!catalog.pathGroups[group]) {
         throw new Error(`${gate.id}: unknown path group ${group}`);
+      }
+    }
+    for (const argument of gate.ci?.e2eArgs ?? []) {
+      if (typeof argument !== "string" || !safeCiE2eArg.test(argument)) {
+        throw new Error(`${gate.id}: unsafe CI browser argument ${argument}`);
       }
     }
   }

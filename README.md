@@ -20,6 +20,7 @@ Project file, and export formal drawings.
 
 ```powershell
 pnpm install --frozen-lockfile
+pnpm setup:e2e # one-time browser setup for local Playwright checks
 pnpm dev
 ```
 
@@ -63,16 +64,17 @@ pnpm gate:affected -- --base origin/main
 # Branch integration
 pnpm gate:branch
 
-# Required local gate before a non-document delivery reaches main
+# Full fallback for shared-core, production-boundary, gate, or unknown changes
 pnpm gate:full
 ```
 
-Gate planning is advisory and conservatively falls back to the full gate for
-unknown paths or validation-policy changes. Use the smallest relevant check
-during development; the canonical complete gate and GitHub required checks
-still apply before mainline delivery. Every target also closes with
-`git diff --check` and `git status --short --branch`; see [AGENTS.md](AGENTS.md)
-for the delivery gate.
+Gate planning conservatively falls back to the full gate for shared-core,
+production-boundary, unknown-path, or validation-policy changes. Bounded
+changes run focused browser specs locally and in pull requests; every
+implementation pull request still runs all unit tests plus release and
+performance contracts. Merge-queue, nightly, and manual CI runs always run the
+complete browser suite. Every target also closes with `git diff --check` and
+`git status --short --branch`; see [AGENTS.md](AGENTS.md) for the delivery gate.
 
 ## Citation
 

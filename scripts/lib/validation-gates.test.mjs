@@ -59,7 +59,6 @@ describe("validation gate planning", () => {
       "test-impact",
       "workspace-unit",
       "component-insert-browser",
-      "full-delivery",
     ]);
   });
 
@@ -71,6 +70,14 @@ describe("validation gate planning", () => {
     expect(selected).toContain("hierarchy-browser");
     expect(selected).toContain("project-file-browser");
     expect(selected).toContain("full-delivery");
+  });
+
+  it("maps Gallery and account changes to their dedicated browser workflow", () => {
+    const selected = ids(["worker/auth.ts", "worker/gallery.ts"]);
+    expect(selected).toContain("workspace-unit");
+    expect(selected).toContain("gallery-browser");
+    expect(selected).not.toContain("editor-browser");
+    expect(selected).not.toContain("full-delivery");
   });
 
   it("selects release verification for package scripts", () => {
