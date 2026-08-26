@@ -178,20 +178,8 @@ import {
   isTypingTarget,
   RenderCrashProbe,
 } from "./editor-runtime-helpers";
-import {
-  LazyAgentPropertiesSection,
-  LazyCellManagerDialog,
-  LazyConnectAgentPanel,
-  LazyEditorHelpDialog,
-  LazyInsertComponentDialog,
-  LazyInstanceTableDialog,
-  LazyNetlistPreflightDialog,
-  LazyProjectSearchDialog,
-  LazyPublishGalleryDialog,
-  LazyRecentRecoveryDialog,
-  LazyReplaceGuardDialog,
-  LazyVersionHistoryDialog,
-} from "./lazy-editor-dialogs";
+import { LazyAgentPropertiesSection } from "./lazy-editor-dialogs";
+import { EditorDialogLayer } from "./editor-dialog-layer";
 import {
   netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
@@ -263,10 +251,7 @@ import {
 } from "../interaction/editor-shortcuts";
 import { createEditorCommandRouter } from "../commands/editor-command";
 import { createEditorTransactionCommands } from "./editor-transaction-commands";
-import {
-  RecoveryFailureBanner,
-  recoveryStateLabel,
-} from "../components/recovery-banners";
+import { recoveryStateLabel } from "../components/recovery-banners";
 import { BrowserAgentHost } from "../agent/browser-agent-host";
 import { BrowserAgentFileHost } from "../agent/browser-agent-file-host";
 import { createAgentSemanticIntentHandler } from "../agent/agent-semantic-intent-handler";
@@ -3409,342 +3394,275 @@ export function App({
           }}
         />
       </header>
-      <Suspense fallback={null}>
-        {helpOpen ? (
-          <LazyEditorHelpDialog
-            closeButtonRef={helpCloseRef}
-            onClose={closeHelp}
-          />
-        ) : null}
-        {(recoveryState === "quota-exceeded" ||
-          recoveryState === "unavailable" ||
-          recoveryState === "failed") &&
-        !recoveryFailureDismissed ? (
-          <RecoveryFailureBanner
-            state={recoveryState}
-            onDownload={() => {
-              const outcome = requestProjectDownload(project);
-              setStatus(
-                outcome.status === "download-requested"
-                  ? `Download requested: ${outcome.fileName}`
-                  : `Download failed: ${outcome.message}`,
-              );
-            }}
-            onDismiss={() => setRecoveryFailureDismissed(true)}
-          />
-        ) : null}
-        {recoveryDialogOpen && recoverySessions.length > 0 ? (
-          <LazyRecentRecoveryDialog
-            sessions={recoverySessions}
-            onRestore={restoreRecoverySession}
-            onDownloadBackup={downloadRecoveryBackup}
-            onDeleteSession={deleteRecoverySessionFromDialog}
-            onClose={() => setRecoveryDialogOpen(false)}
-          />
-        ) : null}
-        {replaceGuard !== null ? (
-          <LazyReplaceGuardDialog
-            intent={replaceGuard.intent}
-            onCancel={cancelReplaceGuard}
-            onConfirm={confirmReplaceGuard}
-            onDownload={downloadCurrentProjectFromGuard}
-          />
-        ) : null}
-        {searchOpen ? (
-          <LazyProjectSearchDialog
-            open={searchOpen}
-            query={searchQuery}
-            results={searchResults}
-            onQueryChange={setSearchQuery}
-            onSelect={selectSearchResult}
-            onClose={closeSearch}
-          />
-        ) : null}
-        {instanceTableOpen ? (
-          <LazyInstanceTableDialog
-            open={instanceTableOpen}
-            project={project}
-            connectivityIndex={projectConnectivityIndex}
-            activeDocumentId={document.id}
-            onClose={() => setInstanceTableOpen(false)}
-            onOpenInstance={openInstanceFromTable}
-            onApply={(transactionId, edits) => {
-              const committed = commitStructure(transactionId, edits);
-              if (committed) {
-                setStatus(
-                  `Updated ${edits.length} Cell${edits.length === 1 ? "" : "s"}`,
-                );
+      <EditorDialogLayer
+        help={
+          helpOpen ? { closeButtonRef: helpCloseRef, onClose: closeHelp } : null
+        }
+        recoveryFailure={
+          (recoveryState === "quota-exceeded" ||
+            recoveryState === "unavailable" ||
+            recoveryState === "failed") &&
+          !recoveryFailureDismissed
+            ? {
+                state: recoveryState,
+                onDownload: () => {
+                  const outcome = requestProjectDownload(project);
+                  setStatus(
+                    outcome.status === "download-requested"
+                      ? `Download requested: ${outcome.fileName}`
+                      : `Download failed: ${outcome.message}`,
+                  );
+                },
+                onDismiss: () => setRecoveryFailureDismissed(true),
               }
-              return committed;
-            }}
-          />
-        ) : null}
-        {insertDialogOpen ? (
-          <LazyInsertComponentDialog
-            open={insertDialogOpen}
-            styleProfileId={document.presentation.styleProfileId}
-            recentSymbolIds={recentSymbolIds}
-            cells={cellInsertCandidates}
-            externalDefinitions={externalSubcircuitInsertCandidates}
-            scope={insertScope}
-            initialSelectionId={insertInitialSelectionId}
-            onApply={(request) =>
-              editorCommands.execute({
-                id: "insert.start",
-                launch: { kind: "quick", request },
-              })
-            }
-            onCancel={cancelComponentInsertFromHook}
-          />
-        ) : null}
-        {pendingCellReset ? (
-          <div
-            className="insert-dialog-backdrop"
-            onPointerDown={(event) =>
-              event.target === event.currentTarget && cancelClearCanvas()
-            }
-          >
-            <section
-              className="editor-action-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="clear-canvas-dialog-title"
-              onKeyDown={(event) => {
-                if (event.key === "Escape") cancelClearCanvas();
-              }}
-            >
-              <header className="editor-action-dialog-header">
-                <p>Cell contents</p>
-                <h2 id="clear-canvas-dialog-title">
-                  {pendingCellReset.command} in {document.name}?
-                </h2>
-              </header>
-              <div className="editor-action-dialog-body">
-                <p>
-                  {pendingCellReset.plan.summary}. Affected objects:{" "}
-                  {pendingCellReset.plan.affectedObjectIds.length}. You can
-                  restore them with Undo.
-                </p>
-              </div>
-              <footer className="editor-action-dialog-actions">
-                <button type="button" autoFocus onClick={cancelClearCanvas}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="danger"
-                  onClick={confirmClearCanvas}
-                >
-                  {pendingCellReset.command}
-                </button>
-              </footer>
-            </section>
-          </div>
-        ) : null}
-        {cellManagerOpen ? (
-          <LazyCellManagerDialog
-            open={cellManagerOpen}
-            cells={cellManagerEntries}
-            documents={project.documents}
-            activeDocumentId={document.id}
-            onClose={() => setCellManagerOpen(false)}
-            onCreate={(name) => {
-              createCell(name);
-              setCellManagerOpen(false);
-            }}
-            onOpen={(documentId) => {
-              setCellManagerOpen(false);
-              switchDocument(documentId);
-            }}
-            onRename={renameCell}
-            onDelete={(documentId) => {
-              const target = project.documents.find(
-                (candidate) => candidate.id === documentId,
-              );
-              if (!target) return;
-              if (
-                commitStructure(
-                  "delete-cell",
-                  planDeleteCell(project, documentId),
-                  project.topDocumentId,
-                )
-              ) {
-                setCellManagerOpen(false);
-                setStatus(`Deleted Cell ${target.name}`);
+            : null
+        }
+        recentRecovery={
+          recoveryDialogOpen && recoverySessions.length > 0
+            ? {
+                sessions: recoverySessions,
+                onRestore: restoreRecoverySession,
+                onDownloadBackup: downloadRecoveryBackup,
+                onDeleteSession: deleteRecoverySessionFromDialog,
+                onClose: () => setRecoveryDialogOpen(false),
               }
-            }}
-            onJumpToCaller={jumpToCaller}
-            onRenameTerminal={(documentId, terminalId, name) =>
-              renameCellTerminal(terminalId, name, documentId)
-            }
-            onSetTerminalDirection={(documentId, terminalId, direction) =>
-              updateCellPinDirection(terminalId, direction, documentId)
-            }
-            onMoveTerminal={(documentId, terminalId, delta) =>
-              moveCellTerminal(terminalId, delta, documentId)
-            }
-            onSetFormalParameters={(documentId, formalParameters) =>
-              setCellFormalParameters(formalParameters, documentId)
-            }
-            externalDefinitions={project.externalSubcircuitDefinitions}
-            onSetExternalDefinition={setExternalSubcircuitDefinition}
-          />
-        ) : null}
-        {netlistPreflightOpen ? (
-          <LazyNetlistPreflightDialog
-            open={netlistPreflightOpen}
-            result={netlistAnalysis}
-            electricalDiagnostics={electricalDiagnostics}
-            onClose={() => setNetlistPreflightOpen(false)}
-            onNavigate={navigateToNetlistDiagnostic}
-            onNavigateElectrical={jumpToProjectDiagnostic}
-            onExport={(format) => exportDesignNetlist(format, true)}
-          />
-        ) : null}
-        {publishGalleryOpen ? (
-          <LazyPublishGalleryDialog
-            draft={publishDraft}
-            onDraftChange={setPublishDraft}
-            defaultName={project.name}
-            session={publishSession}
-            gateReport={publishGates}
-            updateTarget={
-              galleryEntryContext &&
-              publishSession &&
-              (publishSession.isAdmin ||
-                publishSession.role === "moderator" ||
-                (galleryEntryContext.ownerUserId !== null &&
-                  publishSession.id === galleryEntryContext.ownerUserId))
-                ? { id: galleryEntryContext.id, name: galleryEntryContext.name }
-                : null
-            }
-            updateDefaults={
-              galleryEntryContext
-                ? {
-                    description: galleryEntryContext.description,
-                    tags: galleryEntryContext.tags,
+            : null
+        }
+        replaceGuard={
+          replaceGuard !== null
+            ? {
+                intent: replaceGuard.intent,
+                onCancel: cancelReplaceGuard,
+                onConfirm: confirmReplaceGuard,
+                onDownload: downloadCurrentProjectFromGuard,
+              }
+            : null
+        }
+        search={
+          searchOpen
+            ? {
+                open: searchOpen,
+                query: searchQuery,
+                results: searchResults,
+                onQueryChange: setSearchQuery,
+                onSelect: selectSearchResult,
+                onClose: closeSearch,
+              }
+            : null
+        }
+        instanceTable={
+          instanceTableOpen
+            ? {
+                open: instanceTableOpen,
+                project,
+                connectivityIndex: projectConnectivityIndex,
+                activeDocumentId: document.id,
+                onClose: () => setInstanceTableOpen(false),
+                onOpenInstance: openInstanceFromTable,
+                onApply: (transactionId, edits) => {
+                  const committed = commitStructure(transactionId, edits);
+                  if (committed) {
+                    setStatus(
+                      `Updated ${edits.length} Cell${edits.length === 1 ? "" : "s"}`,
+                    );
                   }
-                : null
-            }
-            publish={(fields) => publishProjectToGallery(project, fields)}
-            publishUpdate={
-              galleryEntryContext
-                ? (fields) =>
-                    updateGalleryEntry(galleryEntryContext.id, project, fields)
-                : undefined
-            }
-            onPublished={({ name, updated }) => {
-              setPublishGalleryOpen(false);
-              setPublishDraft(null);
-              setStatus(
-                updated
-                  ? `Updated "${name}" in the gallery`
-                  : `Published "${name}" to the gallery`,
-              );
-            }}
-            onShowHistory={
-              galleryEntryContext
-                ? () => {
-                    setPublishGalleryOpen(false);
-                    setVersionHistoryOpen(true);
+                  return committed;
+                },
+              }
+            : null
+        }
+        insertComponent={
+          insertDialogOpen
+            ? {
+                open: insertDialogOpen,
+                styleProfileId: document.presentation.styleProfileId,
+                recentSymbolIds,
+                cells: cellInsertCandidates,
+                externalDefinitions: externalSubcircuitInsertCandidates,
+                scope: insertScope,
+                initialSelectionId: insertInitialSelectionId,
+                onApply: (request) =>
+                  editorCommands.execute({
+                    id: "insert.start",
+                    launch: { kind: "quick", request },
+                  }),
+                onCancel: cancelComponentInsertFromHook,
+              }
+            : null
+        }
+        cellReset={
+          pendingCellReset
+            ? {
+                documentName: document.name,
+                pending: pendingCellReset,
+                onCancel: cancelClearCanvas,
+                onConfirm: confirmClearCanvas,
+              }
+            : null
+        }
+        cellManager={
+          cellManagerOpen
+            ? {
+                open: cellManagerOpen,
+                cells: cellManagerEntries,
+                documents: project.documents,
+                activeDocumentId: document.id,
+                onClose: () => setCellManagerOpen(false),
+                onCreate: (name) => {
+                  createCell(name);
+                  setCellManagerOpen(false);
+                },
+                onOpen: (documentId) => {
+                  setCellManagerOpen(false);
+                  switchDocument(documentId);
+                },
+                onRename: renameCell,
+                onDelete: (documentId) => {
+                  const target = project.documents.find(
+                    (candidate) => candidate.id === documentId,
+                  );
+                  if (!target) return;
+                  if (
+                    commitStructure(
+                      "delete-cell",
+                      planDeleteCell(project, documentId),
+                      project.topDocumentId,
+                    )
+                  ) {
+                    setCellManagerOpen(false);
+                    setStatus(`Deleted Cell ${target.name}`);
                   }
-                : undefined
-            }
-            onClose={() => setPublishGalleryOpen(false)}
-          />
-        ) : null}
-        {versionHistoryOpen && galleryEntryContext ? (
-          <LazyVersionHistoryDialog
-            entryId={galleryEntryContext.id}
-            entryName={galleryEntryContext.name}
-            onRestored={() => {
-              setVersionHistoryOpen(false);
-              setStatus("Version restored — reloading the entry");
-              void openGalleryEntryById(galleryEntryContext.id);
-            }}
-            onClose={() => setVersionHistoryOpen(false)}
-          />
-        ) : null}
-        {publicAgentUiEnabled && agentPanelOpen ? (
-          <LazyConnectAgentPanel
-            open={agentPanelOpen}
-            status={agentSession.status}
-            claimCode={agentSession.claimCode}
-            claimExpiresAt={agentSession.claimExpiresAt}
-            scopes={agentSession.scopes}
-            expiresAt={agentSession.expiresAt}
-            error={agentSession.error}
-            now={Date.now()}
-            onGrant={agentSession.grant}
-            onPause={agentSession.pause}
-            onResume={agentSession.resume}
-            onReconnect={agentSession.reconnect}
-            onNewConnection={agentSession.newConnection}
-            onRevoke={agentSession.revoke}
-            onClose={() => {
-              setAgentPanelOpen(false);
-            }}
-          />
-        ) : null}
-      </Suspense>
-      {publicAgentUiEnabled && agentFileCandidate ? (
-        <div className="agent-panel" data-testid="agent-file-approval">
-          <section
-            className="agent-dialog"
-            role="dialog"
-            aria-label="Approve Agent file import"
-          >
-            <div className="agent-panel-header">
-              <h2>Approve Agent file import</h2>
-            </div>
-            <p>
-              The Agent staged a {agentFileCandidate.kind} candidate. It has not
-              changed this Project. Replacing it will end the current Agent
-              session.
-            </p>
-            <dl className="agent-file-candidate-summary">
-              <div>
-                <dt>Project</dt>
-                <dd>{agentFileCandidate.projectName}</dd>
-              </div>
-              <div>
-                <dt>Documents</dt>
-                <dd>{agentFileCandidate.documentCount}</dd>
-              </div>
-              <div>
-                <dt>Instances</dt>
-                <dd>{agentFileCandidate.instanceCount}</dd>
-              </div>
-            </dl>
-            {agentFileCandidate.diagnostics.length > 0 ? (
-              <ul className="agent-panel-audit">
-                {agentFileCandidate.diagnostics.map((diagnostic, index) => (
-                  <li key={`${diagnostic.severity}-${index}`}>
-                    <span>{diagnostic.severity}</span>
-                    <span>{diagnostic.message}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="agent-panel-controls">
-              <button
-                type="button"
-                data-testid="agent-file-reject"
-                onClick={rejectAgentFileCandidate}
-              >
-                Reject
-              </button>
-              <button
-                type="button"
-                data-testid="agent-file-approve"
-                onClick={approveAgentFileCandidate}
-              >
-                Replace Project
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
+                },
+                onJumpToCaller: jumpToCaller,
+                onRenameTerminal: (documentId, terminalId, name) =>
+                  renameCellTerminal(terminalId, name, documentId),
+                onSetTerminalDirection: (documentId, terminalId, direction) =>
+                  updateCellPinDirection(terminalId, direction, documentId),
+                onMoveTerminal: (documentId, terminalId, delta) =>
+                  moveCellTerminal(terminalId, delta, documentId),
+                onSetFormalParameters: (documentId, formalParameters) =>
+                  setCellFormalParameters(formalParameters, documentId),
+                externalDefinitions: project.externalSubcircuitDefinitions,
+                onSetExternalDefinition: setExternalSubcircuitDefinition,
+              }
+            : null
+        }
+        netlistPreflight={
+          netlistPreflightOpen
+            ? {
+                open: netlistPreflightOpen,
+                result: netlistAnalysis,
+                electricalDiagnostics,
+                onClose: () => setNetlistPreflightOpen(false),
+                onNavigate: navigateToNetlistDiagnostic,
+                onNavigateElectrical: jumpToProjectDiagnostic,
+                onExport: (format) => exportDesignNetlist(format, true),
+              }
+            : null
+        }
+        publishGallery={
+          publishGalleryOpen
+            ? {
+                draft: publishDraft,
+                onDraftChange: setPublishDraft,
+                defaultName: project.name,
+                session: publishSession,
+                gateReport: publishGates,
+                updateTarget:
+                  galleryEntryContext &&
+                  publishSession &&
+                  (publishSession.isAdmin ||
+                    publishSession.role === "moderator" ||
+                    (galleryEntryContext.ownerUserId !== null &&
+                      publishSession.id === galleryEntryContext.ownerUserId))
+                    ? {
+                        id: galleryEntryContext.id,
+                        name: galleryEntryContext.name,
+                      }
+                    : null,
+                updateDefaults: galleryEntryContext
+                  ? {
+                      description: galleryEntryContext.description,
+                      tags: galleryEntryContext.tags,
+                    }
+                  : null,
+                publish: (fields) => publishProjectToGallery(project, fields),
+                ...(galleryEntryContext
+                  ? {
+                      publishUpdate: (fields) =>
+                        updateGalleryEntry(
+                          galleryEntryContext.id,
+                          project,
+                          fields,
+                        ),
+                    }
+                  : {}),
+                onPublished: ({ name, updated }) => {
+                  setPublishGalleryOpen(false);
+                  setPublishDraft(null);
+                  setStatus(
+                    updated
+                      ? `Updated "${name}" in the gallery`
+                      : `Published "${name}" to the gallery`,
+                  );
+                },
+                ...(galleryEntryContext
+                  ? {
+                      onShowHistory: () => {
+                        setPublishGalleryOpen(false);
+                        setVersionHistoryOpen(true);
+                      },
+                    }
+                  : {}),
+                onClose: () => setPublishGalleryOpen(false),
+              }
+            : null
+        }
+        versionHistory={
+          versionHistoryOpen && galleryEntryContext
+            ? {
+                entryId: galleryEntryContext.id,
+                entryName: galleryEntryContext.name,
+                onRestored: () => {
+                  setVersionHistoryOpen(false);
+                  setStatus("Version restored — reloading the entry");
+                  void openGalleryEntryById(galleryEntryContext.id);
+                },
+                onClose: () => setVersionHistoryOpen(false),
+              }
+            : null
+        }
+        agentConnection={
+          publicAgentUiEnabled && agentPanelOpen
+            ? {
+                open: agentPanelOpen,
+                status: agentSession.status,
+                claimCode: agentSession.claimCode,
+                claimExpiresAt: agentSession.claimExpiresAt,
+                scopes: agentSession.scopes,
+                expiresAt: agentSession.expiresAt,
+                error: agentSession.error,
+                now: Date.now(),
+                onGrant: agentSession.grant,
+                onPause: agentSession.pause,
+                onResume: agentSession.resume,
+                onReconnect: agentSession.reconnect,
+                onNewConnection: agentSession.newConnection,
+                onRevoke: agentSession.revoke,
+                onClose: () => setAgentPanelOpen(false),
+              }
+            : null
+        }
+        agentFileApproval={
+          publicAgentUiEnabled && agentFileCandidate
+            ? {
+                candidate: agentFileCandidate,
+                onReject: rejectAgentFileCandidate,
+                onApprove: approveAgentFileCandidate,
+              }
+            : null
+        }
+      />
       <div
         className={
           visibleLibraryPanelOpen
