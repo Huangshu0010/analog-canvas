@@ -170,6 +170,10 @@ import {
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
 import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
 import { PlacementTrayPanel } from "../features/component-insert/placement-tray-panel";
+import {
+  CellSymbolLayoutProperties,
+  FormalPortProperties,
+} from "../features/properties/component-structure-properties";
 import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
 import {
@@ -6874,181 +6878,34 @@ export function App({
                   aria-label="Component properties"
                 >
                   {selectedFormalTerminal ? (
-                    <div
-                      className="formal-port-properties"
-                      aria-label="Cell Pin properties"
-                    >
-                      <label>
-                        <span>Terminal name</span>
-                        <input
-                          key={`${selectedFormalTerminal.id}-${document.revision}-terminal-name`}
-                          aria-label="Cell Pin name"
-                          defaultValue={selectedFormalTerminal.name}
-                          onBlur={(event) =>
-                            renameSelectedFormalPort(event.currentTarget.value)
-                          }
-                        />
-                      </label>
-                      <label>
-                        <span>Direction</span>
-                        <select
-                          aria-label="Cell Pin direction"
-                          value={selectedFormalTerminal.direction}
-                          onChange={(event) =>
-                            updateCellPinDirection(
-                              selectedFormalTerminal.id,
-                              event.currentTarget
-                                .value as typeof selectedFormalTerminal.direction,
-                            )
-                          }
-                        >
-                          <option value="input">Input</option>
-                          <option value="output">Output</option>
-                          <option value="inout">Inout</option>
-                          <option value="passive">Passive</option>
-                        </select>
-                      </label>
-                      <small>
-                        This Port defines the Cell interface and every parent
-                        symbol automatically.
-                      </small>
-                    </div>
+                    <FormalPortProperties
+                      terminal={selectedFormalTerminal}
+                      revision={document.revision}
+                      onRename={renameSelectedFormalPort}
+                      onDirectionChange={updateCellPinDirection}
+                    />
                   ) : null}
                   {selectedHierarchyCell ? (
-                    <div
-                      className="cell-symbol-layout-properties"
-                      aria-label="Cell symbol layout"
-                    >
-                      <div className="property-section-heading">
-                        Cell symbol layout
-                      </div>
-                      <small>
-                        Editing <strong>{selectedHierarchyCell.name}</strong>.
-                        These definition-level changes apply to every parent
-                        instance; connected routes follow the moved pin.
-                      </small>
-                      <button
-                        type="button"
-                        className="cell-symbol-layout-toggle"
-                        aria-pressed={cellSymbolLayoutEnabled}
-                        onClick={toggleCellSymbolLayout}
-                      >
-                        {cellSymbolLayoutEnabled
-                          ? "Done editing canvas layout"
-                          : "Edit symbol layout on canvas"}
-                      </button>
-                      {cellSymbolLayoutEnabled ? (
-                        <small>
-                          Drag the corner to resize, or a pin dot to change its
-                          side and offset.
-                        </small>
-                      ) : null}
-                      <div className="component-geometry-row">
-                        <label>
-                          Width
-                          <input
-                            key={`${selectedHierarchyCell.id}-${selectedHierarchyCell.revision}-symbol-width`}
-                            aria-label="Cell symbol width"
-                            defaultValue={String(
-                              selectedHierarchyCell.presentation.cellSymbol
-                                ?.minimumBodySize?.width ?? 100,
-                            )}
-                            inputMode="numeric"
-                            onBlur={(event) =>
-                              setCellSymbolBodySize(
-                                selectedHierarchyCell,
-                                Number(event.currentTarget.value),
-                                selectedHierarchyCell.presentation.cellSymbol
-                                  ?.minimumBodySize?.height ?? 60,
-                              )
-                            }
-                          />
-                        </label>
-                        <label>
-                          Height
-                          <input
-                            key={`${selectedHierarchyCell.id}-${selectedHierarchyCell.revision}-symbol-height`}
-                            aria-label="Cell symbol height"
-                            defaultValue={String(
-                              selectedHierarchyCell.presentation.cellSymbol
-                                ?.minimumBodySize?.height ?? 60,
-                            )}
-                            inputMode="numeric"
-                            onBlur={(event) =>
-                              setCellSymbolBodySize(
-                                selectedHierarchyCell,
-                                selectedHierarchyCell.presentation.cellSymbol
-                                  ?.minimumBodySize?.width ?? 100,
-                                Number(event.currentTarget.value),
-                              )
-                            }
-                          />
-                        </label>
-                      </div>
-                      {selectedHierarchyCell.netlist?.terminals.map(
-                        (terminal) => {
-                          const pinPlacement =
-                            selectedHierarchyCell.presentation.cellSymbol?.pinPlacements?.find(
-                              (placement) =>
-                                placement.terminalId === terminal.id,
-                            );
-                          return (
-                            <div
-                              key={terminal.id}
-                              className="cell-symbol-pin-layout-row"
-                            >
-                              <strong>{terminal.name}</strong>
-                              <label>
-                                Side
-                                <select
-                                  key={`${selectedHierarchyCell.revision}-${terminal.id}-side`}
-                                  aria-label={`Cell symbol ${terminal.name} pin side`}
-                                  defaultValue={pinPlacement?.side ?? "auto"}
-                                  onChange={(event) =>
-                                    setCellSymbolPortPlacement(
-                                      selectedHierarchyCell,
-                                      terminal.id,
-                                      event.currentTarget.value as
-                                        | "north"
-                                        | "east"
-                                        | "south"
-                                        | "west"
-                                        | "auto",
-                                      pinPlacement?.offset ?? 0,
-                                    )
-                                  }
-                                >
-                                  <option value="auto">Auto</option>
-                                  <option value="west">Left</option>
-                                  <option value="east">Right</option>
-                                  <option value="north">Top</option>
-                                  <option value="south">Bottom</option>
-                                </select>
-                              </label>
-                              <label>
-                                Offset
-                                <input
-                                  key={`${selectedHierarchyCell.revision}-${terminal.id}-offset`}
-                                  aria-label={`Cell symbol ${terminal.name} pin offset`}
-                                  defaultValue={String(
-                                    pinPlacement?.offset ?? 0,
-                                  )}
-                                  inputMode="numeric"
-                                  onBlur={(event) =>
-                                    setCellSymbolPortPlacement(
-                                      selectedHierarchyCell,
-                                      terminal.id,
-                                      pinPlacement?.side ?? "auto",
-                                      Number(event.currentTarget.value),
-                                    )
-                                  }
-                                />
-                              </label>
-                            </div>
-                          );
-                        },
-                      )}
-                    </div>
+                    <CellSymbolLayoutProperties
+                      cell={selectedHierarchyCell}
+                      enabled={cellSymbolLayoutEnabled}
+                      onToggle={toggleCellSymbolLayout}
+                      onBodySizeChange={(width, height) =>
+                        setCellSymbolBodySize(
+                          selectedHierarchyCell,
+                          width,
+                          height,
+                        )
+                      }
+                      onPortPlacementChange={(terminalId, side, offset) =>
+                        setCellSymbolPortPlacement(
+                          selectedHierarchyCell,
+                          terminalId,
+                          side,
+                          offset,
+                        )
+                      }
+                    />
                   ) : null}
                   <div
                     className="property-card property-identity-card"
