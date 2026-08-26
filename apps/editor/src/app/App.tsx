@@ -157,7 +157,6 @@ import {
   EditorDraftingHandles,
   EditorDraftingHitTargets,
 } from "../canvas/editor-drafting-hit-targets";
-import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
 import { draggedAnnotationAtPosition } from "../features/text-editing/annotation-drag-model";
 import {
   createRasterExportArtifact,
@@ -166,7 +165,6 @@ import {
   requestBrowserDownload,
 } from "../features/editor-shell/editor-export-commands";
 import { EditorStatusbar } from "../features/editor-shell/editor-statusbar";
-import { ComponentPlacementPreview } from "../features/component-insert/component-placement-preview";
 import {
   cellInsertLaunch,
   fullInsertLaunch,
@@ -284,7 +282,10 @@ import type {
   DraftingHandle,
   DraftingStylePatch,
 } from "../features/drafting/drafting-manipulation";
-import { DraftingCreatePreview } from "../features/drafting/drafting-create-preview";
+import {
+  EditorInteractionPreviews,
+  EditorPlacementPreview,
+} from "../canvas/editor-transient-preview-overlays";
 import { DraftingPropertiesPanel } from "../features/drafting/drafting-properties-panel";
 import {
   proposeRectangleLabel,
@@ -7695,37 +7696,19 @@ export function App({
               copyPlacementActive={copyPlacement !== null}
             />
             <g data-layer="editor-overlay">
-              {vddRailMode ? (
-                vddRailStart && componentPreviewPoint ? (
-                  <line
-                    data-testid="vdd-rail-preview"
-                    className="vdd-rail-preview"
-                    x1={vddRailStart.x}
-                    y1={vddRailStart.y}
-                    x2={componentPreviewPoint.x}
-                    y2={componentPreviewPoint.y}
-                    strokeWidth={styleProfile.strokes.powerRail}
-                  />
-                ) : componentPreviewPoint ? (
-                  <ComponentPlacementPreview
-                    styleProfileId={document.presentation.styleProfileId}
-                    symbolId="vdd"
-                    position={componentPreviewPoint}
-                    rotation={0}
-                  />
-                ) : null
-              ) : pendingSymbolId && componentPreviewPoint ? (
-                <ComponentPlacementPreview
-                  styleProfileId={document.presentation.styleProfileId}
-                  symbolId={pendingSymbolId}
-                  {...(pendingPlacementSymbol
-                    ? { symbol: pendingPlacementSymbol }
-                    : {})}
-                  position={componentPreviewPoint}
-                  rotation={componentPlacementRotation}
-                  mirror={componentPlacementMirror}
-                />
-              ) : null}
+              <EditorPlacementPreview
+                vddRailMode={vddRailMode}
+                vddRailStart={vddRailStart}
+                previewPoint={componentPreviewPoint}
+                powerRailStrokeWidth={styleProfile.strokes.powerRail}
+                styleProfileId={document.presentation.styleProfileId}
+                pendingSymbolId={pendingSymbolId}
+                {...(pendingPlacementSymbol
+                  ? { pendingSymbol: pendingPlacementSymbol }
+                  : {})}
+                rotation={componentPlacementRotation}
+                mirror={componentPlacementMirror}
+              />
               <EditorWiringOverlay
                 netLabelEditorOpen={netLabelEditorOpen}
                 selectedRouteId={selectedRouteId}
@@ -7869,56 +7852,28 @@ export function App({
                 onHandlePointerDown={beginDraftingHandleDrag}
                 onDeleteVertex={deleteConstructionVertex}
               />
-              {boxPreview ? (
-                <rect
-                  data-testid={
-                    boxPreview.intent === "zoom" ? "zoom-box" : "selection-box"
-                  }
-                  className={
-                    boxPreview.intent === "zoom"
-                      ? "zoom-box"
-                      : `selection-box selection-box--${marqueeMode(
-                          boxPreview.start,
-                          boxPreview.end,
-                        )}`
-                  }
-                  {...normalizedRect(boxPreview.start, boxPreview.end)}
-                />
-              ) : null}
-              {draftingSource && draftingHover ? (
-                <DraftingCreatePreview
-                  tool={tool}
-                  start={draftingSource}
-                  waypoints={draftingWaypoints}
-                  hover={draftingHover}
-                  snap={draftingSnapPoint}
-                  styleProfile={styleProfile}
-                />
-              ) : null}
-              {tool === "wire" && wirePreviewPoint ? (
-                <circle
-                  className="snap-preview"
-                  cx={wirePreviewPoint.x}
-                  cy={wirePreviewPoint.y}
-                  r="4"
-                />
-              ) : null}
-              {textEditing && textEditingBounds ? (
-                <CanvasTextEditorOverlay
-                  session={textEditing}
-                  bounds={textEditingBounds}
-                  viewBox={viewBox}
-                  disabled={textEditingLocked}
-                  onUpdate={updateTextEditing}
-                  onCommit={commitTextEditing}
-                  onDelete={deleteTextEditing}
-                  {...(editingAnnotation &&
-                  isRoutedMarker(editingAnnotation) &&
-                  effectiveRouteAttachment(editingAnnotation)
-                    ? { onReverseCurrentArrow: reverseSelectedCurrentArrow }
-                    : {})}
-                />
-              ) : null}
+              <EditorInteractionPreviews
+                boxPreview={boxPreview}
+                draftingSource={draftingSource}
+                draftingWaypoints={draftingWaypoints}
+                draftingHover={draftingHover}
+                draftingSnapPoint={draftingSnapPoint}
+                tool={tool}
+                styleProfile={styleProfile}
+                wirePreviewPoint={wirePreviewPoint}
+                textEditing={textEditing}
+                textEditingBounds={textEditingBounds}
+                viewBox={viewBox}
+                textEditingLocked={textEditingLocked}
+                onTextUpdate={updateTextEditing}
+                onTextCommit={commitTextEditing}
+                onTextDelete={deleteTextEditing}
+                {...(editingAnnotation &&
+                isRoutedMarker(editingAnnotation) &&
+                effectiveRouteAttachment(editingAnnotation)
+                  ? { onReverseCurrentArrow: reverseSelectedCurrentArrow }
+                  : {})}
+              />
             </g>
           </svg>
         </section>
