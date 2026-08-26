@@ -116,7 +116,6 @@ import {
   type SpiceImportReport,
 } from "../features/editor-shell/editor-file-commands";
 import { EditorStatusbar } from "../features/editor-shell/editor-statusbar";
-import { EditorTestTelemetry } from "../features/editor-shell/editor-test-telemetry";
 import { useCellSymbolLayout } from "../features/hierarchy/use-cell-symbol-layout";
 import {
   cellInsertLaunch,
@@ -148,14 +147,12 @@ import {
   RenderCrashProbe,
 } from "./editor-runtime-helpers";
 import { EditorDialogLayer } from "./editor-dialog-layer";
+import { EditorAppChrome } from "./editor-app-chrome";
 import { EditorPropertiesDock } from "./editor-properties-dock";
 import {
   netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
 } from "../features/netlist-export/netlist-authoring";
-import { ToolIcon } from "../features/editor-shell/tool-icon";
-import { DrawingToolbar } from "../features/editor-shell/drawing-toolbar";
-import { FileCommandMenu } from "../features/editor-shell/file-command-menu";
 import {
   quickPlaceRequest,
   ShapesPanel,
@@ -170,7 +167,6 @@ import {
 } from "../features/editor-shell/differential-input-swap";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
 import { createGalleryExampleCommands } from "../features/editor-shell/gallery-example-commands";
-import { HierarchyToolbar } from "../features/hierarchy/hierarchy-toolbar";
 import { createEditorNavigationController } from "../features/hierarchy/editor-navigation-controller";
 import { createProjectStructureCommands } from "../features/hierarchy/project-structure-commands";
 import type { PublishGalleryDraft } from "../features/editor-shell/publish-gallery-dialog";
@@ -3049,345 +3045,161 @@ export function App({
   return (
     <main className="app-shell">
       {renderCrashRequested() ? <RenderCrashProbe /> : null}
-      <header className="app-chrome">
-        <div className="app-chrome-main">
-          <div className="app-brand">
-            <a
-              className="gallery-home-link"
-              href="/"
-              aria-label="Back to the gallery"
-              title="Back to the gallery"
-            >
-              <span className="app-brand-mark" aria-hidden="true" />
-              <h1 title="Analog Canvas">Analog Canvas</h1>
-            </a>
-            <div className="app-brand-copy">
-              <p title={`${project.name} / ${document.name}`}>
-                {/* The circuit's name is what a published entry and a saved
-                    file are called, so it is edited where it is read. */}
-                <input
-                  className="app-project-name"
-                  aria-label="Circuit name"
-                  data-testid="project-name-input"
-                  value={projectNameDraft ?? project.name}
-                  size={Math.max((projectNameDraft ?? project.name).length, 6)}
-                  onChange={(event) =>
-                    setProjectNameDraft(event.currentTarget.value)
+      <EditorAppChrome
+        projectName={project.name}
+        projectNameDraft={projectNameDraft}
+        documentName={document.name}
+        onProjectNameDraftChange={setProjectNameDraft}
+        onProjectNameCommit={commitProjectName}
+        onProjectNameCancel={() => setProjectNameDraft(null)}
+        fileCommands={{
+          workspaceSlots,
+          previousProjectName: previousProject?.project.name ?? null,
+          canRevert: formalProjectBaseline !== null && isDirtyWork(),
+          hasRecoverySessions: recoverySessions.length > 0,
+          projectInputRef,
+          onNewProject: createNewProject,
+          onSaveProject: (pickLocation) =>
+            void saveProjectFile({ pickLocation }),
+          onOpenShelfSlot: (slot) => void openShelvedCircuit(slot),
+          onRefresh: refreshApp,
+          onOpenProject: (file) => void openProjectFile(file),
+          onImportSpice: (files) => void importSpiceFiles(files),
+          onExportSvg: exportSvg,
+          onExportRaster: (format) => void exportRaster(format),
+          onExportNetlist: exportDesignNetlist,
+          onRestorePrevious: restorePreviousProject,
+          onRevert: revertToFormalProjectBaseline,
+          onOpenRecovery: openRecoveryDialog,
+        }}
+        searchOpen={searchOpen}
+        onManageCells={() => setCellManagerOpen(true)}
+        onOpenSearch={() => setSearchOpen(true)}
+        undo={{
+          enabled: editorCommands.state({ id: "history.undo" }).enabled,
+          execute: () => editorCommands.execute({ id: "history.undo" }),
+        }}
+        redo={{
+          enabled: editorCommands.state({ id: "history.redo" }).enabled,
+          execute: () => editorCommands.execute({ id: "history.redo" }),
+        }}
+        deleteSelection={{
+          enabled:
+            hasVisualSelection(visualSelection) || selectedEndpoint !== null,
+          execute: () => editorCommands.execute({ id: "selection.delete" }),
+        }}
+        resets={[
+          {
+            label: "Clear Drawing",
+            enabled: clearDrawingPlan.edits.length > 0,
+            execute: () => commitCellReset(clearDrawingPlan, "Clear Drawing"),
+          },
+          {
+            label: "Reset Cell Placement",
+            enabled: resetPlacementPlan.edits.length > 0,
+            execute: () =>
+              commitCellReset(resetPlacementPlan, "Reset Cell Placement"),
+          },
+          {
+            label: "Reset Cell Body",
+            enabled: resetBodyPlan.edits.length > 0,
+            execute: () => commitCellReset(resetBodyPlan, "Reset Cell Body"),
+          },
+        ]}
+        rotate={{
+          enabled: editorCommands.state({ id: "transform.rotate" }).enabled,
+          execute: () => editorCommands.execute({ id: "transform.rotate" }),
+        }}
+        mirrorLeftRight={{
+          enabled: editorCommands.state({
+            id: "transform.mirror",
+            direction: "left-right",
+          }).enabled,
+          execute: () =>
+            editorCommands.execute({
+              id: "transform.mirror",
+              direction: "left-right",
+            }),
+        }}
+        mirrorTopBottom={{
+          enabled: editorCommands.state({
+            id: "transform.mirror",
+            direction: "top-bottom",
+          }).enabled,
+          execute: () =>
+            editorCommands.execute({
+              id: "transform.mirror",
+              direction: "top-bottom",
+            }),
+        }}
+        onAlign={selectedIds.length > 1 ? alignSelectedInstances : null}
+        instanceTableOpen={instanceTableOpen}
+        netlistPreflightOpen={netlistPreflightOpen}
+        onOpenInstanceTable={() => setInstanceTableOpen(true)}
+        onOpenNetlistPreflight={() => setNetlistPreflightOpen(true)}
+        agentAction={
+          publicAgentUiEnabled
+            ? {
+                label:
+                  agentSession.status === "idle"
+                    ? "Connect Agent"
+                    : "Manage Agent",
+                execute: () => {
+                  if (agentSession.status === "idle") {
+                    setAgentPanelOpen(true);
+                    return;
                   }
-                  onBlur={() => commitProjectName()}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") event.currentTarget.blur();
-                    if (event.key === "Escape") setProjectNameDraft(null);
-                  }}
-                />{" "}
-                /{" "}
-                <span data-testid="active-document-name">{document.name}</span>
-              </p>
-            </div>
-          </div>
-          <nav
-            className="app-command-surface"
-            aria-label="Editor commands"
-            onClick={(event) => {
-              const target = event.target;
-              if (
-                target instanceof Element &&
-                target.closest(".command-popover button")
-              ) {
-                dismissOpenCommandMenus();
+                  setSelectionOpen(true);
+                  setAgentDetailsOpen(true);
+                },
               }
-            }}
-          >
-            <div className="menubar-row">
-              <FileCommandMenu
-                workspaceSlots={workspaceSlots}
-                previousProjectName={previousProject?.project.name ?? null}
-                canRevert={formalProjectBaseline !== null && isDirtyWork()}
-                hasRecoverySessions={recoverySessions.length > 0}
-                projectInputRef={projectInputRef}
-                onNewProject={createNewProject}
-                onSaveProject={(pickLocation) =>
-                  void saveProjectFile({ pickLocation })
-                }
-                onOpenShelfSlot={(slot) => void openShelvedCircuit(slot)}
-                onRefresh={refreshApp}
-                onOpenProject={(file) => void openProjectFile(file)}
-                onImportSpice={(files) => void importSpiceFiles(files)}
-                onExportSvg={exportSvg}
-                onExportRaster={(format) => void exportRaster(format)}
-                onExportNetlist={exportDesignNetlist}
-                onRestorePrevious={restorePreviousProject}
-                onRevert={revertToFormalProjectBaseline}
-                onOpenRecovery={openRecoveryDialog}
-              />
-              <details className="command-menu" name="editor-command-menu">
-                <summary>Edit</summary>
-                <div className="command-popover">
-                  <button
-                    type="button"
-                    data-testid="edit-manage-cells"
-                    onClick={() => setCellManagerOpen(true)}
-                  >
-                    Manage Cells…
-                  </button>
-                  <button
-                    type="button"
-                    data-testid="project-search-button"
-                    aria-haspopup="dialog"
-                    aria-expanded={searchOpen}
-                    onClick={() => setSearchOpen(true)}
-                  >
-                    Search…
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({ id: "history.undo" })
-                    }
-                    disabled={
-                      !editorCommands.state({ id: "history.undo" }).enabled
-                    }
-                  >
-                    Undo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({ id: "history.redo" })
-                    }
-                    disabled={
-                      !editorCommands.state({ id: "history.redo" }).enabled
-                    }
-                  >
-                    Redo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({ id: "selection.delete" })
-                    }
-                    disabled={
-                      !hasVisualSelection(visualSelection) && !selectedEndpoint
-                    }
-                  >
-                    Delete
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      commitCellReset(clearDrawingPlan, "Clear Drawing")
-                    }
-                    disabled={clearDrawingPlan.edits.length === 0}
-                  >
-                    Clear Drawing
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      commitCellReset(
-                        resetPlacementPlan,
-                        "Reset Cell Placement",
-                      )
-                    }
-                    disabled={resetPlacementPlan.edits.length === 0}
-                  >
-                    Reset Cell Placement
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      commitCellReset(resetBodyPlan, "Reset Cell Body")
-                    }
-                    disabled={resetBodyPlan.edits.length === 0}
-                  >
-                    Reset Cell Body
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({ id: "transform.rotate" })
-                    }
-                    disabled={
-                      !editorCommands.state({ id: "transform.rotate" }).enabled
-                    }
-                  >
-                    <ToolIcon name="rotate" />
-                    Rotate
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({
-                        id: "transform.mirror",
-                        direction: "left-right",
-                      })
-                    }
-                    disabled={
-                      !editorCommands.state({
-                        id: "transform.mirror",
-                        direction: "left-right",
-                      }).enabled
-                    }
-                  >
-                    Mirror left/right (Shift+R)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({
-                        id: "transform.mirror",
-                        direction: "top-bottom",
-                      })
-                    }
-                    disabled={
-                      !editorCommands.state({
-                        id: "transform.mirror",
-                        direction: "top-bottom",
-                      }).enabled
-                    }
-                  >
-                    Mirror top/bottom (Ctrl+R)
-                  </button>
-                  {selectedIds.length > 1 ? (
-                    <button type="button" onClick={alignSelectedInstances}>
-                      Align
-                    </button>
-                  ) : null}
-                </div>
-              </details>
-              <details className="command-menu" name="editor-command-menu">
-                <summary>Netlist</summary>
-                <div className="command-popover">
-                  <span className="command-group-label">Authoring</span>
-                  <button
-                    type="button"
-                    aria-haspopup="dialog"
-                    aria-expanded={instanceTableOpen}
-                    onClick={() => setInstanceTableOpen(true)}
-                  >
-                    Instance Table…
-                  </button>
-                  <span className="command-group-label">Check</span>
-                  <button
-                    type="button"
-                    aria-haspopup="dialog"
-                    aria-expanded={netlistPreflightOpen}
-                    onClick={() => setNetlistPreflightOpen(true)}
-                  >
-                    Check Report…
-                  </button>
-                </div>
-              </details>
-              {publicAgentUiEnabled ? (
-                <details className="command-menu" name="editor-command-menu">
-                  <summary>Agent</summary>
-                  <div className="command-popover">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (agentSession.status === "idle") {
-                          setAgentPanelOpen(true);
-                          return;
-                        }
-                        setSelectionOpen(true);
-                        setAgentDetailsOpen(true);
-                      }}
-                    >
-                      {agentSession.status === "idle"
-                        ? "Connect Agent"
-                        : "Manage Agent"}
-                    </button>
-                  </div>
-                </details>
-              ) : null}
-              <button
-                type="button"
-                className="toolbar-check-save"
-                data-testid="check-and-save-button"
-                title="Check the circuit and save it to your shelf"
-                onClick={() => void checkAndSave()}
-              >
-                <span className="toolbar-check-glyph" aria-hidden="true" />
-                Check and Save
-              </button>
-              <button
-                type="button"
-                data-testid="publish-gallery-button"
-                aria-haspopup="dialog"
-                aria-expanded={publishGalleryOpen}
-                title="Publish to Gallery"
-                onClick={() => setPublishGalleryOpen(true)}
-              >
-                Publish to Gallery
-              </button>
-            </div>
-          </nav>
-          <div className="app-chrome-actions">
-            <a
-              className="analytics-link"
-              href="/analytics"
-              aria-label="Open visitor analytics"
-            >
-              {visitStats ? (
-                <>
-                  <span>{visitStats.uv.toLocaleString()} visitors</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{visitStats.pv.toLocaleString()} views</span>
-                </>
-              ) : (
-                "Analytics"
-              )}
-            </a>
-            <button
-              type="button"
-              className="menubar-help"
-              ref={helpButtonRef}
-              aria-haspopup="dialog"
-              aria-expanded={helpOpen}
-              aria-controls="editor-help-dialog"
-              onClick={() => setHelpOpen(true)}
-            >
-              Help
-            </button>
-          </div>
-        </div>
-        <DrawingToolbar
-          leftPanelMode={leftPanelMode}
-          libraryPanelOpen={visibleLibraryPanelOpen}
-          tool={tool}
-          documentSettingsOpen={documentSettingsOpen}
-          onToggleExamples={toggleExamplesPanel}
-          onToggleLibrary={toggleLibraryPanel}
-          onInsert={() =>
+            : null
+        }
+        onCheckAndSave={() => void checkAndSave()}
+        publishGalleryOpen={publishGalleryOpen}
+        onPublishGallery={() => setPublishGalleryOpen(true)}
+        visitStats={visitStats}
+        helpButtonRef={helpButtonRef}
+        helpOpen={helpOpen}
+        onOpenHelp={() => setHelpOpen(true)}
+        drawingToolbar={{
+          leftPanelMode,
+          libraryPanelOpen: visibleLibraryPanelOpen,
+          tool,
+          documentSettingsOpen,
+          onToggleExamples: toggleExamplesPanel,
+          onToggleLibrary: toggleLibraryPanel,
+          onInsert: () =>
             editorCommands.execute({
               id: "insert.start",
               launch: fullInsertLaunch(),
-            })
-          }
-          onActivateTool={(nextTool) =>
-            editorCommands.execute({ id: "tool.activate", tool: nextTool })
-          }
-          onAddText={() => editorCommands.execute({ id: "drafting.add-text" })}
-          onOpenDocumentSettings={() => {
+            }),
+          onActivateTool: (nextTool) =>
+            editorCommands.execute({
+              id: "tool.activate",
+              tool: nextTool,
+            }),
+          onAddText: () => editorCommands.execute({ id: "drafting.add-text" }),
+          onOpenDocumentSettings: () => {
             setDocumentSettingsOpen((open) => !open);
             setSelectionOpen(true);
-          }}
-        />
-        <HierarchyToolbar
-          documents={project.documents}
-          activeDocumentId={document.id}
-          topDocumentId={project.topDocumentId}
-          navigationDepth={documentStack.length}
-          canEnter={hasHierarchyEnterSelection}
-          onUp={returnToParentDocument}
-          onTop={returnToTopDocument}
-          onSelectDocument={selectDocumentFromHierarchy}
-          onEnter={enterSelectedHierarchy}
-          onManageCells={() => setCellManagerOpen(true)}
-          onPlaceCell={placeCellInstance}
-        />
-        <EditorTestTelemetry
-          snapshot={{
+          },
+        }}
+        hierarchyToolbar={{
+          documents: project.documents,
+          activeDocumentId: document.id,
+          topDocumentId: project.topDocumentId,
+          navigationDepth: documentStack.length,
+          canEnter: hasHierarchyEnterSelection,
+          onUp: returnToParentDocument,
+          onTop: returnToTopDocument,
+          onSelectDocument: selectDocumentFromHierarchy,
+          onEnter: enterSelectedHierarchy,
+          onManageCells: () => setCellManagerOpen(true),
+          onPlaceCell: placeCellInstance,
+        }}
+        telemetry={{
+          snapshot: {
             selectedInternalRouteCount: internalSelection.routeIds.length,
             revision: document.revision,
             sourceStatus: document.sourceStatus,
@@ -3405,9 +3217,9 @@ export function App({
               visualDiagnosticSummary.structural.length,
             visualDiagnosticCount: visualDiagnosticSummary.observations.length,
             blockingDiagnosticCount: visualDiagnosticSummary.blockingCount,
-          }}
-        />
-      </header>
+          },
+        }}
+      />
       <EditorDialogLayer
         help={
           helpOpen ? { closeButtonRef: helpCloseRef, onClose: closeHelp } : null
