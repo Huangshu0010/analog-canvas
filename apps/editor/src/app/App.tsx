@@ -14,9 +14,7 @@ import { deviceDescriptor } from "@icm/devices";
 
 import {
   compileWireDraft,
-  createConnectivityProposal,
   createFreeWireAnchor,
-  gateConnectivityProposal,
   createRouteWireAnchor,
   proposeEndpointRouteAttachment,
   proposeGroupMoveEdits,
@@ -43,9 +41,6 @@ import {
   planInstanceUnplacement,
   proposeSetCellFormalParameters,
   proposeUpsertExternalSubcircuitDefinition,
-  type ProjectStructureEdit,
-  type EditTransactionResult,
-  type ConnectivityIntent,
   type SchematicEdit,
   type CellResetPlan,
   type WireSource,
@@ -301,6 +296,7 @@ import {
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
 import { createEditorCommandRouter } from "../commands/editor-command";
+import { createEditorTransactionCommands } from "./editor-transaction-commands";
 import {
   RecoveryFailureBanner,
   recoveryStateLabel,
@@ -860,6 +856,16 @@ export function App({
     beginSelectionMove: beginSelectionMoveInteraction,
     cancelInteraction,
   } = useInteractionState<SchematicClipboard>();
+  const { commitStructure, transact, transactConnectivity } =
+    createEditorTransactionCommands({
+      project,
+      document,
+      dispatchProjectTransaction,
+      transactDocument,
+      getCurrentInteractionKind: () => getCurrentInteractionState().kind,
+      cancelAllTransientInteraction,
+      setStatus,
+    });
   const [draftingInspectorSegment, setDraftingInspectorSegment] = useState<{
     objectId: string;
     index: number;
@@ -2256,29 +2262,6 @@ export function App({
     );
   }
 
-  function commitStructure(
-    transactionId: string,
-    edits: ProjectStructureEdit[],
-    activeDocumentId = document.id,
-  ): boolean {
-    const result = dispatchProjectTransaction(
-      {
-        transactionId,
-        projectId: project.id,
-        expectedStructureRevision: project.structureRevision,
-        actor: { kind: "human", id: "human-local" },
-        edits,
-      },
-      activeDocumentId,
-    );
-    if (result.ok && result.applied) return true;
-    const message = result.ok
-      ? "The structural transaction made no change"
-      : (result.diagnostics[0]?.message ?? result.error.message);
-    setStatus(`Could not update Cell structure: ${message}`);
-    return false;
-  }
-
   function createCell(name: string): void {
     name = name.trim();
     if (!name) return;
@@ -3177,105 +3160,6 @@ export function App({
       diagnostic.primary,
       `${diagnostic.domain.toUpperCase()} ${diagnostic.code}: ${diagnostic.message}`,
     );
-  }
-
-  function applyResult(result: EditTransactionResult): void {
-    if (!result.ok) {
-      const detail = result.diagnostics[0]?.message;
-      setStatus(
-        detail && detail !== result.error.message
-          ? `${result.error.code}: ${result.error.message} — ${detail}`
-          : `${result.error.code}: ${result.error.message}`,
-      );
-      return;
-    }
-    setStatus(
-      result.applied
-        ? `Committed revision ${result.revision}`
-        : `Dry run for revision ${result.proposedRevision}`,
-    );
-  }
-
-  function transact(
-    edits: SchematicEdit[],
-    options: {
-      completesWireSession?: boolean;
-      preserveInteraction?: boolean;
-    } = {},
-  ): EditTransactionResult {
-    let result: EditTransactionResult;
-    try {
-      result = transactDocument(edits);
-    } catch (error) {
-      // The controller fence normally converts engine failures into typed
-      // rejections; this catch covers the thin React wrapper around it.
-      // Either way the committed circuit is unchanged, so only the transient
-      // interaction state needs to be dropped.
-      cancelAllTransientInteraction();
-      const message =
-        error instanceof Error ? error.message : "unexpected failure";
-      setStatus(
-        `INTERNAL_ERROR: ${message} — operation cancelled; circuit unchanged`,
-      );
-      return {
-        ok: false,
-        applied: false,
-        revision: document.revision,
-        document,
-        error: { code: "INTERNAL_ERROR", message },
-        diagnostics: [],
-      };
-    }
-    applyResult(result);
-    if (!result.ok && result.error.code === "INTERNAL_ERROR") {
-      cancelAllTransientInteraction();
-    }
-    const currentInteraction = getCurrentInteractionState();
-    const preservesCurrentInteraction =
-      options.preserveInteraction ||
-      (currentInteraction.kind === "wire" && options.completesWireSession);
-    if (
-      result.ok &&
-      currentInteraction.kind !== "idle" &&
-      !preservesCurrentInteraction
-    ) {
-      const cancelledKind = currentInteraction.kind;
-      cancelAllTransientInteraction();
-      setStatus(
-        cancelledKind === "wire"
-          ? `Committed revision ${result.revision}; Wire cancelled because the circuit changed`
-          : `Committed revision ${result.revision}; active tool cancelled because the circuit changed`,
-      );
-    }
-    return result;
-  }
-
-  /**
-   * Connectivity edits are still persisted as the established typed edits.
-   * This fence gives every GUI producer the same Cell/revision contract before
-   * it reaches that mutation boundary.
-   */
-  function transactConnectivity(
-    intent: ConnectivityIntent,
-    edits: readonly SchematicEdit[],
-    preview?: unknown,
-    options: {
-      completesWireSession?: boolean;
-      preserveInteraction?: boolean;
-    } = {},
-  ): EditTransactionResult | null {
-    const proposal = createConnectivityProposal(document, {
-      intent,
-      edits,
-      diagnostics: [],
-      ...(preview === undefined ? {} : { preview }),
-    });
-    const gate = gateConnectivityProposal(document, proposal);
-    if (!gate.ok) {
-      setStatus(gate.message);
-      return null;
-    }
-    return transact([...gate.edits], options);
   }
 
   const clearDrawingPlan = planCellReset(project, document.id, "clear-drawing");
