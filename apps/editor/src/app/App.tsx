@@ -99,7 +99,6 @@ import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import {
   fitCameraToBounds,
   normalizeCameraRect,
-  zoomCameraAtAnchor,
   type CameraRectInput,
 } from "../canvas/fit-view";
 import type { CanvasDragSession } from "../canvas/canvas-drag-session";
@@ -111,16 +110,9 @@ import {
   type RouteStretchPreview,
   useWireInteraction,
 } from "../features/wiring/use-wire-interaction";
-import {
-  closestPointOnSegment,
-  normalizedRect,
-} from "../canvas/canvas-geometry";
-import {
-  classifyCanvasGestureStart,
-  type BoxPreview,
-  type PanPreview,
-  updateCanvasPan,
-} from "../canvas/canvas-gesture-model";
+import { closestPointOnSegment } from "../canvas/canvas-geometry";
+import type { BoxPreview, PanPreview } from "../canvas/canvas-gesture-model";
+import { createCanvasGestureController } from "../canvas/canvas-gesture-controller";
 import {
   canvasPointFromClient,
   logicalRadiusForCanvasPixels,
@@ -277,10 +269,6 @@ import {
   rectangleLabelFor,
 } from "../features/drafting/rectangle-label";
 import {
-  marqueeMode,
-  marqueeSelection,
-} from "../features/selection/marquee-selection";
-import {
   resolveEditorShortcut,
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
@@ -316,10 +304,7 @@ import {
 import { useRecoveryCoordinator } from "../document/recovery-coordinator";
 import { requestProjectDownload } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
-import {
-  deriveSelectionInspectionModel,
-  type SupplementalSelection,
-} from "../features/selection/selection-inspection-model";
+import { deriveSelectionInspectionModel } from "../features/selection/selection-inspection-model";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
 import { createPropertyEditPlanner } from "../features/properties/property-edit-planner";
 import { createSelectionPropertyCommands } from "../features/properties/selection-property-commands";
@@ -383,13 +368,6 @@ const LIBRARY_PANEL_STORAGE_KEY = "icm.library-panel-open.v1";
 const LIBRARY_WIDTH_STORAGE_KEY = "icm.library-panel-width.v1";
 const COMPACT_LAYOUT_MEDIA_QUERY = "(max-width: 860px)";
 const DRAG_START_DISTANCE_PX = 4;
-/**
- * Middle-press slop before a pan begins. A scroll wheel is stiff enough that
- * clicking it drags the hand several pixels, and the ordinary 4px threshold
- * turned those clicks into pans — so the corner cycle they were meant to
- * trigger did nothing and the middle button felt unresponsive.
- */
-const PAN_START_DISTANCE_PX = 10;
 const SNAP_CAPTURE_RADIUS_PX = 7;
 
 /** Persisted Junctions are grid points, including on ±45° Route segments. */
@@ -399,13 +377,6 @@ type DragPreview = InstanceMovePreview;
 // Handle drags are geometry edits rather than translations.  Keep a complete
 // transient object so the formal SVG renderer can redraw both a curved shaft
 // and its arrow head from the same latest control point before pointer-up.
-const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
-  routeIds: [],
-  junctionIds: [],
-  annotationIds: [],
-  draftingIds: [],
-};
-
 export interface AppProps {
   project?: CircuitProject;
   visitStats?: { pv: number; uv: number } | null;
@@ -2003,6 +1974,63 @@ export function App({
     transact,
     setStatus,
   });
+  const {
+    fitView,
+    zoomViewAtCenter,
+    handleWheel,
+    beginCanvasGesture,
+    continueCanvasGesture,
+    finishCanvasGesture,
+  } = createCanvasGestureController({
+    document,
+    resolver,
+    routeGeometryRecords,
+    styleProfile,
+    defaultViewBox: DEFAULT_VIEWBOX,
+    contentBounds: contentScene?.viewBox,
+    viewBox,
+    setViewBox,
+    boxPreview,
+    setBoxPreview,
+    panPreview,
+    setPanPreview,
+    pointFromClient: (clientX, clientY, svg) =>
+      pointFromClient(clientX, clientY, svg),
+    rawPointFromClient: (clientX, clientY, svg) =>
+      pointFromClient(clientX, clientY, svg, false),
+    logicalRadiusForPixels,
+    getInteractionKind: () => getCurrentInteractionState().kind,
+    updateCommandMovePreview: updateCommandMovePreviewFromSelection,
+    componentPlacementPending: Boolean(
+      pendingSymbolId && pendingComponentPlacement,
+    ),
+    componentSymbolPending: pendingSymbolId !== null,
+    setComponentPreviewPoint,
+    vddRailMode,
+    vddRailStart,
+    setVddRailPreviewPoint,
+    copyPlacementPending: copyPlacement !== null,
+    setCopyPreviewPoint,
+    tool,
+    draftingSource,
+    snapDraftingPoint,
+    setDraftingHover,
+    setDraftingSnapPoint,
+    wireActive: wireSource !== null,
+    resolveWireCanvasSnap,
+    setWirePreviewPoint,
+    paintSnapGuides,
+    cycleWireCornerShape,
+    noteCanvasPoint: (point) => {
+      lastCanvasPointRef.current = point;
+    },
+    cellSymbolLayoutDragPointerId,
+    cancelCellSymbolLayoutDrag,
+    completeCellSymbolLayoutDrag,
+    replaceSelection,
+    clearSelectedEndpoint: () => setSelectedEndpoint(null),
+    setStatus,
+  });
 
   function compositeSelectionOwnsHit(
     kind: "instance" | "instance-label" | "annotation" | "route" | "junction",
@@ -3585,245 +3613,6 @@ export function App({
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "SPICE import failed");
     }
-  }
-
-  function fitView(): void {
-    setViewBox(
-      fitCameraToBounds(
-        contentScene?.viewBox ?? DEFAULT_VIEWBOX,
-        document.presentation.grid,
-      ),
-    );
-    setStatus("Fit Document");
-  }
-
-  function zoomViewAtCenter(factor: number): void {
-    setViewBox((current) =>
-      zoomCameraAtAnchor(current, factor, { x: 0.5, y: 0.5 }),
-    );
-  }
-
-  function handleWheel(event: React.WheelEvent<SVGSVGElement>): void {
-    // Ctrl/Command+wheel is a browser-reserved page-zoom gesture. The canvas
-    // owns an unmodified wheel gesture only while the pointer is over it, so
-    // schematic navigation stays useful without fighting the host browser.
-    if (event.ctrlKey || event.metaKey) return;
-    event.preventDefault();
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const anchor = {
-      x: (event.clientX - bounds.left) / bounds.width,
-      y: (event.clientY - bounds.top) / bounds.height,
-    };
-    const factor = event.deltaY < 0 ? 0.88 : 1.14;
-    setViewBox((current) => zoomCameraAtAnchor(current, factor, anchor));
-  }
-
-  function beginCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
-    const gesture = classifyCanvasGestureStart({
-      button: event.button,
-      altKey: event.altKey,
-      interactionKind: getCurrentInteractionState().kind,
-      targetIsCanvas:
-        event.target === event.currentTarget ||
-        (event.target as Element).tagName === "rect",
-      placementPending: Boolean(pendingSymbolId && pendingComponentPlacement),
-      vddRailMode,
-      copyPlacementPending: copyPlacement !== null,
-      tool,
-    });
-    if (gesture === "pan") {
-      event.preventDefault();
-      event.currentTarget.setPointerCapture(event.pointerId);
-      setPanPreview({
-        clientStart: { x: event.clientX, y: event.clientY },
-        viewBoxStart: viewBox,
-        pointerId: event.pointerId,
-        dragged: false,
-      });
-      return;
-    }
-    if (gesture === "zoom") {
-      const zoomStart = pointFromClient(
-        event.clientX,
-        event.clientY,
-        event.currentTarget,
-      );
-      event.currentTarget.setPointerCapture(event.pointerId);
-      setBoxPreview({
-        start: zoomStart,
-        end: zoomStart,
-        pointerId: event.pointerId,
-        intent: "zoom",
-      });
-      return;
-    }
-    if (gesture !== "select") return;
-    const point = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget,
-    );
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setBoxPreview({
-      start: point,
-      end: point,
-      pointerId: event.pointerId,
-      intent: "select",
-    });
-  }
-
-  function continueCanvasGesture(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ): void {
-    const currentInteraction = getCurrentInteractionState();
-    if (currentInteraction.kind === "moving-selection") {
-      updateCommandMovePreviewFromSelection(
-        pointFromClient(event.clientX, event.clientY, event.currentTarget),
-        { x: event.clientX, y: event.clientY },
-        event.currentTarget,
-        event.altKey,
-      );
-      return;
-    }
-    if (panPreview?.pointerId === event.pointerId) {
-      const bounds = event.currentTarget.getBoundingClientRect();
-      const update = updateCanvasPan(
-        panPreview,
-        { x: event.clientX, y: event.clientY },
-        bounds,
-        PAN_START_DISTANCE_PX,
-      );
-      if (!update) return;
-      if (update.preview !== panPreview) setPanPreview(update.preview);
-      setViewBox(update.viewBox);
-      return;
-    }
-    const point = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget,
-    );
-    lastCanvasPointRef.current = point;
-    if (vddRailMode) {
-      const snapped = {
-        x: snapCoordinate(point.x, document.presentation.grid),
-        y: snapCoordinate(point.y, document.presentation.grid),
-      };
-      setVddRailPreviewPoint(
-        vddRailStart
-          ? constrainedPowerRailEndpoint(vddRailStart, snapped)
-          : snapped,
-      );
-      return;
-    }
-    if (pendingSymbolId) {
-      setComponentPreviewPoint(point);
-      return;
-    }
-    if (currentInteraction.kind === "copy-placement") {
-      setCopyPreviewPoint({
-        x: snapCoordinate(point.x, document.presentation.grid),
-        y: snapCoordinate(point.y, document.presentation.grid),
-      });
-      return;
-    }
-    if (boxPreview?.pointerId === event.pointerId) {
-      setBoxPreview({ ...boxPreview, end: point });
-    }
-    // Two-phase drafting: keep the preview anchored to the snap-aware hover point.
-    if (
-      (tool === "arrow" ||
-        tool === "construction-line" ||
-        tool === "rectangle") &&
-      draftingSource !== null
-    ) {
-      const snapped = snapDraftingPoint(
-        point,
-        event.altKey,
-        event.shiftKey,
-        draftingSource ?? undefined,
-        logicalRadiusForPixels(event.currentTarget, SNAP_CAPTURE_RADIUS_PX),
-      );
-      setDraftingHover(snapped.point);
-      setDraftingSnapPoint(snapped.snap);
-      paintSnapGuides(snapped.guides);
-    }
-    if (tool === "wire" && wireSource) {
-      const rawPoint = pointFromClient(
-        event.clientX,
-        event.clientY,
-        event.currentTarget,
-        false,
-      );
-      const resolved = resolveWireCanvasSnap(
-        rawPoint,
-        event.currentTarget,
-        event.altKey,
-      );
-      setWirePreviewPoint(resolved.point);
-      paintSnapGuides(resolved.guides);
-    }
-  }
-
-  function finishCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
-    if (
-      event.type === "pointercancel" &&
-      cellSymbolLayoutDragPointerId === event.pointerId
-    ) {
-      cancelCellSymbolLayoutDrag();
-      return;
-    }
-    if (completeCellSymbolLayoutDrag(event)) return;
-    if (panPreview?.pointerId === event.pointerId) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-      if (!panPreview.dragged && getCurrentInteractionState().kind === "wire") {
-        cycleWireCornerShape();
-      }
-      setPanPreview(null);
-      return;
-    }
-    if (boxPreview?.pointerId !== event.pointerId) return;
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    if (boxPreview.intent === "zoom") {
-      const rect = normalizedRect(boxPreview.start, boxPreview.end);
-      setBoxPreview(null);
-      // A right press barely moved is an ordinary right click, not a frame.
-      if (
-        rect.width > document.presentation.grid &&
-        rect.height > document.presentation.grid
-      ) {
-        setViewBox(fitCameraToBounds(rect, document.presentation.grid));
-        setStatus("Zoomed to framed region");
-      }
-      return;
-    }
-    const rect = normalizedRect(boxPreview.start, boxPreview.end);
-    const clicked =
-      rect.width <= document.presentation.grid &&
-      rect.height <= document.presentation.grid;
-    // Classic directional marquee: a left-to-right drag is a window (full
-    // containment required), a right-to-left drag is a crossing (any overlap
-    // selects). Geometry alone decides membership.
-    const selection = clicked
-      ? { instanceIds: [], ...EMPTY_SUPPLEMENTAL_SELECTION }
-      : marqueeSelection(
-          document,
-          resolver,
-          routeGeometryRecords,
-          styleProfile,
-          rect,
-          marqueeMode(boxPreview.start, boxPreview.end),
-        );
-    replaceSelection(selection);
-    setSelectedEndpoint(null);
-    setBoxPreview(null);
-    const count =
-      selection.instanceIds.length +
-      selection.routeIds.length +
-      selection.junctionIds.length +
-      selection.annotationIds.length +
-      selection.draftingIds.length;
-    setStatus(count > 0 ? `Selected ${count} objects` : "Selection cleared");
   }
 
   // Drafting uses the shared Snap Engine. It may align visually to electrical
