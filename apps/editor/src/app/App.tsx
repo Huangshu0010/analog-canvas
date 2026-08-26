@@ -48,7 +48,6 @@ import {
   resolveMosBulkConnection,
   resolveDocumentStyleProfile,
   resolveDocumentLogicalNets,
-  resolveRouteAttachment,
   resolveRouteTap,
   resolveDocumentRoutingGeometry,
   summarizeProjectCells,
@@ -69,7 +68,6 @@ import {
   defaultDraftTextDocument,
   foldNetName,
   flattenRichText,
-  snapGridPoint,
   semanticTextDocument,
 } from "@icm/model";
 import type {
@@ -101,7 +99,6 @@ import {
   copySelection,
 } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
-import { startCanvasDragSession } from "../canvas/canvas-drag-session";
 import {
   fitCameraToBounds,
   normalizeCameraRect,
@@ -109,7 +106,6 @@ import {
   type CameraRectInput,
 } from "../canvas/fit-view";
 import type { CanvasDragSession } from "../canvas/canvas-drag-session";
-import { startCanvasDragVisual } from "../canvas/canvas-drag-visual";
 import {
   rankCanvasHits,
   resolveCanvasHitAtPoint,
@@ -147,7 +143,7 @@ import {
   EditorDraftingHandles,
   EditorDraftingHitTargets,
 } from "../canvas/editor-drafting-hit-targets";
-import { draggedAnnotationAtPosition } from "../features/text-editing/annotation-drag-model";
+import { createAnnotationDragController } from "../features/text-editing/annotation-drag-controller";
 import {
   createRasterExportArtifact,
   createSvgExportArtifact,
@@ -404,12 +400,6 @@ const SNAP_CAPTURE_RADIUS_PX = 7;
 /** Persisted Junctions are grid points, including on ±45° Route segments. */
 
 type DragPreview = InstanceMovePreview;
-
-interface AnnotationDragPreview {
-  annotationId: string;
-  originalPosition: Point;
-  pointerStart: DerivedPoint;
-}
 
 // Handle drags are geometry edits rather than translations.  Keep a complete
 // transient object so the formal SVG renderer can redraw both a curved shaft
@@ -1966,6 +1956,35 @@ export function App({
     transact,
     setStatus,
   });
+  const { beginDrag: beginAnnotationDrag } = createAnnotationDragController({
+    document,
+    resolver,
+    routeGeometryRecords,
+    dragSessionRef: canvasDragSessionRef,
+    dragThresholdPx: DRAG_START_DISTANCE_PX,
+    pointFromClient: (clientX, clientY, svg) =>
+      pointFromClient(clientX, clientY, svg, false),
+    onCompositeMove: (event, hitTarget) => {
+      if (getCurrentInteractionState().kind !== "moving-selection") {
+        return false;
+      }
+      const primaryInstanceId = selectedIds.at(-1);
+      if (primaryInstanceId) {
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
+      } else {
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          hitTarget,
+        );
+      }
+      return true;
+    },
+    selectAnnotation: (id) => selectOnly("annotation", [id]),
+    clearSelectedEndpoint: () => setSelectedEndpoint(null),
+    transact,
+    setStatus,
+  });
 
   function compositeSelectionOwnsHit(
     kind: "instance" | "instance-label" | "annotation" | "route" | "junction",
@@ -2952,126 +2971,6 @@ export function App({
           : "stretch-segment",
       hitTarget,
     );
-  }
-
-  function beginAnnotationDrag(
-    event: ReactPointerEvent<SVGElement>,
-    annotation: Annotation,
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (event.button !== 0) return;
-    if (getCurrentInteractionState().kind === "moving-selection") {
-      const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId)
-        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
-      else
-        beginVisualSelectionMoveFromSelection(
-          event,
-          visualSelection,
-          hitTarget,
-        );
-      return;
-    }
-    event.stopPropagation();
-    selectOnly("annotation", [annotation.id]);
-    setSelectedEndpoint(null);
-    if (annotation.locked) {
-      setStatus("Selected locked annotation");
-      return;
-    }
-    if (event.shiftKey || event.ctrlKey || event.metaKey) {
-      setStatus(`Selected annotation ${annotation.id}`);
-      return;
-    }
-    canvasDragSessionRef.current?.cancel();
-    const svg = hitTarget.ownerSVGElement!;
-    const pointerStart = pointFromClient(
-      event.clientX,
-      event.clientY,
-      svg,
-      false,
-    );
-    const currentAttachment = effectiveRouteAttachment(annotation);
-    const record = currentAttachment
-      ? routeGeometryRecords.find(
-          ({ route }) => route.id === currentAttachment.routeId,
-        )
-      : undefined;
-    const markerPlacement =
-      record && currentAttachment
-        ? resolveRouteAttachment(record.geometry, currentAttachment)
-        : null;
-    const preview: AnnotationDragPreview = {
-      annotationId: annotation.id,
-      originalPosition: {
-        ...(isRoutedMarker(annotation) && markerPlacement
-          ? markerPlacement.labelPoint
-          : annotation.anchor.kind === "free"
-            ? annotation.anchor.position
-            : annotation.anchor.fallbackPosition),
-      },
-      pointerStart,
-    };
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, [annotation.id]));
-    const positionAt = (clientX: number, clientY: number): DerivedPoint => {
-      const pointer = pointFromClient(clientX, clientY, svg, false);
-      return {
-        x: preview.originalPosition.x + pointer.x - preview.pointerStart.x,
-        y: preview.originalPosition.y + pointer.y - preview.pointerStart.y,
-      };
-    };
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const position = positionAt(client.x, client.y);
-        // Route-attached current markers used to preview by replacing their
-        // annotation in `renderedDocument`. That invalidated and rebuilt the
-        // whole formal SVG scene once per pointer frame. A marker is one
-        // indivisible visual object, so a lightweight temporary translation is
-        // sufficient during the gesture; the exact route attachment is still
-        // resolved and persisted once on pointer release below.
-        dragVisual().translate({
-          x: position.x - preview.originalPosition.x,
-          y: position.y - preview.originalPosition.y,
-        });
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        if (dragged) {
-          completeAnnotationDrag(preview, positionAt(client.x, client.y));
-        }
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-      },
-    });
-  }
-
-  function completeAnnotationDrag(
-    preview: AnnotationDragPreview,
-    position: DerivedPoint,
-  ): void {
-    const annotation = document.annotations.find(
-      (candidate) => candidate.id === preview.annotationId,
-    );
-    if (!annotation) return;
-    transact([
-      {
-        kind: "upsert_schematic_annotation",
-        annotation: draggedAnnotationAtPosition(
-          { document, resolver, routeGeometryRecords },
-          annotation,
-          snapGridPoint(position, document.presentation.grid),
-        ),
-      },
-    ]);
   }
 
   function pointFromClient(
