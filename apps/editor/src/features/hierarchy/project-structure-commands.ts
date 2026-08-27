@@ -1,5 +1,8 @@
 import {
+  planEditCellTerminalAnnotation,
   planCreateCell,
+  planInstanceDeletion,
+  planRemoveCellTerminals,
   planRenameCell,
   planRenameCellTerminal,
   planReorderCellTerminal,
@@ -9,13 +12,19 @@ import {
   proposeSetCellFormalParameters,
   proposeUpsertExternalSubcircuitDefinition,
 } from "@icm/edit-engine";
-import type { ProjectStructureEdit } from "@icm/edit-engine";
-import { createEmptyDocument, createId } from "@icm/model";
+import type { ProjectStructureEdit, SchematicEdit } from "@icm/edit-engine";
+import {
+  createEmptyDocument,
+  createId,
+  semanticTextDocument,
+} from "@icm/model";
 import type {
+  Annotation,
   CircuitProject,
   ExternalSubcircuitDefinition,
   SchematicDocument,
 } from "@icm/model";
+import type { SymbolResolver } from "@icm/symbols";
 
 type CellDirection = "input" | "output" | "inout" | "passive";
 type CellPinSide = "north" | "east" | "south" | "west" | "auto";
@@ -26,6 +35,7 @@ type FormalParameters = NonNullable<
 export interface ProjectStructureCommandDependencies {
   project: CircuitProject;
   activeDocument: SchematicDocument;
+  resolver: SymbolResolver;
   commitStructure: (
     transactionId: string,
     edits: ProjectStructureEdit[],
@@ -33,6 +43,7 @@ export interface ProjectStructureCommandDependencies {
   ) => boolean;
   setStatus: (status: string) => void;
   onCellCreated: () => void;
+  nextSequence: () => number;
   createDocumentId?: () => string;
 }
 
@@ -45,9 +56,11 @@ export interface ProjectStructureCommandDependencies {
 export function createProjectStructureCommands({
   project,
   activeDocument,
+  resolver,
   commitStructure,
   setStatus,
   onCellCreated,
+  nextSequence,
   createDocumentId = () => createId("document"),
 }: ProjectStructureCommandDependencies) {
   const createCell = (inputName: string): void => {
@@ -131,6 +144,110 @@ export function createProjectStructureCommands({
       setStatus(
         error instanceof Error ? error.message : "Could not rename port",
       );
+    }
+  };
+
+  const editCellTerminalAnnotation = (
+    annotation: Annotation,
+    inputName: string,
+  ): boolean => {
+    if (annotation.anchor.kind !== "object") return false;
+    const interfaceInstanceId = annotation.anchor.objectId;
+    const terminal = activeDocument.netlist?.terminals.find((candidate) =>
+      candidate.interfaceInstanceIds.includes(interfaceInstanceId),
+    );
+    if (!terminal) return false;
+    try {
+      const {
+        content,
+        formatOverride,
+        binding: _binding,
+        ...annotationPresentation
+      } = annotation;
+      const editedContent = formatOverride ?? content;
+      const semanticContent = semanticTextDocument(inputName, "formal-port");
+      const normalizedAnnotation: Annotation = {
+        ...annotationPresentation,
+        binding: {
+          kind: "cell-terminal-name",
+          terminalId: terminal.id,
+        },
+        ...(editedContent &&
+        JSON.stringify(editedContent) !== JSON.stringify(semanticContent)
+          ? { formatOverride: editedContent }
+          : {}),
+      };
+      const renamed = terminal.name !== inputName;
+      const edits = planEditCellTerminalAnnotation(
+        project,
+        activeDocument.id,
+        terminal.id,
+        normalizedAnnotation,
+        inputName,
+      );
+      if (edits.length === 0) {
+        setStatus(`Cell Pin ${terminal.name} is already current`);
+        return true;
+      }
+      const committed = commitStructure("edit-cell-pin-label", edits);
+      if (committed) {
+        setStatus(
+          renamed
+            ? `Renamed Cell Pin to ${inputName}`
+            : `Formatted Cell Pin ${inputName}`,
+        );
+      }
+      return committed;
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not rename port",
+      );
+      return false;
+    }
+  };
+
+  const removeCellTerminalSelection = (
+    terminalIds: readonly string[],
+    documentEdits: readonly SchematicEdit[],
+  ): boolean =>
+    commitStructure(
+      "delete-cell-pin-selection",
+      planRemoveCellTerminals(
+        project,
+        activeDocument.id,
+        terminalIds,
+        [...documentEdits],
+      ),
+    );
+
+  const deleteCellTerminal = (
+    terminalId: string,
+    interfaceInstanceId: string,
+  ): boolean => {
+    const terminal = activeDocument.netlist?.terminals.find(
+      (candidate) => candidate.id === terminalId,
+    );
+    if (!terminal) return false;
+    try {
+      const edits = planRemoveCellTerminals(
+        project,
+        activeDocument.id,
+        [terminalId],
+        planInstanceDeletion(
+          activeDocument,
+          resolver,
+          [interfaceInstanceId],
+          nextSequence(),
+        ),
+      );
+      const committed = commitStructure("delete-cell-pin", edits);
+      if (committed) setStatus(`Deleted Cell Pin ${terminal.name}`);
+      return committed;
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not delete port",
+      );
+      return false;
     }
   };
 
@@ -283,6 +400,9 @@ export function createProjectStructureCommands({
     renameCell,
     updateCellPinDirection,
     renameCellTerminal,
+    editCellTerminalAnnotation,
+    removeCellTerminalSelection,
+    deleteCellTerminal,
     moveCellTerminal,
     setCellFormalParameters,
     setExternalSubcircuitDefinition,

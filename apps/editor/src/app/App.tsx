@@ -15,18 +15,13 @@ import {
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
   planDeleteCell,
-  planRemoveCellTerminals,
-  planEditCellTerminalAnnotation,
   planCellReset,
-  type SchematicEdit,
   type CellResetPlan,
   type WireSource,
 } from "@icm/edit-engine";
 import {
   deriveNetConnectivity,
   deriveInternalGroupSelection,
-  endpointKey,
-  findHierarchyPath,
   resolveDraftingObjectGeometry,
   displayableInstanceValue,
   resolveMosBulkConnection,
@@ -34,29 +29,20 @@ import {
   resolveRouteTap,
   summarizeProjectCells,
 } from "@icm/derived";
-import type {
-  Diagnostic,
-  GlobalNetTraceHop,
-  HierarchyFrame,
-  HierarchyNetTraceHop,
-  SearchResult,
-} from "@icm/derived";
+import type { HierarchyFrame } from "@icm/derived";
 import {
   createEmptyProject,
   createId,
   foldNetName,
   flattenRichText,
-  semanticTextDocument,
 } from "@icm/model";
 import type {
-  Annotation,
   CircuitProject,
   DerivedPoint,
   DraftingObject,
   GridRect,
   Point,
   Rect,
-  RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
 import { buildSvgScene } from "@icm/render-svg";
@@ -170,10 +156,6 @@ import {
   evaluateSubmissionGates,
   type SubmissionGateReport,
 } from "@icm/derived";
-import {
-  proposeConnectedInstanceDeletion,
-  proposeVisualSelectionDeletion,
-} from "../features/selection/delete-selection";
 import {
   createLibraryExampleProject,
   libraryProjectExamples,
@@ -702,13 +684,21 @@ export function App({
     setExternalSubcircuitDefinition,
     setCellSymbolBodySize,
     setCellSymbolPortPlacement,
+    editCellTerminalAnnotation,
+    removeCellTerminalSelection,
+    deleteCellTerminal,
     renameProject,
   } = createProjectStructureCommands({
     project,
     activeDocument: document,
+    resolver,
     commitStructure,
     setStatus,
     onCellCreated: () => setDocumentStack([]),
+    nextSequence: () => {
+      uniqueSuffixCounter.current += 1;
+      return uniqueSuffixCounter.current;
+    },
   });
   const { openGalleryEntryById, openLibraryExample, insertGalleryEntryById } =
     createGalleryExampleCommands({
@@ -1064,61 +1054,7 @@ export function App({
         ) === true
       );
     },
-    commitCellPinAnnotation: (annotation, name) => {
-      if (annotation.anchor.kind !== "object") return false;
-      const interfaceInstanceId = annotation.anchor.objectId;
-      const terminal = document.netlist?.terminals.find((candidate) =>
-        candidate.interfaceInstanceIds.includes(interfaceInstanceId),
-      );
-      if (!terminal) return false;
-      try {
-        const {
-          content,
-          formatOverride,
-          binding: _binding,
-          ...annotationPresentation
-        } = annotation;
-        const editedContent = formatOverride ?? content;
-        const semanticContent = semanticTextDocument(name, "formal-port");
-        const normalizedAnnotation: Annotation = {
-          ...annotationPresentation,
-          binding: {
-            kind: "cell-terminal-name",
-            terminalId: terminal.id,
-          },
-          ...(editedContent &&
-          JSON.stringify(editedContent) !== JSON.stringify(semanticContent)
-            ? { formatOverride: editedContent }
-            : {}),
-        };
-        const renamed = terminal.name !== name;
-        const edits = planEditCellTerminalAnnotation(
-          project,
-          document.id,
-          terminal.id,
-          normalizedAnnotation,
-          name,
-        );
-        if (edits.length === 0) {
-          setStatus(`Cell Pin ${terminal.name} is already current`);
-          return true;
-        }
-        const committed = commitStructure("edit-cell-pin-label", edits);
-        if (committed) {
-          setStatus(
-            renamed
-              ? `Renamed Cell Pin to ${name}`
-              : `Formatted Cell Pin ${name}`,
-          );
-        }
-        return committed;
-      } catch (error) {
-        setStatus(
-          error instanceof Error ? error.message : "Could not rename port",
-        );
-        return false;
-      }
-    },
+    commitCellPinAnnotation: editCellTerminalAnnotation,
   });
   const selectedInstanceLabel = selectedInstance
     ? instanceLabelAnnotationFor(document, selectedInstance.id)
@@ -1358,6 +1294,7 @@ export function App({
     clearCommandMoveSession: clearCommandMoveSessionFromSelection,
     deleteSelectedJunction: deleteSelectedJunctionFromSelection,
     deleteSelection: deleteSelectionFromSelection,
+    disconnectSelectedEndpoint,
     canBeginKeyboardSelectionMove,
     canTransformCommandMove,
     mirrorCommandMove: mirrorCommandMoveFromSelection,
@@ -1392,6 +1329,7 @@ export function App({
         revision: committed ? document.revision + 1 : document.revision,
       };
     },
+    commitCellTerminalSelection: removeCellTerminalSelection,
     setStatus,
     setSelectedEndpoint,
     resetSelection,
@@ -1413,7 +1351,6 @@ export function App({
       uniqueSuffixCounter.current += 1;
       return uniqueSuffixCounter.current;
     },
-    nextNoConnectId,
     endpointTestId,
     tool,
     canvasDragSessionRef,
@@ -1805,6 +1742,11 @@ export function App({
     enterSelectedHierarchy,
     returnToParentDocument,
     returnToTopDocument,
+    selectSearchResult,
+    jumpToProjectDiagnostic,
+    highlightNet,
+    toggleHighlightedNet,
+    navigateTraceHop,
   } = createEditorNavigationController({
     project,
     document,
@@ -1821,6 +1763,10 @@ export function App({
     selectOnly,
     setSelectedEndpoint,
     setHighlightedNetOrigin,
+    selectedHighlightNetId,
+    selectedHighlightEndpoint,
+    selectedHighlightIsActive,
+    closeSearch,
     setSelectionOpen,
     setInstanceTableOpen,
     setCellManagerOpen,
@@ -2027,71 +1973,10 @@ export function App({
 
   function deleteSelectedFormalPort(): void {
     if (!selectedFormalTerminal || !selectedInstance) return;
-    try {
-      const edits = planRemoveCellTerminals(
-        project,
-        document.id,
-        [selectedFormalTerminal.id],
-        proposeConnectedInstanceDeletion(
-          document,
-          resolver,
-          [selectedInstance.id],
-          ++uniqueSuffixCounter.current,
-        ),
-      );
-      if (commitStructure("delete-cell-pin", edits)) {
-        resetSelection();
-        setStatus(`Deleted Cell Pin ${selectedFormalTerminal.name}`);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not delete port",
-      );
-    }
-  }
-
-  function deleteCurrentSelection(): void {
-    const formalTerminals = (document.netlist?.terminals ?? []).filter(
-      (terminal) =>
-        terminal.interfaceInstanceIds.some((instanceId) =>
-          visualSelection.instanceIds.includes(instanceId),
-        ),
-    );
-    if (formalTerminals.length === 0) {
-      deleteSelectionFromSelection();
-      return;
-    }
-    try {
-      const deletionEdits = proposeVisualSelectionDeletion(
-        document,
-        resolver,
-        visualSelection,
-        ++uniqueSuffixCounter.current,
-      );
-      if (formalTerminals.length > 0) {
-        if (
-          commitStructure(
-            "delete-cell-pin-selection",
-            planRemoveCellTerminals(
-              project,
-              document.id,
-              formalTerminals.map((terminal) => terminal.id),
-              deletionEdits,
-            ),
-          )
-        ) {
-          resetSelection();
-          setStatus("Deleted selected schematic objects");
-        }
-        return;
-      }
-      if (deletionEdits.length > 0 && transact(deletionEdits).ok) {
-        resetSelection();
-        setStatus("Deleted selected schematic objects");
-        return;
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Delete failed");
+    if (
+      deleteCellTerminal(selectedFormalTerminal.id, selectedInstance.id)
+    ) {
+      resetSelection();
     }
   }
 
@@ -2119,13 +2004,6 @@ export function App({
     browserAgentFileHost.discard(agentFileCandidate.candidateId);
     setAgentFileCandidate(null);
     setStatus("Rejected Agent file candidate");
-  }
-
-  function jumpToProjectDiagnostic(diagnostic: Diagnostic): void {
-    navigateToLocator(
-      diagnostic.primary,
-      `${diagnostic.domain.toUpperCase()} ${diagnostic.code}: ${diagnostic.message}`,
-    );
   }
 
   const clearDrawingPlan = planCellReset(project, document.id, "clear-drawing");
@@ -2356,7 +2234,7 @@ export function App({
       },
       selectAll: selectAllObjects,
       clearSelection: clearEditorSelection,
-      deleteSelection: deleteCurrentSelection,
+      deleteSelection: deleteSelectionFromSelection,
       beginCopy: beginCopyPlacementFromSelection,
       beginMove: beginKeyboardSelectionMoveFromSelection,
       rotatePlacement: rotatePendingComponentFromHook,
@@ -2421,65 +2299,6 @@ export function App({
     setDraftingInspectorSegment(null);
     setDraftingTangentInput(null);
     setDraftingBearingInput(null);
-  }
-
-  // Drafting uses the shared Snap Engine. It may align visually to electrical
-  // geometry, but this profile never creates a Net or junction.
-  // closest point on any route segment, or any existing drafting vertex — within
-  // DRAFTING_SNAP_RADIUS — wins; grid snap is the fallback. Shift locks the
-  // resulting segment from the origin to horizontal/vertical/45°. Purely visual
-  // — never creates a Net, junction, or short.
-  function disconnectSelectedEndpoint(removeRoutes: boolean): void {
-    if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
-      return;
-    }
-    const routeEdits = removeRoutes
-      ? document.routes
-          .filter(
-            (route) =>
-              endpointKey(route.from) ===
-                endpointKey(selectedEndpoint.endpoint) ||
-              endpointKey(route.to) === endpointKey(selectedEndpoint.endpoint),
-          )
-          .map((route): SchematicEdit => ({
-            kind: "remove_route_geometry",
-            routeId: route.id,
-          }))
-      : [];
-    const result = transactConnectivity(
-      "disconnect_endpoint",
-      [
-        ...routeEdits,
-        { kind: "disconnect_endpoint", endpoint: selectedEndpoint.endpoint },
-      ],
-      { removeRoutes },
-    );
-    if (result?.ok) {
-      setSelectedEndpoint(null);
-      setStatus(
-        removeRoutes ? "Deleted endpoint connection" : "Disconnected endpoint",
-      );
-    }
-  }
-
-  function nextNoConnectId(): string {
-    const occupied = new Set([
-      ...document.instances.map((instance) => instance.id),
-      ...document.nets.map((net) => net.id),
-      ...document.routes.map((route) => route.id),
-      ...document.junctions.map((junction) => junction.id),
-      ...document.noConnects.map((noConnect) => noConnect.id),
-      ...document.annotations.map((annotation) => annotation.id),
-      ...document.layoutGroups.map((group) => group.id),
-      ...document.constraints.map((constraint) => constraint.id),
-      ...(document.drafting?.objects ?? []).map((object) => object.id),
-    ]);
-    let id: string;
-    do {
-      uniqueSuffixCounter.current += 1;
-      id = `no-connect-ui-${uniqueSuffixCounter.current}`;
-    } while (occupied.has(id));
-    return id;
   }
 
   useEffect(() => {
@@ -2691,67 +2510,6 @@ export function App({
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
   });
-
-  function selectSearchResult(result: SearchResult): void {
-    navigateToLocator(
-      result.locator,
-      `Selected ${result.locator.kind} ${result.locator.objectId}`,
-    );
-    closeSearch();
-  }
-
-  function highlightNet(
-    netId: string,
-    documentId = document.id,
-    endpoint?: RouteEndpoint,
-    hierarchyPath: readonly HierarchyFrame[] = documentId === document.id
-      ? documentStack
-      : (findHierarchyPath(
-          projectConnectivityIndex,
-          project.topDocumentId,
-          documentId,
-        ) ?? []),
-  ): void {
-    setHighlightedNetOrigin({
-      documentId,
-      netId,
-      hierarchyPath,
-      ...(endpoint ? { endpoint } : {}),
-    });
-    setStatus(`Highlighted Net ${netId}`);
-  }
-
-  function toggleHighlightedNet(): void {
-    const netId = selectedHighlightNetId;
-    if (!netId) {
-      setStatus(
-        "Select a wire, connected pin, or Net Label before highlighting a Net",
-      );
-      return;
-    }
-    if (selectedHighlightIsActive) {
-      setHighlightedNetOrigin(null);
-      setStatus(`Cleared Net highlight ${netId}`);
-      return;
-    }
-    highlightNet(netId, document.id, selectedHighlightEndpoint);
-  }
-
-  function navigateTraceHop(
-    hop: HierarchyNetTraceHop | GlobalNetTraceHop,
-  ): void {
-    navigateToLocator(
-      {
-        documentId: hop.to.documentId,
-        hierarchyPath: hop.to.hierarchyPath,
-        kind: "net",
-        objectId: hop.to.netId,
-      },
-      hop.direction === "global"
-        ? `Traced global Net ${hop.foldedName} to ${hop.to.netId}`
-        : `Traced Net ${hop.to.netId} via ${hop.frame.instanceId}.${hop.frame.parentPinName}`,
-    );
-  }
 
   const canvasEventHandlers = createEditorCanvasEventHandlers({
     model: { tool, document, resolver },
