@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import "./version-history-dialog.css";
+
 /**
  * Version history of one gallery entry, for reviewers and the entry's
  * owner: every update snapshotted the previous state; Restore adopts a
@@ -88,26 +90,26 @@ export function VersionHistoryDialog({
 
   return (
     <div
-      className="insert-dialog-backdrop"
+      className="version-history-backdrop"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
     >
       <section
-        className="publish-gallery-dialog version-history-dialog"
+        className="version-history-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="version-history-title"
         data-testid="version-history-dialog"
       >
-        <header className="publish-gallery-header">
+        <header className="version-history-header">
           <p>Every update keeps the previous state</p>
           <h2 id="version-history-title">Version history — {entryName}</h2>
         </header>
         {versions === null ? (
-          <p className="publish-gallery-note">Loading history…</p>
+          <p className="version-history-note">Loading history…</p>
         ) : versions.length === 0 ? (
-          <p className="publish-gallery-note" data-testid="version-empty">
+          <p className="version-history-note" data-testid="version-empty">
             No earlier versions yet — history starts with the first update.
           </p>
         ) : (
@@ -137,7 +139,7 @@ export function VersionHistoryDialog({
                 </div>
                 <button
                   type="button"
-                  className="publish-gallery-primary"
+                  className="version-history-primary"
                   data-testid={`version-restore-${version.versionNo}`}
                   disabled={busy}
                   onClick={() => void restore(version.versionId)}
@@ -149,11 +151,11 @@ export function VersionHistoryDialog({
           </div>
         )}
         {error ? (
-          <p role="alert" className="publish-gallery-error">
+          <p role="alert" className="version-history-error">
             {error}
           </p>
         ) : null}
-        <div className="publish-gallery-actions">
+        <div className="version-history-actions">
           <button type="button" disabled={busy} onClick={onClose}>
             Close
           </button>

@@ -202,6 +202,49 @@
   background: var(--icm-surface-hover);
 }
 
+/* Account actions collapse behind one disclosure so the Gallery header stays
+   readable at half-screen widths. The popover is complete in this route-level
+   stylesheet and no longer depends on the editor command-menu stylesheet. */
+.account-more {
+  position: relative;
+}
+
+.account-more > summary {
+  display: inline-flex;
+  gap: var(--icm-space-1);
+  align-items: center;
+  height: var(--icm-control-h);
+  padding: 0 var(--icm-space-2);
+  border-radius: var(--icm-radius-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.account-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.account-more > summary:hover {
+  background: var(--icm-surface-hover, rgb(0 0 0 / 4%));
+}
+
+.account-popover {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  min-width: 11rem;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--icm-border);
+  border-radius: 10px;
+  background: var(--icm-surface);
+  box-shadow:
+    0 0 0 1px rgb(15 15 15 / 3%),
+    0 12px 32px rgb(15 15 15 / 12%);
+}
+
 .review-shell {
   /* Same scroll-inside-the-shell rule as .gallery-shell: the app root is
      overflow: hidden, so these pages own their scrolling. */
@@ -391,112 +434,6 @@
   color: var(--icm-accent);
 }
 
-.version-history-dialog {
-  width: min(36rem, 100%);
-}
-
-.version-list {
-  display: flex;
-  max-height: 22rem;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-}
-
-.version-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-  border: 1px solid var(--icm-border);
-  border-radius: 10px;
-}
-
-.version-row img {
-  width: 110px;
-  height: 74px;
-  object-fit: contain;
-  border: 1px solid var(--icm-border);
-  border-radius: 6px;
-  background: #fff;
-}
-
-.version-copy {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.version-copy b {
-  font-size: 0.9rem;
-}
-
-.version-copy small {
-  color: var(--icm-text-muted);
-}
-
-.version-row .publish-gallery-primary {
-  padding: 0.4rem 0.9rem;
-  border: 1px solid var(--icm-accent);
-  border-radius: 8px;
-  color: #fff;
-  background: var(--icm-accent);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.publish-gallery-tags {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.publish-gallery-tags input {
-  box-sizing: border-box;
-  width: 100%;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--icm-border);
-  border-radius: 8px;
-  font: inherit;
-  font-size: 0.9rem;
-}
-
-.publish-gallery-tag-chips,
-.publish-gallery-tag-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.publish-gallery-tag {
-  padding: 3px 10px;
-  border: 1px solid var(--icm-accent);
-  border-radius: 999px;
-  color: var(--icm-accent);
-  background: var(--icm-accent-soft);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.publish-gallery-tag-presets button {
-  padding: 3px 10px;
-  border: 1px solid var(--icm-border);
-  border-radius: 999px;
-  color: var(--icm-text-muted);
-  background: var(--icm-surface);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.publish-gallery-tag-presets button:hover {
-  color: var(--icm-accent);
-  border-color: var(--icm-accent);
-}
-
 .gallery-tile-author {
   padding: 0;
   border: none;
@@ -637,33 +574,6 @@
   max-width: 24rem;
   color: var(--icm-text-muted);
   font-size: 12px;
-}
-
-.publish-gallery-gates {
-  padding: 10px 12px;
-  border: 1px solid var(--icm-border);
-  border-radius: 8px;
-  background: var(--icm-surface-muted);
-  font-size: 0.8rem;
-}
-
-.publish-gallery-gates p {
-  margin: 0 0 4px;
-  font-weight: 600;
-}
-
-.publish-gallery-gates ul {
-  margin: 0;
-  padding-left: 1.1rem;
-}
-
-.publish-gallery-gates-blocking {
-  border-color: var(--icm-danger, #b42318);
-  background: rgb(180 35 24 / 6%);
-}
-
-.publish-gallery-gates-blocking p {
-  color: var(--icm-danger, #b42318);
 }
 
 .gallery-open-editor {

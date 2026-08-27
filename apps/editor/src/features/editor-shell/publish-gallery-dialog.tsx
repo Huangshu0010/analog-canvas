@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import "./publish-gallery-dialog.css";
+
 import type { SubmissionGateReport } from "@icm/derived";
 
 import {

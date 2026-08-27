@@ -192,7 +192,7 @@ export function AccountMenuView({
             ) : null}
             <span aria-hidden="true">⋯</span>
           </summary>
-          <div className="command-popover account-popover">
+          <div className="account-popover">
             {user.isAdmin || user.role === "moderator" ? (
               <a
                 className="account-link"
