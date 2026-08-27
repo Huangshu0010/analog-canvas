@@ -15,7 +15,11 @@ import {
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
-import { executeTransaction, SchematicEditSchema } from "./transaction.js";
+import {
+  EditTransactionSchema,
+  executeTransaction,
+  SchematicEditSchema,
+} from "./transaction.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
@@ -81,6 +85,41 @@ function defineCellPin(
 }
 
 describe("Edit Transaction envelope", () => {
+  it("accepts 1024 edits and rejects the 1025th before execution", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    const maximum = {
+      ...transaction(),
+      edits: Array.from({ length: 1024 }, (_, index) => ({
+        kind: "noop" as const,
+        reason: `Boundary edit ${index + 1}`,
+      })),
+    };
+
+    expect(EditTransactionSchema.safeParse(maximum).success).toBe(true);
+    const accepted = executeTransaction(document, maximum);
+    expect(accepted).toMatchObject({
+      ok: true,
+      applied: true,
+      revision: 1,
+      diff: { changedObjectIds: [] },
+    });
+
+    const rejected = executeTransaction(document, {
+      ...maximum,
+      edits: [
+        ...maximum.edits,
+        { kind: "noop" as const, reason: "Over the boundary" },
+      ],
+    });
+    expect(rejected).toMatchObject({
+      ok: false,
+      applied: false,
+      revision: 0,
+      document,
+      error: { code: "INVALID_TRANSACTION" },
+    });
+  });
+
   it("does not allow an update edit to rebind a Cell Pin marker", () => {
     expect(() =>
       SchematicEditSchema.parse({
