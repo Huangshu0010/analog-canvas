@@ -7,6 +7,9 @@ Date: `2026-08-26`
 Owners: `packages/model`, `packages/project-protocol`, `packages/edit-engine`,
 `packages/symbols`, `packages/derived`, `packages/netlist`, `apps/editor`
 
+Current-version note: Schema 26 (ADR 0047) carries this contract forward
+unchanged; the rolling reader now accepts schema 25 and 26.
+
 ## Context
 
 The repeated-marker model treated several visible Cell Pins as projections of

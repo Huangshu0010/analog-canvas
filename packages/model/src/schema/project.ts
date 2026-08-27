@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { CURRENT_PROJECT_SCHEMA_VERSION, StableIdSchema } from "./common.js";
 import { SourceManifestSchema, SymbolLibraryLockSchema } from "./source.js";
+import { CustomSymbolDefinitionSchema } from "./symbol.js";
 import { SchematicDocumentSchema } from "./document.js";
 import { CellSymbolPresentationSchema } from "./presentation.js";
 import { reportDuplicateIds } from "./validation.js";
@@ -41,6 +42,11 @@ export const CircuitProjectSchema = z
       .array(ExternalSubcircuitDefinitionSchema)
       .max(256)
       .default([]),
+    /** ADR 0047: user-defined symbols persisted with the project. */
+    customSymbolDefinitions: z
+      .array(CustomSymbolDefinitionSchema)
+      .max(256)
+      .default([]),
   })
   .superRefine((project, context) => {
     const cellNames = new Set<string>();
@@ -57,6 +63,11 @@ export const CircuitProjectSchema = z
       cellNames.add(name);
     }
     reportDuplicateIds(project.documents, "documents", context);
+    reportDuplicateIds(
+      project.customSymbolDefinitions,
+      "customSymbolDefinitions",
+      context,
+    );
     const externalSubcircuitDefinitions = project.externalSubcircuitDefinitions;
     reportDuplicateIds(
       externalSubcircuitDefinitions,

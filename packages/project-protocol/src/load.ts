@@ -10,10 +10,7 @@ import {
   type ProjectLoadResult,
   type ProjectParseResult,
 } from "./diagnostics.js";
-import {
-  ProjectMigrationError,
-  upgradeSchema24To25,
-} from "./previous-to-current.js";
+import { upgradeSchema25To26 } from "./previous-to-current.js";
 import { PREVIOUS_PROJECT_SCHEMA_VERSION } from "./version.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -108,22 +105,20 @@ export function tryParseProjectWithMetadata(
   try {
     current =
       sourceSchemaVersion === PREVIOUS_PROJECT_SCHEMA_VERSION
-        ? upgradeSchema24To25(parsed)
+        ? upgradeSchema25To26(parsed)
         : parsed;
   } catch (error) {
-    if (error instanceof ProjectMigrationError) {
-      return {
-        ok: false,
-        diagnostics: [
-          {
-            code: "INVALID_PROJECT",
-            message: error.message,
-            path: [...error.path],
-          },
-        ],
-      };
-    }
-    throw error;
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "INVALID_PROJECT",
+          message:
+            error instanceof Error ? error.message : "Project migration failed",
+          path: [],
+        },
+      ],
+    };
   }
   const diagnostics = invalidProjectDiagnostics(current);
   if (diagnostics.length > 0) return { ok: false, diagnostics };

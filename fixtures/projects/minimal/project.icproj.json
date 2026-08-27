@@ -1,4 +1,5 @@
 {
+  "customSymbolDefinitions": [],
   "documents": [
     {
       "annotations": [],
@@ -32,7 +33,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-minimal",
   "name": "Minimal Project",
-  "schemaVersion": 25,
+  "schemaVersion": 26,
   "source": {
     "dialect": "none",
     "entry": null,

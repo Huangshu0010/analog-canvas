@@ -65,5 +65,9 @@ Runtime resolves the exact contact and the landing as one
   contract.
 
 The application ships the compiled catalog and a Project persists only exact
-symbol and optional variant IDs plus its library lock. Generated catalog tests
-prove every advertised asset resolves and that retired IDs and aliases fail.
+symbol and optional variant IDs plus its library lock. ADR 0047 adds one
+explicit exception: project-authority `customSymbolDefinitions` embed complete
+validated Symbol definitions persisted with the Project; the runtime resolves
+them in a dedicated namespace derived from the definition ID, so user artwork
+never shadows a catalog asset. Generated catalog tests prove every advertised
+asset resolves and that retired IDs and aliases fail.

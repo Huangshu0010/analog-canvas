@@ -120,63 +120,9 @@ function projectText(name = "Fixture"): string {
 }
 
 function previousVersionText(): string {
-  const raw = JSON.parse(projectText()) as { schemaVersion: number };
+  const raw = JSON.parse(projectText()) as Record<string, unknown>;
   raw.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION - 1;
-  return JSON.stringify(raw);
-}
-
-function previousRepeatedCellPinVersionText(): string {
-  const raw = JSON.parse(projectText("Legacy repeated Pin")) as any;
-  raw.schemaVersion = CURRENT_PROJECT_SCHEMA_VERSION - 1;
-  const document = raw.documents[0];
-  document.instances.push(
-    { id: "P1", symbolId: "port", placement: null },
-    { id: "P2", symbolId: "port", placement: null },
-  );
-  document.nets.push({
-    id: "net-vin",
-    terminals: [
-      { instanceId: "P1", pinName: "P" },
-      { instanceId: "P2", pinName: "P" },
-    ],
-  });
-  document.netlist.terminals.push({
-    id: "terminal-vin",
-    name: "VIN",
-    netId: "net-vin",
-    direction: "input",
-    interfaceInstanceIds: ["P1", "P2"],
-  });
-  document.annotations.push(
-    {
-      id: "label-p1",
-      kind: "instance-label",
-      binding: { kind: "cell-terminal-name", terminalId: "terminal-vin" },
-      anchor: {
-        kind: "object",
-        objectId: "P1",
-        localOffset: { x: 0, y: 0 },
-        fallbackPosition: { x: 0, y: 0 },
-      },
-      alignment: "start",
-      rotation: 0,
-      locked: false,
-    },
-    {
-      id: "label-p2",
-      kind: "instance-label",
-      binding: { kind: "cell-terminal-name", terminalId: "terminal-vin" },
-      anchor: {
-        kind: "object",
-        objectId: "P2",
-        localOffset: { x: 0, y: 0 },
-        fallbackPosition: { x: 0, y: 0 },
-      },
-      alignment: "start",
-      rotation: 0,
-      locked: false,
-    },
-  );
+  delete raw.customSymbolDefinitions;
   return JSON.stringify(raw);
 }
 
@@ -745,33 +691,6 @@ describe("gallery submissions", () => {
     expect(JSON.parse(payload.projectText).schemaVersion).toBe(
       CURRENT_PROJECT_SCHEMA_VERSION,
     );
-  });
-
-  it("splits previous-schema repeated Cell Pins in stored text", async () => {
-    const env = environment();
-    const id = await submitOne(env, "Legacy repeated Pin", {
-      text: previousRepeatedCellPinVersionText(),
-    });
-    const detail = await route(env, new Request(`${ORIGIN}/api/gallery/${id}`));
-    const payload = (await detail.json()) as { projectText: string };
-    const stored = JSON.parse(payload.projectText) as any;
-    expect(stored.documents[0].netlist.terminals).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "terminal-vin",
-          name: "VIN",
-          interfaceInstanceIds: ["P1"],
-        }),
-        expect.objectContaining({
-          name: "VIN",
-          interfaceInstanceIds: ["P2"],
-        }),
-      ]),
-    );
-    const bindings = stored.documents[0].annotations.map(
-      (annotation: any) => annotation.binding?.terminalId,
-    );
-    expect(new Set(bindings).size).toBe(2);
   });
 
   it("refuses an anonymous submission: a session is the whole gate", async () => {
@@ -1728,7 +1647,7 @@ describe("gallery administration", () => {
     expect(await preview.text()).toContain("<svg");
   });
 
-  it("upgrades already-stored schema-24 repeated Cell Pins during maintenance", async () => {
+  it("upgrades already-stored previous-schema Projects during maintenance", async () => {
     const env = environment();
     const adminCookie = await adminOf(env);
     const id = await submitOne(env, "Broken VDD", { cookie: adminCookie });
@@ -1739,7 +1658,7 @@ describe("gallery administration", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           id,
-          projectText: previousRepeatedCellPinVersionText(),
+          projectText: previousVersionText(),
           schemaVersion: CURRENT_PROJECT_SCHEMA_VERSION - 1,
           svgText: "<svg/>",
         }),
@@ -1767,12 +1686,8 @@ describe("gallery administration", () => {
     const detail = await route(env, new Request(`${ORIGIN}/api/gallery/${id}`));
     const payload = (await detail.json()) as { projectText: string };
     const stored = JSON.parse(payload.projectText) as any;
-    expect(stored.documents[0].netlist.terminals).toHaveLength(2);
-    expect(
-      stored.documents[0].netlist.terminals.every(
-        (terminal: any) => terminal.interfaceInstanceIds.length === 1,
-      ),
-    ).toBe(true);
+    expect(stored.schemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
+    expect(stored.customSymbolDefinitions).toEqual([]);
     const preview = await route(
       env,
       new Request(`${ORIGIN}/api/gallery/${id}/preview.svg`),
@@ -1816,7 +1731,7 @@ describe("gallery administration", () => {
     env.gallerySql.exec(
       "UPDATE gallery_entry_versions SET schema_version = ?, project_text = ? WHERE id = ?",
       CURRENT_PROJECT_SCHEMA_VERSION - 1,
-      previousRepeatedCellPinVersionText(),
+      previousVersionText(),
       versionId,
     );
     env.gallerySql.exec(
@@ -1829,7 +1744,7 @@ describe("gallery administration", () => {
       "2026-08-24T00:00:00.000Z",
       1,
       CURRENT_PROJECT_SCHEMA_VERSION - 1,
-      previousRepeatedCellPinVersionText(),
+      previousVersionText(),
     );
 
     const backup = await route(
@@ -1871,17 +1786,6 @@ describe("gallery administration", () => {
           [String(CURRENT_PROJECT_SCHEMA_VERSION - 1)]: 1,
         },
       },
-      migrationReports: expect.arrayContaining([
-        expect.objectContaining({
-          table: "gallery_entries",
-          id,
-          report: expect.objectContaining({
-            splitRepeatedTerminalCount: expect.any(Number),
-            independentCellPins: expect.any(Array),
-            preservedLegacySharedNets: expect.any(Array),
-          }),
-        }),
-      ]),
     });
     expect(
       env.gallerySql

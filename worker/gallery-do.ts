@@ -18,7 +18,7 @@ import { analyzeDesignNetlist } from "@icm/netlist";
 import {
   parseProject,
   serializeProject,
-  upgradeSchema24To25WithReport,
+  upgradeSchema25To26,
 } from "@icm/project-protocol";
 import { renderDocumentSvg } from "@icm/render-svg";
 import {
@@ -1080,11 +1080,6 @@ export class GalleryDO {
       storedSchemaVersion: number;
       message: string;
     }> = [];
-    const migrationReports: Array<{
-      table: string;
-      id: string;
-      report: ReturnType<typeof upgradeSchema24To25WithReport>["report"];
-    }> = [];
     for (const source of sources) {
       const versions: Record<string, number> = {};
       inventory[source.table] = versions;
@@ -1093,20 +1088,11 @@ export class GalleryDO {
         versions[versionKey] = (versions[versionKey] ?? 0) + 1;
         try {
           const raw = JSON.parse(row.project_text) as Record<string, unknown>;
-          const migration =
+          const migrated =
             raw.schemaVersion === CURRENT_PROJECT_SCHEMA_VERSION - 1
-              ? upgradeSchema24To25WithReport(raw)
-              : null;
-          const project = parseProject(
-            JSON.stringify(migration?.project ?? raw),
-          );
-          if (migration) {
-            migrationReports.push({
-              table: source.table,
-              id: row.id,
-              report: migration.report,
-            });
-          }
+              ? upgradeSchema25To26(raw)
+              : raw;
+          const project = parseProject(JSON.stringify(migrated));
           updates.push({
             table: source.table,
             id: row.id,
@@ -1153,7 +1139,6 @@ export class GalleryDO {
       records: updates.length + failures.length,
       ready: updates.length,
       failures,
-      migrationReports,
     });
   }
 

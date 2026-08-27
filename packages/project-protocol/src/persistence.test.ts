@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createEmptyProject, deriveStableId } from "@icm/model";
+import { createEmptyProject } from "@icm/model";
 import {
   ProjectFormatError,
   loadProject,
@@ -12,7 +12,6 @@ import {
   saveProject,
   serializeProject,
   type ProjectStorage,
-  upgradeSchema24To25WithReport,
 } from "./index.js";
 
 class MemoryStorage implements ProjectStorage {
@@ -69,202 +68,79 @@ describe("Project persistence", () => {
     }
   });
 
-  it("splits schema-24 repeated markers into independent Cell Pins without changing topology", () => {
+  it("upgrades schema-25 projects by defaulting custom symbols to empty", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     ) as Record<string, any>;
-    source.schemaVersion = 24;
-    const document = source.documents[0];
-    document.instances.push(
-      { id: "P1", symbolId: "port", placement: null },
-      { id: "P2", symbolId: "port-filled", placement: null },
-    );
-    document.nets.push({
-      id: "net-in",
-      terminals: [
-        { instanceId: "P1", pinName: "P" },
-        { instanceId: "P2", pinName: "P" },
-      ],
-    });
-    document.routes.push({
-      id: "route-in",
-      netId: "net-in",
-      from: { kind: "terminal", instanceId: "P1", pinName: "P" },
-      to: { kind: "terminal", instanceId: "P2", pinName: "P" },
-      waypoints: [],
-      segmentModes: ["auto"],
-    });
-    document.junctions.push({
-      id: "junction-in",
-      netId: "net-in",
-      position: { x: 0, y: 0 },
-    });
-    document.netlist.terminals.push({
-      id: "terminal-in",
-      name: "IN",
-      netId: "net-in",
-      direction: "input",
-      interfaceInstanceIds: ["P1", "P2"],
-    });
-    document.annotations.push(
-      {
-        id: "label-p1",
-        kind: "instance-label",
-        binding: { kind: "cell-terminal-name", terminalId: "terminal-in" },
-        anchor: {
-          kind: "object",
-          objectId: "P1",
-          localOffset: { x: 0, y: 0 },
-          fallbackPosition: { x: 0, y: 0 },
-        },
-        alignment: "start",
-        rotation: 0,
-        locked: false,
-      },
-      {
-        id: "label-p2",
-        kind: "instance-label",
-        binding: { kind: "cell-terminal-name", terminalId: "terminal-in" },
-        anchor: {
-          kind: "object",
-          objectId: "P2",
-          localOffset: { x: 0, y: 0 },
-          fallbackPosition: { x: 0, y: 0 },
-        },
-        alignment: "start",
-        rotation: 0,
-        locked: false,
-      },
-    );
-    document.presentation.cellSymbol = {
-      pinPlacements: [{ terminalId: "terminal-in", side: "west", offset: 0 }],
-    };
-    const topology = structuredClone({
-      nets: document.nets,
-      routes: document.routes,
-      junctions: document.junctions,
-    });
-
-    const direct = upgradeSchema24To25WithReport(source);
-    expect(direct.report).toMatchObject({
-      splitRepeatedTerminalCount: 1,
-      reboundAnnotationIds: ["label-p2"],
-      preservedLegacySharedNets: [
-        {
-          documentId: document.id,
-          sourceTerminalId: "terminal-in",
-          netId: "net-in",
-        },
-      ],
-    });
-    expect(direct.report.independentCellPins).toHaveLength(2);
-    const directDocument = (
-      direct.project.documents as Array<Record<string, any>>
-    )[0]!;
-    expect({
-      nets: directDocument.nets,
-      routes: directDocument.routes,
-      junctions: directDocument.junctions,
-    }).toEqual(topology);
+    delete source.customSymbolDefinitions;
+    source.schemaVersion = 25;
 
     const migrated = parseProjectWithMetadata(JSON.stringify(source));
     expect(migrated).toMatchObject({
-      sourceSchemaVersion: 24,
+      sourceSchemaVersion: 25,
       migrated: true,
-      project: { schemaVersion: 25 },
-    });
-    const migratedDocument = migrated.project.documents[0]!;
-    expect(migratedDocument.netlist?.terminals).toMatchObject([
-      {
-        id: "terminal-in",
-        name: "IN",
-        netId: "net-in",
-        interfaceInstanceIds: ["P1"],
+      project: {
+        schemaVersion: 26,
+        customSymbolDefinitions: [],
       },
-      { name: "IN", netId: "net-in", interfaceInstanceIds: ["P2"] },
-    ]);
-    expect(
-      migratedDocument.annotations.find((item) => item.id === "label-p1")
-        ?.binding,
-    ).toEqual({ kind: "cell-terminal-name", terminalId: "terminal-in" });
-    expect(
-      migratedDocument.annotations.find((item) => item.id === "label-p2")
-        ?.binding,
-    ).toEqual({
-      kind: "cell-terminal-name",
-      terminalId: migratedDocument.netlist!.terminals[1]!.id,
     });
-    expect(migratedDocument.presentation.cellSymbol?.pinPlacements).toEqual([
-      { terminalId: "terminal-in", side: "west", offset: 0 },
-    ]);
   });
 
-  it("allocates deterministic collision-safe terminal IDs during migration", () => {
+  it("preserves persisted custom symbol definitions through the upgrade", () => {
     const source = JSON.parse(
       serializeProject(createEmptyProject("project-test", "Test Project")),
     ) as Record<string, any>;
-    source.schemaVersion = 24;
-    const document = source.documents[0];
-    const collidingId = deriveStableId("cell-terminal", "terminal-in", "P2");
-    document.instances.push(
-      { id: "P1", symbolId: "port", placement: null },
-      { id: "P2", symbolId: "port", placement: null },
-      { id: "P3", symbolId: "port", placement: null },
-    );
-    document.nets.push(
+    source.customSymbolDefinitions = [
       {
-        id: "net-in",
-        terminals: [
-          { instanceId: "P1", pinName: "P" },
-          { instanceId: "P2", pinName: "P" },
-        ],
+        id: "custom-def-1",
+        symbol: {
+          schemaVersion: 1,
+          id: "imported-artwork",
+          name: "Imported Block",
+          viewBox: { x: -20, y: -20, width: 40, height: 40 },
+          pins: [
+            {
+              name: "A",
+              role: "terminal",
+              at: { x: -20, y: 0 },
+              direction: "west",
+              presentation: { visibility: "visible" },
+            },
+            {
+              name: "Y",
+              role: "terminal",
+              at: { x: 20, y: 0 },
+              direction: "east",
+              presentation: { visibility: "visible" },
+            },
+          ],
+          primitives: [
+            {
+              kind: "line",
+              from: { x: -10, y: 0 },
+              to: { x: 10, y: 0 },
+            },
+          ],
+          variants: [],
+        },
       },
-      {
-        id: "net-other",
-        terminals: [{ instanceId: "P3", pinName: "P" }],
-      },
-    );
-    document.netlist.terminals.push(
-      {
-        id: "terminal-in",
-        name: "IN",
-        netId: "net-in",
-        direction: "input",
-        interfaceInstanceIds: ["P1", "P2"],
-      },
-      {
-        id: collidingId,
-        name: "OTHER",
-        netId: "net-other",
-        direction: "passive",
-        interfaceInstanceIds: ["P3"],
-      },
-    );
+    ];
+    source.schemaVersion = 25;
 
-    const first = upgradeSchema24To25WithReport(source);
-    const second = upgradeSchema24To25WithReport(source);
-    const firstDocument = (
-      first.project.documents as Array<Record<string, any>>
-    )[0]!;
-    const secondDocument = (
-      second.project.documents as Array<Record<string, any>>
-    )[0]!;
-    const splitId = firstDocument.netlist.terminals[1].id;
-    expect(splitId).not.toBe(collidingId);
-    expect(secondDocument.netlist.terminals[1].id).toBe(splitId);
-    expect(first.report.independentCellPins[1]).toMatchObject({
-      sourceTerminalId: "terminal-in",
-      terminalId: splitId,
-      interfaceInstanceId: "P2",
+    const migrated = parseProjectWithMetadata(JSON.stringify(source));
+    expect(migrated.project.customSymbolDefinitions).toHaveLength(1);
+    expect(migrated.project.customSymbolDefinitions[0]).toMatchObject({
+      id: "custom-def-1",
+      symbol: { id: "imported-artwork", name: "Imported Block" },
     });
   });
 
   it("rejects schemas outside the current-and-previous window", () => {
     const project = createEmptyProject("project-test", "Test Project");
-    for (const schemaVersion of [23, 26, 99]) {
+    for (const schemaVersion of [24, 27, 99]) {
       expect(() =>
         parseProject(JSON.stringify({ ...project, schemaVersion })),
-      ).toThrow(/must be 24 or 25/);
+      ).toThrow(/must be 25 or 26/);
     }
   });
 });

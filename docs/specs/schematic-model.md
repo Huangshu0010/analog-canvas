@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 25 and has
+geometric, and presentation facts. The current model is strict schema 26 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -161,7 +161,7 @@ ordinary Schematic edits inside one Project structural transaction. The
 Project's `structureRevision` protects this cross-Document boundary and the
 editor records it as one undoable structural commit.
 
-Persistence writes only schema 25. The rolling reader accepts schema 24 at the
-file boundary, splits legacy multi-marker terminals without changing physical
-topology, then supplies the current model only; no
-compatibility shape enters runtime electrical derivation.
+Persistence writes only schema 26. The rolling reader accepts schema 25 at the
+file boundary, defaults the ADR 0047 custom symbol array, then supplies the
+current model only; no compatibility shape enters runtime electrical
+derivation.

@@ -1,4 +1,5 @@
 {
+  "customSymbolDefinitions": [],
   "documents": [
     {
       "annotations": [
@@ -2165,7 +2166,7 @@
   "externalSubcircuitDefinitions": [],
   "id": "project-main",
   "name": "New Circuit",
-  "schemaVersion": 25,
+  "schemaVersion": 26,
   "source": {
     "dialect": "none",
     "entry": null,

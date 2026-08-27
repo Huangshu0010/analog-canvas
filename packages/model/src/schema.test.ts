@@ -6,6 +6,7 @@ import {
   CircuitProjectJsonSchema,
   CircuitProjectSchema,
   SchematicDocumentSchema,
+  type CustomSymbolDefinition,
 } from "./schema.js";
 
 describe("CircuitProject schema", () => {
@@ -644,5 +645,83 @@ describe("presentation style overrides", () => {
       CircuitProjectSchema.safeParse(projectWithOverrides({ glowIntensity: 1 }))
         .success,
     ).toBe(false);
+  });
+});
+
+describe("custom symbol definitions (ADR 0047)", () => {
+  const customSymbol: CustomSymbolDefinition["symbol"] = {
+    schemaVersion: 1,
+    id: "imported-block",
+    name: "Imported Block",
+    viewBox: { x: -20, y: -20, width: 40, height: 40 },
+    pins: [
+      {
+        name: "A",
+        role: "terminal",
+        at: { x: -20, y: 0 },
+        direction: "west",
+        presentation: { visibility: "visible" },
+      },
+      {
+        name: "Y",
+        role: "terminal",
+        at: { x: 20, y: 0 },
+        direction: "east",
+        presentation: { visibility: "visible" },
+      },
+    ],
+    primitives: [{ kind: "line", from: { x: -10, y: 0 }, to: { x: 10, y: 0 } }],
+    variants: [],
+  };
+
+  it("defaults customSymbolDefinitions to an empty array", () => {
+    const project = createEmptyProject("project-custom", "Custom");
+    expect(project.customSymbolDefinitions).toEqual([]);
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+  });
+
+  it("accepts a validated embedded Symbol definition", () => {
+    const project = createEmptyProject("project-custom", "Custom");
+    project.customSymbolDefinitions.push({
+      id: "custom-def-1",
+      symbol: customSymbol,
+    });
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+  });
+
+  it("rejects duplicate definition IDs", () => {
+    const project = createEmptyProject("project-custom", "Custom");
+    project.customSymbolDefinitions.push(
+      { id: "custom-def-1", symbol: customSymbol },
+      { id: "custom-def-1", symbol: customSymbol },
+    );
+    expect(() => CircuitProjectSchema.parse(project)).toThrow(
+      /Duplicate ID: custom-def-1/,
+    );
+  });
+
+  it("rejects embedded artwork that violates the Symbol DSL", () => {
+    const project = createEmptyProject("project-custom", "Custom");
+    const offGrid = structuredClone(customSymbol);
+    offGrid.pins[0]!.at = { x: -15, y: 0 };
+    project.customSymbolDefinitions.push({
+      id: "custom-def-off-grid",
+      symbol: offGrid,
+    });
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
+
+    const bothStrokes = structuredClone(customSymbol);
+    bothStrokes.primitives = [
+      {
+        kind: "line",
+        from: { x: -10, y: 0 },
+        to: { x: 10, y: 0 },
+        style: { strokeRole: "normal", strokeWidth: 1 },
+      },
+    ];
+    project.customSymbolDefinitions = [
+      { id: "custom-def-strokes", symbol: bothStrokes },
+    ];
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
   });
 });

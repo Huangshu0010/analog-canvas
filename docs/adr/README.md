@@ -100,6 +100,9 @@ The schema-25 independent Cell-Pin authoring contract and read-only Formal Port
 name projection, superseding ADR 0037 and the remaining shared-marker clauses
 of ADRs 0043/0045, is
 [`0046-independent-cell-pins-and-formal-port-projection.md`](0046-independent-cell-pins-and-formal-port-projection.md).
+The user-defined Symbol protocol that persists custom symbol definitions with
+the Project and moves the Symbol artwork schema into the model is
+[`0047-user-defined-symbol-protocol.md`](0047-user-defined-symbol-protocol.md).
 The arbitrary-angle Route authoring decision is
 [`0039-any-angle-route-authoring.md`](0039-any-angle-route-authoring.md).
 
