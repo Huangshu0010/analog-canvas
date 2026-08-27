@@ -36,8 +36,8 @@ export interface SchematicClipboard {
   instances: Instance[];
   cellTerminals: CellNetlistTerminal[];
   /**
-   * Nets entirely inside the copied selection. They are duplicated (or merged
-   * by name) when the copy is committed.
+   * Nets entirely inside the copied selection. They are duplicated when the
+   * copy is committed.
    */
   nets: Net[];
   /**

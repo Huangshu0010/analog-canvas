@@ -37,6 +37,12 @@ to that existing terminal. Explicitly renaming one terminal onto another may
 still invoke the existing merge behavior. Those deliberate operations remain
 the way to request shared terminal identity.
 
+Whole-Document composition is a separate clipboard mode. Gallery insertion
+and other full-scene imports preserve the imported circuit's declared
+interface contract: Cell Pins with the same case-insensitive name merge into
+the existing formal terminal and its Base Net. This mode is carried explicitly
+by `copyWholeDocument`; it does not change ordinary `copySelection` behavior.
+
 This supersedes only the clipboard-copy clauses of
 [ADR 0037](0037-repeated-formal-port-markers.md) and
 [ADR 0043](0043-cell-pin-contract-convergence.md).

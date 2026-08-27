@@ -1,85 +1,47 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import type {
-  CSSProperties,
-  DragEvent,
-  MouseEvent as ReactMouseEvent,
-  PointerEvent as ReactPointerEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import "../editor.css";
 import type {
   AgentHostSemanticIntentRequest,
   AgentHostSemanticIntentResult,
 } from "@icm/agent-adapter";
-import { deviceDescriptor } from "@icm/devices";
-
 import {
   compileWireDraft,
-  createConnectivityProposal,
   createFreeWireAnchor,
-  gateConnectivityProposal,
-  createRouteWireAnchor,
   proposeEndpointRouteAttachment,
-  proposeGroupMoveEdits,
-  proposeGroupReflectionEdits,
-  proposeGroupRotationEdits,
   proposeLooseRouteTranslation,
   proposePowerRailEndpointResize,
   proposePowerRailTranslation,
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
-  planEnsureNamedNet,
-  planCreateCell,
   planDeleteCell,
-  planRenameCell,
   planRemoveCellTerminals,
-  planRenameCellTerminal,
-  planReorderCellTerminal,
-  planSetCellSymbolPresentation,
   planEditCellTerminalAnnotation,
-  planSetCellTerminalPlacement,
-  planUpdateCellTerminalDirection,
-  planSetMosModelTarget,
   planCellReset,
-  planInstanceUnplacement,
-  proposeSetCellFormalParameters,
-  proposeUpsertExternalSubcircuitDefinition,
-  type ProjectStructureEdit,
-  type EditTransactionResult,
-  type ConnectivityIntent,
   type SchematicEdit,
   type CellResetPlan,
   type WireSource,
-  type WireRoutingMode,
-  type WireCornerOrder,
 } from "@icm/edit-engine";
-import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
-import { analyzeDesignNetlist, printDesignNetlist } from "@icm/netlist";
-import type { NetlistDiagnostic, NetlistFormat } from "@icm/netlist";
+import { analyzeDesignNetlist } from "@icm/netlist";
 import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
   deriveCrossings,
   deriveNetConnectivity,
   deriveInternalGroupSelection,
-  derivePowerRailComponent,
   diagnoseProjectSnapshot,
   diagnoseVisualQuality,
   endpointKey,
   findHierarchyPath,
-  findHierarchyPaths,
-  hasDifferentialInputs,
   isMosBulkTerminal,
-  isSchematicAnnotationVisible,
   isVisibleEndpoint,
   resolveEndpointConnection,
   resolveDraftingObjectGeometry,
   resolveElectricalContactTargets,
   displayableInstanceValue,
-  resolveNetLabelBinding,
   resolveMosBulkConnection,
   resolveDocumentStyleProfile,
   resolveDocumentLogicalNets,
-  resolveRouteAttachment,
   resolveRouteTap,
   resolveDocumentRoutingGeometry,
   summarizeProjectCells,
@@ -91,38 +53,27 @@ import type {
   GlobalNetTraceHop,
   HierarchyFrame,
   HierarchyNetTraceHop,
-  ObjectLocator,
   SearchResult,
 } from "@icm/derived";
 import {
   createEmptyProject,
-  createEmptyDocument,
   createId,
-  deriveStableId,
-  defaultDraftTextDocument,
   foldNetName,
   flattenRichText,
-  inverseTransformPoint,
-  snapGridPoint,
   semanticTextDocument,
-  transformPoint,
 } from "@icm/model";
 import type {
   Annotation,
   CircuitProject,
-  ConnectivityEvidence,
   DerivedPoint,
-  ExternalSubcircuitDefinition,
   DraftingObject,
   GridRect,
   Point,
   Rect,
-  RichTextDocument,
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
 import { buildSvgScene } from "@icm/render-svg";
-import { importSpiceSources } from "@icm/spice";
 import { renderCrashRequested, sceneCrashRequested } from "./crash-test-hooks";
 import { buildSceneSafely } from "./scene-safety";
 import {
@@ -130,53 +81,49 @@ import {
   externalSubcircuitSymbolId,
   findUnsupportedProjectSymbolIds,
   hierarchicalSymbolId,
-  resolvePdkSymbolMapping,
   resolvePdkSymbolMappingForTerminalOrder,
   reviewedSky130MosModelSuggestions,
 } from "@icm/symbols";
 import {
-  clipboardPlacementAnchor,
   clipboardPreviewDocument,
   copySelection,
-  copyWholeDocument,
 } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
-import { startCanvasDragSession } from "../canvas/canvas-drag-session";
 import {
   fitCameraToBounds,
   normalizeCameraRect,
-  zoomCameraAtAnchor,
   type CameraRectInput,
 } from "../canvas/fit-view";
 import type { CanvasDragSession } from "../canvas/canvas-drag-session";
-import { startCanvasDragVisual } from "../canvas/canvas-drag-visual";
-import {
-  rankCanvasHits,
-  resolveCanvasHitAtPoint,
-} from "../canvas/canvas-hit-resolver";
+import { createCanvasHitController } from "../canvas/canvas-hit-controller";
 import {
   type RouteStretchPreview,
   useWireInteraction,
 } from "../features/wiring/use-wire-interaction";
+import { closestPointOnSegment } from "../canvas/canvas-geometry";
+import type { BoxPreview, PanPreview } from "../canvas/canvas-gesture-model";
+import { createCanvasGestureController } from "../canvas/canvas-gesture-controller";
+import { createEditorCanvasEventHandlers } from "../canvas/editor-canvas-event-handlers";
 import {
-  centerOfBounds,
-  clamp,
-  closestPointOnSegment,
-  normalizedBearing,
-  normalizedRect,
-  polylineBounds,
-  serializePolylinePoints,
-} from "../canvas/canvas-geometry";
-import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
-import { ComponentPlacementPreview } from "../features/component-insert/component-placement-preview";
+  canvasPointFromClient,
+  logicalRadiusForCanvasPixels,
+  replaceCanvasSnapGuides,
+} from "../canvas/canvas-viewport";
+import { EditorCanvasSurface } from "../canvas/editor-canvas-surface";
+import { createAnnotationDragController } from "../features/text-editing/annotation-drag-controller";
+import {
+  createEditorFileCommands,
+  type SpiceImportReport,
+} from "../features/editor-shell/editor-file-commands";
+import { EditorStatusbar } from "../features/editor-shell/editor-statusbar";
+import { useCellSymbolLayout } from "../features/hierarchy/use-cell-symbol-layout";
 import {
   cellInsertLaunch,
   fullInsertLaunch,
 } from "../features/component-insert/insert-launch";
 import { useComponentPlacement } from "../features/component-insert/use-component-placement";
-import { planPlaceAllUnplacedInstances } from "../features/component-insert/placement-tray";
-import { missingDefaultInstanceDisplayAnnotations } from "../features/instance-display/default-instance-display";
-import { DisplayToggle } from "../features/component-insert/display-toggle";
+import { createPlacementTrayCommands } from "../features/component-insert/placement-tray-commands";
+import { componentTargetDescription } from "../features/properties/component-identity-properties";
 import {
   constrainedPowerRailEndpoint,
   constructVddRailEdits,
@@ -187,10 +134,6 @@ import {
   proposePlacementContact,
   proposedStandalonePowerConnection,
 } from "../features/component-insert/placement-connectivity";
-import {
-  componentParameters,
-  externalMosComponentParameters,
-} from "../features/component-insert/component-parameters";
 import {
   endpointTestId,
   instanceLabelAnnotationFor,
@@ -203,29 +146,13 @@ import {
   isTypingTarget,
   RenderCrashProbe,
 } from "./editor-runtime-helpers";
+import { EditorDialogLayer } from "./editor-dialog-layer";
+import { EditorAppChrome } from "./editor-app-chrome";
+import { EditorPropertiesDock } from "./editor-properties-dock";
 import {
-  LazyAgentPropertiesSection,
-  LazyCellManagerDialog,
-  LazyConnectAgentPanel,
-  LazyEditorHelpDialog,
-  LazyInsertComponentDialog,
-  LazyInstanceTableDialog,
-  LazyNetlistPreflightDialog,
-  LazyProjectSearchDialog,
-  LazyPublishGalleryDialog,
-  LazyRecentRecoveryDialog,
-  LazyReplaceGuardDialog,
-  LazyVersionHistoryDialog,
-} from "./lazy-editor-dialogs";
-import {
-  bindingForEditedModel,
-  initialInstanceNetlist,
   netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
 } from "../features/netlist-export/netlist-authoring";
-import { ToolIcon } from "../features/editor-shell/tool-icon";
-import { DrawingToolbar } from "../features/editor-shell/drawing-toolbar";
-import { FileCommandMenu } from "../features/editor-shell/file-command-menu";
 import {
   quickPlaceRequest,
   ShapesPanel,
@@ -239,11 +166,9 @@ import {
   planDifferentialInputSwap,
 } from "../features/editor-shell/differential-input-swap";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
-import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
-import { HierarchyToolbar } from "../features/hierarchy/hierarchy-toolbar";
-import { parseProject } from "@icm/project-protocol";
-import { DocumentSettingsSection } from "../features/editor-shell/document-settings-section";
-import { derivedFingerWidth } from "../features/properties/finger-width";
+import { createGalleryExampleCommands } from "../features/editor-shell/gallery-example-commands";
+import { createEditorNavigationController } from "../features/hierarchy/editor-navigation-controller";
+import { createProjectStructureCommands } from "../features/hierarchy/project-structure-commands";
 import type { PublishGalleryDraft } from "../features/editor-shell/publish-gallery-dialog";
 import {
   publishProjectToGallery,
@@ -261,52 +186,29 @@ import {
 import {
   createLibraryExampleProject,
   libraryProjectExamples,
-  type LibraryProjectExample,
 } from "../examples/library-examples";
 import { useDocumentController } from "../document/document-controller";
 import { useProjectFileLifecycle } from "../document/use-project-file-lifecycle";
 import {
-  applyDraftingHandle,
-  applyDraftingStylePatch,
-  deleteConstructionVertex as deleteConstructionVertexObject,
   draftingDragOrigin,
-  insertArrowWaypoint as insertArrowWaypointObject,
-  insertConstructionVertex as insertConstructionVertexObject,
-  rotateDraftingObject,
-  setDraftingBearing as setDraftingObjectBearing,
-  setDraftingTangentAngle as setDraftingObjectTangentAngle,
   translateDraftingObject,
 } from "../features/drafting/drafting-manipulation";
-import type {
-  DraftingHandle,
-  DraftingStylePatch,
-} from "../features/drafting/drafting-manipulation";
-import { DraftingCreatePreview } from "../features/drafting/drafting-create-preview";
+import { createDraftingCommands } from "../features/drafting/drafting-commands";
+import { createDraftingCreateController } from "../features/drafting/drafting-create-controller";
 import {
-  proposeRectangleLabel,
-  rectangleInteriorAt,
-  rectangleLabelFor,
-} from "../features/drafting/rectangle-label";
-import {
-  marqueeMode,
-  marqueeSelection,
-} from "../features/selection/marquee-selection";
-import {
-  draftingPathData,
-  quadraticMidpoint,
-  quadraticTangentAngle,
-} from "../features/drafting/drafting-path";
+  createDraftingDragController,
+  type DraftingHandlePreview,
+} from "../features/drafting/drafting-drag-controller";
 import {
   resolveEditorShortcut,
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
 import { createEditorCommandRouter } from "../commands/editor-command";
-import {
-  RecoveryFailureBanner,
-  recoveryStateLabel,
-} from "../components/recovery-banners";
+import { createEditorTransactionCommands } from "./editor-transaction-commands";
+import { recoveryStateLabel } from "../components/recovery-banners";
 import { BrowserAgentHost } from "../agent/browser-agent-host";
 import { BrowserAgentFileHost } from "../agent/browser-agent-file-host";
+import { createAgentSemanticIntentHandler } from "../agent/agent-semantic-intent-handler";
 import { PUBLIC_AGENT_UI_ENABLED } from "../agent/public-agent-ui";
 import { useAgentSession } from "../agent/use-agent-session";
 import type { AgentFileCandidateSummary } from "@icm/agent-adapter";
@@ -315,10 +217,8 @@ import { useInteractionState } from "../interaction/interaction-state";
 import type { EditorTool } from "../interaction/interaction-state";
 import { resolveTextEditingTarget } from "../features/text-editing/text-editing";
 import { planMosBulkDefaultUpdate } from "../features/component-insert/mos-bulk-defaults";
-import { planCheckBulkDefaults } from "../features/netlist-export/check-and-save";
 import {
   listWorkspaceShelf,
-  saveToWorkspaceShelf,
   type WorkspaceSlot,
 } from "../features/editor-shell/workspace-shelf";
 import {
@@ -331,8 +231,10 @@ import {
 import { useRecoveryCoordinator } from "../document/recovery-coordinator";
 import { requestProjectDownload } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
+import { deriveSelectionInspectionModel } from "../features/selection/selection-inspection-model";
 import { usePropertiesEditor } from "../features/properties/use-properties-editor";
-import { capacitorPlatePropertyRows } from "../features/properties/capacitor-plate-properties";
+import { createPropertyEditPlanner } from "../features/properties/property-edit-planner";
+import { createSelectionPropertyCommands } from "../features/properties/selection-property-commands";
 import {
   LIBRARY_WIDTH_MAX,
   LIBRARY_WIDTH_MIN,
@@ -343,17 +245,13 @@ import {
   type ProjectedInstanceMove,
   useSelectionInteraction,
 } from "../features/selection/use-selection-interaction";
-import {
-  NetTraceSection,
-  ProjectDiagnosticsSection,
-  SelectionInspectorDetails,
-  summarizeVisualDiagnostics,
-} from "../features/selection/selection-inspector-details";
-import type { SpiceImportReport } from "../features/selection/selection-inspector-details";
+import { summarizeVisualDiagnostics } from "../features/selection/selection-inspector-details";
 import {
   hasVisualSelection,
   pruneVisualSelection,
 } from "../features/selection/visual-selection";
+import { createSelectionMoveController } from "../features/selection/selection-move-controller";
+import { createSelectionTransformController } from "../features/selection/selection-transform-controller";
 import type { VisualSelection } from "../features/selection/visual-selection";
 import {
   planSelectionMove,
@@ -364,29 +262,20 @@ import {
   annotationAnchor,
   annotationHitBox,
   attachmentAtPoint,
-  defaultInstanceLabel,
-  defaultInstanceValue,
-  dragNetLabelAttachmentAtPoint,
-  dragRouteAttachmentAtPoint,
   effectiveRouteAttachment,
   endpointNetId,
-  instanceHitBox,
   instanceValueAnnotation,
   isRoutedMarker,
   looseRouteAnchorIds,
-  NET_LABEL_MAX_NORMAL_OFFSET,
-  routeTapPoint,
 } from "../features/wiring/route-interaction-geometry";
-import { reflectOrientation } from "../interaction/shortcut-orientation";
+import { useWireCanvasController } from "../features/wiring/use-wire-canvas-controller";
 import type { ScreenFlip } from "../interaction/shortcut-orientation";
 import {
   buildDraftingAnchors,
   buildInstanceAnchors,
   buildSceneSnapTargets,
-  endpointSnapAnchor,
 } from "../snap/candidates";
 import {
-  logicalToleranceForScale,
   resolvePointSnap,
   resolveTranslationSnap,
   SNAP_PROFILES,
@@ -400,60 +289,15 @@ const LIBRARY_PANEL_STORAGE_KEY = "icm.library-panel-open.v1";
 const LIBRARY_WIDTH_STORAGE_KEY = "icm.library-panel-width.v1";
 const COMPACT_LAYOUT_MEDIA_QUERY = "(max-width: 860px)";
 const DRAG_START_DISTANCE_PX = 4;
-/**
- * Middle-press slop before a pan begins. A scroll wheel is stiff enough that
- * clicking it drags the hand several pixels, and the ordinary 4px threshold
- * turned those clicks into pans — so the corner cycle they were meant to
- * trigger did nothing and the middle button felt unresponsive.
- */
-const PAN_START_DISTANCE_PX = 10;
 const SNAP_CAPTURE_RADIUS_PX = 7;
 
 /** Persisted Junctions are grid points, including on ±45° Route segments. */
 
 type DragPreview = InstanceMovePreview;
 
-interface BoxPreview {
-  start: DerivedPoint;
-  end: DerivedPoint;
-  pointerId: number;
-  /**
-   * Left-drag selects what the box touches; right-drag (or Alt+left-drag)
-   * zooms to fit it.
-   */
-  intent: "select" | "zoom";
-}
-
-interface PanPreview {
-  clientStart: Point;
-  viewBoxStart: GridRect;
-  pointerId: number;
-  dragged: boolean;
-}
-
-interface AnnotationDragPreview {
-  annotationId: string;
-  originalPosition: Point;
-  pointerStart: DerivedPoint;
-}
-
 // Handle drags are geometry edits rather than translations.  Keep a complete
 // transient object so the formal SVG renderer can redraw both a curved shaft
 // and its arrow head from the same latest control point before pointer-up.
-interface DraftingHandlePreview {
-  objectId: string;
-  object: DraftingObject;
-}
-
-type SupplementalSelection = Omit<VisualSelection, "instanceIds">;
-
-const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
-  routeIds: [],
-  junctionIds: [],
-  annotationIds: [],
-  draftingIds: [],
-};
-
 export interface AppProps {
   project?: CircuitProject;
   visitStats?: { pv: number; uv: number } | null;
@@ -790,16 +634,6 @@ export function App({
     setAgentStatusDismissed(false);
   }, [agentSession.status, publicAgentUiEnabled]);
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
-  const [cellSymbolLayoutEnabled, setCellSymbolLayoutEnabled] = useState(false);
-  const [
-    cellSymbolLayoutTargetInstanceId,
-    setCellSymbolLayoutTargetInstanceId,
-  ] = useState<string | null>(null);
-  const [cellSymbolLayoutDrag, setCellSymbolLayoutDrag] = useState<{
-    kind: "body" | "pin";
-    pointerId: number;
-    terminalId?: string;
-  } | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [wireOptionsOpen, setWireOptionsOpen] = useState(false);
   const [routingGuidanceView, setRoutingGuidanceView] = useState<
@@ -860,6 +694,44 @@ export function App({
     beginSelectionMove: beginSelectionMoveInteraction,
     cancelInteraction,
   } = useInteractionState<SchematicClipboard>();
+  const { commitStructure, transact, transactConnectivity } =
+    createEditorTransactionCommands({
+      project,
+      document,
+      dispatchProjectTransaction,
+      transactDocument,
+      getCurrentInteractionKind: () => getCurrentInteractionState().kind,
+      cancelAllTransientInteraction,
+      setStatus,
+    });
+  const {
+    createCell,
+    renameCell,
+    updateCellPinDirection,
+    renameCellTerminal,
+    moveCellTerminal,
+    setCellFormalParameters,
+    setExternalSubcircuitDefinition,
+    setCellSymbolBodySize,
+    setCellSymbolPortPlacement,
+    renameProject,
+  } = createProjectStructureCommands({
+    project,
+    activeDocument: document,
+    commitStructure,
+    setStatus,
+    onCellCreated: () => setDocumentStack([]),
+  });
+  const { openGalleryEntryById, openLibraryExample, insertGalleryEntryById } =
+    createGalleryExampleCommands({
+      defaultViewBox: DEFAULT_VIEWBOX,
+      replaceActiveProject,
+      guardDirtyReplacement,
+      beginCopyPlacement: beginCopyPlacementInteraction,
+      cancelAllTransientInteraction,
+      setGalleryEntryContext,
+      setStatus,
+    });
   const [draftingInspectorSegment, setDraftingInspectorSegment] = useState<{
     objectId: string;
     index: number;
@@ -883,15 +755,6 @@ export function App({
   const [workspaceSlots, setWorkspaceSlots] = useState<
     readonly WorkspaceSlot[]
   >([]);
-  /**
-   * The corner shape is a standing authoring preference, not per-wire state:
-   * picking the wire tool again reset it, so a chosen diagonal had to be
-   * re-selected for every single wire.
-   */
-  const lastWireShapeRef = useRef<{
-    routingMode: WireRoutingMode;
-    cornerOrder: WireCornerOrder;
-  }>({ routingMode: "orthogonal", cornerOrder: "auto" });
   const [selectedEndpoint, setSelectedEndpoint] = useState<WireSource | null>(
     null,
   );
@@ -1029,10 +892,56 @@ export function App({
   const returnablePlacedInstances = document.instances.filter(
     (instance) => instance.placement !== null,
   );
-  const selectedIds = visualSelection.instanceIds;
+  const {
+    selectedIds,
+    supplementalSelection,
+    selectedRouteId,
+    selectedAnnotationId,
+    selectedDraftingId,
+    selectedInstance,
+    selectedInstanceHasDifferentialInputs,
+    selectedHierarchyCell,
+    selectedDevice,
+    selectedCapacitorPlateRows,
+    selectedExternalSubcircuit,
+    selectedExternalMosMapping,
+    selectedPropertyDevice,
+    selectedRoute,
+    selectedRouteNetLabels,
+    selectedRouteNetLabel,
+    selectedAnnotation,
+    selectedNetLabelBinding,
+    selectedDrafting,
+    hasHierarchyEnterSelection,
+    hasRotatableSelection,
+    hasMirrorableSelection,
+    hasInspectableSelection,
+    selectionShelfSummary,
+    selectedNoConnect,
+    selectedEndpointNetId,
+    selectedHighlightNetId,
+    selectedHighlightEndpoint,
+  } = deriveSelectionInspectionModel({
+    project,
+    document,
+    resolver,
+    selection: visualSelection,
+    selectedEndpoint,
+  });
   const projectConnectivityIndex = useMemo(
     () => buildProjectConnectivityIndex(project, resolver),
     [project, resolver],
+  );
+  const routeGeometryRecords = useMemo(
+    () =>
+      document.routes.flatMap((route) => {
+        const geometry = projectConnectivityIndex.documents
+          .get(document.id)
+          ?.routingGeometry.routes.get(route.id);
+        if (!geometry) return [];
+        return [{ route, geometry }];
+      }),
+    [document, projectConnectivityIndex],
   );
   const netlistAnalysis = useMemo(
     () => analyzeDesignNetlist(project),
@@ -1086,134 +995,61 @@ export function App({
       }).search(searchQuery),
     [project, projectConnectivityIndex, searchQuery],
   );
-  const supplementalSelection: SupplementalSelection = {
-    routeIds: visualSelection.routeIds,
-    junctionIds: visualSelection.junctionIds,
-    annotationIds: visualSelection.annotationIds,
-    draftingIds: visualSelection.draftingIds,
-  };
-  const selectedRouteId = visualSelection.routeIds.at(-1) ?? null;
-  const selectedAnnotationId = visualSelection.annotationIds.at(-1) ?? null;
-  const selectedDraftingId = visualSelection.draftingIds.at(-1) ?? null;
-  const selectedId = selectedIds.at(-1) ?? null;
-  const selectedInstance =
-    selectedIds.length === 1
-      ? document.instances.find((instance) => instance.id === selectedId)
-      : undefined;
-  const selectedInstanceHasDifferentialInputs = (() => {
-    if (!selectedInstance) return false;
-    const resolved = resolver.resolve(selectedInstance.symbolId);
-    return resolved ? hasDifferentialInputs(resolved) : false;
-  })();
-  const selectedHierarchyCell = selectedInstance
-    ? project.documents.find(
-        (candidate) =>
-          candidate.id === referencedDocumentId(project, selectedInstance),
-      )
-    : undefined;
-  const selectedDevice = selectedInstance
-    ? deviceDescriptor(selectedInstance.symbolId)
-    : undefined;
-  const selectedCapacitorPlateRows = selectedInstance
-    ? capacitorPlatePropertyRows(document, selectedInstance)
-    : null;
-  const selectedBinding = selectedInstance?.netlist?.binding;
-  const selectedExternalSubcircuit =
-    selectedBinding?.kind === "external-subcircuit"
-      ? project.externalSubcircuitDefinitions.find(
-          (definition) => definition.id === selectedBinding.definitionId,
-        )
-      : undefined;
-  const selectedExternalMosMapping = selectedExternalSubcircuit
-    ? selectedExternalSubcircuit.presentation
-      ? undefined
-      : resolvePdkSymbolMappingForTerminalOrder(
-          selectedExternalSubcircuit.name,
-          selectedExternalSubcircuit.terminals.map((terminal) => terminal.name),
-        )
-    : undefined;
-  const selectedPropertyDevice =
-    selectedDevice ??
-    (selectedExternalMosMapping
-      ? deviceDescriptor(selectedExternalMosMapping.symbolId)
-      : undefined);
-  const selectedCellSymbolLayout = useMemo(() => {
-    if (
-      !cellSymbolLayoutEnabled ||
-      !selectedInstance?.placement ||
-      !selectedHierarchyCell?.netlist
-    ) {
-      return null;
-    }
-    const definition = resolver.resolve(selectedInstance.symbolId)?.definition;
-    const body = definition?.primitives.find(
-      (primitive) => primitive.kind === "polygon",
-    );
-    if (!definition || !body || body.kind !== "polygon") return null;
-    const xs = body.points.map((point) => point.x);
-    const ys = body.points.map((point) => point.y);
-    return {
-      child: selectedHierarchyCell,
-      instance: selectedInstance,
-      body: {
-        left: Math.min(...xs),
-        right: Math.max(...xs),
-        top: Math.min(...ys),
-        bottom: Math.max(...ys),
-      },
-      pins: selectedHierarchyCell.netlist.terminals.flatMap((terminal) => {
-        const pin = definition.pins.find(
-          (candidate) => candidate.name === terminal.name,
-        );
-        return pin ? [{ terminal, pin }] : [];
-      }),
-    };
-  }, [
-    cellSymbolLayoutEnabled,
-    resolver,
-    selectedHierarchyCell,
+  const {
+    enabled: cellSymbolLayoutEnabled,
+    layout: selectedCellSymbolLayout,
+    activeDragPointerId: cellSymbolLayoutDragPointerId,
+    cancelDrag: cancelCellSymbolLayoutDrag,
+    exit: exitCellSymbolLayout,
+    toggle: toggleCellSymbolLayout,
+    beginDrag: beginCellSymbolLayoutDrag,
+    completeDrag: completeCellSymbolLayoutDrag,
+  } = useCellSymbolLayout({
     selectedInstance,
-  ]);
-  const selectedRoute = selectedRouteId
-    ? document.routes.find((route) => route.id === selectedRouteId)
-    : undefined;
-  // Labels are electrically associated with a Net, not intrinsically with a
-  // Route. The editor's own label id is useful as a preference only: imported
-  // projects and older documents legitimately use arbitrary annotation ids.
-  const selectedRouteNetLabels = selectedRoute
-    ? document.annotations.filter(
-        (annotation) =>
-          annotation.kind === "net-label" &&
-          annotation.netId === selectedRoute.netId,
-      )
-    : [];
-  const selectedRouteNetLabel = selectedRoute
-    ? (selectedRouteNetLabels.find(
-        (annotation) => annotation.id === `net-label-${selectedRoute.id}`,
-      ) ??
-      selectedRouteNetLabels.find(
-        (annotation) =>
-          resolveNetLabelBinding(document, resolver, annotation)?.routeId ===
-          selectedRoute.id,
-      ))
-    : undefined;
-  const selectedAnnotation = selectedAnnotationId
-    ? document.annotations.find(
-        (annotation) => annotation.id === selectedAnnotationId,
-      )
-    : undefined;
-  const selectedNetLabelBinding = selectedAnnotation
-    ? resolveNetLabelBinding(document, resolver, selectedAnnotation)
-    : null;
-  const selectedDrafting = selectedDraftingId
-    ? document.drafting?.objects.find(
-        (object) => object.id === selectedDraftingId,
-      )
-    : undefined;
-  const hasHierarchyEnterSelection = Boolean(
-    (selectedInstance && referencedDocumentId(project, selectedInstance)) ||
-    selectedDrafting?.kind === "rectangle",
-  );
+    child: selectedHierarchyCell,
+    resolver,
+    selectionOpen,
+    canvasPointFromEvent: (event) =>
+      pointFromClient(event.clientX, event.clientY, event.currentTarget),
+    setBodySize: setCellSymbolBodySize,
+    setPortPlacement: setCellSymbolPortPlacement,
+  });
+  const {
+    netLabelForRoute,
+    netLabelEditsForRoute,
+    netNameEditsForAnnotation,
+    propertyParametersForInstance,
+    instancePropertyEdits,
+  } = createPropertyEditPlanner({
+    project,
+    document,
+    resolver,
+    routeGeometryRecords,
+    setStatus,
+  });
+  const {
+    referenceLabelVisibilityEdits,
+    valueVisibilityEdits,
+    updateSelectedModelTarget,
+    updateSelectedSchematicName,
+    updateSelectedReference,
+    deleteSelectedAnnotation,
+    reverseSelectedCurrentArrow,
+  } = createSelectionPropertyCommands({
+    project,
+    document,
+    resolver,
+    selectedInstance,
+    selectedInstanceIsMos:
+      selectedPropertyDevice?.symbolId === "nmos" ||
+      selectedPropertyDevice?.symbolId === "pmos",
+    selectedAnnotation,
+    commitStructure,
+    transact,
+    replaceAnnotationSelection: (ids) =>
+      replaceSelectionKind("annotation", ids),
+    setStatus,
+  });
   const {
     addAdditionalParameter,
     additionalParameterDraft,
@@ -1334,53 +1170,6 @@ export function App({
       }
     },
   });
-  const hasRotatableSelection =
-    selectedIds.some((id) =>
-      document.instances.some(
-        (instance) => instance.id === id && instance.placement !== null,
-      ),
-    ) ||
-    visualSelection.draftingIds.some((id) => {
-      const object = document.drafting?.objects.find(
-        (candidate) => candidate.id === id,
-      );
-      return (
-        object?.kind === "arrow" ||
-        object?.kind === "construction-line" ||
-        object?.kind === "rectangle"
-      );
-    });
-  const hasMirrorableSelection = selectedIds.some((id) =>
-    document.instances.some(
-      (instance) => instance.id === id && instance.placement !== null,
-    ),
-  );
-  const hasInspectableSelection = Boolean(
-    selectedIds.length > 0 ||
-    selectedRoute ||
-    selectedAnnotation ||
-    selectedDrafting ||
-    selectedEndpoint,
-  );
-  const selectionShelfSummary = selectedInstance
-    ? `${selectedInstance.id} · ${selectedInstance.symbolId}`
-    : selectedIds.length > 1
-      ? `${selectedIds.length} components`
-      : selectedRoute
-        ? `Route · ${
-            resolveDocumentLogicalNets(document).byBaseNetId.get(
-              selectedRoute.netId,
-            )?.name ?? selectedRoute.netId
-          }`
-        : selectedAnnotation
-          ? `Annotation · ${selectedAnnotation.kind}`
-          : selectedDrafting
-            ? `Drawing · ${selectedDrafting.kind}`
-            : selectedEndpoint?.endpoint.kind === "junction"
-              ? "Junction"
-              : selectedEndpoint
-                ? "Endpoint"
-                : "None";
   const selectedInstanceLabel = selectedInstance
     ? instanceLabelAnnotationFor(document, selectedInstance.id)
     : undefined;
@@ -1414,26 +1203,6 @@ export function App({
       : false;
   });
   const styleProfile = resolveDocumentStyleProfile(document.presentation);
-  const selectedNoConnect =
-    selectedEndpoint && selectedEndpoint.endpoint.kind !== "junction"
-      ? document.noConnects.find(
-          (noConnect) =>
-            endpointKey(noConnect.endpoint) ===
-            endpointKey(selectedEndpoint.endpoint),
-        )
-      : undefined;
-  const selectedEndpointNetId = selectedEndpoint
-    ? endpointNetId(document, selectedEndpoint.endpoint)
-    : null;
-  const selectedHighlightNetId =
-    selectedRoute?.netId ??
-    selectedEndpointNetId ??
-    selectedNetLabelBinding?.netId ??
-    null;
-  const selectedHighlightEndpoint =
-    selectedRoute?.from ??
-    selectedEndpoint?.endpoint ??
-    selectedNetLabelBinding?.endpoint;
   const selectedHighlightIsActive = Boolean(
     selectedHighlightNetId &&
     highlightedNetOrigin?.documentId === document.id &&
@@ -1627,17 +1396,6 @@ export function App({
     }
     return [...byKey.values()];
   }, [visibleBulkEndpoints, visibleEndpoints]);
-  const routeGeometryRecords = useMemo(
-    () =>
-      document.routes.flatMap((route) => {
-        const geometry = projectConnectivityIndex.documents
-          .get(document.id)
-          ?.routingGeometry.routes.get(route.id);
-        if (!geometry) return [];
-        return [{ route, geometry }];
-      }),
-    [document, projectConnectivityIndex],
-  );
   const contactComponents = useMemo(
     () =>
       [
@@ -1648,6 +1406,7 @@ export function App({
     [document.id, projectConnectivityIndex],
   );
   const {
+    createRouteAnchor,
     beginRouteStretch,
     drawSelectedMosBulk,
     deleteSelectedRouteConnection,
@@ -1693,7 +1452,6 @@ export function App({
     pointFromClient,
     logicalRadiusForPixels,
     contactComponents,
-    createRouteAnchor: routeAnchor,
   });
   const cellInsertCandidates = useMemo(
     () =>
@@ -1788,6 +1546,53 @@ export function App({
     pendingComponentPlacement,
     setVddRailStart,
     setVddRailPreviewPoint,
+  });
+  const {
+    completeVisualSelectionMove,
+    visualMoveOrigin: commandMoveVisualOrigin,
+    resolveInstanceMove: instanceMoveAt,
+    completeInstanceMove,
+  } = createSelectionMoveController({
+    document,
+    resolver,
+    visibleEndpoints,
+    routeGeometryRecords,
+    contactComponents,
+    transactConnectivity,
+    setStatus,
+    nextRoutingSuffix,
+  });
+  const {
+    rotate: rotateSelected,
+    mirror: mirrorSelected,
+    align: alignSelectedInstances,
+  } = createSelectionTransformController({
+    document,
+    resolver,
+    selectedInstanceIds: selectedIds,
+    selection: visualSelection,
+    transact,
+    setStatus,
+  });
+  const {
+    handleDrop,
+    placeAll: placeAllFromTray,
+    returnToTray: returnInstancesToTray,
+  } = createPlacementTrayCommands({
+    document,
+    resolver,
+    styleProfile,
+    viewBox,
+    pointFromDrop: (event) =>
+      pointFromClient(event.clientX, event.clientY, event.currentTarget),
+    transact,
+    selectInstance: (id) => selectOnly("instance", [id]),
+    resetSelection,
+    setStatus,
+    nextSuffix: () => {
+      uniqueSuffixCounter.current += 1;
+      return uniqueSuffixCounter.current;
+    },
   });
   const {
     beginCopyPlacement: beginCopyPlacementFromSelection,
@@ -1957,73 +1762,314 @@ export function App({
     document.routes.length === 0 &&
     document.annotations.length === 0 &&
     (document.drafting?.objects.length ?? 0) === 0;
-
-  function compositeSelectionOwnsHit(
-    kind: "instance" | "instance-label" | "annotation" | "route" | "junction",
-    id: string,
-  ): boolean {
-    // Any multi-object selection is composite, counted across every kind. The
-    // previous rule also required at least one Instance, so a marquee holding
-    // only Routes, Junctions, or Annotations was never treated as a group and
-    // dragging it moved just the grabbed object.
-    const hasCompositeSelection =
-      selectedIds.length +
-        visualSelection.routeIds.length +
-        visualSelection.junctionIds.length +
-        visualSelection.annotationIds.length +
-        visualSelection.draftingIds.length >
-      1;
-    if (!hasCompositeSelection) return false;
-    if (kind === "instance" || kind === "instance-label") {
-      return selectedIds.includes(id);
-    }
-    if (kind === "route") {
-      return (
-        visualSelection.routeIds.includes(id) ||
-        selectedInternalRouteIds.has(id)
-      );
-    }
-    if (kind === "junction") {
-      return (
-        visualSelection.junctionIds.includes(id) ||
-        selectedInternalJunctionIds.has(id)
-      );
-    }
-    const annotation = document.annotations.find(
-      (candidate) => candidate.id === id,
-    );
-    return Boolean(
-      visualSelection.annotationIds.includes(id) ||
-      (annotation?.anchor.kind === "object" &&
-        (selectedIds.includes(annotation.anchor.objectId) ||
-          selectedInternalObjectIds.has(annotation.anchor.objectId))),
-    );
-  }
+  const {
+    insertConstructionVertex,
+    insertArrowWaypoint,
+    deleteConstructionVertex,
+    setDraftingStyle,
+    setDraftingTangentAngle,
+    setDraftingBearing,
+    toggleDraftingLock,
+    addPlainText,
+    addCurrentArrow,
+    reverseSelectedDrafting,
+  } = createDraftingCommands({
+    document,
+    resolver,
+    viewBox,
+    selection: visualSelection,
+    selectedDrafting,
+    inspectorSegment: draftingInspectorSegment,
+    selectedRoute,
+    selectedRouteSegmentIndex,
+    routeGeometryRecords,
+    transact,
+    setStatus,
+    nextId: (prefix) => {
+      uniqueSuffixCounter.current += 1;
+      return `${prefix}-${uniqueSuffixCounter.current}`;
+    },
+    beginTextEditing: beginDraftingTextEditing,
+    selectAnnotation: (id) => selectOnly("annotation", [id]),
+  });
+  const {
+    snapPoint: snapDraftingPoint,
+    handleCanvasClick: handleDraftingCanvasClick,
+    finish: finishDraftingCreate,
+  } = createDraftingCreateController({
+    document,
+    resolver,
+    visibleEndpoints,
+    routeGeometryRecords,
+    tool,
+    source: draftingSource,
+    hover: draftingHover,
+    waypoints: draftingWaypoints,
+    setSource: setDraftingSource,
+    setHover: setDraftingHover,
+    setWaypoints: setDraftingWaypoints,
+    setSnapPoint: setDraftingSnapPoint,
+    clear: clearDraftingCreate,
+    setTool,
+    transact,
+    setStatus,
+    nextId: (prefix) => {
+      uniqueSuffixCounter.current += 1;
+      return `${prefix}-${uniqueSuffixCounter.current}`;
+    },
+  });
+  const {
+    beginDrag: beginDraftingDrag,
+    beginHandleDrag: beginDraftingHandleDrag,
+  } = createDraftingDragController({
+    document,
+    resolver,
+    visibleEndpoints,
+    dragSessionRef: canvasDragSessionRef,
+    dragThresholdPx: DRAG_START_DISTANCE_PX,
+    snapCaptureRadiusPx: SNAP_CAPTURE_RADIUS_PX,
+    pointFromClient: (clientX, clientY, svg, snapToGrid) =>
+      snapToGrid
+        ? pointFromClient(clientX, clientY, svg)
+        : pointFromClient(clientX, clientY, svg, false),
+    logicalRadiusForPixels,
+    paintSnapGuides,
+    snapDraftingPoint,
+    onCompositeMove: (event, hitTarget) => {
+      if (getCurrentInteractionState().kind !== "moving-selection")
+        return false;
+      const primaryInstanceId = selectedIds.at(-1);
+      if (primaryInstanceId) {
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
+      } else {
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          hitTarget,
+        );
+      }
+      return true;
+    },
+    selectDraftingObject,
+    setInspectorSegment: setDraftingInspectorSegment,
+    clearTangentInput: () => setDraftingTangentInput(null),
+    setHandlePreview: setDraftingHandlePreview,
+    transact,
+    setStatus,
+  });
+  const { beginDrag: beginAnnotationDrag } = createAnnotationDragController({
+    document,
+    resolver,
+    routeGeometryRecords,
+    dragSessionRef: canvasDragSessionRef,
+    dragThresholdPx: DRAG_START_DISTANCE_PX,
+    pointFromClient: (clientX, clientY, svg) =>
+      pointFromClient(clientX, clientY, svg, false),
+    onCompositeMove: (event, hitTarget) => {
+      if (getCurrentInteractionState().kind !== "moving-selection") {
+        return false;
+      }
+      const primaryInstanceId = selectedIds.at(-1);
+      if (primaryInstanceId) {
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
+      } else {
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          hitTarget,
+        );
+      }
+      return true;
+    },
+    selectAnnotation: (id) => selectOnly("annotation", [id]),
+    clearSelectedEndpoint: () => setSelectedEndpoint(null),
+    transact,
+    setStatus,
+  });
+  const {
+    resolveWireCanvasSnap,
+    cycleWireCornerShape,
+    applyWireCanvasPoint,
+    handleRoutePointerDown,
+  } = useWireCanvasController({
+    document,
+    resolver,
+    wiringEndpoints,
+    routeGeometryRecords,
+    contactComponents,
+    wireSource,
+    wireWaypoints,
+    wireDraftSteps,
+    wireRoutingMode,
+    wireCornerOrder,
+    tool,
+    vddRailMode,
+    componentPlacementPending: Boolean(
+      pendingSymbolId && pendingComponentPlacement,
+    ),
+    selectedInstanceIds: selectedIds,
+    selection: visualSelection,
+    getInteractionKind: () => getCurrentInteractionState().kind,
+    beginInstanceMove: beginMoveFromSelection,
+    beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
+    cancelInteraction,
+    handleWireRoutePointerDown,
+    selectRoute,
+    beginRouteStretch,
+    createRouteAnchor,
+    pointFromClient: (clientX, clientY, svg) =>
+      pointFromClient(clientX, clientY, svg, false),
+    logicalRadiusForPixels,
+    paintSnapGuides,
+    setWireSource,
+    setWirePreviewPoint,
+    setWireDraftSteps,
+    commitWire,
+    fixWirePoint,
+    finishWireAtPoint,
+    setWireRoutingMode,
+    setWireCornerOrder,
+    setStatus,
+  });
+  const {
+    compositeSelectionOwnsHit,
+    handlePointerDown: handleCanvasHitPointerDown,
+  } = createCanvasHitController({
+    document,
+    visibleEndpoints,
+    selection: visualSelection,
+    selectedInternalRouteIds,
+    selectedInternalJunctionIds,
+    selectedInternalObjectIds,
+    getInteractionKind: () => getCurrentInteractionState().kind,
+    placementOwnsCanvas: Boolean(
+      (pendingSymbolId && pendingComponentPlacement) ||
+      vddRailMode ||
+      copyPlacement !== null,
+    ),
+    tool,
+    cellSymbolLayoutEnabled,
+    beginInstanceMove: beginMoveFromSelection,
+    beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
+    beginAnnotationDrag,
+    handleRoutePointerDown,
+    beginDraftingDrag,
+    selectEndpoint,
+    endpointStatusLabel: (endpoint) => endpointTestId(endpoint.endpoint),
+    setStatus,
+  });
+  const {
+    fitView,
+    zoomViewAtCenter,
+    handleWheel,
+    beginCanvasGesture,
+    continueCanvasGesture,
+    finishCanvasGesture,
+  } = createCanvasGestureController({
+    document,
+    resolver,
+    routeGeometryRecords,
+    styleProfile,
+    defaultViewBox: DEFAULT_VIEWBOX,
+    contentBounds: contentScene?.viewBox,
+    viewBox,
+    setViewBox,
+    boxPreview,
+    setBoxPreview,
+    panPreview,
+    setPanPreview,
+    pointFromClient: (clientX, clientY, svg) =>
+      pointFromClient(clientX, clientY, svg),
+    rawPointFromClient: (clientX, clientY, svg) =>
+      pointFromClient(clientX, clientY, svg, false),
+    logicalRadiusForPixels,
+    getInteractionKind: () => getCurrentInteractionState().kind,
+    updateCommandMovePreview: updateCommandMovePreviewFromSelection,
+    componentPlacementPending: Boolean(
+      pendingSymbolId && pendingComponentPlacement,
+    ),
+    componentSymbolPending: pendingSymbolId !== null,
+    setComponentPreviewPoint,
+    vddRailMode,
+    vddRailStart,
+    setVddRailPreviewPoint,
+    copyPlacementPending: copyPlacement !== null,
+    setCopyPreviewPoint,
+    tool,
+    draftingSource,
+    snapDraftingPoint,
+    setDraftingHover,
+    setDraftingSnapPoint,
+    wireActive: wireSource !== null,
+    resolveWireCanvasSnap,
+    setWirePreviewPoint,
+    paintSnapGuides,
+    cycleWireCornerShape,
+    noteCanvasPoint: (point) => {
+      lastCanvasPointRef.current = point;
+    },
+    cellSymbolLayoutDragPointerId,
+    cancelCellSymbolLayoutDrag,
+    completeCellSymbolLayoutDrag,
+    replaceSelection,
+    clearSelectedEndpoint: () => setSelectedEndpoint(null),
+    setStatus,
+  });
+  const {
+    switchDocument,
+    selectDocumentFromHierarchy,
+    openInstanceFromTable,
+    jumpToCaller,
+    navigateToLocator,
+    navigateToNetlistDiagnostic,
+    fitDocument,
+    enterHierarchy,
+    enterSelectedHierarchy,
+    returnToParentDocument,
+    returnToTopDocument,
+  } = createEditorNavigationController({
+    project,
+    document,
+    resolver,
+    connectivityIndex: projectConnectivityIndex,
+    documentStack,
+    setDocumentStack,
+    documentViewBoxes,
+    viewBox,
+    defaultViewBox: DEFAULT_VIEWBOX,
+    setViewBox,
+    openDocument,
+    resetInteractionState,
+    selectOnly,
+    setSelectedEndpoint,
+    setHighlightedNetOrigin,
+    setSelectionOpen,
+    setInstanceTableOpen,
+    setCellManagerOpen,
+    selectedInstance,
+    selectedDrafting,
+    commitProjectStructure,
+    setStatus,
+  });
+  const applyAgentSemanticIntent = createAgentSemanticIntentHandler({
+    project,
+    resolver,
+    connectivityIndex: projectConnectivityIndex,
+    navigateToLocator,
+    fitDocument,
+    clearFocus: () => {
+      resetInteractionState();
+      setHighlightedNetOrigin(null);
+      setSelectionOpen(false);
+      setStatus("Agent cleared semantic focus");
+    },
+    highlightNet,
+  });
+  agentSemanticIntentRef.current = applyAgentSemanticIntent;
 
   useEffect(() => {
     if (!selectedRouteId) setSelectedRouteSegmentIndex(null);
   }, [selectedRouteId]);
-
-  useEffect(() => {
-    if (!cellSymbolLayoutEnabled) return;
-    // Symbol geometry is definition-level, but its canvas grips belong to one
-    // selected parent instance. Do not let them survive a selection change.
-    if (
-      selectedInstance?.id !== cellSymbolLayoutTargetInstanceId ||
-      !selectedHierarchyCell?.netlist
-    ) {
-      exitCellSymbolLayout();
-    }
-  }, [
-    cellSymbolLayoutEnabled,
-    cellSymbolLayoutTargetInstanceId,
-    selectedHierarchyCell?.netlist,
-    selectedInstance?.id,
-  ]);
-
-  useEffect(() => {
-    if (!selectionOpen && cellSymbolLayoutEnabled) exitCellSymbolLayout();
-  }, [cellSymbolLayoutEnabled, selectionOpen]);
 
   useEffect(() => {
     const pruned = pruneVisualSelection(visualSelection, document);
@@ -2091,66 +2137,6 @@ export function App({
     toggleExamplesPanelFromShell();
   }
 
-  // The same loader serves a fresh `/g/<id>` boot and the live Examples panel.
-  // Only the live path crosses an existing Project session and needs the
-  // replacement guard and Previous Project snapshot.
-  async function openGalleryEntryById(
-    entryId: string,
-    protectCurrentProject = true,
-  ): Promise<void> {
-    try {
-      const response = await fetch(`/api/gallery/${entryId}`, {
-        credentials: "same-origin",
-      });
-      if (!response.ok) {
-        setStatus("This gallery entry is unavailable");
-        return;
-      }
-      const payload = (await response.json()) as {
-        entry?: {
-          name?: string;
-          author?: string;
-          description?: string;
-          tags?: string[];
-        };
-        ownerUserId?: string | null;
-        projectText?: string;
-      };
-      if (!payload.projectText) {
-        setStatus("This gallery entry is unavailable");
-        return;
-      }
-      const galleryProject = parseProject(payload.projectText);
-      const install = () => {
-        replaceActiveProject(galleryProject, DEFAULT_VIEWBOX, {
-          rememberPrevious: protectCurrentProject,
-        });
-        setGalleryEntryContext({
-          id: entryId,
-          name: payload.entry?.name ?? galleryProject.name,
-          projectId: galleryProject.id,
-          ownerUserId: payload.ownerUserId ?? null,
-          author: payload.entry?.author ?? "",
-          description: payload.entry?.description ?? "",
-          tags: payload.entry?.tags ?? [],
-        });
-        setStatus(
-          `Opened gallery circuit: ${payload.entry?.name ?? galleryProject.name}`,
-        );
-      };
-      if (protectCurrentProject) {
-        await guardDirtyReplacement(
-          `Open gallery circuit ${payload.entry?.name ?? galleryProject.name}`,
-          install,
-        );
-      } else {
-        install();
-      }
-    } catch {
-      setStatus("This gallery entry is unavailable");
-    }
-  }
-
   // boot Project only; ordinary sessions never re-run these.
   const bootTargetHandled = useRef(false);
   useEffect(() => {
@@ -2206,122 +2192,6 @@ export function App({
     }
   }
 
-  function switchDocument(nextDocumentId: string): void {
-    if (nextDocumentId === document.id) return;
-    documentViewBoxes.current.set(document.id, viewBox);
-    const nextDocument = openDocument(nextDocumentId);
-    if (!nextDocument) {
-      setStatus(`Document not found: ${nextDocumentId}`);
-      return;
-    }
-    setViewBox(
-      documentViewBoxes.current.get(nextDocument.id) ?? DEFAULT_VIEWBOX,
-      nextDocument.presentation.grid,
-    );
-    resetInteractionState();
-    setStatus(`Opened Cell ${nextDocument.name}`);
-  }
-
-  function selectDocumentFromHierarchy(nextDocumentId: string): void {
-    const paths = findHierarchyPaths(
-      projectConnectivityIndex,
-      project.topDocumentId,
-      nextDocumentId,
-    );
-    setDocumentStack(paths?.length === 1 ? [...paths[0]!] : []);
-    switchDocument(nextDocumentId);
-    if (paths && paths.length > 1) {
-      setStatus(
-        `Opened shared Cell without caller context (${paths.length} instance paths)`,
-      );
-    }
-  }
-
-  function openInstanceFromTable(documentId: string, instanceId: string): void {
-    const paths = findHierarchyPaths(
-      projectConnectivityIndex,
-      project.topDocumentId,
-      documentId,
-    );
-    // A reused definition remains a single table row. Navigation still needs
-    // one concrete caller context, so use the deterministic first valid path.
-    setDocumentStack(paths?.[0] ? [...paths[0]] : []);
-    switchDocument(documentId);
-    selectOnly("instance", [instanceId]);
-    setInstanceTableOpen(false);
-    setStatus(
-      paths && paths.length > 1
-        ? `Opened ${documentId}.${instanceId} via one of ${paths.length} caller paths`
-        : `Opened ${documentId}.${instanceId}`,
-    );
-  }
-
-  function commitStructure(
-    transactionId: string,
-    edits: ProjectStructureEdit[],
-    activeDocumentId = document.id,
-  ): boolean {
-    const result = dispatchProjectTransaction(
-      {
-        transactionId,
-        projectId: project.id,
-        expectedStructureRevision: project.structureRevision,
-        actor: { kind: "human", id: "human-local" },
-        edits,
-      },
-      activeDocumentId,
-    );
-    if (result.ok && result.applied) return true;
-    const message = result.ok
-      ? "The structural transaction made no change"
-      : (result.diagnostics[0]?.message ?? result.error.message);
-    setStatus(`Could not update Cell structure: ${message}`);
-    return false;
-  }
-
-  function createCell(name: string): void {
-    name = name.trim();
-    if (!name) return;
-    const child = createEmptyDocument(createId("document"), name);
-    child.netlist!.name = name;
-    child.presentation = structuredClone(document.presentation);
-    if (commitStructure("create-cell", planCreateCell(child), child.id)) {
-      setDocumentStack([]);
-      setStatus(`Created Cell ${name}`);
-    }
-  }
-
-  function renameCell(documentId: string, name: string): void {
-    const target = project.documents.find(
-      (candidate) => candidate.id === documentId,
-    );
-    if (!target) return;
-    name = name.trim();
-    if (!name || name === target.name) return;
-    if (
-      commitStructure("rename-cell", planRenameCell(project, documentId, name))
-    ) {
-      setStatus(`Renamed Cell to ${name}`);
-    }
-  }
-
-  function jumpToCaller(parentDocumentId: string, instanceId: string): void {
-    const path = findHierarchyPath(
-      projectConnectivityIndex,
-      project.topDocumentId,
-      parentDocumentId,
-    );
-    if (!path) {
-      setStatus("Caller path could not be resolved");
-      return;
-    }
-    setDocumentStack([...path]);
-    switchDocument(parentDocumentId);
-    selectOnly("instance", [instanceId]);
-    setCellManagerOpen(false);
-    setStatus(`Opened caller ${parentDocumentId}.${instanceId}`);
-  }
-
   const cellManagerEntries = useMemo(
     () => summarizeProjectCells(project),
     [project],
@@ -2337,280 +2207,6 @@ export function App({
       launch: cellInsertLaunch(),
     });
     setStatus("Choose a Cell, then place it on the canvas");
-  }
-
-  function updateCellPinDirection(
-    terminalId: string,
-    direction: "input" | "output" | "inout" | "passive",
-    targetDocumentId = document.id,
-  ): void {
-    const targetDocument = project.documents.find(
-      (candidate) => candidate.id === targetDocumentId,
-    );
-    if (!targetDocument?.netlist) return;
-    if (
-      commitStructure(
-        "update-cell-pin-direction",
-        planUpdateCellTerminalDirection(
-          project,
-          targetDocumentId,
-          terminalId,
-          direction,
-        ),
-      )
-    ) {
-      setStatus("Updated Cell port direction");
-    }
-  }
-
-  function renameCellTerminal(
-    terminalId: string,
-    name: string,
-    targetDocumentId = document.id,
-  ): void {
-    const nextName = name.trim();
-    const targetDocument = project.documents.find(
-      (candidate) => candidate.id === targetDocumentId,
-    );
-    const terminal = targetDocument?.netlist?.terminals.find(
-      (candidate) => candidate.id === terminalId,
-    );
-    if (!terminal || !nextName || terminal.name === nextName) return;
-    try {
-      if (
-        commitStructure(
-          "rename-cell-interface-terminal",
-          planRenameCellTerminal(
-            project,
-            targetDocumentId,
-            terminalId,
-            nextName,
-          ),
-        )
-      ) {
-        setStatus(`Renamed Cell Pin to ${nextName}`);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not rename port",
-      );
-    }
-  }
-
-  function moveCellTerminal(
-    terminalId: string,
-    delta: -1 | 1,
-    targetDocumentId = document.id,
-  ): void {
-    const edits = planReorderCellTerminal(
-      project,
-      targetDocumentId,
-      terminalId,
-      delta,
-    );
-    if (edits.length === 0) return;
-    if (commitStructure("reorder-cell-interface-terminal", edits)) {
-      setStatus("Reordered formal terminal interface");
-    }
-  }
-
-  function setCellFormalParameters(
-    formalParameters: NonNullable<
-      SchematicDocument["netlist"]
-    >["formalParameters"],
-    targetDocumentId = document.id,
-  ): void {
-    try {
-      const proposal = proposeSetCellFormalParameters(
-        project,
-        targetDocumentId,
-        formalParameters.map((parameter) => ({
-          name: parameter.name.trim(),
-          ...(parameter.defaultValue?.trim()
-            ? { defaultValue: parameter.defaultValue.trim() }
-            : {}),
-        })),
-      );
-      if (commitStructure("set-cell-formal-parameters", [...proposal.edits])) {
-        setStatus("Updated Cell formal parameters");
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error
-          ? error.message
-          : "Could not update Cell formal parameters",
-      );
-    }
-  }
-
-  function setExternalSubcircuitDefinition(
-    definition: ExternalSubcircuitDefinition,
-  ): void {
-    try {
-      const proposal = proposeUpsertExternalSubcircuitDefinition(
-        project,
-        definition,
-      );
-      if (proposal.diagnostics.length > 0) {
-        setStatus(
-          `Cannot update external interface: ${proposal.diagnostics[0]}`,
-        );
-        return;
-      }
-      if (
-        commitStructure("upsert-external-subcircuit-interface", [
-          ...proposal.edits,
-        ])
-      ) {
-        setStatus(`Updated external subcircuit ${definition.name}`);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error
-          ? error.message
-          : "Could not update external subcircuit interface",
-      );
-    }
-  }
-
-  function setCellSymbolBodySize(
-    child: SchematicDocument,
-    width: number,
-    height: number,
-  ): void {
-    if (
-      !Number.isInteger(width) ||
-      !Number.isInteger(height) ||
-      width <= 0 ||
-      height <= 0 ||
-      width % 10 !== 0 ||
-      height % 10 !== 0
-    ) {
-      setStatus("Cell symbol size must use positive 10-unit grid values");
-      return;
-    }
-    const current = child.presentation.cellSymbol;
-    if (
-      commitStructure(
-        "resize-cell-symbol",
-        planSetCellSymbolPresentation(project, child.id, {
-          ...(current?.pinPlacements
-            ? { pinPlacements: current.pinPlacements }
-            : {}),
-          minimumBodySize: { width, height },
-        }),
-      )
-    ) {
-      setStatus(`Resized ${child.name} symbol for every parent instance`);
-    }
-  }
-
-  function setCellSymbolPortPlacement(
-    child: SchematicDocument,
-    terminalId: string,
-    side: "north" | "east" | "south" | "west" | "auto",
-    offset: number,
-  ): void {
-    try {
-      if (
-        commitStructure(
-          "move-cell-symbol-pin",
-          planSetCellTerminalPlacement(
-            project,
-            child.id,
-            terminalId,
-            side,
-            offset,
-          ),
-        )
-      ) {
-        setStatus(`Moved Cell symbol pin in every parent instance`);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error
-          ? error.message
-          : "Could not move Cell symbol pin",
-      );
-    }
-  }
-
-  function exitCellSymbolLayout(): void {
-    setCellSymbolLayoutDrag(null);
-    setCellSymbolLayoutEnabled(false);
-    setCellSymbolLayoutTargetInstanceId(null);
-  }
-
-  function toggleCellSymbolLayout(): void {
-    if (cellSymbolLayoutEnabled) {
-      exitCellSymbolLayout();
-      return;
-    }
-    if (!selectedHierarchyCell || !selectedInstance?.placement) return;
-    setCellSymbolLayoutTargetInstanceId(selectedInstance.id);
-    setCellSymbolLayoutEnabled(true);
-  }
-
-  function beginCellSymbolLayoutDrag(
-    event: ReactPointerEvent<SVGCircleElement>,
-    kind: "body" | "pin",
-    terminalId?: string,
-  ): void {
-    if (!selectedCellSymbolLayout) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setCellSymbolLayoutDrag({
-      kind,
-      pointerId: event.pointerId,
-      ...(terminalId ? { terminalId } : {}),
-    });
-  }
-
-  function completeCellSymbolLayoutDrag(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ): boolean {
-    const drag = cellSymbolLayoutDrag;
-    const layout = selectedCellSymbolLayout;
-    if (!drag || drag.pointerId !== event.pointerId || !layout) return false;
-    const point = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget,
-    );
-    const local = inverseTransformPoint(
-      point,
-      layout.instance.placement!.position,
-      layout.instance.placement!,
-    );
-    setCellSymbolLayoutDrag(null);
-    if (drag.kind === "body") {
-      setCellSymbolBodySize(
-        layout.child,
-        Math.max(10, snapCoordinate(Math.abs(local.x) * 2, 10)),
-        Math.max(10, snapCoordinate(Math.abs(local.y) * 2, 10)),
-      );
-      return true;
-    }
-    if (!drag.terminalId) return true;
-    if (drag.kind === "pin") {
-      const distances = [
-        ["west", Math.abs(local.x - layout.body.left)],
-        ["east", Math.abs(local.x - layout.body.right)],
-        ["north", Math.abs(local.y - layout.body.top)],
-        ["south", Math.abs(local.y - layout.body.bottom)],
-      ] as const;
-      const side = distances.reduce((closest, candidate) =>
-        candidate[1] < closest[1] ? candidate : closest,
-      )[0];
-      const offset = snapCoordinate(
-        side === "west" || side === "east" ? local.y : local.x,
-        10,
-      );
-      setCellSymbolPortPlacement(layout.child, drag.terminalId, side, offset);
-      return true;
-    }
-    return true;
   }
 
   const selectedFormalTerminal = selectedInstance
@@ -2636,37 +2232,20 @@ export function App({
     : undefined;
 
   function commitProjectName(): void {
-    const next = (projectNameDraft ?? "").trim();
     setProjectNameDraft(null);
-    if (!next || next === project.name) return;
-    if (
-      commitStructure("rename-project", [
-        { kind: "rename_project", name: next },
-      ])
-    ) {
-      setStatus(`Renamed circuit to ${next}`);
-    }
+    renameProject(projectNameDraft);
   }
 
   function renameSelectedFormalPort(name: string): void {
     if (!selectedFormalTerminal) return;
     name = name.trim();
     if (!name || name === selectedFormalTerminal.name) return;
-    try {
-      const edits = planRenameCellTerminal(
-        project,
-        document.id,
-        selectedFormalTerminal.id,
-        name,
-      );
-      if (commitStructure("rename-cell-pin", edits)) {
-        setStatus(`Renamed Cell Pin to ${name}`);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not rename port",
-      );
-    }
+    renameCellTerminal(
+      selectedFormalTerminal.id,
+      name,
+      document.id,
+      "rename-cell-pin",
+    );
   }
 
   function deleteSelectedFormalPort(): void {
@@ -2739,408 +2318,6 @@ export function App({
     }
   }
 
-  function navigateToLocator(
-    locator: ObjectLocator,
-    statusMessage: string,
-  ): void {
-    const targetDocument = project.documents.find(
-      (candidate) => candidate.id === locator.documentId,
-    );
-    if (!targetDocument) {
-      setStatus(`Document not found: ${locator.documentId}`);
-      return;
-    }
-    const derivedPath = findHierarchyPath(
-      projectConnectivityIndex,
-      project.topDocumentId,
-      locator.documentId,
-    );
-    const hierarchyPath =
-      locator.hierarchyPath.length > 0
-        ? locator.hierarchyPath
-        : (derivedPath ?? []);
-    documentViewBoxes.current.set(document.id, viewBox);
-    const opened = openDocument(locator.documentId);
-    if (!opened) {
-      setStatus(`Document not found: ${locator.documentId}`);
-      return;
-    }
-    setDocumentStack([...hierarchyPath]);
-    setViewBox(
-      documentViewBoxes.current.get(opened.id) ?? DEFAULT_VIEWBOX,
-      opened.presentation.grid,
-    );
-    resetInteractionState();
-
-    const focusPoint = (point: Point) =>
-      setViewBox(
-        {
-          x: point.x - 80,
-          y: point.y - 60,
-          width: 160,
-          height: 120,
-        },
-        opened.presentation.grid,
-      );
-    const endpoint =
-      locator.kind === "terminal"
-        ? locator.endpoint
-        : locator.kind === "no-connect"
-          ? opened.noConnects.find(
-              (noConnect) => noConnect.id === locator.objectId,
-            )?.endpoint
-          : undefined;
-    if (endpoint) {
-      const connection = resolveEndpointConnection(opened, resolver, endpoint);
-      if (connection) {
-        setSelectedEndpoint({
-          endpoint,
-          netId: endpointNetId(opened, endpoint),
-          connection,
-          preludeEdits: [],
-        });
-        focusPoint(connection.contactPoint);
-      }
-    } else if (locator.kind === "instance") {
-      const instance = opened.instances.find(
-        (item) => item.id === locator.objectId,
-      );
-      selectOnly("instance", [locator.objectId]);
-      if (instance?.placement) focusPoint(instance.placement.position);
-    } else if (locator.kind === "route") {
-      const route = opened.routes.find((item) => item.id === locator.objectId);
-      selectOnly("route", [locator.objectId]);
-      const centerline = route
-        ? projectConnectivityIndex.documents
-            .get(opened.id)
-            ?.routingGeometry.routes.get(route.id)?.centerline
-        : undefined;
-      if (centerline?.[0]) focusPoint(centerline[0]);
-    } else if (locator.kind === "junction") {
-      const junction = opened.junctions.find(
-        (item) => item.id === locator.objectId,
-      );
-      selectOnly("junction", [locator.objectId]);
-      if (junction) focusPoint(junction.position);
-    } else if (locator.kind === "annotation") {
-      const annotation = opened.annotations.find(
-        (item) => item.id === locator.objectId,
-      );
-      selectOnly("annotation", [locator.objectId]);
-      const position =
-        annotation?.anchor.kind === "free"
-          ? annotation.anchor.position
-          : annotation?.anchor.fallbackPosition;
-      if (position) focusPoint(position);
-    } else if (locator.kind === "net") {
-      setHighlightedNetOrigin({
-        documentId: opened.id,
-        netId: locator.objectId,
-        hierarchyPath: locator.hierarchyPath,
-      });
-      const route = opened.routes.find(
-        (item) => item.netId === locator.objectId,
-      );
-      const centerline = route
-        ? projectConnectivityIndex.documents
-            .get(opened.id)
-            ?.routingGeometry.routes.get(route.id)?.centerline
-        : undefined;
-      if (centerline?.[0]) focusPoint(centerline[0]);
-    }
-    setSelectionOpen(true);
-    setStatus(statusMessage);
-  }
-
-  function navigateToNetlistDiagnostic(diagnostic: NetlistDiagnostic): void {
-    navigateToLocator(diagnostic.primary, `Preflight: ${diagnostic.message}`);
-    if (diagnostic.primary.kind !== "document") return;
-    const target = project.documents.find(
-      (candidate) => candidate.id === diagnostic.primary.documentId,
-    );
-    if (!target) return;
-    setViewBox(
-      fitCameraToBounds(
-        buildSvgScene(target, resolver).viewBox,
-        target.presentation.grid,
-      ),
-      target.presentation.grid,
-    );
-  }
-
-  function applyAgentSemanticIntent(
-    request: AgentHostSemanticIntentRequest,
-  ): AgentHostSemanticIntentResult {
-    const intent = request.intent;
-    const targetDocument = project.documents.find(
-      (candidate) => candidate.id === request.documentId,
-    );
-    if (!targetDocument) {
-      return {
-        ok: false,
-        code: "DOCUMENT_NOT_FOUND",
-        message: `Document ${request.documentId} is not present in this Project`,
-      };
-    }
-    const activateDocument = (message: string) => {
-      const hierarchyPath =
-        findHierarchyPath(
-          projectConnectivityIndex,
-          project.topDocumentId,
-          targetDocument.id,
-        ) ?? [];
-      navigateToLocator(
-        {
-          documentId: targetDocument.id,
-          hierarchyPath,
-          kind: "document",
-          objectId: targetDocument.id,
-        },
-        message,
-      );
-    };
-    const fail = (
-      code: string,
-      message: string,
-    ): AgentHostSemanticIntentResult => ({
-      ok: false,
-      code,
-      message,
-    });
-
-    switch (intent.kind) {
-      case "activate-document":
-        activateDocument(`Agent activated Cell ${targetDocument.name}`);
-        return {
-          ok: true,
-          kind: intent.kind,
-          documentId: targetDocument.id,
-          objectIds: [],
-        };
-      case "fit-document": {
-        activateDocument(`Agent fit Cell ${targetDocument.name}`);
-        setViewBox(
-          fitCameraToBounds(
-            buildSvgScene(targetDocument, resolver).viewBox,
-            targetDocument.presentation.grid,
-          ),
-          targetDocument.presentation.grid,
-        );
-        return {
-          ok: true,
-          kind: intent.kind,
-          documentId: targetDocument.id,
-          objectIds: [],
-        };
-      }
-      case "clear-focus":
-        resetInteractionState();
-        setHighlightedNetOrigin(null);
-        setSelectionOpen(false);
-        setStatus("Agent cleared semantic focus");
-        return {
-          ok: true,
-          kind: intent.kind,
-          documentId: targetDocument.id,
-          objectIds: [],
-        };
-      case "highlight-net": {
-        const net = targetDocument.nets.find(
-          (candidate) => candidate.id === intent.netId,
-        );
-        if (!net) {
-          return fail(
-            "OBJECT_NOT_FOUND",
-            `Net ${intent.netId} is not present in Document ${targetDocument.id}`,
-          );
-        }
-        activateDocument(
-          `Agent highlighted Net ${resolveDocumentLogicalNets(targetDocument).byBaseNetId.get(net.id)?.name ?? net.id}`,
-        );
-        highlightNet(net.id, targetDocument.id, intent.endpoint);
-        return {
-          ok: true,
-          kind: intent.kind,
-          documentId: targetDocument.id,
-          objectIds: [net.id],
-          netId: net.id,
-        };
-      }
-      case "select": {
-        const { locator } = intent;
-        if (locator.documentId !== targetDocument.id) {
-          return fail(
-            "DOCUMENT_MISMATCH",
-            "A semantic locator must address the transaction Document",
-          );
-        }
-        const expectedHierarchyPath = findHierarchyPath(
-          projectConnectivityIndex,
-          project.topDocumentId,
-          targetDocument.id,
-        );
-        if (
-          !expectedHierarchyPath ||
-          expectedHierarchyPath.length !== locator.hierarchyPath.length ||
-          expectedHierarchyPath.some(
-            (frame, index) =>
-              frame.parentDocumentId !==
-                locator.hierarchyPath[index]?.parentDocumentId ||
-              frame.instanceId !== locator.hierarchyPath[index]?.instanceId ||
-              frame.childDocumentId !==
-                locator.hierarchyPath[index]?.childDocumentId,
-          )
-        ) {
-          return fail(
-            "LOCATOR_MISMATCH",
-            "The locator hierarchy path is not reachable from this Project top Cell",
-          );
-        }
-        const exists = (() => {
-          switch (locator.kind) {
-            case "instance":
-              return targetDocument.instances.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "net":
-              return targetDocument.nets.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "route":
-              return targetDocument.routes.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "junction":
-              return targetDocument.junctions.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "annotation":
-              return targetDocument.annotations.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "no-connect":
-              return targetDocument.noConnects.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "terminal": {
-              const endpoint = locator.endpoint;
-              if (endpoint?.kind !== "terminal") return false;
-              const instance = targetDocument.instances.find(
-                (item) => item.id === endpoint.instanceId,
-              );
-              const resolved = instance
-                ? resolver.resolve(instance.symbolId, instance.symbolVariantId)
-                : null;
-              return (
-                resolved?.definition.pins.some(
-                  (pin) => pin.name === endpoint.pinName,
-                ) ?? false
-              );
-            }
-          }
-        })();
-        if (!exists) {
-          return fail(
-            "OBJECT_NOT_FOUND",
-            `Locator ${locator.kind} ${locator.objectId} is not present in Document ${targetDocument.id}`,
-          );
-        }
-        const objectLocator: ObjectLocator = {
-          documentId: locator.documentId,
-          hierarchyPath: locator.hierarchyPath,
-          kind: locator.kind,
-          objectId: locator.objectId,
-          ...(locator.endpoint ? { endpoint: locator.endpoint } : {}),
-        };
-        navigateToLocator(
-          objectLocator,
-          `Agent selected ${locator.kind} ${locator.objectId}`,
-        );
-        return {
-          ok: true,
-          kind: intent.kind,
-          documentId: targetDocument.id,
-          objectIds: [locator.objectId],
-          ...(locator.kind === "net" ? { netId: locator.objectId } : {}),
-        };
-      }
-    }
-  }
-
-  agentSemanticIntentRef.current = applyAgentSemanticIntent;
-
-  function enterHierarchy(instanceId: string): void {
-    const instance = document.instances.find(
-      (candidate) => candidate.id === instanceId,
-    );
-    const targetId = instance ? referencedDocumentId(project, instance) : null;
-    if (!targetId) {
-      setStatus(`${instanceId} has no child Cell`);
-      return;
-    }
-    setDocumentStack((current) => [
-      ...current,
-      {
-        parentDocumentId: document.id,
-        instanceId,
-        childDocumentId: targetId,
-      },
-    ]);
-    switchDocument(targetId);
-  }
-
-  function enterSelectedHierarchy(): void {
-    if (
-      selectedInstance &&
-      referencedDocumentId(project, selectedInstance) !== null
-    ) {
-      enterHierarchy(selectedInstance.id);
-      return;
-    }
-    if (selectedDrafting?.kind !== "rectangle") {
-      setStatus(
-        "Select a rectangle or hierarchical block before entering a Cell",
-      );
-      return;
-    }
-    try {
-      const converted = convertRectangleToHierarchy(
-        project,
-        document.id,
-        selectedDrafting.id,
-      );
-      commitProjectStructure(converted.project, document.id);
-      setDocumentStack((current) => [
-        ...current,
-        {
-          parentDocumentId: converted.parentDocumentId,
-          instanceId: converted.instanceId,
-          childDocumentId: converted.childDocumentId,
-        },
-      ]);
-      switchDocument(converted.childDocumentId);
-      setStatus(`Created and entered Cell ${converted.cellName}`);
-    } catch (error) {
-      setStatus(
-        `Could not create Cell: ${
-          error instanceof Error ? error.message : "unexpected failure"
-        }`,
-      );
-    }
-  }
-
-  function returnToParentDocument(): void {
-    const frame = documentStack.at(-1);
-    if (!frame) return;
-    setDocumentStack((current) => current.slice(0, -1));
-    switchDocument(frame.parentDocumentId);
-  }
-
-  function returnToTopDocument(): void {
-    setDocumentStack([]);
-    switchDocument(project.topDocumentId);
-  }
-
   function approveAgentFileCandidate(): void {
     if (!agentFileCandidate) return;
     const meta = agentFileCandidate;
@@ -3172,105 +2349,6 @@ export function App({
       diagnostic.primary,
       `${diagnostic.domain.toUpperCase()} ${diagnostic.code}: ${diagnostic.message}`,
     );
-  }
-
-  function applyResult(result: EditTransactionResult): void {
-    if (!result.ok) {
-      const detail = result.diagnostics[0]?.message;
-      setStatus(
-        detail && detail !== result.error.message
-          ? `${result.error.code}: ${result.error.message} — ${detail}`
-          : `${result.error.code}: ${result.error.message}`,
-      );
-      return;
-    }
-    setStatus(
-      result.applied
-        ? `Committed revision ${result.revision}`
-        : `Dry run for revision ${result.proposedRevision}`,
-    );
-  }
-
-  function transact(
-    edits: SchematicEdit[],
-    options: {
-      completesWireSession?: boolean;
-      preserveInteraction?: boolean;
-    } = {},
-  ): EditTransactionResult {
-    let result: EditTransactionResult;
-    try {
-      result = transactDocument(edits);
-    } catch (error) {
-      // The controller fence normally converts engine failures into typed
-      // rejections; this catch covers the thin React wrapper around it.
-      // Either way the committed circuit is unchanged, so only the transient
-      // interaction state needs to be dropped.
-      cancelAllTransientInteraction();
-      const message =
-        error instanceof Error ? error.message : "unexpected failure";
-      setStatus(
-        `INTERNAL_ERROR: ${message} — operation cancelled; circuit unchanged`,
-      );
-      return {
-        ok: false,
-        applied: false,
-        revision: document.revision,
-        document,
-        error: { code: "INTERNAL_ERROR", message },
-        diagnostics: [],
-      };
-    }
-    applyResult(result);
-    if (!result.ok && result.error.code === "INTERNAL_ERROR") {
-      cancelAllTransientInteraction();
-    }
-    const currentInteraction = getCurrentInteractionState();
-    const preservesCurrentInteraction =
-      options.preserveInteraction ||
-      (currentInteraction.kind === "wire" && options.completesWireSession);
-    if (
-      result.ok &&
-      currentInteraction.kind !== "idle" &&
-      !preservesCurrentInteraction
-    ) {
-      const cancelledKind = currentInteraction.kind;
-      cancelAllTransientInteraction();
-      setStatus(
-        cancelledKind === "wire"
-          ? `Committed revision ${result.revision}; Wire cancelled because the circuit changed`
-          : `Committed revision ${result.revision}; active tool cancelled because the circuit changed`,
-      );
-    }
-    return result;
-  }
-
-  /**
-   * Connectivity edits are still persisted as the established typed edits.
-   * This fence gives every GUI producer the same Cell/revision contract before
-   * it reaches that mutation boundary.
-   */
-  function transactConnectivity(
-    intent: ConnectivityIntent,
-    edits: readonly SchematicEdit[],
-    preview?: unknown,
-    options: {
-      completesWireSession?: boolean;
-      preserveInteraction?: boolean;
-    } = {},
-  ): EditTransactionResult | null {
-    const proposal = createConnectivityProposal(document, {
-      intent,
-      edits,
-      diagnostics: [],
-      ...(preview === undefined ? {} : { preview }),
-    });
-    const gate = gateConnectivityProposal(document, proposal);
-    if (!gate.ok) {
-      setStatus(gate.message);
-      return null;
-    }
-    return transact([...gate.edits], options);
   }
 
   const clearDrawingPlan = planCellReset(project, document.id, "clear-drawing");
@@ -3362,79 +2440,6 @@ export function App({
     );
   }
 
-  /**
-   * Examples join the drawing instead of replacing it: the example's content
-   * is attached to the placement cursor like an ordinary copy, so existing
-   * work is never overwritten. A hierarchical example cannot be flattened
-   * onto one Document, so it still opens as its own Project behind the
-   * ordinary dirty guard.
-   */
-  /**
-   * Start placing another Project's single document on the current canvas.
-   * Borrowing part of a circuit is the common reason to open one from the
-   * panel, and replacing the canvas throws away whatever is already drawn.
-   * A hierarchical Project cannot be pasted as one fragment, so it reports
-   * false and the caller falls back to opening it.
-   */
-  function beginProjectImportPlacement(
-    imported: CircuitProject,
-    label: string,
-  ): boolean {
-    const importedDocument = imported.documents.find(
-      (candidate) => candidate.id === imported.topDocumentId,
-    );
-    if (!importedDocument || imported.documents.length > 1) return false;
-    const clipboard = copyWholeDocument(importedDocument);
-    const anchor = clipboard ? clipboardPlacementAnchor(clipboard) : null;
-    if (!clipboard || !anchor) return false;
-    cancelAllTransientInteraction();
-    beginCopyPlacementInteraction(clipboard, anchor);
-    setStatus(
-      `Place ${label} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
-    );
-    return true;
-  }
-
-  function openLibraryExample(example: LibraryProjectExample): void {
-    const exampleProject = createLibraryExampleProject(example.id);
-    if (!exampleProject) {
-      setStatus(`Example is unavailable: ${example.name}`);
-      return;
-    }
-    if (beginProjectImportPlacement(exampleProject, example.name)) return;
-    void guardDirtyReplacement(`Open ${example.name} example`, () => {
-      replaceActiveProject(exampleProject);
-      setStatus(`Opened example: ${example.name}`);
-    });
-  }
-
-  /** Panel cards insert; the `/g/<id>` deep link still opens the circuit. */
-  async function insertGalleryEntryById(entryId: string): Promise<void> {
-    try {
-      const response = await fetch(`/api/gallery/${entryId}`, {
-        credentials: "same-origin",
-      });
-      const payload = response.ok
-        ? ((await response.json()) as {
-            entry?: { name?: string };
-            projectText?: string;
-          })
-        : null;
-      if (!payload?.projectText) {
-        setStatus("This gallery entry is unavailable");
-        return;
-      }
-      const imported = parseProject(payload.projectText);
-      const label = payload.entry?.name ?? imported.name;
-      if (beginProjectImportPlacement(imported, label)) return;
-      // A hierarchical circuit cannot be pasted as one fragment, so opening it
-      // is the useful answer rather than refusing with a message.
-      await openGalleryEntryById(entryId);
-    } catch {
-      setStatus("This gallery entry is unavailable");
-    }
-  }
-
   function rotatePendingCopy(delta: 90 | -90): void {
     if (!copyPlacement) return;
     rotateCopyPlacement(delta);
@@ -3447,370 +2452,6 @@ export function App({
     setStatus(
       `Place copy mirrored ${direction === "left-right" ? "left/right" : "top/bottom"} · R rotates · Esc cancels`,
     );
-  }
-
-  function routeAnchor(
-    routeId: string,
-    point: Point,
-    segmentIndex: number,
-  ): WireSource {
-    const route = document.routes.find(
-      (candidate) => candidate.id === routeId,
-    )!;
-    const suffix = nextRoutingSuffix();
-    // Route taps are persisted geometry. Snap the projected screen hit back to
-    // the document grid before splitRoute validates it, avoiding sub-pixel SVG
-    // transform residue at an otherwise exact corner.
-    return createRouteWireAnchor(
-      document,
-      route,
-      point,
-      segmentIndex,
-      document.presentation.grid,
-      suffix,
-    );
-  }
-
-  function handleRoutePointerDown(
-    event: ReactPointerEvent<SVGElement>,
-    routeId: string,
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (vddRailMode || (pendingSymbolId && pendingComponentPlacement)) return;
-    if (
-      getCurrentInteractionState().kind === "moving-selection" &&
-      selectedIds.length > 0
-    ) {
-      const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId)
-        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
-      return;
-    }
-    if (tool !== "pointer") {
-      handleWireRoutePointerDown(event, routeId, hitTarget);
-      return;
-    }
-    event.stopPropagation();
-    if (event.altKey) {
-      setStatus("Snap suppressed while Alt is held");
-      return;
-    }
-    const routeRecord = routeGeometryRecords.find(
-      (candidate) => candidate.route.id === routeId,
-    );
-    if (!routeRecord) return;
-    const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
-    const pointer = pointFromClient(event.clientX, event.clientY, svg, false);
-    const tap = resolveRouteTap(
-      routeRecord.geometry,
-      pointer,
-      logicalRadiusForPixels(svg, 7),
-    );
-    const segmentIndex = tap?.address.segmentIndex ?? 0;
-    if (getCurrentInteractionState().kind === "moving-selection") {
-      const movePlan = planSelectionMove(document, visualSelection);
-      if (movePlan.previewObjectIds.length > 0) {
-        beginVisualSelectionMoveFromSelection(
-          event,
-          visualSelection,
-          hitTarget,
-        );
-        return;
-      }
-      cancelInteraction();
-    }
-    selectRoute(routeId, segmentIndex);
-    beginRouteStretch(
-      event,
-      routeId,
-      segmentIndex,
-      routeRecord.route.presentation === "power-rail"
-        ? "move-power-rail"
-        : looseRouteAnchorIds(document, routeRecord.route) !== null
-          ? "move-loose-route"
-          : "stretch-segment",
-      hitTarget,
-    );
-  }
-
-  function constrainAnnotationPosition(
-    annotation: Annotation,
-    candidate: DerivedPoint,
-  ): Point {
-    if (
-      (annotation.kind === "instance-label" ||
-        annotation.kind === "instance-value") &&
-      annotation.anchor.kind === "object"
-    ) {
-      const anchor = annotation.anchor;
-      const instance = document.instances.find(
-        (item) => item.id === anchor.objectId,
-      );
-      if (instance?.placement) {
-        const resolved = resolver.resolve(
-          instance.symbolId,
-          instance.symbolVariantId,
-        );
-        const radius = Math.ceil(
-          Math.max(
-            resolved?.definition.viewBox.width ?? 60,
-            resolved?.definition.viewBox.height ?? 60,
-          ) /
-            2 +
-            30,
-        );
-        return snapGridPoint(
-          {
-            x: clamp(
-              candidate.x,
-              instance.placement.position.x - radius,
-              instance.placement.position.x + radius,
-            ),
-            y: clamp(
-              candidate.y,
-              instance.placement.position.y - radius,
-              instance.placement.position.y + radius,
-            ),
-          },
-          document.presentation.grid,
-        );
-      }
-    }
-    if (annotation.kind === "net-label" && annotation.netId) {
-      const candidates = routeGeometryRecords
-        .filter(({ route }) => route.netId === annotation.netId)
-        .flatMap(({ geometry }) =>
-          geometry.centerline
-            .slice(0, -1)
-            .map((from, index) =>
-              closestPointOnSegment(
-                candidate,
-                from,
-                geometry.centerline[index + 1]!,
-              ),
-            ),
-        );
-      const closest = candidates.sort((left, right) => {
-        const leftDistance =
-          (left.x - candidate.x) ** 2 + (left.y - candidate.y) ** 2;
-        const rightDistance =
-          (right.x - candidate.x) ** 2 + (right.y - candidate.y) ** 2;
-        return leftDistance - rightDistance;
-      })[0];
-      if (closest) {
-        return snapGridPoint(
-          {
-            x: clamp(
-              candidate.x,
-              closest.x - NET_LABEL_MAX_NORMAL_OFFSET,
-              closest.x + NET_LABEL_MAX_NORMAL_OFFSET,
-            ),
-            y: clamp(
-              candidate.y,
-              closest.y - NET_LABEL_MAX_NORMAL_OFFSET,
-              closest.y + NET_LABEL_MAX_NORMAL_OFFSET,
-            ),
-          },
-          document.presentation.grid,
-        );
-      }
-    }
-    return snapGridPoint(candidate, document.presentation.grid);
-  }
-
-  function draggedAnnotationAtPosition(
-    annotation: Annotation,
-    candidate: DerivedPoint,
-  ): Annotation {
-    const currentAttachment = effectiveRouteAttachment(annotation);
-    if (isRoutedMarker(annotation) && currentAttachment) {
-      const attached = dragRouteAttachmentAtPoint(
-        routeGeometryRecords,
-        candidate,
-        currentAttachment,
-      );
-      if (!attached) return annotation;
-      const anchor =
-        annotation.anchor.kind === "route"
-          ? {
-              ...annotation.anchor,
-              segmentIndex: attached.routeAttachment.segmentIndex,
-              t: attached.routeAttachment.t,
-              normalOffset: attached.routeAttachment.normalOffset,
-              direction: attached.routeAttachment.direction,
-              fallbackPosition: attached.position,
-            }
-          : annotation.anchor;
-      return {
-        ...annotation,
-        anchor,
-      };
-    }
-    if (annotation.kind === "net-label" && annotation.anchor.kind === "route") {
-      const attached = dragNetLabelAttachmentAtPoint(
-        routeGeometryRecords,
-        candidate,
-        annotation.anchor.routeId,
-      );
-      if (!attached) return annotation;
-      return {
-        ...annotation,
-        anchor: {
-          ...annotation.anchor,
-          segmentIndex: attached.segmentIndex,
-          t: attached.t,
-          normalOffset: attached.normalOffset,
-          fallbackPosition: attached.labelPosition,
-        },
-      };
-    }
-
-    const position = constrainAnnotationPosition(annotation, candidate);
-    if (annotation.anchor.kind === "object") {
-      const anchor = annotation.anchor;
-      const instance = document.instances.find(
-        (item) => item.id === anchor.objectId,
-      );
-      if (instance?.placement) {
-        return {
-          ...annotation,
-          anchor: {
-            ...annotation.anchor,
-            localOffset: {
-              x: position.x - instance.placement.position.x,
-              y: position.y - instance.placement.position.y,
-            },
-            fallbackPosition: position,
-          },
-        };
-      }
-    }
-    return {
-      ...annotation,
-      anchor:
-        annotation.anchor.kind === "free"
-          ? { kind: "free", position }
-          : { ...annotation.anchor, fallbackPosition: position },
-    };
-  }
-
-  function beginAnnotationDrag(
-    event: ReactPointerEvent<SVGElement>,
-    annotation: Annotation,
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (event.button !== 0) return;
-    if (getCurrentInteractionState().kind === "moving-selection") {
-      const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId)
-        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
-      else
-        beginVisualSelectionMoveFromSelection(
-          event,
-          visualSelection,
-          hitTarget,
-        );
-      return;
-    }
-    event.stopPropagation();
-    selectOnly("annotation", [annotation.id]);
-    setSelectedEndpoint(null);
-    if (annotation.locked) {
-      setStatus("Selected locked annotation");
-      return;
-    }
-    if (event.shiftKey || event.ctrlKey || event.metaKey) {
-      setStatus(`Selected annotation ${annotation.id}`);
-      return;
-    }
-    canvasDragSessionRef.current?.cancel();
-    const svg = hitTarget.ownerSVGElement!;
-    const pointerStart = pointFromClient(
-      event.clientX,
-      event.clientY,
-      svg,
-      false,
-    );
-    const currentAttachment = effectiveRouteAttachment(annotation);
-    const record = currentAttachment
-      ? routeGeometryRecords.find(
-          ({ route }) => route.id === currentAttachment.routeId,
-        )
-      : undefined;
-    const markerPlacement =
-      record && currentAttachment
-        ? resolveRouteAttachment(record.geometry, currentAttachment)
-        : null;
-    const preview: AnnotationDragPreview = {
-      annotationId: annotation.id,
-      originalPosition: {
-        ...(isRoutedMarker(annotation) && markerPlacement
-          ? markerPlacement.labelPoint
-          : annotation.anchor.kind === "free"
-            ? annotation.anchor.position
-            : annotation.anchor.fallbackPosition),
-      },
-      pointerStart,
-    };
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, [annotation.id]));
-    const positionAt = (clientX: number, clientY: number): DerivedPoint => {
-      const pointer = pointFromClient(clientX, clientY, svg, false);
-      return {
-        x: preview.originalPosition.x + pointer.x - preview.pointerStart.x,
-        y: preview.originalPosition.y + pointer.y - preview.pointerStart.y,
-      };
-    };
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const position = positionAt(client.x, client.y);
-        // Route-attached current markers used to preview by replacing their
-        // annotation in `renderedDocument`. That invalidated and rebuilt the
-        // whole formal SVG scene once per pointer frame. A marker is one
-        // indivisible visual object, so a lightweight temporary translation is
-        // sufficient during the gesture; the exact route attachment is still
-        // resolved and persisted once on pointer release below.
-        dragVisual().translate({
-          x: position.x - preview.originalPosition.x,
-          y: position.y - preview.originalPosition.y,
-        });
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        if (dragged) {
-          completeAnnotationDrag(preview, positionAt(client.x, client.y));
-        }
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-      },
-    });
-  }
-
-  function completeAnnotationDrag(
-    preview: AnnotationDragPreview,
-    position: DerivedPoint,
-  ): void {
-    const annotation = document.annotations.find(
-      (candidate) => candidate.id === preview.annotationId,
-    );
-    if (!annotation) return;
-    transact([
-      {
-        kind: "upsert_schematic_annotation",
-        annotation: draggedAnnotationAtPosition(
-          annotation,
-          snapGridPoint(position, document.presentation.grid),
-        ),
-      },
-    ]);
   }
 
   function pointFromClient(
@@ -3831,68 +2472,22 @@ export function App({
     svg: SVGSVGElement,
     snapToGrid = true,
   ): DerivedPoint {
-    const grid = document.presentation.grid;
-    const matrix = svg.getScreenCTM();
-    if (matrix) {
-      const clientPoint = svg.createSVGPoint();
-      clientPoint.x = clientX;
-      clientPoint.y = clientY;
-      const localPoint = clientPoint.matrixTransform(matrix.inverse());
-      return {
-        x: snapToGrid ? snapCoordinate(localPoint.x, grid) : localPoint.x,
-        y: snapToGrid ? snapCoordinate(localPoint.y, grid) : localPoint.y,
-      };
-    }
-    const bounds = svg.getBoundingClientRect();
-    const x =
-      viewBox.x + ((clientX - bounds.left) / bounds.width) * viewBox.width;
-    const y =
-      viewBox.y + ((clientY - bounds.top) / bounds.height) * viewBox.height;
-    return {
-      x: snapToGrid ? snapCoordinate(x, grid) : x,
-      y: snapToGrid ? snapCoordinate(y, grid) : y,
-    };
+    return canvasPointFromClient(
+      clientX,
+      clientY,
+      svg,
+      viewBox,
+      document.presentation.grid,
+      snapToGrid,
+    );
   }
 
   function logicalRadiusForPixels(svg: SVGSVGElement, pixels: number): number {
-    const matrix = svg.getScreenCTM();
-    if (!matrix) return pixels;
-    const xScale = Math.hypot(matrix.a, matrix.b);
-    const yScale = Math.hypot(matrix.c, matrix.d);
-    const scale = (xScale + yScale) / 2;
-    return logicalToleranceForScale(pixels, scale);
+    return logicalRadiusForCanvasPixels(svg, pixels);
   }
 
   function paintSnapGuides(guides: readonly SnapGuideLine[]): void {
-    const layer = snapGuideLayerRef.current;
-    if (!layer) return;
-    layer.replaceChildren(
-      ...guides.map((guide) => {
-        const line = globalThis.document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "line",
-        );
-        line.setAttribute("class", "smart-snap-guide");
-        line.setAttribute("data-testid", `snap-guide-${guide.axis}`);
-        line.setAttribute(
-          "x1",
-          String(guide.axis === "x" ? guide.coordinate : guide.from - 24),
-        );
-        line.setAttribute(
-          "y1",
-          String(guide.axis === "y" ? guide.coordinate : guide.from - 24),
-        );
-        line.setAttribute(
-          "x2",
-          String(guide.axis === "x" ? guide.coordinate : guide.to + 24),
-        );
-        line.setAttribute(
-          "y2",
-          String(guide.axis === "y" ? guide.coordinate : guide.to + 24),
-        );
-        return line;
-      }),
-    );
+    replaceCanvasSnapGuides(snapGuideLayerRef.current, guides);
   }
 
   /**
@@ -3925,1049 +2520,6 @@ export function App({
       clearTransientCanvasState();
     };
   }, []);
-
-  function resolveWireCanvasSnap(
-    point: Point,
-    svg: SVGSVGElement,
-    suppressSnap: boolean,
-  ): {
-    point: Point;
-    endpoint?: WireSource;
-    route?: { routeId: string; segmentIndex: number; point: Point };
-    ambiguous?: boolean;
-    guides: SnapGuideLine[];
-  } {
-    if (suppressSnap) {
-      return {
-        point: {
-          x: snapCoordinate(point.x, document.presentation.grid),
-          y: snapCoordinate(point.y, document.presentation.grid),
-        },
-        guides: [],
-      };
-    }
-    // A wire already under way arrives from its last authored point, so a tap
-    // on a conductor can land exactly where that run reaches it.
-    const arrival = wireSource
-      ? (wireWaypoints.at(-1) ?? wireSource.connection.contactPoint)
-      : null;
-    const routeTargets = routeGeometryRecords.flatMap(({ route, geometry }) =>
-      geometry.centerline.slice(0, -1).map((from, segmentIndex) => ({
-        anchor: {
-          id: `wire-route:${route.id}:${segmentIndex}`,
-          point: routeTapPoint(
-            point,
-            from,
-            geometry.centerline[segmentIndex + 1]!,
-            document.presentation.grid,
-            arrival,
-          ),
-          kind: "route" as const,
-        },
-        routeId: route.id,
-        segmentIndex,
-      })),
-    );
-    const endpointTargets = wiringEndpoints.map((source) => ({
-      source,
-      anchor: endpointSnapAnchor(source),
-    }));
-    const activeSourceAnchorId = wireSource
-      ? endpointSnapAnchor(wireSource).id
-      : null;
-    const resolved = resolvePointSnap(
-      point,
-      [
-        ...endpointTargets.map((candidate) => candidate.anchor),
-        ...routeTargets.map((candidate) => candidate.anchor),
-      ],
-      {
-        grid: document.presentation.grid,
-        tolerance: logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
-        profile: SNAP_PROFILES.wire,
-        ...(activeSourceAnchorId
-          ? { excludedTargetIds: new Set([activeSourceAnchorId]) }
-          : {}),
-      },
-    );
-    const snappedPoint = {
-      x: point.x + resolved.delta.x,
-      y: point.y + resolved.delta.y,
-    };
-    const atPoint = (candidate: { anchor: { id: string; point: Point } }) =>
-      candidate.anchor.id !== activeSourceAnchorId &&
-      Math.abs(candidate.anchor.point.x - snappedPoint.x) < 1e-6 &&
-      Math.abs(candidate.anchor.point.y - snappedPoint.y) < 1e-6;
-    const contactTargets = resolveElectricalContactTargets(
-      document,
-      resolver,
-      [
-        ...endpointTargets.filter(atPoint).map((candidate) => ({
-          kind: "endpoint" as const,
-          id: candidate.anchor.id,
-          point: candidate.anchor.point,
-          netId: candidate.source.netId,
-          endpoint: candidate.source.endpoint,
-        })),
-        ...routeTargets.filter(atPoint).map((candidate) => ({
-          kind: "route" as const,
-          id: candidate.anchor.id,
-          point: candidate.anchor.point,
-          netId: document.routes.find(
-            (route) => route.id === candidate.routeId,
-          )!.netId,
-          routeId: candidate.routeId,
-          segmentIndex: candidate.segmentIndex,
-        })),
-      ],
-      contactComponents,
-    );
-    const ambiguous = contactTargets.length > 1;
-    const contact = ambiguous ? undefined : contactTargets[0];
-    const endpoint = contact?.endpoint
-      ? endpointTargets.find(
-          (candidate) => candidate.anchor.id === contact.endpoint!.id,
-        )?.source
-      : undefined;
-    const route =
-      !endpoint && contact?.route
-        ? routeTargets.find(
-            (candidate) => candidate.anchor.id === contact.route!.id,
-          )
-        : undefined;
-    return {
-      point: snappedPoint,
-      ...(ambiguous ? { ambiguous: true } : {}),
-      ...(endpoint ? { endpoint } : {}),
-      ...(route
-        ? {
-            route: {
-              routeId: route.routeId,
-              segmentIndex: route.segmentIndex,
-              point: snappedPoint,
-            },
-          }
-        : {}),
-      guides: resolved.guides,
-    };
-  }
-
-  /**
-   * One middle-click steps the corner through the shapes a wire actually
-   * turns with: horizontal-first, vertical-first, then the 45° diagonal. The
-   * click used to reach only the diagonal, so the two orthogonal elbows were
-   * unreachable without the Corner menu.
-   */
-  // Re-arm the remembered corner shape on a fresh wire. Activating the wire
-  // tool builds a clean state, which dropped the choice; this restores it
-  // without touching a wire already in progress.
-  useEffect(() => {
-    if (tool !== "wire" || wireSource !== null || wireDraftSteps.length > 0)
-      return;
-    const remembered = lastWireShapeRef.current;
-    if (remembered.routingMode !== wireRoutingMode)
-      setWireRoutingMode(remembered.routingMode);
-    if (remembered.cornerOrder !== wireCornerOrder)
-      setWireCornerOrder(remembered.cornerOrder);
-  }, [
-    tool,
-    wireSource,
-    wireDraftSteps.length,
-    wireRoutingMode,
-    wireCornerOrder,
-    setWireRoutingMode,
-    setWireCornerOrder,
-  ]);
-
-  function cycleWireCornerShape(): void {
-    // "auto" is where every wire starts, so it has to be a named stop on the
-    // cycle: leaving it out made findIndex return -1 and the first press land
-    // on entry 0. That press was also invisible, because a first leg drawn by
-    // "auto" already runs horizontal — hence vertical first comes next, so
-    // every press visibly redraws the preview.
-    const shapes = [
-      {
-        routingMode: "orthogonal" as const,
-        cornerOrder: "auto" as const,
-        label: "auto",
-      },
-      {
-        routingMode: "orthogonal" as const,
-        cornerOrder: "vertical-first" as const,
-        label: "vertical first",
-      },
-      {
-        routingMode: "orthogonal" as const,
-        cornerOrder: "horizontal-first" as const,
-        label: "horizontal first",
-      },
-      {
-        routingMode: "octilinear" as const,
-        cornerOrder: "diagonal-first" as const,
-        label: "45° diagonal",
-      },
-      {
-        routingMode: "free" as const,
-        cornerOrder: "auto" as const,
-        label: "any angle",
-      },
-    ];
-    const index = shapes.findIndex(
-      (shape) =>
-        shape.routingMode === wireRoutingMode &&
-        shape.cornerOrder === wireCornerOrder,
-    );
-    const next = shapes[(index + 1) % shapes.length]!;
-    lastWireShapeRef.current = next;
-    if (next.routingMode !== wireRoutingMode)
-      setWireRoutingMode(next.routingMode);
-    setWireCornerOrder(next.cornerOrder);
-    setStatus(`Wire corner: ${next.label}`);
-  }
-
-  function applyWireCanvasPoint(
-    rawPoint: Point,
-    svg: SVGSVGElement,
-    suppressSnap: boolean,
-    finish: boolean,
-  ): void {
-    const resolved = resolveWireCanvasSnap(rawPoint, svg, suppressSnap);
-    paintSnapGuides([]);
-    // A double-click ends the wire and never begins one. Landing on an
-    // endpoint or an existing Route already commits on the first click, so
-    // without this the finishing gesture started a fresh wire at that point
-    // and drawing appeared to continue.
-    if (finish && !wireSource) return;
-    if (resolved.ambiguous) {
-      setStatus(
-        "Ambiguous connection: choose one endpoint or conductor away from the overlap",
-      );
-      return;
-    }
-    if (resolved.endpoint) {
-      if (!wireSource) {
-        setWireSource(resolved.endpoint, document.revision);
-        setWirePreviewPoint(resolved.endpoint.connection.contactPoint);
-        setWireDraftSteps([]);
-      } else if (
-        endpointKey(wireSource.endpoint) !==
-        endpointKey(resolved.endpoint.endpoint)
-      ) {
-        commitWire(resolved.endpoint);
-      } else {
-        setStatus("Choose a different endpoint");
-      }
-      return;
-    }
-    if (resolved.route) {
-      const anchor = routeAnchor(
-        resolved.route.routeId,
-        resolved.route.point,
-        resolved.route.segmentIndex,
-      );
-      if (!wireSource) {
-        setWireSource(anchor, document.revision);
-        setWirePreviewPoint(anchor.connection.contactPoint);
-        setWireDraftSteps([]);
-      } else {
-        commitWire(anchor);
-      }
-      return;
-    }
-    if (finish) finishWireAtPoint(resolved.point);
-    else fixWirePoint(resolved.point);
-  }
-
-  function handleCanvasHitPointerDown(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ): void {
-    if (
-      (pendingSymbolId && pendingComponentPlacement) ||
-      vddRailMode ||
-      copyPlacement !== null
-    ) {
-      return;
-    }
-    if (getCurrentInteractionState().kind === "moving-selection") {
-      const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId) {
-        beginMoveFromSelection(event, primaryInstanceId, event.currentTarget);
-      } else {
-        beginVisualSelectionMoveFromSelection(
-          event,
-          visualSelection,
-          event.currentTarget,
-        );
-      }
-      return;
-    }
-    if (tool !== "pointer" || event.button !== 0) return;
-    if (
-      cellSymbolLayoutEnabled &&
-      (event.target as Element).closest(
-        '[data-testid="cell-symbol-layout-overlay"]',
-      )
-    ) {
-      // The canvas capture layer ranks the underlying scene through
-      // elementsFromPoint(). Layout grips intentionally outrank that scene so
-      // a selected hierarchy instance cannot start an ordinary move first.
-      return;
-    }
-    // Handles outrank the scene they sit on, the same way layout grips do.
-    // Testing only event.target missed a handle drawn under another hit
-    // surface — a Power Rail end handle sits beneath its Junction's endpoint
-    // circle — so this capture layer claimed the press and the rail moved
-    // instead of resizing. Rank the whole stack at the point instead.
-    const handleAtPoint = event.currentTarget.ownerDocument
-      .elementsFromPoint(event.clientX, event.clientY)
-      .some((element) => element.closest(".draft-handle, .route-handle"));
-    if (handleAtPoint) return;
-    const hit = resolveCanvasHitAtPoint(
-      event.currentTarget.ownerDocument,
-      { x: event.clientX, y: event.clientY },
-      event.altKey ? 1 : 0,
-    );
-    if (!hit || hit.kind === "handle") return;
-    const hitTarget = hit.element as SVGElement;
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (
-      !event.shiftKey &&
-      !event.ctrlKey &&
-      !event.metaKey &&
-      (hit.kind === "instance" ||
-        hit.kind === "instance-label" ||
-        hit.kind === "annotation" ||
-        hit.kind === "route" ||
-        hit.kind === "junction") &&
-      compositeSelectionOwnsHit(hit.kind, hit.id)
-    ) {
-      const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId) {
-        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
-        return;
-      }
-      // A marquee can hold only Routes, Junctions, and Annotations. Without an
-      // Instance to anchor the move, the press used to fall through to the
-      // single-object branches below and drag just the grabbed object out of
-      // its own selection.
-      const movePlan = planSelectionMove(document, visualSelection);
-      if (movePlan.previewObjectIds.length > 0) {
-        beginVisualSelectionMoveFromSelection(
-          event,
-          visualSelection,
-          hitTarget,
-        );
-        return;
-      }
-    }
-
-    if (hit.kind === "instance") {
-      beginMoveFromSelection(event, hit.id, hitTarget);
-      return;
-    }
-    if (hit.kind === "annotation") {
-      const annotation = document.annotations.find(
-        (candidate) => candidate.id === hit.id,
-      );
-      if (annotation) beginAnnotationDrag(event, annotation, hitTarget);
-      return;
-    }
-    if (hit.kind === "route") {
-      handleRoutePointerDown(event, hit.id, hitTarget);
-      return;
-    }
-    if (hit.kind === "drafting") {
-      const object = document.drafting?.objects.find(
-        (candidate) => candidate.id === hit.id,
-      );
-      if (object) beginDraftingDrag(event, object, hitTarget);
-      return;
-    }
-    const endpoint = visibleEndpoints.find(
-      (candidate) =>
-        candidate.endpoint.kind === "junction" &&
-        candidate.endpoint.junctionId === hit.id,
-    );
-    if (endpoint) {
-      selectEndpoint(endpoint);
-      setStatus(`Selected ${endpointTestId(endpoint.endpoint)}`);
-    }
-  }
-
-  function handleDrop(event: DragEvent<SVGSVGElement>): void {
-    event.preventDefault();
-    const instanceId = event.dataTransfer.getData("application/x-icm-instance");
-    if (!instanceId) {
-      return;
-    }
-    const placement = {
-      position: pointFromClient(
-        event.clientX,
-        event.clientY,
-        event.currentTarget,
-      ),
-      rotation: 0 as const,
-      mirror: "none" as const,
-    };
-    const instance = document.instances.find(
-      (candidate) => candidate.id === instanceId,
-    );
-    const displayAnnotations = instance
-      ? missingDefaultInstanceDisplayAnnotations(
-          document,
-          { ...instance, placement },
-          resolver,
-          styleProfile,
-        )
-      : [];
-    transact([
-      {
-        kind: "place_instance",
-        instanceId,
-        placement,
-      },
-      ...displayAnnotations.map((annotation) => ({
-        kind: "upsert_schematic_annotation" as const,
-        annotation,
-      })),
-    ]);
-    selectOnly("instance", [instanceId]);
-  }
-
-  function placeAllFromTray(): void {
-    const edits = planPlaceAllUnplacedInstances(document, viewBox);
-    if (edits.length === 0) {
-      setStatus("The Placement Tray is empty");
-      return;
-    }
-    const displayEdits = edits.flatMap((edit) => {
-      if (edit.kind !== "place_instance") return [];
-      const instance = document.instances.find(
-        (candidate) => candidate.id === edit.instanceId,
-      );
-      if (!instance) return [];
-      return missingDefaultInstanceDisplayAnnotations(
-        document,
-        { ...instance, placement: edit.placement },
-        resolver,
-        styleProfile,
-      ).map((annotation) => ({
-        kind: "upsert_schematic_annotation" as const,
-        annotation,
-      }));
-    });
-    if (transact([...edits, ...displayEdits]).ok) {
-      resetSelection();
-      setStatus(
-        `Placed ${edits.length} retained ${edits.length === 1 ? "Instance" : "Instances"} in a deterministic canvas grid`,
-      );
-    }
-  }
-
-  function returnInstancesToTray(instanceIds: readonly string[]): void {
-    if (instanceIds.length === 0) {
-      setStatus("There are no returnable placed Instances");
-      return;
-    }
-    try {
-      const edits = planInstanceUnplacement(
-        document,
-        resolver,
-        instanceIds,
-        ++uniqueSuffixCounter.current,
-      );
-      if (edits.length === 0) {
-        setStatus("Those Instances are already retained in the Placement Tray");
-        return;
-      }
-      if (transact(edits).ok) {
-        resetSelection();
-        const returnedFormalPort = instanceIds.some((instanceId) =>
-          document.netlist?.terminals.some((terminal) =>
-            terminal.interfaceInstanceIds.includes(instanceId),
-          ),
-        );
-        setStatus(
-          `Returned ${instanceIds.length} ${instanceIds.length === 1 ? "Instance" : "Instances"} to the Placement Tray; ${returnedFormalPort ? "Cell interfaces and " : ""}electrical facts were retained`,
-        );
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not return to tray",
-      );
-    }
-  }
-
-  function placementTrayIdentity(
-    instance: SchematicDocument["instances"][number],
-  ): string {
-    const formalName = document.netlist?.terminals.find((terminal) =>
-      terminal.interfaceInstanceIds.includes(instance.id),
-    )?.name;
-    const schematicName = flattenRichText(
-      instance.schematicName ?? { runs: [] },
-    );
-    const reference =
-      instance.schematicReference ?? instance.netlist?.reference ?? null;
-    const secondary = formalName ?? schematicName;
-    const identity =
-      reference && secondary && reference !== secondary
-        ? `${reference} · ${secondary}`
-        : (reference ?? secondary ?? "Unreferenced");
-    return `${identity} · ${instance.symbolId}`;
-  }
-
-  function selectionVisualMoveEdits(
-    movePlan: SelectionMovePlan,
-    delta: Point,
-    sourceDocument: SchematicDocument = document,
-  ): SchematicEdit[] {
-    return [
-      ...movePlan.freeAnnotationIds.flatMap((annotationId) => {
-        const annotation = sourceDocument.annotations.find(
-          (candidate) => candidate.id === annotationId,
-        );
-        if (!annotation || annotation.anchor.kind !== "free") return [];
-        return [
-          {
-            kind: "upsert_schematic_annotation" as const,
-            annotation: {
-              ...annotation,
-              anchor: {
-                kind: "free" as const,
-                position: snapGridPoint(
-                  {
-                    x: annotation.anchor.position.x + delta.x,
-                    y: annotation.anchor.position.y + delta.y,
-                  },
-                  sourceDocument.presentation.grid,
-                ),
-              },
-            },
-          },
-        ];
-      }),
-      ...movePlan.draftingIds.flatMap((draftingId) => {
-        const object = sourceDocument.drafting?.objects.find(
-          (candidate) => candidate.id === draftingId,
-        );
-        return object
-          ? [
-              {
-                kind: "upsert_drafting_object" as const,
-                object: translateDraftingObject(
-                  object,
-                  delta,
-                  sourceDocument.presentation.grid,
-                ),
-              },
-            ]
-          : [];
-      }),
-    ];
-  }
-
-  function completeVisualSelectionMove(
-    movePlan: SelectionMovePlan,
-    delta: Point,
-  ): void {
-    if (delta.x === 0 && delta.y === 0) return;
-    const looseRouteEdits = movePlan.looseRouteIds.flatMap(
-      (routeId) => proposeLooseRouteTranslation(document, routeId, delta).edits,
-    );
-    const result = transactConnectivity(
-      "move_connected_selection",
-      [...looseRouteEdits, ...selectionVisualMoveEdits(movePlan, delta)],
-      { delta, looseRouteIds: movePlan.looseRouteIds },
-    );
-    if (result?.ok && movePlan.fixedObjectIds.length > 0) {
-      setStatus(
-        `Moved selection; ${movePlan.fixedObjectIds.length} attached object(s) remained fixed`,
-      );
-    }
-  }
-
-  function commandMoveVisualOrigin(movePlan: SelectionMovePlan): Point {
-    const freeAnnotation = movePlan.freeAnnotationIds
-      .map((id) =>
-        document.annotations.find((annotation) => annotation.id === id),
-      )
-      .find((annotation) => annotation?.anchor.kind === "free");
-    return (
-      movePlan.draftingIds
-        .flatMap((id) => {
-          const object = document.drafting?.objects.find(
-            (candidate) => candidate.id === id,
-          );
-          const origin = object ? draftingDragOrigin(object) : null;
-          return origin ? [origin] : [];
-        })
-        .find((point): point is Point => point !== null) ??
-      (freeAnnotation?.anchor.kind === "free"
-        ? freeAnnotation.anchor.position
-        : undefined) ??
-      movePlan.looseRouteIds
-        .map(
-          (id) =>
-            routeGeometryRecords.find((record) => record.route.id === id)
-              ?.geometry.centerline[0],
-        )
-        .find((point): point is Point => point !== undefined) ?? { x: 0, y: 0 }
-    );
-  }
-
-  function instanceMoveAt(
-    preview: DragPreview,
-    position: DerivedPoint,
-    tolerance: number,
-    suppressSnap: boolean,
-    previous?: SnapResult,
-    projectedDocument?: SchematicDocument,
-  ) {
-    const sourceDocument = projectedDocument ?? document;
-    const sourceVisibleEndpoints: WireSource[] = projectedDocument
-      ? [
-          ...sourceDocument.instances.flatMap((instance) => {
-            if (!instance.placement) return [];
-            const resolved = resolver.resolve(
-              instance.symbolId,
-              instance.symbolVariantId,
-            );
-            if (!resolved) return [];
-            return resolved.definition.pins
-              .filter((pin) =>
-                isVisibleEndpoint(sourceDocument, resolver, {
-                  kind: "terminal",
-                  instanceId: instance.id,
-                  pinName: pin.name,
-                }),
-              )
-              .flatMap((pin): WireSource[] => {
-                const endpoint: RouteEndpoint = {
-                  kind: "terminal",
-                  instanceId: instance.id,
-                  pinName: pin.name,
-                };
-                const connection = resolveEndpointConnection(
-                  sourceDocument,
-                  resolver,
-                  endpoint,
-                );
-                return connection
-                  ? [
-                      {
-                        endpoint,
-                        connection,
-                        netId: endpointNetId(sourceDocument, endpoint),
-                        preludeEdits: [],
-                        ...(isMosBulkTerminal(sourceDocument, endpoint)
-                          ? { routePresentation: "bulk-dashed" as const }
-                          : {}),
-                      },
-                    ]
-                  : [];
-              });
-          }),
-          ...sourceDocument.junctions
-            .filter((junction) => {
-              const role = junction.role ?? "branch";
-              return role === "branch" || role === "route-anchor";
-            })
-            .flatMap((junction): WireSource[] => {
-              const endpoint: RouteEndpoint = {
-                kind: "junction",
-                junctionId: junction.id,
-              };
-              const connection = resolveEndpointConnection(
-                sourceDocument,
-                resolver,
-                endpoint,
-              );
-              return connection
-                ? [
-                    {
-                      endpoint,
-                      connection,
-                      netId: junction.netId,
-                      preludeEdits: [],
-                    },
-                  ]
-                : [];
-            }),
-        ]
-      : visibleEndpoints;
-    const sourceRouteGeometryRecords = projectedDocument
-      ? (() => {
-          const routingGeometry = resolveDocumentRoutingGeometry(
-            sourceDocument,
-            resolver,
-          );
-          return sourceDocument.routes.flatMap((route) => {
-            const geometry = routingGeometry.routes.get(route.id);
-            return geometry ? [{ route, geometry }] : [];
-          });
-        })()
-      : routeGeometryRecords;
-    const sourceContactComponents = projectedDocument
-      ? sourceDocument.nets.flatMap(
-          (net) =>
-            deriveNetConnectivity(sourceDocument, resolver, net).components,
-        )
-      : contactComponents;
-    const rawDelta = {
-      x: position.x - preview.pointerStart.x,
-      y: position.y - preview.pointerStart.y,
-    };
-    const movingIds = new Set(preview.instanceIds);
-    const movingAnchors = buildInstanceAnchors(
-      sourceDocument,
-      resolver,
-      sourceVisibleEndpoints,
-      movingIds,
-    );
-    const routeTargets: SnapAnchor[] = suppressSnap
-      ? []
-      : movingAnchors.flatMap((moving): SnapAnchor[] => {
-          if (moving.electrical?.kind !== "endpoint") return [];
-          const movedPoint = {
-            x: moving.point.x + rawDelta.x,
-            y: moving.point.y + rawDelta.y,
-          };
-          return sourceRouteGeometryRecords.flatMap(({ route, geometry }) => {
-            const belongsToMovingInstance = [route.from, route.to].some(
-              (endpoint) =>
-                endpoint.kind === "terminal" &&
-                movingIds.has(endpoint.instanceId),
-            );
-            if (belongsToMovingInstance) return [];
-            return geometry.centerline
-              .slice(0, -1)
-              .flatMap((from, segmentIndex) => {
-                const point = closestPointOnSegment(
-                  movedPoint,
-                  from,
-                  geometry.centerline[segmentIndex + 1]!,
-                );
-                if (
-                  Math.hypot(point.x - movedPoint.x, point.y - movedPoint.y) >
-                  tolerance
-                ) {
-                  return [];
-                }
-                return [
-                  {
-                    id: `move-route:${moving.id}:${route.id}:${segmentIndex}`,
-                    point,
-                    kind: "route" as const,
-                    acceptsMovingAnchorId: moving.id,
-                    electrical: {
-                      kind: "route" as const,
-                      routeId: route.id,
-                      segmentIndex,
-                      netId: route.netId,
-                    },
-                  },
-                ];
-              });
-          });
-        });
-    const staticTargets = buildSceneSnapTargets(
-      sourceDocument,
-      resolver,
-      sourceVisibleEndpoints,
-      movingIds,
-    );
-    let snap: SnapResult = suppressSnap
-      ? { delta: rawDelta, guides: [] }
-      : resolveTranslationSnap(
-          {
-            rawDelta,
-            movingAnchors,
-            targetAnchors: [...staticTargets, ...routeTargets],
-            primaryAnchorId: `instance:${preview.primaryInstanceId}:origin`,
-            grid: sourceDocument.presentation.grid,
-            tolerance,
-            profile: SNAP_PROFILES.instanceMove,
-          },
-          previous,
-        );
-    if (snap.electricalMatch?.target.electrical?.kind === "route") {
-      const point = snap.electricalMatch.target.point;
-      const coincidentRoutes = routeTargets.filter(
-        (target) =>
-          target.electrical?.kind === "route" &&
-          target.point.x === point.x &&
-          target.point.y === point.y,
-      );
-      const conductors = resolveElectricalContactTargets(
-        sourceDocument,
-        resolver,
-        coincidentRoutes.flatMap((target) =>
-          target.electrical?.kind === "route"
-            ? [
-                {
-                  kind: "route" as const,
-                  id: target.id,
-                  point: target.point,
-                  netId: target.electrical.netId,
-                  routeId: target.electrical.routeId,
-                  segmentIndex: target.electrical.segmentIndex,
-                },
-              ]
-            : [],
-        ),
-        sourceContactComponents,
-      );
-      if (conductors.length > 1) {
-        snap = resolveTranslationSnap(
-          {
-            rawDelta,
-            movingAnchors,
-            targetAnchors: staticTargets,
-            primaryAnchorId: `instance:${preview.primaryInstanceId}:origin`,
-            grid: sourceDocument.presentation.grid,
-            tolerance,
-            profile: SNAP_PROFILES.instanceMove,
-          },
-          previous,
-        );
-      }
-    }
-    const moves = preview.instanceIds.map((instanceId) => {
-      const original = preview.originalPositions[instanceId]!;
-      return {
-        instanceId,
-        position: snapGridPoint(
-          {
-            x: original.x + snap.delta.x,
-            y: original.y + snap.delta.y,
-          },
-          sourceDocument.presentation.grid,
-        ),
-      };
-    });
-    return { snap, moves };
-  }
-
-  function completeInstanceMove(
-    preview: DragPreview,
-    position: DerivedPoint,
-    tolerance: number,
-    suppressSnap: boolean,
-    previous?: SnapResult,
-    projection?: ProjectedInstanceMove,
-  ): void {
-    const sourceDocument = projection?.document ?? document;
-    const prefixEdits = [...(projection?.prefixEdits ?? [])];
-    const { snap: resolvedSnap, moves } =
-      projection?.resolvedMove ??
-      instanceMoveAt(
-        preview,
-        position,
-        tolerance,
-        suppressSnap,
-        previous,
-        projection?.document,
-      );
-    const electricalMatch = resolvedSnap.electricalMatch;
-    const delta = {
-      x:
-        moves[0]!.position.x -
-        preview.originalPositions[moves[0]!.instanceId]!.x,
-      y:
-        moves[0]!.position.y -
-        preview.originalPositions[moves[0]!.instanceId]!.y,
-    };
-    if (delta.x !== 0 || delta.y !== 0 || prefixEdits.length > 0) {
-      try {
-        const groupMove =
-          delta.x !== 0 || delta.y !== 0
-            ? proposeGroupMoveEdits(sourceDocument, resolver, moves)
-            : { edits: [], preview: { routes: [], junctions: [] } };
-        const looseRouteEdits = preview.movePlan.looseRouteIds.flatMap(
-          (routeId) =>
-            proposeLooseRouteTranslation(sourceDocument, routeId, delta).edits,
-        );
-        const visualEdits = selectionVisualMoveEdits(
-          preview.movePlan,
-          delta,
-          sourceDocument,
-        );
-        const movingElectrical = electricalMatch?.moving.electrical;
-        const targetElectrical = electricalMatch?.target.electrical;
-        const projected = structuredClone(sourceDocument);
-        for (const move of moves) {
-          const instance = projected.instances.find(
-            (candidate) => candidate.id === move.instanceId,
-          );
-          if (instance?.placement) instance.placement.position = move.position;
-        }
-        const contactEdits: readonly SchematicEdit[] =
-          movingElectrical?.kind === "endpoint" &&
-          targetElectrical?.kind === "route"
-            ? proposeEndpointRouteAttachment(
-                projected,
-                movingElectrical.endpoint,
-                movingElectrical.netId,
-                targetElectrical.routeId,
-                electricalMatch!.target.point,
-                targetElectrical.segmentIndex,
-                `move-${nextRoutingSuffix()}`,
-              ).edits
-            : [];
-        const result = transactConnectivity(
-          targetElectrical?.kind === "route"
-            ? "attach_endpoint_to_wire"
-            : targetElectrical?.kind === "endpoint"
-              ? "connect_without_wire"
-              : "move_connected_selection",
-          [
-            ...prefixEdits,
-            ...groupMove.edits,
-            ...looseRouteEdits,
-            ...visualEdits,
-            ...contactEdits,
-          ],
-          { moves, electricalMatch },
-        );
-        if (result?.ok && electricalMatch) {
-          setStatus("Snapped pin endpoints and connected them without a wire");
-        } else if (result?.ok && prefixEdits.length > 0) {
-          setStatus("Moved and transformed selection");
-        }
-      } catch (error) {
-        setStatus(
-          error instanceof Error ? error.message : "Local stretch failed",
-        );
-      }
-    }
-  }
-
-  /** Selected Instances that are actually on the sheet, in selection order. */
-  function placedSelectionIds(): string[] {
-    return selectedIds.filter((id) =>
-      document.instances.some(
-        (candidate) => candidate.id === id && candidate.placement,
-      ),
-    );
-  }
-
-  function rotateSelected(deltaDegrees: 90 | -90 = 90): void {
-    const placedSelection = placedSelectionIds();
-    // Several parts turn as one body about a shared pivot. Spinning each one
-    // about its own origin leaves the arrangement exactly where it was, which
-    // is not what turning a selection means. A lone part has no arrangement to
-    // preserve, so it keeps the simpler in-place turn.
-    const groupRotation =
-      placedSelection.length > 1
-        ? proposeGroupRotationEdits(
-            document,
-            resolver,
-            placedSelection,
-            deltaDegrees,
-          )
-        : null;
-    const instanceEdits = groupRotation
-      ? groupRotation.edits
-      : selectedIds.flatMap((id): SchematicEdit[] => {
-          const instance = document.instances.find(
-            (candidate) => candidate.id === id,
-          );
-          if (!instance?.placement) return [];
-          const next =
-            (((instance.placement.rotation + deltaDegrees) % 360) + 360) % 360;
-          return [
-            {
-              kind: "rotate_instance",
-              instanceId: instance.id,
-              rotation: next as 0 | 90 | 180 | 270,
-            },
-          ];
-        });
-    // Drafting rotation: R now also rotates a selected drafting object. An arrow
-    // pivots about its resolved center; a construction line pivots about the
-    // center of its bounds. Purely geometric — never changes electrical Nets.
-    const draftingEdits = visualSelection.draftingIds.flatMap(
-      (id): SchematicEdit[] => {
-        const object = document.drafting?.objects.find(
-          (candidate) => candidate.id === id,
-        );
-        if (!object) return [];
-        const next = rotateDraftingObject(
-          object,
-          resolveDraftingObjectGeometry(document, resolver, object),
-          deltaDegrees,
-          document.presentation.grid,
-        );
-        return next ? [{ kind: "upsert_drafting_object", object: next }] : [];
-      },
-    );
-    const edits = [...instanceEdits, ...draftingEdits];
-    if (edits.length === 0 || !transact(edits).ok) return;
-    // Name which turn happened. "Committed revision 5" cannot tell someone
-    // whether the arrangement turned or only the symbols did.
-    setStatus(
-      groupRotation
-        ? `Turned ${placedSelection.length} parts as one group`
-        : "Turned the selection in place",
-    );
-  }
-
-  function mirrorSelected(direction: ScreenFlip = "left-right"): void {
-    // Several parts flip as one body about the selection's own axis. Flipping
-    // each about its own centre leaves the arrangement exactly where it was —
-    // a row of three flipped one at a time is still the same row — which is
-    // the same fault rotation had.
-    const placedSelection = placedSelectionIds();
-    if (placedSelection.length > 1) {
-      const plan = proposeGroupReflectionEdits(
-        document,
-        resolver,
-        placedSelection,
-        direction,
-      );
-      if (plan.edits.length > 0 && transact(plan.edits).ok) {
-        setStatus(
-          `Flipped ${placedSelection.length} parts as one group, ${
-            direction === "left-right" ? "left to right" : "top to bottom"
-          }`,
-        );
-      }
-      return;
-    }
-    const edits = selectedIds.flatMap((id): SchematicEdit[] => {
-      const instance = document.instances.find(
-        (candidate) => candidate.id === id,
-      );
-      if (!instance?.placement) return [];
-      const orientation = reflectOrientation(instance.placement, direction);
-      return [
-        {
-          kind: "mirror_instance",
-          instanceId: instance.id,
-          mirror: orientation.mirror,
-        },
-        ...(orientation.rotation === instance.placement.rotation
-          ? []
-          : [
-              {
-                kind: "rotate_instance" as const,
-                instanceId: instance.id,
-                rotation: orientation.rotation,
-              },
-            ]),
-      ];
-    });
-    if (edits.length > 0 && transact(edits).ok) {
-      setStatus(
-        `Flipped the selection ${
-          direction === "left-right" ? "left to right" : "top to bottom"
-        }`,
-      );
-    }
-  }
 
   const editorCommands = createEditorCommandRouter({
     getContext: () => ({
@@ -5055,20 +2607,34 @@ export function App({
       report: setStatus,
     },
   });
-
-  function download(
-    bytes: BlobPart,
-    mediaType: string,
-    extension: string,
-    baseName = project.name,
-  ): void {
-    const url = URL.createObjectURL(new Blob([bytes], { type: mediaType }));
-    const anchor = window.document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${safeExportBaseName(baseName)}.${extension}`;
-    anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
+  const {
+    exportSvg,
+    checkAndSave,
+    exportDesignNetlist,
+    exportRaster,
+    importSpiceFiles,
+  } = createEditorFileCommands({
+    project,
+    getCurrentProject: () => editorDocumentController.project,
+    document,
+    resolver,
+    defaultViewBox: DEFAULT_VIEWBOX,
+    publishSessionPresent: publishSession !== null,
+    netlistIr: netlistAnalysis.ir,
+    exportWarningsPresent:
+      netlistAnalysis.diagnostics.length > 0 ||
+      electricalDiagnostics.length > 0,
+    transact,
+    reportExport,
+    guardDirtyReplacement,
+    replaceActiveProject,
+    setWorkspaceSlots,
+    setNetlistPreflightOpen,
+    setImportReport,
+    setImportReviewOpen,
+    setSelectionOpen,
+    setStatus,
+  });
 
   // Single entry point for selecting a drafting object. Editing is opened
   // separately (double-click/Enter) so selection and text caret ownership do
@@ -5080,1845 +2646,12 @@ export function App({
     setDraftingBearingInput(null);
   }
 
-  // A drafting drag commits exactly one typed transaction on pointerup. Its
-  // geometry is kind-aware: arrows move their free endpoints and construction
-  // lines move their points, rather than mutating the unused base anchor.
-  function beginDraftingDrag(
-    event: ReactPointerEvent<SVGElement>,
-    object: DraftingObject,
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (event.button !== 0 || object.locked) return;
-    if (getCurrentInteractionState().kind === "moving-selection") {
-      const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId)
-        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
-      else
-        beginVisualSelectionMoveFromSelection(
-          event,
-          visualSelection,
-          hitTarget,
-        );
-      return;
-    }
-    const origin = draftingDragOrigin(object);
-    if (!origin) {
-      selectDraftingObject(object.id);
-      setStatus("This anchored drawing moves with its attachment");
-      return;
-    }
-    event.stopPropagation();
-    if (event.shiftKey || event.ctrlKey || event.metaKey) {
-      selectDraftingObject(object.id);
-      setStatus(`Selected drawing ${object.id}`);
-      return;
-    }
-    canvasDragSessionRef.current?.cancel();
-    const svg = hitTarget.ownerSVGElement!;
-    const start = pointFromClient(event.clientX, event.clientY, svg, false);
-    const original = { ...origin };
-    selectDraftingObject(object.id);
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, [object.id]));
-    const tolerance = logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX);
-    const movingAnchors = [
-      {
-        id: `drafting:${object.id}:origin`,
-        point: original,
-        kind: "drafting" as const,
-      },
-      ...buildDraftingAnchors(document, resolver, new Set([object.id])),
-    ];
-    const targetAnchors = buildSceneSnapTargets(
-      document,
-      resolver,
-      visibleEndpoints,
-      new Set(),
-      new Set([object.id]),
-    );
-    let lastSnap: SnapResult | undefined;
-    const positionAt = (
-      clientX: number,
-      clientY: number,
-      suppressSnap: boolean,
-      previous?: SnapResult,
-    ): { position: Point; snap: SnapResult } => {
-      const point = pointFromClient(clientX, clientY, svg, false);
-      const rawDelta = { x: point.x - start.x, y: point.y - start.y };
-      const resolved: SnapResult = suppressSnap
-        ? { delta: rawDelta, guides: [] }
-        : resolveTranslationSnap(
-            {
-              rawDelta,
-              movingAnchors,
-              targetAnchors,
-              primaryAnchorId: `drafting:${object.id}:origin`,
-              grid: document.presentation.grid,
-              tolerance,
-              profile: SNAP_PROFILES.draftingMove,
-            },
-            previous,
-          );
-      return {
-        position: {
-          x: original.x + resolved.delta.x,
-          y: original.y + resolved.delta.y,
-        },
-        snap: resolved,
-      };
-    };
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const resolved = positionAt(
-          client.x,
-          client.y,
-          Boolean(client.altKey),
-          lastSnap,
-        );
-        lastSnap = resolved.snap;
-        paintSnapGuides(resolved.snap.guides);
-        dragVisual().translate({
-          x: resolved.position.x - original.x,
-          y: resolved.position.y - original.y,
-        });
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        paintSnapGuides([]);
-        if (dragged) {
-          const position = positionAt(
-            client.x,
-            client.y,
-            Boolean(client.altKey),
-            lastSnap,
-          ).position;
-          const latest = document.drafting?.objects.find(
-            (item) => item.id === object.id,
-          );
-          if (
-            latest &&
-            (position.x !== original.x || position.y !== original.y)
-          ) {
-            transact([
-              {
-                kind: "upsert_drafting_object",
-                object: translateDraftingObject(
-                  latest,
-                  {
-                    x: position.x - original.x,
-                    y: position.y - original.y,
-                  },
-                  document.presentation.grid,
-                ),
-              },
-            ]);
-          }
-        }
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        paintSnapGuides([]);
-      },
-    });
-  }
-
-  // Drag a single endpoint (arrow from/to) or vertex (construction-line index).
-  // Mirrors beginDraftingDrag's session discipline (cancel on Escape, commit
-  // once on pointerup from the ref) but mutates only the named handle, leaving
-  // the rest of the object's geometry in place. The arrow head always rides the
-  // tip because the renderer derives it from `to`.
-  function beginDraftingHandleDrag(
-    event: ReactPointerEvent<SVGElement>,
-    object: DraftingObject,
-    handle: DraftingHandle,
-  ): void {
-    if (event.button !== 0 || object.locked) return;
-    event.stopPropagation();
-    canvasDragSessionRef.current?.cancel();
-    const hitTarget = event.currentTarget;
-    const svg = hitTarget.ownerSVGElement!;
-    const originalGeometry = resolveDraftingObjectGeometry(
-      document,
-      resolver,
-      object,
-    );
-    if (handle.kind === "curve") {
-      setDraftingInspectorSegment({ objectId: object.id, index: handle.index });
-      setDraftingTangentInput(null);
-    }
-    selectDraftingObject(object.id);
-
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const snapped = snapDraftingPoint(
-          pointFromClient(client.x, client.y, svg),
-          Boolean(client.altKey),
-          event.shiftKey,
-          undefined,
-          logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
-        );
-        paintSnapGuides(snapped.guides);
-        setDraftingHandlePreview({
-          objectId: object.id,
-          object: applyDraftingHandle(
-            object,
-            handle,
-            snapped.point,
-            originalGeometry,
-            document.presentation.grid,
-          ),
-        });
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        paintSnapGuides([]);
-        if (dragged) {
-          const point = snapDraftingPoint(
-            pointFromClient(client.x, client.y, svg),
-            Boolean(client.altKey),
-            event.shiftKey,
-            undefined,
-            logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
-          ).point;
-          const latest = document.drafting?.objects.find(
-            (item) => item.id === object.id,
-          );
-          if (latest) {
-            const next = applyDraftingHandle(
-              latest,
-              handle,
-              point,
-              originalGeometry,
-              document.presentation.grid,
-            );
-            if (next !== latest) {
-              transact([{ kind: "upsert_drafting_object", object: next }]);
-            }
-          }
-        }
-        setDraftingHandlePreview(null);
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        setDraftingHandlePreview(null);
-        paintSnapGuides([]);
-      },
-    });
-  }
-
-  // Insert a vertex on a construction line at the clicked point, on the nearest
-  // segment. Commits one transaction. Used by the construction-line hit shape's
-  // double-click handler.
-  function insertConstructionVertex(
-    object: Extract<DraftingObject, { kind: "construction-line" }>,
-    point: Point,
-  ): void {
-    const next = insertConstructionVertexObject(object, point);
-    if (!next) return;
-    // An explicit vertex is a straightening operation for the selected
-    // segment. It avoids silently reinterpreting a Bézier control after the
-    // segment count changes.
-    transact([
-      {
-        kind: "upsert_drafting_object",
-        object: next.object,
-      },
-    ]);
-    setStatus(`Inserted vertex ${next.index}`);
-  }
-
-  // Free arrows share the same midpoint editing model as construction lines.
-  // The inserted point is deliberately a waypoint, never an endpoint anchor:
-  // an attached arrow endpoint therefore remains attached after reshaping.
-  function insertArrowWaypoint(
-    object: Extract<DraftingObject, { kind: "arrow" }>,
-    point: Point,
-  ): void {
-    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
-    if (geometry.kind !== "arrow") return;
-    const next = insertArrowWaypointObject(object, geometry, point);
-    if (!next) return;
-    transact([
-      {
-        kind: "upsert_drafting_object",
-        object: next.object,
-      },
-    ]);
-    setStatus(`Inserted arrow bend ${next.index + 1}`);
-  }
-
-  // Delete a vertex from a construction line by index; refuse below 2 vertices.
-  function deleteConstructionVertex(
-    object: Extract<DraftingObject, { kind: "construction-line" }>,
-    index: number,
-  ): void {
-    const next = deleteConstructionVertexObject(object, index);
-    if (next.kind === "minimum") {
-      setStatus("A construction line needs at least two vertices");
-      return;
-    }
-    if (next.kind !== "updated") return;
-    transact([{ kind: "upsert_drafting_object", object: next.object }]);
-    setStatus(`Deleted vertex ${index}`);
-  }
-
-  // Apply a bounded style change to the selected drafting object(s). `patch` is
-  // merged into styleOverride (undefined keys clear that property). One
-  // upsert_drafting_object transaction per object. Applies to free arrows and
-  // construction lines; route current markers keep their own binding.
-  function setDraftingStyle(patch: DraftingStylePatch): void {
-    const ids = visualSelection.draftingIds;
-    if (ids.length === 0) return;
-    const edits: SchematicEdit[] = [];
-    for (const id of ids) {
-      const object = document.drafting?.objects.find(
-        (candidate) => candidate.id === id,
-      );
-      if (!object) continue;
-      const nextObject = applyDraftingStylePatch(object, patch);
-      if (!nextObject) continue;
-      edits.push({
-        kind: "upsert_drafting_object",
-        object: nextObject,
-      });
-    }
-    if (edits.length > 0) {
-      const result = transact(edits);
-      if (result.ok) setStatus("Updated drawing style");
-    } else if (ids.length > 0) {
-      setStatus("Drawing is locked; unlock it before editing its style");
-    }
-  }
-
-  function setDraftingTangentAngle(angleDegrees: number): void {
-    if (
-      !selectedDrafting ||
-      selectedDrafting.locked ||
-      (selectedDrafting.kind !== "arrow" &&
-        selectedDrafting.kind !== "construction-line") ||
-      !Number.isFinite(angleDegrees)
-    ) {
-      return;
-    }
-    const geometry = resolveDraftingObjectGeometry(
-      document,
-      resolver,
-      selectedDrafting,
-    );
-    if (geometry.kind !== selectedDrafting.kind) return;
-    const index =
-      draftingInspectorSegment?.objectId === selectedDrafting.id
-        ? draftingInspectorSegment.index
-        : Math.max(0, geometry.curveControls.findIndex(Boolean));
-    if (index >= geometry.points.length - 1) return;
-    const next = setDraftingObjectTangentAngle(
-      selectedDrafting,
-      geometry,
-      index,
-      angleDegrees,
-      document.presentation.grid,
-    );
-    if (!next) return;
-    transact([
-      {
-        kind: "upsert_drafting_object",
-        object: next,
-      },
-    ]);
-  }
-
-  function setDraftingBearing(bearingDegrees: number): void {
-    if (
-      !selectedDrafting ||
-      selectedDrafting.locked ||
-      (selectedDrafting.kind !== "arrow" &&
-        selectedDrafting.kind !== "construction-line" &&
-        selectedDrafting.kind !== "rectangle") ||
-      !Number.isFinite(bearingDegrees)
-    ) {
-      return;
-    }
-    const geometry = resolveDraftingObjectGeometry(
-      document,
-      resolver,
-      selectedDrafting,
-    );
-    const next = setDraftingObjectBearing(
-      selectedDrafting,
-      geometry,
-      bearingDegrees,
-      document.presentation.grid,
-    );
-    if (next.kind === "attached-arrow") {
-      setStatus(
-        "An attached arrow cannot rotate without detaching its endpoints",
-      );
-      return;
-    }
-    if (next.kind !== "updated") return;
-    transact([{ kind: "upsert_drafting_object", object: next.object }]);
-  }
-
-  function toggleDraftingLock(object: DraftingObject): void {
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: { ...object, locked: !object.locked },
-      },
-    ]);
-    if (result?.ok) {
-      setStatus(
-        object.locked
-          ? "Drawing unlocked; it can now be edited or deleted"
-          : "Drawing locked; unlock it before editing or deleting",
-      );
-    }
-  }
-
-  function addPlainText(): void {
-    uniqueSuffixCounter.current += 1;
-    const id = `note-${uniqueSuffixCounter.current}`;
-    const position = snapGridPoint(
-      {
-        x: Math.round(viewBox.x + viewBox.width / 2),
-        y: Math.round(viewBox.y + viewBox.height - 20),
-      },
-      document.presentation.grid,
-    );
-    const textObject: Extract<DraftingObject, { kind: "text" }> = {
-      id,
-      kind: "text",
-      locked: false,
-      zIndex: 0,
-      anchor: { kind: "free", position },
-      content: defaultDraftTextDocument("Design note"),
-      alignment: "middle",
-      rotation: 0,
-      typographyToken: "label",
-    };
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: textObject,
-      },
-    ]);
-    if (result.ok) {
-      beginDraftingTextEditing(textObject);
-      setStatus(`Added drafting text ${id}`);
-    }
-  }
-
-  function addConstructionLine(): void {
-    uniqueSuffixCounter.current += 1;
-    const id = `construction-${uniqueSuffixCounter.current}`;
-    const center = snapGridPoint(
-      {
-        x: Math.round(viewBox.x + viewBox.width / 2),
-        y: Math.round(viewBox.y + viewBox.height / 2),
-      },
-      document.presentation.grid,
-    );
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: {
-          id,
-          kind: "construction-line",
-          locked: false,
-          zIndex: 0,
-          anchor: { kind: "free", position: center },
-          points: [
-            { x: center.x - 80, y: center.y },
-            { x: center.x + 80, y: center.y },
-          ],
-          lineStyle: "dashed",
-        },
-      },
-    ]);
-    if (result.ok) setStatus(`Added construction line ${id}`);
-  }
-
-  function addFreeArrow(): void {
-    uniqueSuffixCounter.current += 1;
-    const id = `arrow-${uniqueSuffixCounter.current}`;
-    const center = snapGridPoint(
-      {
-        x: Math.round(viewBox.x + viewBox.width / 2),
-        y: Math.round(viewBox.y + viewBox.height / 2),
-      },
-      document.presentation.grid,
-    );
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: {
-          id,
-          kind: "arrow",
-          locked: false,
-          zIndex: 0,
-          anchor: { kind: "free", position: center },
-          from: { kind: "free", position: { x: center.x - 60, y: center.y } },
-          to: { kind: "free", position: { x: center.x + 60, y: center.y } },
-        },
-      },
-    ]);
-    if (result.ok) setStatus(`Added free arrow ${id}`);
-  }
-
-  function addCurrentArrow(): void {
-    if (!selectedRoute) {
-      setStatus("Select a wire segment before adding a current arrow");
-      return;
-    }
-    const segmentIndex = Math.min(
-      selectedRouteSegmentIndex ?? 0,
-      selectedRoute.segmentModes.length - 1,
-    );
-    const record = routeGeometryRecords.find(
-      ({ route }) => route.id === selectedRoute.id,
-    );
-    const from = record?.geometry.centerline[segmentIndex];
-    const to = record?.geometry.centerline[segmentIndex + 1];
-    if (!from || !to) {
-      setStatus("Selected wire segment cannot accept a current arrow");
-      return;
-    }
-    uniqueSuffixCounter.current += 1;
-    const id = `current-${uniqueSuffixCounter.current}`;
-    const fallbackPosition = snapGridPoint(
-      { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 },
-      document.presentation.grid,
-    );
-    const result = transact([
-      {
-        kind: "upsert_schematic_annotation",
-        annotation: {
-          id,
-          kind: "route-marker",
-          markerKind: "current",
-          content: semanticTextDocument("I_x", "route-marker"),
-          anchor: {
-            kind: "route",
-            routeId: selectedRoute.id,
-            segmentIndex,
-            t: 0.5,
-            normalOffset: -14,
-            direction: "forward",
-            orientation: "follow",
-            fallbackPosition,
-          },
-          alignment: "middle",
-          rotation: 0,
-          locked: false,
-        },
-      },
-    ]);
-    if (result.ok) {
-      selectOnly("annotation", [id]);
-      setStatus(`Added current arrow on ${selectedRoute.id}`);
-    }
-  }
-
-  function netLabelForRoute(
-    route: SchematicDocument["routes"][number],
-  ): Annotation | undefined {
-    const candidates = document.annotations.filter(
-      (annotation) =>
-        annotation.kind === "net-label" && annotation.netId === route.netId,
-    );
-    return (
-      candidates.find(
-        (annotation) => annotation.id === `net-label-${route.id}`,
-      ) ??
-      candidates.find(
-        (annotation) =>
-          resolveNetLabelBinding(document, resolver, annotation)?.routeId ===
-          route.id,
-      )
-    );
-  }
-
-  function netLabelEditsForRoute(
-    route: SchematicDocument["routes"][number],
-    rawName: string,
-    presentation?: {
-      alignment: "start" | "middle" | "end";
-      sizeScale: number;
-      formatOverride?: RichTextDocument;
-    },
-  ): SchematicEdit[] | null {
-    const net = document.nets.find((candidate) => candidate.id === route.netId);
-    if (!net) return null;
-    const existingLabel = netLabelForRoute(route);
-    const name = rawName.trim();
-    if (!name) {
-      return existingLabel
-        ? [
-            {
-              kind: "remove_schematic_annotation",
-              annotationId: existingLabel.id,
-            },
-          ]
-        : null;
-    }
-    const labelId = existingLabel?.id ?? `net-label-${route.id}`;
-    const namedNetPlan = planEnsureNamedNet(document, {
-      candidateNetId: net.id,
-      name,
-      evidenceId:
-        document.connectivityEvidence.find(
-          (evidence) =>
-            evidence.kind === "name-claim" &&
-            evidence.owner.kind === "net-label" &&
-            evidence.owner.annotationId === labelId,
-        )?.id ??
-        deriveStableId(
-          "connectivity-evidence",
-          document.id,
-          "net-label",
-          net.id,
-          labelId,
-        ),
-      owner: { kind: "net-label", annotationId: labelId },
-    });
-    if (!namedNetPlan.ok) return null;
-    const targetNetId = namedNetPlan.netId;
-    const geometry = routeGeometryRecords.find(
-      ({ route: candidate }) => candidate.id === route.id,
-    )?.geometry;
-    if (!geometry) return null;
-    const segment = Math.max(
-      0,
-      Math.floor((geometry.centerline.length - 1) / 2),
-    );
-    const from = geometry.centerline[segment]!;
-    const to = geometry.centerline[segment + 1] ?? from;
-    const position = snapGridPoint(
-      (existingLabel
-        ? existingLabel.anchor.kind === "free"
-          ? existingLabel.anchor.position
-          : existingLabel.anchor.fallbackPosition
-        : undefined) ?? {
-        x: (from.x + to.x) / 2,
-        y: (from.y + to.y) / 2 - 8,
-      },
-      document.presentation.grid,
-    );
-    const previousAnchor =
-      existingLabel?.anchor.kind === "route" &&
-      existingLabel.anchor.routeId === route.id
-        ? existingLabel.anchor
-        : null;
-    const edits: SchematicEdit[] = [...namedNetPlan.edits];
-    edits.push({
-      kind: "upsert_schematic_annotation",
-      annotation: {
-        id: labelId,
-        kind: "net-label",
-        binding: { kind: "net-name", netId: targetNetId },
-        netId: targetNetId,
-        // A dragged route anchor survives a name edit; new labels start at
-        // the middle segment with the default normal offset.
-        anchor: previousAnchor
-          ? { ...previousAnchor, fallbackPosition: position }
-          : {
-              kind: "route",
-              routeId: route.id,
-              segmentIndex: segment,
-              t: 0.5,
-              normalOffset: -8,
-              direction: "forward",
-              orientation: "follow",
-              fallbackPosition: position,
-            },
-        alignment:
-          presentation?.alignment ?? existingLabel?.alignment ?? "middle",
-        rotation: 0,
-        locked: false,
-        ...(presentation?.sizeScale !== undefined
-          ? { sizeScale: presentation.sizeScale }
-          : existingLabel?.sizeScale !== undefined
-            ? { sizeScale: existingLabel.sizeScale }
-            : {}),
-        ...(presentation?.formatOverride
-          ? { formatOverride: presentation.formatOverride }
-          : {}),
-      },
-    });
-    return edits;
-  }
-
-  function netNameEditsForAnnotation(
-    annotation: Annotation,
-    rawName: string,
-    presentationAnnotation?: Annotation,
-  ): SchematicEdit[] | null | undefined {
-    const binding = annotation.binding;
-    if (binding?.kind !== "net-name" || annotation.anchor.kind !== "object") {
-      return undefined;
-    }
-    const ownerObjectId = annotation.anchor.objectId;
-    const instance = document.instances.find(
-      (candidate) => candidate.id === ownerObjectId,
-    );
-    const powerClaim = document.connectivityEvidence.find(
-      (
-        evidence,
-      ): evidence is Extract<ConnectivityEvidence, { kind: "name-claim" }> =>
-        evidence.kind === "name-claim" &&
-        evidence.owner.kind === "power-marker" &&
-        (evidence.owner.objectId === ownerObjectId ||
-          evidence.owner.objectId === annotation.id),
-    );
-    if (annotation.kind !== "power-label") return undefined;
-    const net = document.nets.find(
-      (candidate) => candidate.id === binding.netId,
-    );
-    if (!net) {
-      setStatus(`Net Label references missing Net ${binding.netId}`);
-      return null;
-    }
-    const name = rawName.trim();
-    const namedNetPlan = planEnsureNamedNet(document, {
-      candidateNetId: net.id,
-      name,
-      evidenceId:
-        powerClaim?.id ??
-        deriveStableId(
-          "connectivity-evidence",
-          document.id,
-          "power-marker",
-          net.id,
-          annotation.id,
-        ),
-      owner: {
-        kind: "power-marker",
-        objectId:
-          powerClaim?.owner.kind === "power-marker"
-            ? powerClaim.owner.objectId
-            : annotation.id,
-      },
-      ...(powerClaim
-        ? {
-            scope: powerClaim.scope,
-            ...(powerClaim.powerDomain
-              ? { powerDomain: powerClaim.powerDomain }
-              : {}),
-          }
-        : {}),
-    });
-    if (!namedNetPlan.ok) {
-      setStatus(namedNetPlan.message);
-      return null;
-    }
-    return [
-      ...namedNetPlan.edits,
-      ...(presentationAnnotation
-        ? [
-            {
-              kind: "upsert_schematic_annotation" as const,
-              annotation: presentationAnnotation,
-            },
-          ]
-        : []),
-    ];
-  }
-
-  function referenceLabelVisibilityEdits(
-    instanceIds: readonly string[],
-    visible: boolean,
-  ): SchematicEdit[] {
-    const edits: SchematicEdit[] = [];
-    for (const instanceId of instanceIds) {
-      const instance = document.instances.find(
-        (item) => item.id === instanceId,
-      );
-      if (!instance) continue;
-      const label = instanceLabelAnnotationFor(document, instanceId);
-      if (label) {
-        const { visible: _currentVisibility, ...rest } = label;
-        edits.push({
-          kind: "upsert_schematic_annotation",
-          annotation: visible ? rest : { ...rest, visible: false },
-        });
-      } else if (visible) {
-        const created = defaultInstanceLabel(
-          document,
-          instance,
-          resolver,
-          styleProfile,
-        );
-        if (created) {
-          edits.push({
-            kind: "upsert_schematic_annotation",
-            annotation: created,
-          });
-        }
-      }
-    }
-    return edits;
-  }
-
-  function valueVisibilityEdits(
-    source: SchematicDocument,
-    instanceIds: readonly string[],
-    visible: boolean,
-  ): SchematicEdit[] {
-    const edits: SchematicEdit[] = [];
-    for (const instanceId of instanceIds) {
-      const instance = source.instances.find((item) => item.id === instanceId);
-      if (!instance) continue;
-      const value = instanceValueAnnotation(source, instanceId);
-      if (value) {
-        const { visible: _currentVisibility, ...rest } = value;
-        if (visible) {
-          edits.push({
-            kind: "upsert_schematic_annotation",
-            annotation: rest,
-          });
-        } else {
-          edits.push({
-            kind: "upsert_schematic_annotation",
-            annotation: { ...rest, visible: false },
-          });
-        }
-      } else if (visible) {
-        const created = defaultInstanceValue(
-          source,
-          instance,
-          resolver,
-          styleProfile,
-        );
-        if (created) {
-          edits.push({
-            kind: "upsert_schematic_annotation",
-            annotation: created,
-          });
-        }
-      }
-    }
-    return edits;
-  }
-
-  function instancePropertyEdits(draft: {
-    instanceId: string | null;
-    parameters: Record<string, string>;
-    x: string;
-    y: string;
-    rotation: "0" | "90" | "180" | "270";
-  }): { edits: SchematicEdit[]; invalidPosition: boolean } {
-    if (!draft.instanceId) return { edits: [], invalidPosition: false };
-    const instance = document.instances.find(
-      (item) => item.id === draft.instanceId,
-    );
-    if (!instance) return { edits: [], invalidPosition: false };
-    const edits: SchematicEdit[] = [];
-    const baseNetlist =
-      instance.netlist ??
-      initialInstanceNetlist(document, instance.symbolId, {});
-    if (baseNetlist) {
-      const netlistParameters = { ...baseNetlist.parameters };
-      const set: Record<string, string> = {};
-      const unset: string[] = [];
-      for (const parameter of propertyParametersForInstance(instance)) {
-        const value = (draft.parameters[parameter.key] ?? "").trim();
-        const current = netlistParameters[parameter.key];
-        if (value === "") {
-          delete netlistParameters[parameter.key];
-          if (current !== undefined) unset.push(parameter.key);
-        } else {
-          netlistParameters[parameter.key] = value;
-          if (current !== value) set[parameter.key] = value;
-        }
-      }
-
-      const nextNetlist = {
-        ...baseNetlist,
-        parameters: netlistParameters,
-      };
-      if (!instance.netlist) {
-        edits.push({
-          kind: "set_instance_netlist",
-          instanceId: instance.id,
-          netlist: nextNetlist,
-        });
-      } else if (Object.keys(set).length > 0 || unset.length > 0) {
-        edits.push({
-          kind: "patch_instance_netlist_parameters",
-          instanceId: instance.id,
-          ...(Object.keys(set).length > 0 ? { set } : {}),
-          ...(unset.length > 0 ? { unset } : {}),
-        });
-      }
-    }
-
-    let invalidPosition = false;
-    if (instance.placement) {
-      const x = Number(draft.x);
-      const y = Number(draft.y);
-      if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        invalidPosition = true;
-      } else {
-        const position = {
-          x: snapCoordinate(x, document.presentation.grid),
-          y: snapCoordinate(y, document.presentation.grid),
-        };
-        if (
-          position.x !== instance.placement.position.x ||
-          position.y !== instance.placement.position.y
-        ) {
-          edits.push({
-            kind: "move_instance",
-            instanceId: instance.id,
-            position,
-          });
-        }
-      }
-      const rotation = Number(draft.rotation) as 0 | 90 | 180 | 270;
-      if (rotation !== instance.placement.rotation) {
-        edits.push({
-          kind: "rotate_instance",
-          instanceId: instance.id,
-          rotation,
-        });
-      }
-    }
-    return { edits, invalidPosition };
-  }
-
-  function updateSelectedModelTarget(value: string): void {
-    if (!selectedInstance?.netlist) return;
-    if (
-      selectedPropertyDevice?.symbolId === "nmos" ||
-      selectedPropertyDevice?.symbolId === "pmos"
-    ) {
-      try {
-        const edits = planSetMosModelTarget(
-          project,
-          document.id,
-          selectedInstance.id,
-          value,
-        );
-        if (edits.length === 0) return;
-        if (commitStructure("set-mos-model-target", edits)) {
-          const target = value.trim();
-          const mapping = target
-            ? resolvePdkSymbolMapping(target, 4)
-            : undefined;
-          setStatus(
-            mapping
-              ? `Set external X target ${target}`
-              : target
-                ? `Set model target ${target}`
-                : `Cleared model target for ${selectedInstance.id}`,
-          );
-        }
-      } catch (error) {
-        setStatus(
-          error instanceof Error
-            ? error.message
-            : "Could not set MOS model target",
-        );
-      }
-      return;
-    }
-    const binding = bindingForEditedModel(selectedInstance.symbolId, value);
-    const nextBinding = binding ?? null;
-    const currentBinding = selectedInstance.netlist.binding ?? null;
-    if (JSON.stringify(nextBinding) === JSON.stringify(currentBinding)) return;
-    if (
-      transact([
-        {
-          kind: "set_instance_binding",
-          instanceId: selectedInstance.id,
-          binding: nextBinding,
-        },
-      ]).ok
-    ) {
-      setStatus(
-        nextBinding?.kind === "model"
-          ? `Set model target ${nextBinding.name}`
-          : `Cleared model target for ${selectedInstance.id}`,
-      );
-    }
-  }
-
-  function propertyParametersForInstance(
-    instance: SchematicDocument["instances"][number],
-  ) {
-    const binding = instance.netlist?.binding;
-    if (binding?.kind === "external-subcircuit") {
-      const definition = project.externalSubcircuitDefinitions.find(
-        (candidate) => candidate.id === binding.definitionId,
-      );
-      const mapping = definition
-        ? resolvePdkSymbolMapping(definition.name, definition.terminals.length)
-        : undefined;
-      if (
-        definition &&
-        (mapping?.symbolId === "nmos" || mapping?.symbolId === "pmos") &&
-        definition.terminals.every(
-          (terminal, index) =>
-            terminal.name.toLowerCase() ===
-            mapping.pinNames[index]?.toLowerCase(),
-        )
-      ) {
-        return externalMosComponentParameters(mapping.symbolId);
-      }
-    }
-    return componentParameters(instance.symbolId);
-  }
-
-  function updateSelectedSchematicName(value: string): void {
-    if (!selectedInstance) return;
-    const content = defaultDraftTextDocument(value.trim());
-    if (
-      JSON.stringify(selectedInstance.schematicName ?? null) ===
-      JSON.stringify(content)
-    ) {
-      return;
-    }
-    if (
-      transact([
-        {
-          kind: "set_instance_schematic_name",
-          instanceId: selectedInstance.id,
-          content,
-        },
-      ]).ok
-    ) {
-      setStatus(`Renamed schematic label to ${value.trim()}`);
-    }
-  }
-
-  function updateSelectedReference(value: string): void {
-    if (!selectedInstance?.netlist) return;
-    const reference = value.trim();
-    if (!reference) {
-      setStatus("Netlist reference cannot be empty");
-      return;
-    }
-    if (reference === selectedInstance.netlist.reference) return;
-    if (
-      transact([
-        {
-          kind: "set_instance_reference",
-          instanceId: selectedInstance.id,
-          reference,
-        },
-      ]).ok
-    ) {
-      setStatus(`Set netlist reference to ${reference}`);
-    }
-  }
-
-  /*
-   * Text sessions use one persistence proposal for both annotation and
-   * drafting owners. The tagged target keeps their typed edit differences at
-   * the boundary rather than branching through the floating editor lifecycle.
-   */
-  function deleteSelectedAnnotation(): void {
-    if (!selectedAnnotation) return;
-    const result = transact([
-      {
-        kind: "remove_schematic_annotation",
-        annotationId: selectedAnnotation.id,
-      },
-    ]);
-    if (result.ok) replaceSelectionKind("annotation", []);
-  }
-
-  function reverseSelectedCurrentArrow(): void {
-    if (!selectedAnnotation || !isRoutedMarker(selectedAnnotation)) {
-      return;
-    }
-    const attachment = effectiveRouteAttachment(selectedAnnotation);
-    if (!attachment) return;
-    const direction: "forward" | "reverse" =
-      attachment.direction === "forward" ? "reverse" : "forward";
-    // A route-marker stores direction on its route VisualAnchor.
-    const anchor =
-      selectedAnnotation.kind === "route-marker" &&
-      selectedAnnotation.anchor.kind === "route"
-        ? { ...selectedAnnotation.anchor, direction }
-        : selectedAnnotation.anchor;
-    const result = transact([
-      {
-        kind: "upsert_schematic_annotation",
-        annotation: {
-          ...selectedAnnotation,
-          anchor,
-        },
-      },
-    ]);
-    if (result.ok) setStatus(`Current arrow points ${direction}`);
-  }
-
-  function alignSelectedInstances(): void {
-    if (selectedIds.length < 2) {
-      setStatus("Select at least two instances to align");
-      return;
-    }
-    const result = transact([
-      { kind: "align_instances", instanceIds: selectedIds, axis: "y" },
-    ]);
-    if (result.ok)
-      setStatus(`Aligned ${selectedIds.length} selected instances`);
-  }
-
-  function exportSvg(): void {
-    const source = createFormalExportSource(document, resolver, {
-      title: project.name,
-    });
-    download(source.svg, "image/svg+xml", "svg");
-    void reportExport(`Exported revision ${document.revision}`);
-  }
-
-  /**
-   * Settle the loose ends and shelve the circuit.
-   *
-   * This deliberately does not run the design-netlist analysis. That analysis
-   * answers "can this be emitted as SPICE?", which is a question about an
-   * export, not about a drawing — a schematic is allowed to be abbreviated
-   * and idealised. An ideal switch, an amplifier drawn as a triangle, a
-   * resistor with no value yet: none of those is a mistake, and calling them
-   * blocking issues on the way to saving would be the tool telling the author
-   * their drawing is wrong when it is not. The Check Report is still one
-   * click away under Netlist, and export still gates on it, which is where
-   * that question belongs.
-   *
-   * What it does settle is MOS bodies, because an unstated body is a loose
-   * end rather than a legitimate abbreviation, and the author asked for it.
-   */
-  async function checkAndSave(): Promise<void> {
-    const bulkPlan = planCheckBulkDefaults(document);
-    const settledBodies = bulkPlan.edits.length > 0;
-    if (settledBodies) transact([...bulkPlan.edits]);
-    const ambiguousSides = [
-      bulkPlan.ambiguous.nmos ? "NMOS" : null,
-      bulkPlan.ambiguous.pmos ? "PMOS" : null,
-    ].filter((side): side is string => side !== null);
-
-    const notes = [
-      settledBodies ? "bound the unwired MOS bodies" : null,
-      ambiguousSides.length > 0
-        ? `${ambiguousSides.join(" and ")} bodies need a supply chosen`
-        : null,
-    ].filter((note): note is string => note !== null);
-    const prefix = notes.length > 0 ? `${notes.join("; ")} — ` : "";
-
-    if (!publishSession) {
-      setStatus(`${prefix}sign in to keep a copy on your shelf`);
-      return;
-    }
-    const outcome = await saveToWorkspaceShelf(
-      editorDocumentController.project,
-    );
-    if (outcome.status === "saved") {
-      setWorkspaceSlots(outcome.slots);
-      setStatus(
-        `${prefix}saved "${editorDocumentController.project.name}" to your shelf`,
-      );
-      return;
-    }
-    setStatus(
-      outcome.status === "signed-out"
-        ? `${prefix}sign in again to keep a copy on your shelf`
-        : outcome.status === "too-large"
-          ? `${prefix}the circuit is too large for the shelf`
-          : `${prefix}the shelf could not be reached (${outcome.message})`,
-    );
-  }
-
-  function exportDesignNetlist(
-    format: NetlistFormat,
-    warningsReviewed = false,
-  ): void {
-    if (!netlistAnalysis.ir) {
-      setNetlistPreflightOpen(true);
-      setStatus("Resolve the Check Report findings before export");
-      return;
-    }
-    if (
-      (netlistAnalysis.diagnostics.length > 0 ||
-        electricalDiagnostics.length > 0) &&
-      !warningsReviewed
-    ) {
-      setNetlistPreflightOpen(true);
-      setStatus("Review the Check Report warnings before export");
-      return;
-    }
-    const artifact = printDesignNetlist(format, netlistAnalysis.ir);
-    download(artifact.text, artifact.mediaType, artifact.extension.slice(1));
-    void reportExport(
-      `Download requested: ${safeExportBaseName(project.name)}${artifact.extension}`,
-    );
-  }
-
-  async function exportRaster(format: "png" | "pdf"): Promise<void> {
-    setStatus(`Preparing ${format.toUpperCase()} export`);
-    try {
-      const { exportFormalArtifactsInBrowser, rasterizeFormalSvgInBrowser } =
-        await import("@icm/exporters/browser");
-      const source = createFormalExportSource(document, resolver, {
-        title: project.name,
-      });
-      if (format === "png") {
-        const png = await rasterizeFormalSvgInBrowser(source);
-        download(png.bytes as BlobPart, png.mediaType, "png");
-      } else {
-        const { pdf } = await exportFormalArtifactsInBrowser(source);
-        download(pdf as BlobPart, "application/pdf", "pdf");
-      }
-      await reportExport(
-        `Exported ${format.toUpperCase()} revision ${document.revision}`,
-      );
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Export failed");
-    }
-  }
-
-  async function importSpiceFiles(files: FileList | null): Promise<void> {
-    if (!files || files.length === 0) {
-      return;
-    }
-    const selectedFiles = [...files];
-    const sourceInputs = await Promise.all(
-      selectedFiles.map(async (file) => ({
-        path: file.webkitRelativePath || file.name,
-        bytes: new Uint8Array(await file.arrayBuffer()),
-      })),
-    );
-    const conventionalEntries = sourceInputs.filter((input) =>
-      /\.(?:cir|sp|spi)$/iu.test(input.path),
-    );
-    const namedCircuitEntries = conventionalEntries.filter(
-      (input) => input.path.split("/").at(-1)?.toLowerCase() === "circuit.spi",
-    );
-    const entryCandidates =
-      namedCircuitEntries.length === 1
-        ? namedCircuitEntries
-        : conventionalEntries;
-    if (entryCandidates.length !== 1) {
-      setStatus(
-        `Select one unambiguous .cir, .sp, or .spi entry and its local include files; found ${entryCandidates.length}`,
-      );
-      return;
-    }
-    setStatus("Importing SPICE sources");
-    try {
-      const result = await importSpiceSources(
-        sourceInputs,
-        entryCandidates[0]!.path,
-      );
-      const nextImportReport: SpiceImportReport = {
-        entryPath: entryCandidates[0]!.path,
-        diagnostics: result.diagnostics,
-      };
-      if (!result.project || !result.successful) {
-        setImportReport(nextImportReport);
-        setImportReviewOpen(true);
-        setSelectionOpen(true);
-        const firstError = result.diagnostics.find(
-          (item) => item.severity === "error",
-        );
-        setStatus(firstError?.message ?? "SPICE import failed");
-        return;
-      }
-      const instanceCount = result.project.documents.reduce(
-        (count, candidate) => count + candidate.instances.length,
-        0,
-      );
-      await guardDirtyReplacement("Import SPICE sources", () => {
-        replaceActiveProject(result.project!, DEFAULT_VIEWBOX, {
-          source: "spice-import",
-        });
-        setImportReport(nextImportReport);
-        setImportReviewOpen(true);
-        setSelectionOpen(true);
-        setStatus(
-          `Imported ${result.project!.documents.length} Documents and ${instanceCount} structural instances`,
-        );
-      });
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "SPICE import failed");
-    }
-  }
-
-  function fitView(): void {
-    setViewBox(
-      fitCameraToBounds(
-        contentScene?.viewBox ?? DEFAULT_VIEWBOX,
-        document.presentation.grid,
-      ),
-    );
-    setStatus("Fit Document");
-  }
-
-  function zoomViewAtCenter(factor: number): void {
-    setViewBox((current) =>
-      zoomCameraAtAnchor(current, factor, { x: 0.5, y: 0.5 }),
-    );
-  }
-
-  function handleWheel(event: React.WheelEvent<SVGSVGElement>): void {
-    // Ctrl/Command+wheel is a browser-reserved page-zoom gesture. The canvas
-    // owns an unmodified wheel gesture only while the pointer is over it, so
-    // schematic navigation stays useful without fighting the host browser.
-    if (event.ctrlKey || event.metaKey) return;
-    event.preventDefault();
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const anchor = {
-      x: (event.clientX - bounds.left) / bounds.width,
-      y: (event.clientY - bounds.top) / bounds.height,
-    };
-    const factor = event.deltaY < 0 ? 0.88 : 1.14;
-    setViewBox((current) => zoomCameraAtAnchor(current, factor, anchor));
-  }
-
-  function beginCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
-    if (getCurrentInteractionState().kind === "moving-selection") return;
-    if (event.button === 1) {
-      event.preventDefault();
-      event.currentTarget.setPointerCapture(event.pointerId);
-      setPanPreview({
-        clientStart: { x: event.clientX, y: event.clientY },
-        viewBoxStart: viewBox,
-        pointerId: event.pointerId,
-        dragged: false,
-      });
-      return;
-    }
-    // Frame-zoom entry: right-drag, or Alt+left-drag for environments whose
-    // system software (screenshot tools, mouse-driver gestures) hooks the
-    // right button before the browser can see the drag. Modes that commit on
-    // the next left click, and the drafting/wire tools whose right click
-    // cancels them, stay outside this gesture.
-    const frameZoomDrag =
-      event.button === 2 || (event.button === 0 && event.altKey);
-    if (frameZoomDrag) {
-      if (
-        (pendingSymbolId && pendingComponentPlacement) ||
-        vddRailMode ||
-        copyPlacement !== null ||
-        tool === "wire" ||
-        tool === "construction-line" ||
-        tool === "arrow" ||
-        tool === "rectangle"
-      ) {
-        return;
-      }
-      if (
-        event.target !== event.currentTarget &&
-        (event.target as Element).tagName !== "rect"
-      ) {
-        return;
-      }
-      const zoomStart = pointFromClient(
-        event.clientX,
-        event.clientY,
-        event.currentTarget,
-      );
-      event.currentTarget.setPointerCapture(event.pointerId);
-      setBoxPreview({
-        start: zoomStart,
-        end: zoomStart,
-        pointerId: event.pointerId,
-        intent: "zoom",
-      });
-      return;
-    }
-    if (event.button !== 0) return;
-    // Placement deliberately commits on the matching click below. Pointer-down
-    // must not start the normal selection/move gesture while that click is
-    // pending, regardless of which SVG child was hit.
-    if (
-      (pendingSymbolId && pendingComponentPlacement) ||
-      vddRailMode ||
-      copyPlacement !== null
-    )
-      return;
-    const point = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget,
-    );
-    if (
-      event.target !== event.currentTarget &&
-      (event.target as Element).tagName !== "rect"
-    )
-      return;
-    if (tool === "wire") return;
-    // Arrow / Construction line use a two-phase click model (mirroring wire):
-    // click to set the start, hover to preview, click to commit. They bypass the
-    // pointer-capture gesture trio here; creation lives in the SVG onClick and
-    // continueCanvasGesture hover handling.
-    if (
-      tool === "construction-line" ||
-      tool === "arrow" ||
-      tool === "rectangle"
-    )
-      return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setBoxPreview({
-      start: point,
-      end: point,
-      pointerId: event.pointerId,
-      intent: "select",
-    });
-  }
-
-  function continueCanvasGesture(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ): void {
-    const currentInteraction = getCurrentInteractionState();
-    if (currentInteraction.kind === "moving-selection") {
-      updateCommandMovePreviewFromSelection(
-        pointFromClient(event.clientX, event.clientY, event.currentTarget),
-        { x: event.clientX, y: event.clientY },
-        event.currentTarget,
-        event.altKey,
-      );
-      return;
-    }
-    if (panPreview?.pointerId === event.pointerId) {
-      const bounds = event.currentTarget.getBoundingClientRect();
-      const dx =
-        ((event.clientX - panPreview.clientStart.x) / bounds.width) *
-        panPreview.viewBoxStart.width;
-      const dy =
-        ((event.clientY - panPreview.clientStart.y) / bounds.height) *
-        panPreview.viewBoxStart.height;
-      const moved =
-        Math.hypot(
-          event.clientX - panPreview.clientStart.x,
-          event.clientY - panPreview.clientStart.y,
-        ) >= PAN_START_DISTANCE_PX;
-      // A middle press stays a click until it travels far enough to be a pan.
-      // Panning on sub-threshold jitter nudged the canvas under an ordinary
-      // click, so the press is ignored until the gesture commits to a drag.
-      if (!moved && !panPreview.dragged) return;
-      if (moved && !panPreview.dragged)
-        setPanPreview({ ...panPreview, dragged: true });
-      setViewBox({
-        ...panPreview.viewBoxStart,
-        x: Math.round(panPreview.viewBoxStart.x - dx),
-        y: Math.round(panPreview.viewBoxStart.y - dy),
-      });
-      return;
-    }
-    const point = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget,
-    );
-    lastCanvasPointRef.current = point;
-    if (vddRailMode) {
-      const snapped = {
-        x: snapCoordinate(point.x, document.presentation.grid),
-        y: snapCoordinate(point.y, document.presentation.grid),
-      };
-      setVddRailPreviewPoint(
-        vddRailStart
-          ? constrainedPowerRailEndpoint(vddRailStart, snapped)
-          : snapped,
-      );
-      return;
-    }
-    if (pendingSymbolId) {
-      setComponentPreviewPoint(point);
-      return;
-    }
-    if (currentInteraction.kind === "copy-placement") {
-      setCopyPreviewPoint({
-        x: snapCoordinate(point.x, document.presentation.grid),
-        y: snapCoordinate(point.y, document.presentation.grid),
-      });
-      return;
-    }
-    if (boxPreview?.pointerId === event.pointerId) {
-      setBoxPreview({ ...boxPreview, end: point });
-    }
-    // Two-phase drafting: keep the preview anchored to the snap-aware hover point.
-    if (
-      (tool === "arrow" ||
-        tool === "construction-line" ||
-        tool === "rectangle") &&
-      draftingSource !== null
-    ) {
-      const snapped = snapDraftingPoint(
-        point,
-        event.altKey,
-        event.shiftKey,
-        draftingSource ?? undefined,
-        logicalRadiusForPixels(event.currentTarget, SNAP_CAPTURE_RADIUS_PX),
-      );
-      setDraftingHover(snapped.point);
-      setDraftingSnapPoint(snapped.snap);
-      paintSnapGuides(snapped.guides);
-    }
-    if (tool === "wire" && wireSource) {
-      const rawPoint = pointFromClient(
-        event.clientX,
-        event.clientY,
-        event.currentTarget,
-        false,
-      );
-      const resolved = resolveWireCanvasSnap(
-        rawPoint,
-        event.currentTarget,
-        event.altKey,
-      );
-      setWirePreviewPoint(resolved.point);
-      paintSnapGuides(resolved.guides);
-    }
-  }
-
-  function finishCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
-    if (
-      event.type === "pointercancel" &&
-      cellSymbolLayoutDrag?.pointerId === event.pointerId
-    ) {
-      setCellSymbolLayoutDrag(null);
-      return;
-    }
-    if (completeCellSymbolLayoutDrag(event)) return;
-    if (panPreview?.pointerId === event.pointerId) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-      if (!panPreview.dragged && getCurrentInteractionState().kind === "wire") {
-        cycleWireCornerShape();
-      }
-      setPanPreview(null);
-      return;
-    }
-    if (boxPreview?.pointerId !== event.pointerId) return;
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    if (boxPreview.intent === "zoom") {
-      const rect = normalizedRect(boxPreview.start, boxPreview.end);
-      setBoxPreview(null);
-      // A right press barely moved is an ordinary right click, not a frame.
-      if (
-        rect.width > document.presentation.grid &&
-        rect.height > document.presentation.grid
-      ) {
-        setViewBox(fitCameraToBounds(rect, document.presentation.grid));
-        setStatus("Zoomed to framed region");
-      }
-      return;
-    }
-    const rect = normalizedRect(boxPreview.start, boxPreview.end);
-    const clicked =
-      rect.width <= document.presentation.grid &&
-      rect.height <= document.presentation.grid;
-    // Classic directional marquee: a left-to-right drag is a window (full
-    // containment required), a right-to-left drag is a crossing (any overlap
-    // selects). Geometry alone decides membership.
-    const selection = clicked
-      ? { instanceIds: [], ...EMPTY_SUPPLEMENTAL_SELECTION }
-      : marqueeSelection(
-          document,
-          resolver,
-          routeGeometryRecords,
-          styleProfile,
-          rect,
-          marqueeMode(boxPreview.start, boxPreview.end),
-        );
-    replaceSelection(selection);
-    setSelectedEndpoint(null);
-    setBoxPreview(null);
-    const count =
-      selection.instanceIds.length +
-      selection.routeIds.length +
-      selection.junctionIds.length +
-      selection.annotationIds.length +
-      selection.draftingIds.length;
-    setStatus(count > 0 ? `Selected ${count} objects` : "Selection cleared");
-  }
-
   // Drafting uses the shared Snap Engine. It may align visually to electrical
   // geometry, but this profile never creates a Net or junction.
   // closest point on any route segment, or any existing drafting vertex — within
   // DRAFTING_SNAP_RADIUS — wins; grid snap is the fallback. Shift locks the
   // resulting segment from the origin to horizontal/vertical/45°. Purely visual
   // — never creates a Net, junction, or short.
-  function snapDraftingPoint(
-    point: DerivedPoint,
-    altKey: boolean,
-    shiftKey: boolean,
-    origin?: Point,
-    tolerance = document.presentation.grid,
-  ): { point: Point; snap: Point | null; guides: SnapGuideLine[] } {
-    if (altKey) {
-      const constrained =
-        shiftKey && origin ? constrainAngle(origin, point) : point;
-      return {
-        point: snapGridPoint(constrained, document.presentation.grid),
-        snap: null,
-        guides: [],
-      };
-    }
-    const routeTargets = routeGeometryRecords.flatMap(({ route, geometry }) =>
-      geometry.centerline.slice(0, -1).map((from, segmentIndex) => ({
-        id: `route:${route.id}:${segmentIndex}`,
-        point: closestPointOnSegment(
-          point,
-          from,
-          geometry.centerline[segmentIndex + 1]!,
-        ),
-        kind: "route" as const,
-      })),
-    );
-    const resolved = resolvePointSnap(
-      point,
-      [
-        ...buildSceneSnapTargets(document, resolver, visibleEndpoints),
-        ...routeTargets,
-      ],
-      {
-        grid: document.presentation.grid,
-        tolerance,
-        profile: SNAP_PROFILES.draftingHandle,
-      },
-    );
-    let snapped: DerivedPoint = {
-      x: point.x + resolved.delta.x,
-      y: point.y + resolved.delta.y,
-    };
-    const hasObjectSnap =
-      (resolved.xMatch && resolved.xMatch.targetKind !== "grid") ||
-      (resolved.yMatch && resolved.yMatch.targetKind !== "grid");
-    // Closest point on each route segment (visual snap to conductors; no
-    // electrical effect — drafting never joins a Net by proximity).
-    if (shiftKey && origin) {
-      snapped = constrainAngle(origin, snapped);
-    }
-    return {
-      point: snapGridPoint(snapped, document.presentation.grid),
-      snap: hasObjectSnap
-        ? snapGridPoint(snapped, document.presentation.grid)
-        : null,
-      guides: resolved.guides,
-    };
-  }
-
-  function constrainAngle(origin: Point, target: DerivedPoint): DerivedPoint {
-    const dx = target.x - origin.x;
-    const dy = target.y - origin.y;
-    const angle = Math.atan2(dy, dx);
-    const step = Math.PI / 4; // 45° increments
-    const locked = Math.round(angle / step) * step;
-    const length = Math.hypot(dx, dy);
-    return {
-      x: Math.round(origin.x + Math.cos(locked) * length),
-      y: Math.round(origin.y + Math.sin(locked) * length),
-    };
-  }
-
-  // Handle a canvas click while the Arrow / Construction line tool is active.
-  // Mirrors the wire tool's click model: first click fixes the start (and a snap
-  // candidate), hover updates the preview, the next click commits. Construction
-  // lines append a vertex per intermediate click; arrows commit on click #2.
-  function handleDraftingCanvasClick(
-    rawPoint: Point,
-    altKey: boolean,
-    shiftKey: boolean,
-    tolerance: number,
-  ): void {
-    if (
-      tool !== "arrow" &&
-      tool !== "construction-line" &&
-      tool !== "rectangle"
-    )
-      return;
-    const { point, snap } = snapDraftingPoint(
-      rawPoint,
-      altKey,
-      shiftKey,
-      draftingSource ?? undefined,
-      tolerance,
-    );
-    if (draftingSource === null) {
-      setDraftingSource(point);
-      setDraftingHover(point);
-      setDraftingSnapPoint(snap);
-      setDraftingWaypoints([]);
-      setStatus(
-        tool === "arrow"
-          ? "Arrow: click the end point (Enter to finish, Esc to cancel)"
-          : tool === "rectangle"
-            ? "Rectangle: click the opposite corner (Esc to cancel)"
-            : "Construction line: click next vertex (Enter to finish, Esc to cancel)",
-      );
-      return;
-    }
-    if (tool === "arrow" || tool === "rectangle") {
-      commitDraftingCreate(tool, draftingSource, point);
-      clearDraftingCreate();
-      return;
-    }
-    // construction-line: each click appends a vertex; commit happens on Enter
-    // or double-click (finishDraftingCreate).
-    setDraftingWaypoints((current) => [...current, point]);
-    setDraftingHover(point);
-    setDraftingSnapPoint(snap);
-    setStatus(`Construction line: ${draftingWaypoints.length + 1} bend(s)`);
-  }
-
-  // Finish construction-line creation from the accumulated waypoints + hover,
-  // or finish an arrow from its source + hover. One transaction.
-  function finishDraftingCreate(): void {
-    if (
-      tool !== "arrow" &&
-      tool !== "construction-line" &&
-      tool !== "rectangle"
-    )
-      return;
-    if (draftingSource === null) return;
-    const end = draftingHover ?? draftingSource;
-    if (tool === "arrow" || tool === "rectangle") {
-      if (draftingSource.x !== end.x || draftingSource.y !== end.y) {
-        commitDraftingCreate(tool, draftingSource, end);
-      }
-    } else {
-      const points = [draftingSource, ...draftingWaypoints];
-      if (
-        end.x !== points[points.length - 1]!.x ||
-        end.y !== points[points.length - 1]!.y
-      ) {
-        points.push(end);
-      }
-      if (points.length >= 2) {
-        commitDraftingCreateVertices(points);
-      }
-    }
-    clearDraftingCreate();
-  }
-
-  // P1: commit a drafting object at the final end point.
-  function commitDraftingCreate(
-    activeTool: EditorTool,
-    start: Point,
-    end: Point,
-  ): void {
-    uniqueSuffixCounter.current += 1;
-    const snappedStart = snapGridPoint(start, document.presentation.grid);
-    const snappedEnd = snapGridPoint(end, document.presentation.grid);
-    if (activeTool === "construction-line") {
-      const id = `construction-${uniqueSuffixCounter.current}`;
-      const result = transact([
-        {
-          kind: "upsert_drafting_object",
-          object: {
-            id,
-            kind: "construction-line",
-            locked: false,
-            zIndex: 0,
-            anchor: { kind: "free", position: snappedStart },
-            points: [snappedStart, snappedEnd],
-            lineStyle: "dashed",
-          },
-        },
-      ]);
-      if (result.ok) setStatus(`Added construction line ${id}`);
-    } else if (activeTool === "arrow") {
-      const id = `arrow-${uniqueSuffixCounter.current}`;
-      const result = transact([
-        {
-          kind: "upsert_drafting_object",
-          object: {
-            id,
-            kind: "arrow",
-            locked: false,
-            zIndex: 0,
-            anchor: { kind: "free", position: snappedStart },
-            from: {
-              kind: "free",
-              position: snappedStart,
-            },
-            to: {
-              kind: "free",
-              position: snappedEnd,
-            },
-          },
-        },
-      ]);
-      if (result.ok) setStatus(`Added free arrow ${id}`);
-    } else if (activeTool === "rectangle") {
-      const width = Math.round(Math.abs(snappedEnd.x - snappedStart.x));
-      const height = Math.round(Math.abs(snappedEnd.y - snappedStart.y));
-      if (width < 1 || height < 1) {
-        setStatus("Rectangle needs non-zero width and height");
-        return;
-      }
-      const id = `rectangle-${uniqueSuffixCounter.current}`;
-      const center = snapGridPoint(
-        {
-          x: Math.round((snappedStart.x + snappedEnd.x) / 2),
-          y: Math.round((snappedStart.y + snappedEnd.y) / 2),
-        },
-        document.presentation.grid,
-      );
-      const result = transact([
-        {
-          kind: "upsert_drafting_object",
-          object: {
-            id,
-            kind: "rectangle",
-            locked: false,
-            zIndex: 0,
-            anchor: { kind: "free", position: center },
-            center,
-            width,
-            height,
-            rotation: 0,
-            lineStyle: "solid",
-          },
-        },
-      ]);
-      if (result.ok) setStatus(`Added rectangle ${id}`);
-    }
-    setTool("pointer");
-  }
-
-  // Commit a multi-vertex construction line from the two-phase click model.
-  function commitDraftingCreateVertices(points: Point[]): void {
-    if (points.length < 2) return;
-    uniqueSuffixCounter.current += 1;
-    const id = `construction-${uniqueSuffixCounter.current}`;
-    const snappedPoints = points.map((point) =>
-      snapGridPoint(point, document.presentation.grid),
-    );
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: {
-          id,
-          kind: "construction-line",
-          locked: false,
-          zIndex: 0,
-          anchor: { kind: "free", position: snappedPoints[0]! },
-          points: snappedPoints,
-          lineStyle: "dashed",
-        },
-      },
-    ]);
-    if (result.ok) {
-      setStatus(`Added construction line ${id}`);
-      setTool("pointer");
-    }
-  }
-
   function disconnectSelectedEndpoint(removeRoutes: boolean): void {
     if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
       return;
@@ -7243,717 +2976,514 @@ export function App({
     );
   }
 
+  const canvasEventHandlers = createEditorCanvasEventHandlers({
+    tool,
+    document,
+    resolver,
+    interactionKind: () => getCurrentInteractionState().kind,
+    pendingSymbolId,
+    pendingComponentPlacement: Boolean(pendingComponentPlacement),
+    vddRailMode,
+    copyPlacementActive: copyPlacement !== null,
+    cellSymbolLayoutEnabled,
+    selectedDrafting,
+    wireSource,
+    wireDraftStepCount: wireDraftSteps.length,
+    draftingSourceActive: draftingSource !== null,
+    pointFromClient,
+    snapPlacementPoint: (point) => ({
+      x: snapCoordinate(point.x, document.presentation.grid),
+      y: snapCoordinate(point.y, document.presentation.grid),
+    }),
+    commitCommandMove: commitCommandMoveFromSelection,
+    commitCopyPlacement: commitCopyPlacementFromSelection,
+    commitPendingPlacement: commitPendingPlacementAtFromHook,
+    exitCellSymbolLayout,
+    clearDraftingSelection: () => replaceSelectionKind("drafting", []),
+    handleCanvasHitPointerDown,
+    beginCanvasGesture,
+    continueCanvasGesture,
+    finishCanvasGesture,
+    clearComponentPreview: () => setComponentPreviewPoint(null),
+    clearVddRailPreview: () => setVddRailPreviewPoint(null),
+    clearCopyPreview: () => setCopyPreviewPoint(null),
+    handleDraftingCanvasClick,
+    logicalRadiusForPixels,
+    snapCaptureRadiusPixels: SNAP_CAPTURE_RADIUS_PX,
+    applyWireCanvasPoint,
+    beginAnnotationTextEditing,
+    cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
+    beginDraftingTextEditing,
+    nextRectangleLabelId: () => {
+      uniqueSuffixCounter.current += 1;
+      return `note-${uniqueSuffixCounter.current}`;
+    },
+    upsertDraftingObject: (object) =>
+      transact([{ kind: "upsert_drafting_object", object }]).ok,
+    finishDraftingCreate,
+    resolveWireCanvasSnap,
+    completeWire,
+    cancelDraftingCreate: clearDraftingCreate,
+    cancelWire: () => {
+      setWireSource(null, null);
+      setWirePreviewPoint(null);
+      setWireDraftSteps([]);
+      setTool("pointer");
+      setBulkDrawInstanceId(null);
+      setStatus("Wire cancelled");
+    },
+    setStatus,
+    onWheel: handleWheel,
+    onDrop: handleDrop,
+  });
+
   return (
     <main className="app-shell">
       {renderCrashRequested() ? <RenderCrashProbe /> : null}
-      <header className="app-chrome">
-        <div className="app-chrome-main">
-          <div className="app-brand">
-            <a
-              className="gallery-home-link"
-              href="/"
-              aria-label="Back to the gallery"
-              title="Back to the gallery"
-            >
-              <span className="app-brand-mark" aria-hidden="true" />
-              <h1 title="Analog Canvas">Analog Canvas</h1>
-            </a>
-            <div className="app-brand-copy">
-              <p title={`${project.name} / ${document.name}`}>
-                {/* The circuit's name is what a published entry and a saved
-                    file are called, so it is edited where it is read. */}
-                <input
-                  className="app-project-name"
-                  aria-label="Circuit name"
-                  data-testid="project-name-input"
-                  value={projectNameDraft ?? project.name}
-                  size={Math.max((projectNameDraft ?? project.name).length, 6)}
-                  onChange={(event) =>
-                    setProjectNameDraft(event.currentTarget.value)
+      <EditorAppChrome
+        projectName={project.name}
+        projectNameDraft={projectNameDraft}
+        documentName={document.name}
+        onProjectNameDraftChange={setProjectNameDraft}
+        onProjectNameCommit={commitProjectName}
+        onProjectNameCancel={() => setProjectNameDraft(null)}
+        fileCommands={{
+          workspaceSlots,
+          previousProjectName: previousProject?.project.name ?? null,
+          canRevert: formalProjectBaseline !== null && isDirtyWork(),
+          hasRecoverySessions: recoverySessions.length > 0,
+          projectInputRef,
+          onNewProject: createNewProject,
+          onSaveProject: (pickLocation) =>
+            void saveProjectFile({ pickLocation }),
+          onOpenShelfSlot: (slot) => void openShelvedCircuit(slot),
+          onRefresh: refreshApp,
+          onOpenProject: (file) => void openProjectFile(file),
+          onImportSpice: (files) => void importSpiceFiles(files),
+          onExportSvg: exportSvg,
+          onExportRaster: (format) => void exportRaster(format),
+          onExportNetlist: exportDesignNetlist,
+          onRestorePrevious: restorePreviousProject,
+          onRevert: revertToFormalProjectBaseline,
+          onOpenRecovery: openRecoveryDialog,
+        }}
+        searchOpen={searchOpen}
+        onManageCells={() => setCellManagerOpen(true)}
+        onOpenSearch={() => setSearchOpen(true)}
+        undo={{
+          enabled: editorCommands.state({ id: "history.undo" }).enabled,
+          execute: () => editorCommands.execute({ id: "history.undo" }),
+        }}
+        redo={{
+          enabled: editorCommands.state({ id: "history.redo" }).enabled,
+          execute: () => editorCommands.execute({ id: "history.redo" }),
+        }}
+        deleteSelection={{
+          enabled:
+            hasVisualSelection(visualSelection) || selectedEndpoint !== null,
+          execute: () => editorCommands.execute({ id: "selection.delete" }),
+        }}
+        resets={[
+          {
+            label: "Clear Drawing",
+            enabled: clearDrawingPlan.edits.length > 0,
+            execute: () => commitCellReset(clearDrawingPlan, "Clear Drawing"),
+          },
+          {
+            label: "Reset Cell Placement",
+            enabled: resetPlacementPlan.edits.length > 0,
+            execute: () =>
+              commitCellReset(resetPlacementPlan, "Reset Cell Placement"),
+          },
+          {
+            label: "Reset Cell Body",
+            enabled: resetBodyPlan.edits.length > 0,
+            execute: () => commitCellReset(resetBodyPlan, "Reset Cell Body"),
+          },
+        ]}
+        rotate={{
+          enabled: editorCommands.state({ id: "transform.rotate" }).enabled,
+          execute: () => editorCommands.execute({ id: "transform.rotate" }),
+        }}
+        mirrorLeftRight={{
+          enabled: editorCommands.state({
+            id: "transform.mirror",
+            direction: "left-right",
+          }).enabled,
+          execute: () =>
+            editorCommands.execute({
+              id: "transform.mirror",
+              direction: "left-right",
+            }),
+        }}
+        mirrorTopBottom={{
+          enabled: editorCommands.state({
+            id: "transform.mirror",
+            direction: "top-bottom",
+          }).enabled,
+          execute: () =>
+            editorCommands.execute({
+              id: "transform.mirror",
+              direction: "top-bottom",
+            }),
+        }}
+        onAlign={selectedIds.length > 1 ? alignSelectedInstances : null}
+        instanceTableOpen={instanceTableOpen}
+        netlistPreflightOpen={netlistPreflightOpen}
+        onOpenInstanceTable={() => setInstanceTableOpen(true)}
+        onOpenNetlistPreflight={() => setNetlistPreflightOpen(true)}
+        agentAction={
+          publicAgentUiEnabled
+            ? {
+                label:
+                  agentSession.status === "idle"
+                    ? "Connect Agent"
+                    : "Manage Agent",
+                execute: () => {
+                  if (agentSession.status === "idle") {
+                    setAgentPanelOpen(true);
+                    return;
                   }
-                  onBlur={() => commitProjectName()}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") event.currentTarget.blur();
-                    if (event.key === "Escape") setProjectNameDraft(null);
-                  }}
-                />{" "}
-                /{" "}
-                <span data-testid="active-document-name">{document.name}</span>
-              </p>
-            </div>
-          </div>
-          <nav
-            className="app-command-surface"
-            aria-label="Editor commands"
-            onClick={(event) => {
-              const target = event.target;
-              if (
-                target instanceof Element &&
-                target.closest(".command-popover button")
-              ) {
-                dismissOpenCommandMenus();
+                  setSelectionOpen(true);
+                  setAgentDetailsOpen(true);
+                },
               }
-            }}
-          >
-            <div className="menubar-row">
-              <FileCommandMenu
-                workspaceSlots={workspaceSlots}
-                previousProjectName={previousProject?.project.name ?? null}
-                canRevert={formalProjectBaseline !== null && isDirtyWork()}
-                hasRecoverySessions={recoverySessions.length > 0}
-                projectInputRef={projectInputRef}
-                onNewProject={createNewProject}
-                onSaveProject={(pickLocation) =>
-                  void saveProjectFile({ pickLocation })
-                }
-                onOpenShelfSlot={(slot) => void openShelvedCircuit(slot)}
-                onRefresh={refreshApp}
-                onOpenProject={(file) => void openProjectFile(file)}
-                onImportSpice={(files) => void importSpiceFiles(files)}
-                onExportSvg={exportSvg}
-                onExportRaster={(format) => void exportRaster(format)}
-                onExportNetlist={exportDesignNetlist}
-                onRestorePrevious={restorePreviousProject}
-                onRevert={revertToFormalProjectBaseline}
-                onOpenRecovery={openRecoveryDialog}
-              />
-              <details className="command-menu" name="editor-command-menu">
-                <summary>Edit</summary>
-                <div className="command-popover">
-                  <button
-                    type="button"
-                    data-testid="edit-manage-cells"
-                    onClick={() => setCellManagerOpen(true)}
-                  >
-                    Manage Cells…
-                  </button>
-                  <button
-                    type="button"
-                    data-testid="project-search-button"
-                    aria-haspopup="dialog"
-                    aria-expanded={searchOpen}
-                    onClick={() => setSearchOpen(true)}
-                  >
-                    Search…
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({ id: "history.undo" })
-                    }
-                    disabled={
-                      !editorCommands.state({ id: "history.undo" }).enabled
-                    }
-                  >
-                    Undo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({ id: "history.redo" })
-                    }
-                    disabled={
-                      !editorCommands.state({ id: "history.redo" }).enabled
-                    }
-                  >
-                    Redo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({ id: "selection.delete" })
-                    }
-                    disabled={
-                      !hasVisualSelection(visualSelection) && !selectedEndpoint
-                    }
-                  >
-                    Delete
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      commitCellReset(clearDrawingPlan, "Clear Drawing")
-                    }
-                    disabled={clearDrawingPlan.edits.length === 0}
-                  >
-                    Clear Drawing
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      commitCellReset(
-                        resetPlacementPlan,
-                        "Reset Cell Placement",
-                      )
-                    }
-                    disabled={resetPlacementPlan.edits.length === 0}
-                  >
-                    Reset Cell Placement
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      commitCellReset(resetBodyPlan, "Reset Cell Body")
-                    }
-                    disabled={resetBodyPlan.edits.length === 0}
-                  >
-                    Reset Cell Body
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({ id: "transform.rotate" })
-                    }
-                    disabled={
-                      !editorCommands.state({ id: "transform.rotate" }).enabled
-                    }
-                  >
-                    <ToolIcon name="rotate" />
-                    Rotate
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({
-                        id: "transform.mirror",
-                        direction: "left-right",
-                      })
-                    }
-                    disabled={
-                      !editorCommands.state({
-                        id: "transform.mirror",
-                        direction: "left-right",
-                      }).enabled
-                    }
-                  >
-                    Mirror left/right (Shift+R)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      editorCommands.execute({
-                        id: "transform.mirror",
-                        direction: "top-bottom",
-                      })
-                    }
-                    disabled={
-                      !editorCommands.state({
-                        id: "transform.mirror",
-                        direction: "top-bottom",
-                      }).enabled
-                    }
-                  >
-                    Mirror top/bottom (Ctrl+R)
-                  </button>
-                  {selectedIds.length > 1 ? (
-                    <button type="button" onClick={alignSelectedInstances}>
-                      Align
-                    </button>
-                  ) : null}
-                </div>
-              </details>
-              <details className="command-menu" name="editor-command-menu">
-                <summary>Netlist</summary>
-                <div className="command-popover">
-                  <span className="command-group-label">Authoring</span>
-                  <button
-                    type="button"
-                    aria-haspopup="dialog"
-                    aria-expanded={instanceTableOpen}
-                    onClick={() => setInstanceTableOpen(true)}
-                  >
-                    Instance Table…
-                  </button>
-                  <span className="command-group-label">Check</span>
-                  <button
-                    type="button"
-                    aria-haspopup="dialog"
-                    aria-expanded={netlistPreflightOpen}
-                    onClick={() => setNetlistPreflightOpen(true)}
-                  >
-                    Check Report…
-                  </button>
-                </div>
-              </details>
-              {publicAgentUiEnabled ? (
-                <details className="command-menu" name="editor-command-menu">
-                  <summary>Agent</summary>
-                  <div className="command-popover">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (agentSession.status === "idle") {
-                          setAgentPanelOpen(true);
-                          return;
-                        }
-                        setSelectionOpen(true);
-                        setAgentDetailsOpen(true);
-                      }}
-                    >
-                      {agentSession.status === "idle"
-                        ? "Connect Agent"
-                        : "Manage Agent"}
-                    </button>
-                  </div>
-                </details>
-              ) : null}
-              <button
-                type="button"
-                className="toolbar-check-save"
-                data-testid="check-and-save-button"
-                title="Check the circuit and save it to your shelf"
-                onClick={() => void checkAndSave()}
-              >
-                <span className="toolbar-check-glyph" aria-hidden="true" />
-                Check and Save
-              </button>
-              <button
-                type="button"
-                data-testid="publish-gallery-button"
-                aria-haspopup="dialog"
-                aria-expanded={publishGalleryOpen}
-                title="Publish to Gallery"
-                onClick={() => setPublishGalleryOpen(true)}
-              >
-                Publish to Gallery
-              </button>
-            </div>
-          </nav>
-          <div className="app-chrome-actions">
-            <a
-              className="analytics-link"
-              href="/analytics"
-              aria-label="Open visitor analytics"
-            >
-              {visitStats ? (
-                <>
-                  <span>{visitStats.uv.toLocaleString()} visitors</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{visitStats.pv.toLocaleString()} views</span>
-                </>
-              ) : (
-                "Analytics"
-              )}
-            </a>
-            <button
-              type="button"
-              className="menubar-help"
-              ref={helpButtonRef}
-              aria-haspopup="dialog"
-              aria-expanded={helpOpen}
-              aria-controls="editor-help-dialog"
-              onClick={() => setHelpOpen(true)}
-            >
-              Help
-            </button>
-          </div>
-        </div>
-        <DrawingToolbar
-          leftPanelMode={leftPanelMode}
-          libraryPanelOpen={visibleLibraryPanelOpen}
-          tool={tool}
-          documentSettingsOpen={documentSettingsOpen}
-          onToggleExamples={toggleExamplesPanel}
-          onToggleLibrary={toggleLibraryPanel}
-          onInsert={() =>
+            : null
+        }
+        onCheckAndSave={() => void checkAndSave()}
+        publishGalleryOpen={publishGalleryOpen}
+        onPublishGallery={() => setPublishGalleryOpen(true)}
+        visitStats={visitStats}
+        helpButtonRef={helpButtonRef}
+        helpOpen={helpOpen}
+        onOpenHelp={() => setHelpOpen(true)}
+        drawingToolbar={{
+          leftPanelMode,
+          libraryPanelOpen: visibleLibraryPanelOpen,
+          tool,
+          documentSettingsOpen,
+          onToggleExamples: toggleExamplesPanel,
+          onToggleLibrary: toggleLibraryPanel,
+          onInsert: () =>
             editorCommands.execute({
               id: "insert.start",
               launch: fullInsertLaunch(),
-            })
-          }
-          onActivateTool={(nextTool) =>
-            editorCommands.execute({ id: "tool.activate", tool: nextTool })
-          }
-          onAddText={() => editorCommands.execute({ id: "drafting.add-text" })}
-          onOpenDocumentSettings={() => {
+            }),
+          onActivateTool: (nextTool) =>
+            editorCommands.execute({
+              id: "tool.activate",
+              tool: nextTool,
+            }),
+          onAddText: () => editorCommands.execute({ id: "drafting.add-text" }),
+          onOpenDocumentSettings: () => {
             setDocumentSettingsOpen((open) => !open);
             setSelectionOpen(true);
-          }}
-        />
-        <HierarchyToolbar
-          documents={project.documents}
-          activeDocumentId={document.id}
-          topDocumentId={project.topDocumentId}
-          navigationDepth={documentStack.length}
-          canEnter={hasHierarchyEnterSelection}
-          onUp={returnToParentDocument}
-          onTop={returnToTopDocument}
-          onSelectDocument={selectDocumentFromHierarchy}
-          onEnter={enterSelectedHierarchy}
-          onManageCells={() => setCellManagerOpen(true)}
-          onPlaceCell={placeCellInstance}
-        />
-        <div data-testid="editor-test-telemetry" hidden>
-          <output data-testid="selected-internal-route-count">
-            {internalSelection.routeIds.length}
-          </output>
-          <output data-testid="revision">{document.revision}</output>
-          <output data-testid="source-status">{document.sourceStatus}</output>
-          <output data-testid="document-count">
-            {project.documents.length}
-          </output>
-          <output data-testid="active-document-id">{document.id}</output>
-          <output data-testid="active-instance-count">
-            {document.instances.length}
-          </output>
-          <output data-testid="instance-count">{projectInstanceCount}</output>
-          <output data-testid="net-count">{document.nets.length}</output>
-          <output data-testid="active-tool">{tool}</output>
-          <output data-testid="flightline-count">{flightlines.length}</output>
-          <output data-testid="displayed-flightline-count">
-            {displayedFlightlines.length}
-          </output>
-          <output data-testid="crossing-count">{crossings.length}</output>
-          <output data-testid="annotation-count">
-            {document.annotations.length}
-          </output>
-          <output data-testid="structural-diagnostic-count">
-            {visualDiagnosticSummary.structural.length}
-          </output>
-          <output data-testid="visual-diagnostic-count">
-            {visualDiagnosticSummary.observations.length}
-          </output>
-          <output data-testid="blocking-diagnostic-count">
-            {visualDiagnosticSummary.blockingCount}
-          </output>
-        </div>
-      </header>
-      <Suspense fallback={null}>
-        {helpOpen ? (
-          <LazyEditorHelpDialog
-            closeButtonRef={helpCloseRef}
-            onClose={closeHelp}
-          />
-        ) : null}
-        {(recoveryState === "quota-exceeded" ||
-          recoveryState === "unavailable" ||
-          recoveryState === "failed") &&
-        !recoveryFailureDismissed ? (
-          <RecoveryFailureBanner
-            state={recoveryState}
-            onDownload={() => {
-              const outcome = requestProjectDownload(project);
-              setStatus(
-                outcome.status === "download-requested"
-                  ? `Download requested: ${outcome.fileName}`
-                  : `Download failed: ${outcome.message}`,
-              );
-            }}
-            onDismiss={() => setRecoveryFailureDismissed(true)}
-          />
-        ) : null}
-        {recoveryDialogOpen && recoverySessions.length > 0 ? (
-          <LazyRecentRecoveryDialog
-            sessions={recoverySessions}
-            onRestore={restoreRecoverySession}
-            onDownloadBackup={downloadRecoveryBackup}
-            onDeleteSession={deleteRecoverySessionFromDialog}
-            onClose={() => setRecoveryDialogOpen(false)}
-          />
-        ) : null}
-        {replaceGuard !== null ? (
-          <LazyReplaceGuardDialog
-            intent={replaceGuard.intent}
-            onCancel={cancelReplaceGuard}
-            onConfirm={confirmReplaceGuard}
-            onDownload={downloadCurrentProjectFromGuard}
-          />
-        ) : null}
-        {searchOpen ? (
-          <LazyProjectSearchDialog
-            open={searchOpen}
-            query={searchQuery}
-            results={searchResults}
-            onQueryChange={setSearchQuery}
-            onSelect={selectSearchResult}
-            onClose={closeSearch}
-          />
-        ) : null}
-        {instanceTableOpen ? (
-          <LazyInstanceTableDialog
-            open={instanceTableOpen}
-            project={project}
-            connectivityIndex={projectConnectivityIndex}
-            activeDocumentId={document.id}
-            onClose={() => setInstanceTableOpen(false)}
-            onOpenInstance={openInstanceFromTable}
-            onApply={(transactionId, edits) => {
-              const committed = commitStructure(transactionId, edits);
-              if (committed) {
-                setStatus(
-                  `Updated ${edits.length} Cell${edits.length === 1 ? "" : "s"}`,
-                );
+          },
+        }}
+        hierarchyToolbar={{
+          documents: project.documents,
+          activeDocumentId: document.id,
+          topDocumentId: project.topDocumentId,
+          navigationDepth: documentStack.length,
+          canEnter: hasHierarchyEnterSelection,
+          onUp: returnToParentDocument,
+          onTop: returnToTopDocument,
+          onSelectDocument: selectDocumentFromHierarchy,
+          onEnter: enterSelectedHierarchy,
+          onManageCells: () => setCellManagerOpen(true),
+          onPlaceCell: placeCellInstance,
+        }}
+        telemetry={{
+          snapshot: {
+            selectedInternalRouteCount: internalSelection.routeIds.length,
+            revision: document.revision,
+            sourceStatus: document.sourceStatus,
+            documentCount: project.documents.length,
+            activeDocumentId: document.id,
+            activeInstanceCount: document.instances.length,
+            instanceCount: projectInstanceCount,
+            netCount: document.nets.length,
+            activeTool: tool,
+            flightlineCount: flightlines.length,
+            displayedFlightlineCount: displayedFlightlines.length,
+            crossingCount: crossings.length,
+            annotationCount: document.annotations.length,
+            structuralDiagnosticCount:
+              visualDiagnosticSummary.structural.length,
+            visualDiagnosticCount: visualDiagnosticSummary.observations.length,
+            blockingDiagnosticCount: visualDiagnosticSummary.blockingCount,
+          },
+        }}
+      />
+      <EditorDialogLayer
+        help={
+          helpOpen ? { closeButtonRef: helpCloseRef, onClose: closeHelp } : null
+        }
+        recoveryFailure={
+          (recoveryState === "quota-exceeded" ||
+            recoveryState === "unavailable" ||
+            recoveryState === "failed") &&
+          !recoveryFailureDismissed
+            ? {
+                state: recoveryState,
+                onDownload: () => {
+                  const outcome = requestProjectDownload(project);
+                  setStatus(
+                    outcome.status === "download-requested"
+                      ? `Download requested: ${outcome.fileName}`
+                      : `Download failed: ${outcome.message}`,
+                  );
+                },
+                onDismiss: () => setRecoveryFailureDismissed(true),
               }
-              return committed;
-            }}
-          />
-        ) : null}
-        {insertDialogOpen ? (
-          <LazyInsertComponentDialog
-            open={insertDialogOpen}
-            styleProfileId={document.presentation.styleProfileId}
-            recentSymbolIds={recentSymbolIds}
-            cells={cellInsertCandidates}
-            externalDefinitions={externalSubcircuitInsertCandidates}
-            scope={insertScope}
-            initialSelectionId={insertInitialSelectionId}
-            onApply={(request) =>
-              editorCommands.execute({
-                id: "insert.start",
-                launch: { kind: "quick", request },
-              })
-            }
-            onCancel={cancelComponentInsertFromHook}
-          />
-        ) : null}
-        {pendingCellReset ? (
-          <div
-            className="insert-dialog-backdrop"
-            onPointerDown={(event) =>
-              event.target === event.currentTarget && cancelClearCanvas()
-            }
-          >
-            <section
-              className="editor-action-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="clear-canvas-dialog-title"
-              onKeyDown={(event) => {
-                if (event.key === "Escape") cancelClearCanvas();
-              }}
-            >
-              <header className="editor-action-dialog-header">
-                <p>Cell contents</p>
-                <h2 id="clear-canvas-dialog-title">
-                  {pendingCellReset.command} in {document.name}?
-                </h2>
-              </header>
-              <div className="editor-action-dialog-body">
-                <p>
-                  {pendingCellReset.plan.summary}. Affected objects:{" "}
-                  {pendingCellReset.plan.affectedObjectIds.length}. You can
-                  restore them with Undo.
-                </p>
-              </div>
-              <footer className="editor-action-dialog-actions">
-                <button type="button" autoFocus onClick={cancelClearCanvas}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="danger"
-                  onClick={confirmClearCanvas}
-                >
-                  {pendingCellReset.command}
-                </button>
-              </footer>
-            </section>
-          </div>
-        ) : null}
-        {cellManagerOpen ? (
-          <LazyCellManagerDialog
-            open={cellManagerOpen}
-            cells={cellManagerEntries}
-            documents={project.documents}
-            activeDocumentId={document.id}
-            onClose={() => setCellManagerOpen(false)}
-            onCreate={(name) => {
-              createCell(name);
-              setCellManagerOpen(false);
-            }}
-            onOpen={(documentId) => {
-              setCellManagerOpen(false);
-              switchDocument(documentId);
-            }}
-            onRename={renameCell}
-            onDelete={(documentId) => {
-              const target = project.documents.find(
-                (candidate) => candidate.id === documentId,
-              );
-              if (!target) return;
-              if (
-                commitStructure(
-                  "delete-cell",
-                  planDeleteCell(project, documentId),
-                  project.topDocumentId,
-                )
-              ) {
-                setCellManagerOpen(false);
-                setStatus(`Deleted Cell ${target.name}`);
+            : null
+        }
+        recentRecovery={
+          recoveryDialogOpen && recoverySessions.length > 0
+            ? {
+                sessions: recoverySessions,
+                onRestore: restoreRecoverySession,
+                onDownloadBackup: downloadRecoveryBackup,
+                onDeleteSession: deleteRecoverySessionFromDialog,
+                onClose: () => setRecoveryDialogOpen(false),
               }
-            }}
-            onJumpToCaller={jumpToCaller}
-            onRenameTerminal={(documentId, terminalId, name) =>
-              renameCellTerminal(terminalId, name, documentId)
-            }
-            onSetTerminalDirection={(documentId, terminalId, direction) =>
-              updateCellPinDirection(terminalId, direction, documentId)
-            }
-            onMoveTerminal={(documentId, terminalId, delta) =>
-              moveCellTerminal(terminalId, delta, documentId)
-            }
-            onSetFormalParameters={(documentId, formalParameters) =>
-              setCellFormalParameters(formalParameters, documentId)
-            }
-            externalDefinitions={project.externalSubcircuitDefinitions}
-            onSetExternalDefinition={setExternalSubcircuitDefinition}
-          />
-        ) : null}
-        {netlistPreflightOpen ? (
-          <LazyNetlistPreflightDialog
-            open={netlistPreflightOpen}
-            result={netlistAnalysis}
-            electricalDiagnostics={electricalDiagnostics}
-            onClose={() => setNetlistPreflightOpen(false)}
-            onNavigate={navigateToNetlistDiagnostic}
-            onNavigateElectrical={jumpToProjectDiagnostic}
-            onExport={(format) => exportDesignNetlist(format, true)}
-          />
-        ) : null}
-        {publishGalleryOpen ? (
-          <LazyPublishGalleryDialog
-            draft={publishDraft}
-            onDraftChange={setPublishDraft}
-            defaultName={project.name}
-            session={publishSession}
-            gateReport={publishGates}
-            updateTarget={
-              galleryEntryContext &&
-              publishSession &&
-              (publishSession.isAdmin ||
-                publishSession.role === "moderator" ||
-                (galleryEntryContext.ownerUserId !== null &&
-                  publishSession.id === galleryEntryContext.ownerUserId))
-                ? { id: galleryEntryContext.id, name: galleryEntryContext.name }
-                : null
-            }
-            updateDefaults={
-              galleryEntryContext
-                ? {
-                    description: galleryEntryContext.description,
-                    tags: galleryEntryContext.tags,
+            : null
+        }
+        replaceGuard={
+          replaceGuard !== null
+            ? {
+                intent: replaceGuard.intent,
+                onCancel: cancelReplaceGuard,
+                onConfirm: confirmReplaceGuard,
+                onDownload: downloadCurrentProjectFromGuard,
+              }
+            : null
+        }
+        search={
+          searchOpen
+            ? {
+                open: searchOpen,
+                query: searchQuery,
+                results: searchResults,
+                onQueryChange: setSearchQuery,
+                onSelect: selectSearchResult,
+                onClose: closeSearch,
+              }
+            : null
+        }
+        instanceTable={
+          instanceTableOpen
+            ? {
+                open: instanceTableOpen,
+                project,
+                connectivityIndex: projectConnectivityIndex,
+                activeDocumentId: document.id,
+                onClose: () => setInstanceTableOpen(false),
+                onOpenInstance: openInstanceFromTable,
+                onApply: (transactionId, edits) => {
+                  const committed = commitStructure(transactionId, edits);
+                  if (committed) {
+                    setStatus(
+                      `Updated ${edits.length} Cell${edits.length === 1 ? "" : "s"}`,
+                    );
                   }
-                : null
-            }
-            publish={(fields) => publishProjectToGallery(project, fields)}
-            publishUpdate={
-              galleryEntryContext
-                ? (fields) =>
-                    updateGalleryEntry(galleryEntryContext.id, project, fields)
-                : undefined
-            }
-            onPublished={({ name, updated }) => {
-              setPublishGalleryOpen(false);
-              setPublishDraft(null);
-              setStatus(
-                updated
-                  ? `Updated "${name}" in the gallery`
-                  : `Published "${name}" to the gallery`,
-              );
-            }}
-            onShowHistory={
-              galleryEntryContext
-                ? () => {
-                    setPublishGalleryOpen(false);
-                    setVersionHistoryOpen(true);
+                  return committed;
+                },
+              }
+            : null
+        }
+        insertComponent={
+          insertDialogOpen
+            ? {
+                open: insertDialogOpen,
+                styleProfileId: document.presentation.styleProfileId,
+                recentSymbolIds,
+                cells: cellInsertCandidates,
+                externalDefinitions: externalSubcircuitInsertCandidates,
+                scope: insertScope,
+                initialSelectionId: insertInitialSelectionId,
+                onApply: (request) =>
+                  editorCommands.execute({
+                    id: "insert.start",
+                    launch: { kind: "quick", request },
+                  }),
+                onCancel: cancelComponentInsertFromHook,
+              }
+            : null
+        }
+        cellReset={
+          pendingCellReset
+            ? {
+                documentName: document.name,
+                pending: pendingCellReset,
+                onCancel: cancelClearCanvas,
+                onConfirm: confirmClearCanvas,
+              }
+            : null
+        }
+        cellManager={
+          cellManagerOpen
+            ? {
+                open: cellManagerOpen,
+                cells: cellManagerEntries,
+                documents: project.documents,
+                activeDocumentId: document.id,
+                onClose: () => setCellManagerOpen(false),
+                onCreate: (name) => {
+                  createCell(name);
+                  setCellManagerOpen(false);
+                },
+                onOpen: (documentId) => {
+                  setCellManagerOpen(false);
+                  switchDocument(documentId);
+                },
+                onRename: renameCell,
+                onDelete: (documentId) => {
+                  const target = project.documents.find(
+                    (candidate) => candidate.id === documentId,
+                  );
+                  if (!target) return;
+                  if (
+                    commitStructure(
+                      "delete-cell",
+                      planDeleteCell(project, documentId),
+                      project.topDocumentId,
+                    )
+                  ) {
+                    setCellManagerOpen(false);
+                    setStatus(`Deleted Cell ${target.name}`);
                   }
-                : undefined
-            }
-            onClose={() => setPublishGalleryOpen(false)}
-          />
-        ) : null}
-        {versionHistoryOpen && galleryEntryContext ? (
-          <LazyVersionHistoryDialog
-            entryId={galleryEntryContext.id}
-            entryName={galleryEntryContext.name}
-            onRestored={() => {
-              setVersionHistoryOpen(false);
-              setStatus("Version restored — reloading the entry");
-              void openGalleryEntryById(galleryEntryContext.id);
-            }}
-            onClose={() => setVersionHistoryOpen(false)}
-          />
-        ) : null}
-        {publicAgentUiEnabled && agentPanelOpen ? (
-          <LazyConnectAgentPanel
-            open={agentPanelOpen}
-            status={agentSession.status}
-            claimCode={agentSession.claimCode}
-            claimExpiresAt={agentSession.claimExpiresAt}
-            scopes={agentSession.scopes}
-            expiresAt={agentSession.expiresAt}
-            error={agentSession.error}
-            now={Date.now()}
-            onGrant={agentSession.grant}
-            onPause={agentSession.pause}
-            onResume={agentSession.resume}
-            onReconnect={agentSession.reconnect}
-            onNewConnection={agentSession.newConnection}
-            onRevoke={agentSession.revoke}
-            onClose={() => {
-              setAgentPanelOpen(false);
-            }}
-          />
-        ) : null}
-      </Suspense>
-      {publicAgentUiEnabled && agentFileCandidate ? (
-        <div className="agent-panel" data-testid="agent-file-approval">
-          <section
-            className="agent-dialog"
-            role="dialog"
-            aria-label="Approve Agent file import"
-          >
-            <div className="agent-panel-header">
-              <h2>Approve Agent file import</h2>
-            </div>
-            <p>
-              The Agent staged a {agentFileCandidate.kind} candidate. It has not
-              changed this Project. Replacing it will end the current Agent
-              session.
-            </p>
-            <dl className="agent-file-candidate-summary">
-              <div>
-                <dt>Project</dt>
-                <dd>{agentFileCandidate.projectName}</dd>
-              </div>
-              <div>
-                <dt>Documents</dt>
-                <dd>{agentFileCandidate.documentCount}</dd>
-              </div>
-              <div>
-                <dt>Instances</dt>
-                <dd>{agentFileCandidate.instanceCount}</dd>
-              </div>
-            </dl>
-            {agentFileCandidate.diagnostics.length > 0 ? (
-              <ul className="agent-panel-audit">
-                {agentFileCandidate.diagnostics.map((diagnostic, index) => (
-                  <li key={`${diagnostic.severity}-${index}`}>
-                    <span>{diagnostic.severity}</span>
-                    <span>{diagnostic.message}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="agent-panel-controls">
-              <button
-                type="button"
-                data-testid="agent-file-reject"
-                onClick={rejectAgentFileCandidate}
-              >
-                Reject
-              </button>
-              <button
-                type="button"
-                data-testid="agent-file-approve"
-                onClick={approveAgentFileCandidate}
-              >
-                Replace Project
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
+                },
+                onJumpToCaller: jumpToCaller,
+                onRenameTerminal: (documentId, terminalId, name) =>
+                  renameCellTerminal(terminalId, name, documentId),
+                onSetTerminalDirection: (documentId, terminalId, direction) =>
+                  updateCellPinDirection(terminalId, direction, documentId),
+                onMoveTerminal: (documentId, terminalId, delta) =>
+                  moveCellTerminal(terminalId, delta, documentId),
+                onSetFormalParameters: (documentId, formalParameters) =>
+                  setCellFormalParameters(formalParameters, documentId),
+                externalDefinitions: project.externalSubcircuitDefinitions,
+                onSetExternalDefinition: setExternalSubcircuitDefinition,
+              }
+            : null
+        }
+        netlistPreflight={
+          netlistPreflightOpen
+            ? {
+                open: netlistPreflightOpen,
+                result: netlistAnalysis,
+                electricalDiagnostics,
+                onClose: () => setNetlistPreflightOpen(false),
+                onNavigate: navigateToNetlistDiagnostic,
+                onNavigateElectrical: jumpToProjectDiagnostic,
+                onExport: (format) => exportDesignNetlist(format, true),
+              }
+            : null
+        }
+        publishGallery={
+          publishGalleryOpen
+            ? {
+                draft: publishDraft,
+                onDraftChange: setPublishDraft,
+                defaultName: project.name,
+                session: publishSession,
+                gateReport: publishGates,
+                updateTarget:
+                  galleryEntryContext &&
+                  publishSession &&
+                  (publishSession.isAdmin ||
+                    publishSession.role === "moderator" ||
+                    (galleryEntryContext.ownerUserId !== null &&
+                      publishSession.id === galleryEntryContext.ownerUserId))
+                    ? {
+                        id: galleryEntryContext.id,
+                        name: galleryEntryContext.name,
+                      }
+                    : null,
+                updateDefaults: galleryEntryContext
+                  ? {
+                      description: galleryEntryContext.description,
+                      tags: galleryEntryContext.tags,
+                    }
+                  : null,
+                publish: (fields) => publishProjectToGallery(project, fields),
+                ...(galleryEntryContext
+                  ? {
+                      publishUpdate: (fields) =>
+                        updateGalleryEntry(
+                          galleryEntryContext.id,
+                          project,
+                          fields,
+                        ),
+                    }
+                  : {}),
+                onPublished: ({ name, updated }) => {
+                  setPublishGalleryOpen(false);
+                  setPublishDraft(null);
+                  setStatus(
+                    updated
+                      ? `Updated "${name}" in the gallery`
+                      : `Published "${name}" to the gallery`,
+                  );
+                },
+                ...(galleryEntryContext
+                  ? {
+                      onShowHistory: () => {
+                        setPublishGalleryOpen(false);
+                        setVersionHistoryOpen(true);
+                      },
+                    }
+                  : {}),
+                onClose: () => setPublishGalleryOpen(false),
+              }
+            : null
+        }
+        versionHistory={
+          versionHistoryOpen && galleryEntryContext
+            ? {
+                entryId: galleryEntryContext.id,
+                entryName: galleryEntryContext.name,
+                onRestored: () => {
+                  setVersionHistoryOpen(false);
+                  setStatus("Version restored — reloading the entry");
+                  void openGalleryEntryById(galleryEntryContext.id);
+                },
+                onClose: () => setVersionHistoryOpen(false),
+              }
+            : null
+        }
+        agentConnection={
+          publicAgentUiEnabled && agentPanelOpen
+            ? {
+                open: agentPanelOpen,
+                status: agentSession.status,
+                claimCode: agentSession.claimCode,
+                claimExpiresAt: agentSession.claimExpiresAt,
+                scopes: agentSession.scopes,
+                expiresAt: agentSession.expiresAt,
+                error: agentSession.error,
+                now: Date.now(),
+                onGrant: agentSession.grant,
+                onPause: agentSession.pause,
+                onResume: agentSession.resume,
+                onReconnect: agentSession.reconnect,
+                onNewConnection: agentSession.newConnection,
+                onRevoke: agentSession.revoke,
+                onClose: () => setAgentPanelOpen(false),
+              }
+            : null
+        }
+        agentFileApproval={
+          publicAgentUiEnabled && agentFileCandidate
+            ? {
+                candidate: agentFileCandidate,
+                onReject: rejectAgentFileCandidate,
+                onApprove: approveAgentFileCandidate,
+              }
+            : null
+        }
+      />
       <div
         className={
           visibleLibraryPanelOpen
@@ -8018,61 +3548,36 @@ export function App({
             }}
           />
         ) : null}
-        <aside
-          className={selectionOpen ? "selection-dock open" : "selection-dock"}
-          aria-label="Properties"
-          role="complementary"
-        >
-          <section className="selection-shelf" aria-label="Selection">
-            <button
-              type="button"
-              ref={selectionShelfRef}
-              className="selection-shelf-header"
-              data-testid="selection-shelf"
-              aria-expanded={selectionOpen}
-              onClick={() => {
-                if (selectionOpen) exitCellSymbolLayout();
-                // Narrow layouts have room for one side panel. Whichever the
-                // user just asked for wins, rather than one of them always
-                // outranking the other and appearing not to open at all.
-                else if (compactLayout) setCompactLibraryPanelOpen(false);
-                setSelectionOpen((current) => !current);
-                if (selectionOpen) setImportReviewOpen(false);
-              }}
-            >
-              <span className="selection-shelf-title">
-                <ToolIcon name="inspect" />
-                <span>Properties</span>
-                {publicAgentUiEnabled &&
-                agentSession.status !== "idle" &&
-                !agentStatusDismissed ? (
-                  <span
-                    className={`agent-shelf-indicator ${
-                      agentSession.status === "revoked" ||
-                      agentSession.status === "expired"
-                        ? "terminal"
-                        : ""
-                    }`}
-                    title={`Agent: ${agentSession.status}`}
-                    aria-label={`Agent: ${agentSession.status}`}
-                  />
-                ) : null}
-              </span>
-              <span className="selection-shelf-summary">
-                {selectionShelfSummary}
-                {hasInspectableSelection ? (
-                  <span
-                    className="selection-shelf-indicator"
-                    aria-hidden="true"
-                  />
-                ) : null}
-              </span>
-            </button>
-            <div className="selection-panel" hidden={!selectionOpen}>
-              {documentSettingsOpen ? (
-                <DocumentSettingsSection
-                  document={document}
-                  onApplyStyle={(styleOverrides) => {
+        <EditorPropertiesDock
+          open={selectionOpen}
+          shelfRef={selectionShelfRef}
+          onToggle={() => {
+            if (selectionOpen) exitCellSymbolLayout();
+            // Narrow layouts have room for one side panel. Whichever the user
+            // just asked for wins.
+            else if (compactLayout) setCompactLibraryPanelOpen(false);
+            setSelectionOpen((current) => !current);
+            if (selectionOpen) setImportReviewOpen(false);
+          }}
+          summary={selectionShelfSummary}
+          hasInspectableSelection={hasInspectableSelection}
+          agentIndicator={
+            publicAgentUiEnabled &&
+            agentSession.status !== "idle" &&
+            !agentStatusDismissed
+              ? {
+                  status: agentSession.status,
+                  terminal:
+                    agentSession.status === "revoked" ||
+                    agentSession.status === "expired",
+                }
+              : null
+          }
+          documentSettings={
+            documentSettingsOpen
+              ? {
+                  document,
+                  onApplyStyle: (styleOverrides) => {
                     const result = transact([
                       {
                         kind: "set_presentation_style",
@@ -8087,2921 +3592,617 @@ export function App({
                           : "Reset document style to profile defaults",
                       );
                     }
-                  }}
-                  onChangeBulkDefault={updateMosBulkDefault}
-                />
-              ) : null}
-              {selectedInstance && selectedBulkResolution ? (
-                <section
-                  className="context-actions"
-                  aria-label="MOS bulk connection"
-                >
-                  <h2>Bulk</h2>
-                  <button
-                    type="button"
-                    className="bulk-draw-action"
-                    data-testid="draw-bulk-connection"
-                    onClick={drawSelectedMosBulk}
-                  >
-                    Draw bulk connection
-                  </button>
-                  <p>
-                    {selectedInstance.id}.B →{" "}
-                    {selectedBulkResolution.net
+                  },
+                  onChangeBulkDefault: updateMosBulkDefault,
+                }
+              : null
+          }
+          mosBulk={{
+            connection:
+              selectedInstance && selectedBulkResolution
+                ? `${selectedInstance.id}.B → ${
+                    selectedBulkResolution.net
                       ? (resolveDocumentLogicalNets(document).byBaseNetId.get(
                           selectedBulkResolution.net.id,
                         )?.name ?? selectedBulkResolution.net.id)
-                      : "unresolved"}
-                    {" · "}
-                    {selectedBulkResolution.status}
-                  </p>
-                  {selectedHiddenBulkNet ? (
-                    <p>Explicit bulk is shown with a Razavi dashed route.</p>
-                  ) : null}
-                </section>
-              ) : null}
-              {flightlines.length > 0 ? (
-                <section
-                  className="context-actions"
-                  aria-label="Routing guidance"
-                >
-                  <h2>Imported routing guidance</h2>
-                  <div className="component-mirror-row">
-                    {(
-                      [
-                        ["focused", "Focused"],
-                        ["all", "All"],
-                        ["hidden", "Hide"],
-                      ] as const
-                    ).map(([view, label]) => (
-                      <button
-                        type="button"
-                        aria-pressed={routingGuidanceView === view}
-                        key={view}
-                        onClick={() => setRoutingGuidanceView(view)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <small>
-                    {displayedFlightlines.length} shown / {flightlines.length}{" "}
-                    derived. Guidance exists only for imported Nets.
-                  </small>
-                </section>
-              ) : null}
-              {!hasInspectableSelection ? (
-                <p className="inspect-empty">Select an object to inspect.</p>
-              ) : null}
-              {selectedIds.length > 1 ? (
-                <section
-                  className="property-section"
-                  aria-label="Group display toggles"
-                >
-                  <div className="property-section-heading">Canvas labels</div>
-                  <div className="display-toggle-row">
-                    <DisplayToggle
-                      label="Reference"
-                      checked={selectedGroupLabelsAllVisible}
-                      onChange={(checked) =>
-                        setReferenceLabelsVisible(selectedIds, checked)
+                      : "unresolved"
+                  } · ${selectedBulkResolution.status}`
+                : null,
+            explicitRouteVisible: Boolean(selectedHiddenBulkNet),
+            onDraw: drawSelectedMosBulk,
+          }}
+          routingGuidance={{
+            total: flightlines.length,
+            displayed: displayedFlightlines.length,
+            view: routingGuidanceView,
+            onViewChange: setRoutingGuidanceView,
+          }}
+          groupDisplay={{
+            active: selectedIds.length > 1,
+            referencesVisible: selectedGroupLabelsAllVisible,
+            valuesVisible: selectedGroupValuesAllVisible,
+            valuesAvailable: selectedGroupValueAvailable,
+            onReferencesVisibleChange: (visible) =>
+              setReferenceLabelsVisible(selectedIds, visible),
+            onValuesVisibleChange: (visible) =>
+              setValueLabelsVisible(selectedIds, visible),
+          }}
+          component={
+            selectedInstance
+              ? {
+                  formalPort: selectedFormalTerminal
+                    ? {
+                        terminal: selectedFormalTerminal,
+                        revision: document.revision,
+                        onRename: renameSelectedFormalPort,
+                        onDirectionChange: updateCellPinDirection,
                       }
-                    />
-                    <DisplayToggle
-                      label="Value"
-                      checked={selectedGroupValuesAllVisible}
-                      disabled={!selectedGroupValueAvailable}
-                      help={
-                        selectedGroupValueAvailable
-                          ? undefined
-                          : "Fill device parameters first"
+                    : null,
+                  cellSymbolLayout: selectedHierarchyCell
+                    ? {
+                        cell: selectedHierarchyCell,
+                        enabled: cellSymbolLayoutEnabled,
+                        onToggle: toggleCellSymbolLayout,
+                        onBodySizeChange: (width, height) =>
+                          setCellSymbolBodySize(
+                            selectedHierarchyCell,
+                            width,
+                            height,
+                          ),
+                        onPortPlacementChange: (terminalId, side, offset) =>
+                          setCellSymbolPortPlacement(
+                            selectedHierarchyCell,
+                            terminalId,
+                            side,
+                            offset,
+                          ),
                       }
-                      onChange={(checked) =>
-                        setValueLabelsVisible(selectedIds, checked)
-                      }
-                    />
-                  </div>
-                </section>
-              ) : null}
-              {selectedInstance ? (
-                <section
-                  className="property-section component-properties"
-                  aria-label="Component properties"
-                >
-                  {selectedFormalTerminal ? (
-                    <div
-                      className="formal-port-properties"
-                      aria-label="Cell Pin properties"
-                    >
-                      <label>
-                        <span>Terminal name</span>
-                        <input
-                          key={`${selectedFormalTerminal.id}-${document.revision}-terminal-name`}
-                          aria-label="Cell Pin name"
-                          defaultValue={selectedFormalTerminal.name}
-                          onBlur={(event) =>
-                            renameSelectedFormalPort(event.currentTarget.value)
-                          }
-                        />
-                      </label>
-                      <label>
-                        <span>Direction</span>
-                        <select
-                          aria-label="Cell Pin direction"
-                          value={selectedFormalTerminal.direction}
-                          onChange={(event) =>
-                            updateCellPinDirection(
-                              selectedFormalTerminal.id,
-                              event.currentTarget
-                                .value as typeof selectedFormalTerminal.direction,
-                            )
-                          }
-                        >
-                          <option value="input">Input</option>
-                          <option value="output">Output</option>
-                          <option value="inout">Inout</option>
-                          <option value="passive">Passive</option>
-                        </select>
-                      </label>
-                      <small>
-                        This Port defines the Cell interface and every parent
-                        symbol automatically.
-                      </small>
-                    </div>
-                  ) : null}
-                  {selectedHierarchyCell ? (
-                    <div
-                      className="cell-symbol-layout-properties"
-                      aria-label="Cell symbol layout"
-                    >
-                      <div className="property-section-heading">
-                        Cell symbol layout
-                      </div>
-                      <small>
-                        Editing <strong>{selectedHierarchyCell.name}</strong>.
-                        These definition-level changes apply to every parent
-                        instance; connected routes follow the moved pin.
-                      </small>
-                      <button
-                        type="button"
-                        className="cell-symbol-layout-toggle"
-                        aria-pressed={cellSymbolLayoutEnabled}
-                        onClick={toggleCellSymbolLayout}
-                      >
-                        {cellSymbolLayoutEnabled
-                          ? "Done editing canvas layout"
-                          : "Edit symbol layout on canvas"}
-                      </button>
-                      {cellSymbolLayoutEnabled ? (
-                        <small>
-                          Drag the corner to resize, or a pin dot to change its
-                          side and offset.
-                        </small>
-                      ) : null}
-                      <div className="component-geometry-row">
-                        <label>
-                          Width
-                          <input
-                            key={`${selectedHierarchyCell.id}-${selectedHierarchyCell.revision}-symbol-width`}
-                            aria-label="Cell symbol width"
-                            defaultValue={String(
-                              selectedHierarchyCell.presentation.cellSymbol
-                                ?.minimumBodySize?.width ?? 100,
-                            )}
-                            inputMode="numeric"
-                            onBlur={(event) =>
-                              setCellSymbolBodySize(
-                                selectedHierarchyCell,
-                                Number(event.currentTarget.value),
-                                selectedHierarchyCell.presentation.cellSymbol
-                                  ?.minimumBodySize?.height ?? 60,
-                              )
-                            }
-                          />
-                        </label>
-                        <label>
-                          Height
-                          <input
-                            key={`${selectedHierarchyCell.id}-${selectedHierarchyCell.revision}-symbol-height`}
-                            aria-label="Cell symbol height"
-                            defaultValue={String(
-                              selectedHierarchyCell.presentation.cellSymbol
-                                ?.minimumBodySize?.height ?? 60,
-                            )}
-                            inputMode="numeric"
-                            onBlur={(event) =>
-                              setCellSymbolBodySize(
-                                selectedHierarchyCell,
-                                selectedHierarchyCell.presentation.cellSymbol
-                                  ?.minimumBodySize?.width ?? 100,
-                                Number(event.currentTarget.value),
-                              )
-                            }
-                          />
-                        </label>
-                      </div>
-                      {selectedHierarchyCell.netlist?.terminals.map(
-                        (terminal) => {
-                          const pinPlacement =
-                            selectedHierarchyCell.presentation.cellSymbol?.pinPlacements?.find(
-                              (placement) =>
-                                placement.terminalId === terminal.id,
-                            );
-                          return (
-                            <div
-                              key={terminal.id}
-                              className="cell-symbol-pin-layout-row"
-                            >
-                              <strong>{terminal.name}</strong>
-                              <label>
-                                Side
-                                <select
-                                  key={`${selectedHierarchyCell.revision}-${terminal.id}-side`}
-                                  aria-label={`Cell symbol ${terminal.name} pin side`}
-                                  defaultValue={pinPlacement?.side ?? "auto"}
-                                  onChange={(event) =>
-                                    setCellSymbolPortPlacement(
-                                      selectedHierarchyCell,
-                                      terminal.id,
-                                      event.currentTarget.value as
-                                        | "north"
-                                        | "east"
-                                        | "south"
-                                        | "west"
-                                        | "auto",
-                                      pinPlacement?.offset ?? 0,
-                                    )
-                                  }
-                                >
-                                  <option value="auto">Auto</option>
-                                  <option value="west">Left</option>
-                                  <option value="east">Right</option>
-                                  <option value="north">Top</option>
-                                  <option value="south">Bottom</option>
-                                </select>
-                              </label>
-                              <label>
-                                Offset
-                                <input
-                                  key={`${selectedHierarchyCell.revision}-${terminal.id}-offset`}
-                                  aria-label={`Cell symbol ${terminal.name} pin offset`}
-                                  defaultValue={String(
-                                    pinPlacement?.offset ?? 0,
-                                  )}
-                                  inputMode="numeric"
-                                  onBlur={(event) =>
-                                    setCellSymbolPortPlacement(
-                                      selectedHierarchyCell,
-                                      terminal.id,
-                                      pinPlacement?.side ?? "auto",
-                                      Number(event.currentTarget.value),
-                                    )
-                                  }
-                                />
-                              </label>
-                            </div>
-                          );
-                        },
-                      )}
-                    </div>
-                  ) : null}
-                  <div
-                    className="property-card property-identity-card"
-                    aria-label="Component identity"
-                  >
-                    <div className="property-section-heading">Identity</div>
-                    <dl className="component-readonly-fields">
-                      {selectedPortNet && !selectedFormalTerminal ? (
-                        <div>
-                          <dt>
-                            {selectedSupplyMarker ? "Supply" : "Net name"}
-                          </dt>
-                          <dd>
-                            <input
-                              key={`${selectedPortNet.id}-${document.revision}-net-port-name`}
-                              aria-label={
-                                selectedSupplyMarker
-                                  ? "Supply name"
-                                  : "Supply Net name"
-                              }
-                              defaultValue={selectedPortLogicalName ?? ""}
-                              onBlur={(event) =>
-                                commitElectricalMarkerName(
-                                  selectedInstance.id,
-                                  event.currentTarget.value,
-                                )
-                              }
-                            />
-                          </dd>
-                        </div>
-                      ) : !selectedFormalTerminal ? (
-                        <div>
-                          <dt>Schematic label</dt>
-                          <dd>
-                            <input
-                              key={`${selectedInstance.id}-${document.revision}-schematic-label`}
-                              aria-label="Component schematic label"
-                              defaultValue={flattenRichText(
-                                selectedInstance.schematicName ??
-                                  defaultDraftTextDocument(
-                                    selectedInstance.schematicReference ??
-                                      selectedInstance.netlist?.reference ??
-                                      "",
-                                  ),
-                              )}
-                              placeholder="Schematic label"
-                              onBlur={(event) =>
-                                updateSelectedSchematicName(
-                                  event.currentTarget.value,
-                                )
-                              }
-                            />
-                          </dd>
-                        </div>
-                      ) : null}
-                      {selectedInstance.netlist ? (
-                        <div>
-                          <dt>Netlist reference</dt>
-                          <dd>
-                            <input
-                              key={`${selectedInstance.id}-${document.revision}-netlist-reference`}
-                              aria-label="Component netlist reference"
-                              defaultValue={selectedInstance.netlist.reference}
-                              onBlur={(event) =>
-                                updateSelectedReference(
-                                  event.currentTarget.value,
-                                )
-                              }
-                            />
-                          </dd>
-                        </div>
-                      ) : null}
-                      <div>
-                        <dt>Symbol</dt>
-                        <dd>{selectedInstance.symbolId}</dd>
-                      </div>
-                      <div>
-                        <dt>Cell</dt>
-                        <dd>{document.netlist?.name ?? document.name}</dd>
-                      </div>
-                      {selectedInstance.netlist &&
+                    : null,
+                  identity: {
+                    instance: selectedInstance,
+                    revision: document.revision,
+                    cellName: document.netlist?.name ?? document.name,
+                    formalTerminalSelected: Boolean(selectedFormalTerminal),
+                    portNet: selectedPortNet
+                      ? {
+                          id: selectedPortNet.id,
+                          logicalName: selectedPortLogicalName ?? "",
+                          supply: Boolean(selectedSupplyMarker),
+                        }
+                      : null,
+                    targetDescription:
+                      selectedInstance.netlist &&
                       !(
                         selectedInstance.netlist.binding?.kind === "model" ||
                         selectedDevice?.targetPolicy === "required-model" ||
                         selectedExternalMosMapping
-                      ) ? (
-                        <div className="property-identity-target">
-                          <dt>Target</dt>
-                          <dd>
-                            {selectedInstance.netlist.binding?.kind ===
-                            "primitive"
-                              ? `Built-in primitive: ${selectedInstance.netlist.binding.deviceClass}`
-                              : selectedInstance.netlist.binding?.kind ===
-                                  "subcircuit"
-                                ? `Internal Cell: ${selectedHierarchyCell?.netlist?.name ?? "unresolved"}`
-                                : selectedInstance.netlist.binding?.kind ===
-                                    "external-subcircuit"
-                                  ? `External subcircuit: ${selectedExternalSubcircuit?.name ?? "unresolved"}`
-                                  : selectedInstance.netlist.binding?.kind ===
-                                      "unresolved-subcircuit"
-                                    ? `Unresolved subcircuit: ${selectedInstance.netlist.binding.name}`
-                                    : "No target is bound yet."}
-                          </dd>
-                        </div>
-                      ) : null}
-                    </dl>
-                  </div>
-                  {selectedCapacitorPlateRows ? (
-                    <div
-                      className="property-card property-terminal-card"
-                      role="group"
-                      aria-label="Capacitor plate terminals"
-                    >
-                      <div className="property-section-heading">
-                        Electrical terminals
-                      </div>
-                      <dl className="component-readonly-fields">
-                        {selectedCapacitorPlateRows.map((row) => (
-                          <div key={row.role}>
-                            <dt>{row.label}</dt>
-                            <dd aria-label={`${row.label} terminal`}>
-                              Pin {row.pinName} ·{" "}
-                              {row.netName ?? row.netId ?? "Unconnected"}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </div>
-                  ) : null}
-                  {selectedInstance.netlist &&
-                  (selectedInstance.netlist.binding?.kind === "model" ||
-                    selectedDevice?.targetPolicy === "required-model" ||
-                    selectedExternalMosMapping) ? (
-                    <div
-                      className="property-card property-target-card"
-                      aria-label="Netlist target"
-                    >
-                      <div className="property-section-heading">
-                        Netlist target
-                      </div>
-                      <label>
-                        Model
-                        <input
-                          key={`${selectedInstance.id}-${document.revision}-model-target`}
-                          aria-label="Component model target"
-                          list={
-                            selectedPropertyDevice?.symbolId === "nmos" ||
-                            selectedPropertyDevice?.symbolId === "pmos"
-                              ? `mos-model-options-${selectedPropertyDevice.symbolId}`
-                              : undefined
-                          }
-                          defaultValue={
-                            selectedInstance.netlist.binding?.kind === "model"
-                              ? selectedInstance.netlist.binding.name
-                              : selectedExternalMosMapping
-                                ? selectedExternalSubcircuit?.name
-                                : ""
-                          }
-                          placeholder="Model name"
-                          onBlur={(event) =>
-                            updateSelectedModelTarget(event.currentTarget.value)
-                          }
-                        />
-                        {selectedPropertyDevice?.symbolId === "nmos" ||
-                        selectedPropertyDevice?.symbolId === "pmos" ? (
-                          <datalist
-                            id={`mos-model-options-${selectedPropertyDevice.symbolId}`}
-                          >
-                            {reviewedSky130MosModelSuggestions(
-                              selectedPropertyDevice.symbolId,
-                            ).map((model) => (
-                              <option value={model} key={model} />
-                            ))}
-                          </datalist>
-                        ) : null}
-                        {selectedExternalMosMapping ? (
-                          <small>External subcircuit · X reference</small>
-                        ) : null}
-                      </label>
-                    </div>
-                  ) : null}
-                  <div
-                    className="property-card property-electrical-section"
-                    aria-label="Component parameters and display"
-                  >
-                    <div className="property-section-heading">Parameters</div>
-                    <div className="component-parameter-grid">
-                      {propertyParametersForInstance(selectedInstance).map(
-                        (parameter, index) => (
-                          <label key={parameter.key} title={parameter.help}>
-                            <span className="property-parameter-name">
-                              {parameter.label}
-                              {parameter.unit ? ` / ${parameter.unit}` : ""}
-                              <em>({parameter.help})</em>
-                            </span>
-                            <input
-                              ref={
-                                index === 0 ? instanceValueInputRef : undefined
-                              }
-                              aria-label={`Component ${parameter.label.toLowerCase()}`}
-                              inputMode={parameter.inputMode}
-                              value={
-                                instancePropertyDraft.parameters[
-                                  parameter.key
-                                ] ?? ""
-                              }
-                              placeholder={parameter.placeholder}
-                              onChange={(event) => {
-                                const value = event.currentTarget.value;
-                                updateInstancePropertyDraft((current) => ({
-                                  ...current,
-                                  parameters: {
-                                    ...current.parameters,
-                                    [parameter.key]: value,
-                                  },
-                                }));
-                              }}
-                            />
-                          </label>
-                        ),
-                      )}
-                    </div>
-                    {(() => {
-                      // Finger width is shown, never stored: deriving it from
-                      // the authored W and NF keeps W = FW x NF true by
-                      // construction instead of by keeping two values agreed.
-                      const fingerWidth = derivedFingerWidth(
-                        instancePropertyDraft.parameters.w,
-                        instancePropertyDraft.parameters.nf,
-                      );
-                      return fingerWidth ? (
-                        <p
-                          className="property-derived-note"
-                          data-testid="derived-finger-width"
-                        >
-                          Finger width {fingerWidth} · W = FW × NF
-                        </p>
-                      ) : null;
-                    })()}
-                    <div className="property-display-card">
-                      <div className="property-section-heading">Display</div>
-                      <div
-                        className="display-toggle-row"
-                        aria-label="Component display toggles"
-                      >
-                        <DisplayToggle
-                          label={
-                            selectedInstance.symbolId === "port" ||
-                            selectedInstance.symbolId === "port-filled"
-                              ? "Port label"
-                              : "Reference"
-                          }
-                          checked={
-                            selectedInstanceLabel !== undefined &&
-                            selectedInstanceLabel.visible !== false
-                          }
-                          onChange={(checked) =>
-                            setReferenceLabelsVisible(
-                              [selectedInstance.id],
-                              checked,
-                            )
-                          }
-                        />
-                        <DisplayToggle
-                          label="Value"
-                          checked={
-                            selectedInstanceValue !== null &&
-                            selectedInstanceValue.visible !== false
-                          }
-                          disabled={!selectedInstanceValueAvailable}
-                          help={
-                            selectedInstanceValueAvailable
-                              ? undefined
-                              : "Set the device parameters first"
-                          }
-                          onChange={(checked) => {
-                            if (checked) {
-                              showSelectedInstanceValue();
-                            } else {
-                              setValueLabelsVisible(
-                                [selectedInstance.id],
-                                false,
-                              );
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                    {selectedInstance.netlist ? (
-                      <details className="property-details property-details-inline">
-                        <summary>
-                          <span>Advanced parameters</span>
-                          <small>{additionalParameterDraft.length}</small>
-                        </summary>
-                        <div
-                          className="additional-parameters"
-                          aria-label="Additional parameters"
-                        >
-                          <small>
-                            Model- or dialect-specific raw values. Apply commits
-                            all rows as one undoable edit.
-                          </small>
-                          {additionalParameterDraft.map((parameter, index) => (
-                            <div
-                              className="component-geometry-row"
-                              key={parameter.id}
-                            >
-                              <label>
-                                Name
-                                <input
-                                  aria-label={`Additional parameter name ${index + 1}`}
-                                  value={parameter.name}
-                                  onChange={(event) =>
-                                    updateAdditionalParameter(parameter.id, {
-                                      name: event.currentTarget.value,
-                                    })
-                                  }
-                                />
-                              </label>
-                              <label>
-                                Value
-                                <input
-                                  aria-label={`Additional parameter value ${index + 1}`}
-                                  value={parameter.value}
-                                  onChange={(event) =>
-                                    updateAdditionalParameter(parameter.id, {
-                                      value: event.currentTarget.value,
-                                    })
-                                  }
-                                />
-                              </label>
-                              <button
-                                type="button"
-                                aria-label={`Remove additional parameter ${index + 1}`}
-                                onClick={() =>
-                                  removeAdditionalParameter(parameter.id)
-                                }
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ))}
-                          <div className="component-mirror-row">
-                            <button
-                              type="button"
-                              onClick={addAdditionalParameter}
-                            >
-                              Add parameter
-                            </button>
-                            {additionalParameterDraftChanges ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={applyAdditionalParameters}
-                                >
-                                  Apply parameters
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={cancelAdditionalParameters}
-                                >
-                                  Cancel parameter edits
-                                </button>
-                              </>
-                            ) : null}
-                          </div>
-                        </div>
-                      </details>
-                    ) : null}
-                  </div>
-                  {selectedInstance.importProvenance ? (
-                    <div
-                      className="property-card"
-                      aria-label="Imported source evidence"
-                    >
-                      <div className="property-section-heading">
-                        Imported source evidence
-                      </div>
-                      <small>
-                        {selectedInstance.importProvenance.kind}:{" "}
-                        {selectedInstance.importProvenance.sourceTarget}
-                      </small>
-                    </div>
-                  ) : null}
-                  {selectedInstance.placement ? (
-                    <div className="property-card property-placement-card">
-                      <div className="property-section-heading">Placement</div>
-                      <div
-                        className="component-geometry-row property-placement-controls"
-                        aria-label="Component geometry"
-                      >
-                        <label>
-                          X
-                          <input
-                            aria-label="Component X position"
-                            inputMode="decimal"
-                            value={instancePropertyDraft.x}
-                            onChange={(event) => {
-                              const x = event.currentTarget.value;
-                              updateInstancePropertyDraft((current) => ({
-                                ...current,
-                                x,
-                              }));
-                            }}
-                          />
-                        </label>
-                        <label>
-                          Y
-                          <input
-                            aria-label="Component Y position"
-                            inputMode="decimal"
-                            value={instancePropertyDraft.y}
-                            onChange={(event) => {
-                              const y = event.currentTarget.value;
-                              updateInstancePropertyDraft((current) => ({
-                                ...current,
-                                y,
-                              }));
-                            }}
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          className="property-placement-icon-button"
-                          aria-label={`Rotate component clockwise 90 degrees; current rotation ${instancePropertyDraft.rotation} degrees; shortcut R`}
-                          title={`Rotate 90° clockwise · current ${instancePropertyDraft.rotation}° (R)`}
-                          onClick={() =>
-                            editorCommands.execute({ id: "transform.rotate" })
-                          }
-                        >
-                          <ToolIcon name="rotate" />
-                        </button>
-                        <button
-                          type="button"
-                          className="property-placement-icon-button"
-                          aria-label="Mirror component left to right, Shift+R"
-                          title="Mirror left/right (Shift+R)"
-                          onClick={() =>
-                            editorCommands.execute({
-                              id: "transform.mirror",
-                              direction: "left-right",
-                            })
-                          }
-                        >
-                          <ToolIcon name="mirror-horizontal" />
-                        </button>
-                        <button
-                          type="button"
-                          className="property-placement-icon-button"
-                          aria-label="Mirror component top to bottom, Ctrl+R"
-                          title="Mirror top/bottom (Ctrl+R)"
-                          onClick={() =>
-                            editorCommands.execute({
-                              id: "transform.mirror",
-                              direction: "top-bottom",
-                            })
-                          }
-                        >
-                          <ToolIcon name="mirror-vertical" />
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        className="property-return-to-tray"
-                        aria-label="Return component to Placement Tray"
-                        onClick={() =>
-                          returnInstancesToTray([selectedInstance.id])
-                        }
-                      >
-                        Return to tray
-                      </button>
-                      {differentialOutputSibling(selectedInstance.symbolId) ||
-                      selectedInstanceHasDifferentialInputs ? (
-                        <div
-                          className="component-mirror-row property-amplifier-actions"
-                          aria-label="Amplifier placement actions"
-                        >
-                          {differentialOutputSibling(
-                            selectedInstance.symbolId,
-                          ) ? (
-                            <button
-                              type="button"
-                              data-testid="swap-differential-outputs"
-                              aria-label="Swap the + and - outputs"
-                              title="Swap the + and - outputs"
-                              onClick={() =>
-                                transact(
-                                  planDifferentialOutputSwap(
-                                    selectedInstance.id,
-                                    selectedInstance.symbolId,
-                                  ),
-                                )
-                              }
-                            >
-                              Swap + / − outputs
-                            </button>
-                          ) : null}
-                          {selectedInstanceHasDifferentialInputs &&
-                          differentialInputSibling(
-                            selectedInstance.symbolId,
-                          ) ? (
-                            <button
-                              type="button"
-                              data-testid="swap-differential-inputs"
-                              aria-label="Swap the + and - inputs"
-                              title="Swap + / - inputs (Ctrl+R)"
-                              onClick={() =>
-                                transact(
-                                  planDifferentialInputSwap(
-                                    selectedInstance.id,
-                                    selectedInstance.symbolId,
-                                  ),
-                                )
-                              }
-                            >
-                              Swap + / − inputs
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {hasInstancePropertyDraftChanges ? (
-                    <button
-                      type="button"
-                      className="property-discard"
-                      onClick={discardInstancePropertyDraft}
-                    >
-                      Discard changes
-                    </button>
-                  ) : null}
-                </section>
-              ) : null}
-              {selectedDrafting
-                ? (() => {
-                    const geometry = resolveDraftingObjectGeometry(
-                      document,
-                      resolver,
-                      selectedDrafting,
-                    );
-                    if (
-                      geometry.kind !== "arrow" &&
-                      geometry.kind !== "construction-line" &&
-                      geometry.kind !== "rectangle"
-                    ) {
-                      return null;
-                    }
-                    const lineStyle =
-                      selectedDrafting.styleOverride?.lineStyle ??
-                      (selectedDrafting.kind === "construction-line" ||
-                      selectedDrafting.kind === "rectangle"
-                        ? selectedDrafting.lineStyle
-                        : "solid");
-                    const isRectangle = geometry.kind === "rectangle";
-                    const points = isRectangle
-                      ? geometry.corners
-                      : geometry.points;
-                    const curveControls = isRectangle
-                      ? points.slice(0, -1).map(() => null)
-                      : geometry.curveControls;
-                    const segmentIndex =
-                      draftingInspectorSegment?.objectId === selectedDrafting.id
-                        ? draftingInspectorSegment.index
-                        : Math.max(0, curveControls.findIndex(Boolean));
-                    const tangentAngle = isRectangle
-                      ? 0
-                      : quadraticTangentAngle(
-                          points[segmentIndex]!,
-                          curveControls[segmentIndex] ?? null,
-                          points[segmentIndex + 1]!,
-                        );
-                    const tangentInputKey = `${selectedDrafting.id}:${segmentIndex}`;
-                    const realizedAngleText = String(
-                      Math.round(tangentAngle * 10) / 10,
-                    );
-                    const tangentInputValue =
-                      draftingTangentInput?.key === tangentInputKey
-                        ? draftingTangentInput.value
-                        : realizedAngleText;
-                    const bearing = isRectangle
-                      ? geometry.rotation
-                      : normalizedBearing(points[0]!, points[1]!);
-                    const realizedBearingText = String(
-                      Math.round(bearing * 10) / 10,
-                    );
-                    const bearingInputValue =
-                      draftingBearingInput?.objectId === selectedDrafting.id
-                        ? draftingBearingInput.value
-                        : realizedBearingText;
-                    return (
-                      <section
-                        className="context-actions drawing-properties"
-                        aria-label="Drawing style"
-                        data-testid="drafting-properties"
-                      >
-                        <h2>Drawing style</h2>
-                        <label>
-                          Line style
-                          <select
-                            aria-label="Line style"
-                            value={lineStyle}
-                            disabled={selectedDrafting.locked}
-                            onChange={(event) =>
-                              setDraftingStyle({
-                                lineStyle: event.currentTarget.value as
-                                  "solid" | "dashed" | "dotted",
-                              })
-                            }
-                          >
-                            <option value="solid">Solid</option>
-                            <option value="dashed">Dashed</option>
-                            <option value="dotted">Dotted</option>
-                          </select>
-                        </label>
-                        <label>
-                          Stroke width
-                          <select
-                            aria-label="Stroke width"
-                            value={String(
-                              selectedDrafting.styleOverride?.strokeScale ?? 1,
-                            )}
-                            disabled={selectedDrafting.locked}
-                            onChange={(event) =>
-                              setDraftingStyle({
-                                strokeScale: Number(
-                                  event.currentTarget.value,
-                                ) as 0.75 | 1 | 1.5 | 2,
-                              })
-                            }
-                          >
-                            <option value="0.75">0.75×</option>
-                            <option value="1">1×</option>
-                            <option value="1.5">1.5×</option>
-                            <option value="2">2×</option>
-                          </select>
-                        </label>
-                        {selectedDrafting.kind === "construction-line" &&
-                        points.length > 2 ? (
-                          <label>
-                            Curve segment
-                            <select
-                              aria-label="Curve segment"
-                              value={String(segmentIndex)}
-                              disabled={selectedDrafting.locked}
-                              onChange={(event) => {
-                                setDraftingInspectorSegment({
-                                  objectId: selectedDrafting.id,
-                                  index: Number(event.currentTarget.value),
-                                });
-                                setDraftingTangentInput(null);
-                              }}
-                            >
-                              {points.slice(0, -1).map((_, index) => (
-                                <option key={index} value={index}>
-                                  Segment {index + 1}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        ) : null}
-                        {!isRectangle ? (
-                          <label>
-                            Tangent angle (°)
-                            <input
-                              aria-label="Tangent angle"
-                              type="number"
-                              min="0"
-                              max="170"
-                              step="1"
-                              value={tangentInputValue}
-                              disabled={selectedDrafting.locked}
-                              placeholder={realizedAngleText}
-                              onFocus={() => {
-                                setDraftingTangentInput({
-                                  key: tangentInputKey,
-                                  value: "",
-                                });
-                              }}
-                              onChange={(event) => {
-                                const value = event.currentTarget.value;
-                                setDraftingTangentInput({
-                                  key: tangentInputKey,
-                                  value,
-                                });
-                                const angle = Number(value);
-                                if (value !== "" && Number.isFinite(angle)) {
-                                  setDraftingTangentAngle(angle);
-                                }
-                              }}
-                              onBlur={() => setDraftingTangentInput(null)}
-                            />
-                          </label>
-                        ) : null}
-                        <label>
-                          Bearing (°)
-                          <input
-                            aria-label="Drawing bearing"
-                            type="number"
-                            min="0"
-                            max="359"
-                            step="1"
-                            value={bearingInputValue}
-                            disabled={selectedDrafting.locked}
-                            placeholder={realizedBearingText}
-                            onFocus={() =>
-                              setDraftingBearingInput({
-                                objectId: selectedDrafting.id,
-                                value: "",
-                              })
-                            }
-                            onChange={(event) => {
-                              const value = event.currentTarget.value;
-                              setDraftingBearingInput({
-                                objectId: selectedDrafting.id,
-                                value,
-                              });
-                              const bearing = Number(value);
-                              if (value !== "" && Number.isFinite(bearing)) {
-                                setDraftingBearing(bearing);
-                              }
-                            }}
-                            onBlur={() => setDraftingBearingInput(null)}
-                          />
-                        </label>
-                        {selectedDrafting.kind === "arrow" ? (
-                          <>
-                            <label>
-                              Arrow head
-                              <select
-                                aria-label="Arrow head"
-                                value={
-                                  selectedDrafting.styleOverride?.arrowHead ??
-                                  "filled"
-                                }
-                                disabled={selectedDrafting.locked}
-                                onChange={(event) =>
-                                  setDraftingStyle({
-                                    arrowHead: event.currentTarget.value as
-                                      "none" | "filled" | "open",
-                                  })
-                                }
-                              >
-                                <option value="none">No head</option>
-                                <option value="filled">Filled</option>
-                                <option value="open">Open</option>
-                              </select>
-                            </label>
-                            <label>
-                              Arrow head size
-                              <select
-                                aria-label="Arrow head size"
-                                value={String(
-                                  selectedDrafting.styleOverride
-                                    ?.arrowHeadScale ?? 1,
-                                )}
-                                disabled={selectedDrafting.locked}
-                                onChange={(event) =>
-                                  setDraftingStyle({
-                                    arrowHeadScale: Number(
-                                      event.currentTarget.value,
-                                    ) as 0.75 | 1 | 1.25 | 1.5,
-                                  })
-                                }
-                              >
-                                <option value="0.75">0.75×</option>
-                                <option value="1">1×</option>
-                                <option value="1.25">1.25×</option>
-                                <option value="1.5">1.5×</option>
-                              </select>
-                            </label>
-                            <button
-                              type="button"
-                              disabled={selectedDrafting.locked}
-                              onClick={() => {
-                                const { from, to } = selectedDrafting;
-                                transact([
-                                  {
-                                    kind: "upsert_drafting_object",
-                                    object: {
-                                      ...selectedDrafting,
-                                      from: to,
-                                      to: from,
-                                      waypoints: [
-                                        ...(selectedDrafting.waypoints ?? []),
-                                      ].reverse(),
-                                      curveControls: [
-                                        ...(selectedDrafting.curveControls ??
-                                          []),
-                                      ].reverse(),
-                                    },
-                                  },
-                                ]);
-                              }}
-                            >
-                              Reverse
-                            </button>
-                          </>
-                        ) : null}
-                        <button
-                          type="button"
-                          disabled={selectedDrafting.locked}
-                          onClick={() =>
-                            editorCommands.execute({ id: "transform.rotate" })
-                          }
-                        >
-                          <ToolIcon name="rotate" />
-                          Rotate
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => toggleDraftingLock(selectedDrafting)}
-                        >
-                          <ToolIcon name="lock" />
-                          {selectedDrafting.locked ? "Unlock" : "Lock"}
-                        </button>
-                      </section>
-                    );
-                  })()
-                : null}
-              <section
-                className="context-actions placement-tray"
-                aria-label="Placement Tray"
-              >
-                <div className="placement-tray-heading">
-                  <h2>Placement Tray</h2>
-                  <span
-                    className="placement-tray-count"
-                    aria-label={`${unplaced.length} retained ${
-                      unplaced.length === 1 ? "Instance" : "Instances"
-                    }`}
-                  >
-                    {unplaced.length}
-                  </span>
-                </div>
-                <div className="component-mirror-row">
-                  <button
-                    type="button"
-                    onClick={placeAllFromTray}
-                    disabled={unplaced.length === 0}
-                  >
-                    Place all
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      returnInstancesToTray(
-                        returnablePlacedInstances.map(
-                          (instance) => instance.id,
-                        ),
                       )
-                    }
-                    disabled={returnablePlacedInstances.length === 0}
-                  >
-                    Return all
-                  </button>
-                </div>
-                {unplaced.length > 0 ? (
-                  <div className="placement-tray-list">
-                    {unplaced.map((instance) => (
-                      <div
-                        className="placement-tray-entry"
-                        draggable
-                        data-testid={`unplaced-${instance.id}`}
-                        key={instance.id}
-                        onDragStart={(event) => {
-                          event.dataTransfer.setData(
-                            "application/x-icm-instance",
-                            instance.id,
-                          );
-                          event.dataTransfer.effectAllowed = "move";
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            selectOnly("instance", [instance.id]);
-                            setStatus(
-                              `Selected ${placementTrayIdentity(instance)}`,
-                            );
-                          }}
-                        >
-                          {placementTrayIdentity(instance)}
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Place ${placementTrayIdentity(instance)} from tray`}
-                          onClick={() =>
-                            beginRetainedInstancePlacementFromHook(instance.id)
+                        ? componentTargetDescription(
+                            selectedInstance,
+                            selectedHierarchyCell?.netlist?.name,
+                            selectedExternalSubcircuit?.name,
+                          )
+                        : null,
+                    capacitorPlateRows: selectedCapacitorPlateRows,
+                    modelTarget:
+                      selectedInstance.netlist &&
+                      (selectedInstance.netlist.binding?.kind === "model" ||
+                        selectedDevice?.targetPolicy === "required-model" ||
+                        selectedExternalMosMapping)
+                        ? {
+                            defaultValue:
+                              selectedInstance.netlist.binding?.kind === "model"
+                                ? selectedInstance.netlist.binding.name
+                                : selectedExternalMosMapping
+                                  ? (selectedExternalSubcircuit?.name ?? "")
+                                  : "",
+                            suggestions:
+                              selectedPropertyDevice?.symbolId === "nmos" ||
+                              selectedPropertyDevice?.symbolId === "pmos"
+                                ? reviewedSky130MosModelSuggestions(
+                                    selectedPropertyDevice.symbolId,
+                                  )
+                                : [],
+                            ...(selectedPropertyDevice?.symbolId === "nmos" ||
+                            selectedPropertyDevice?.symbolId === "pmos"
+                              ? {
+                                  listId: `mos-model-options-${selectedPropertyDevice.symbolId}`,
+                                }
+                              : {}),
+                            externalSubcircuit: Boolean(
+                              selectedExternalMosMapping,
+                            ),
                           }
-                        >
-                          Place…
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </section>
-              {selectedRouteId ? (
-                <section className="context-actions" aria-label="Route actions">
-                  <h2>Electrical route</h2>
-                  <label>
-                    Electrical Net label
-                    <input
-                      ref={netLabelPropertyInputRef}
-                      aria-label="Electrical Net label"
-                      value={netLabelDraft}
-                      onChange={(event) =>
-                        updateNetLabelDraft(event.currentTarget.value)
-                      }
-                    />
-                  </label>
-                  <button type="button" onClick={deleteSelectedRouteNetLabel}>
-                    Delete Net label
-                  </button>
-                  <button type="button" onClick={addCurrentArrow}>
-                    Add current arrow
-                  </button>
-                  <button type="button" onClick={toggleHighlightedNet}>
-                    {selectedHighlightIsActive
-                      ? "Clear Net highlight (H)"
-                      : "Highlight Net (H)"}
-                  </button>
-                  <button type="button" onClick={deleteSelectedRouteConnection}>
-                    Delete wire
-                  </button>
-                </section>
-              ) : null}
-              {selectedEndpoint &&
-              selectedEndpoint.endpoint.kind !== "junction" ? (
-                <section
-                  className="context-actions"
-                  aria-label="Endpoint actions"
-                >
-                  <h2>Endpoint</h2>
-                  <button
-                    type="button"
-                    onClick={() => disconnectSelectedEndpoint(false)}
-                  >
-                    Disconnect endpoint
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => disconnectSelectedEndpoint(true)}
-                  >
-                    Delete connection
-                  </button>
-                  <button
-                    type="button"
-                    onClick={toggleSelectedNoConnectFromSelection}
-                    disabled={
-                      !selectedNoConnect && selectedEndpointNetId !== null
-                    }
-                  >
-                    {selectedNoConnect ? "Clear No Connect" : "Mark No Connect"}
-                  </button>
-                  {!selectedNoConnect && selectedEndpointNetId ? (
-                    <small>
-                      Disconnect this endpoint before marking No Connect.
-                    </small>
-                  ) : null}
-                </section>
-              ) : null}
-              {selectedEndpoint?.endpoint.kind === "junction" ? (
-                <section
-                  className="context-actions"
-                  aria-label="Junction actions"
-                >
-                  <h2>Junction</h2>
-                  <button
-                    type="button"
-                    onClick={deleteSelectedJunctionFromSelection}
-                  >
-                    Delete junction and attached wires
-                  </button>
-                </section>
-              ) : null}
-              {selectedAnnotation && isRoutedMarker(selectedAnnotation) ? (
-                <section
-                  className="context-actions"
-                  aria-label="Current arrow actions"
-                >
-                  <h2>Current arrow</h2>
-                  <button type="button" onClick={reverseSelectedCurrentArrow}>
-                    Reverse direction (X)
-                  </button>
-                  <small>Drag to slide along the wire or move its label.</small>
-                  <button type="button" onClick={deleteSelectedAnnotation}>
-                    Delete current arrow
-                  </button>
-                </section>
-              ) : null}
-              {selectedAnnotation &&
-              !isRoutedMarker(selectedAnnotation) &&
-              selectedNetLabelBinding ? (
-                <section
-                  className="context-actions"
-                  aria-label="Annotation actions"
-                >
-                  <h2>Annotation</h2>
-                  <button type="button" onClick={toggleHighlightedNet}>
-                    {selectedHighlightIsActive
-                      ? "Clear Net highlight (H)"
-                      : "Highlight Net (H)"}
-                  </button>
-                </section>
-              ) : null}
-              <ProjectDiagnosticsSection
-                snapshot={liveDiagnosticSnapshot}
-                documentLabel={(documentId) =>
-                  project.documents.find(
-                    (candidate) => candidate.id === documentId,
-                  )?.name ?? documentId
+                        : null,
+                    onMarkerNameChange: (value) =>
+                      commitElectricalMarkerName(selectedInstance.id, value),
+                    onSchematicNameChange: updateSelectedSchematicName,
+                    onReferenceChange: updateSelectedReference,
+                    onModelTargetChange: updateSelectedModelTarget,
+                  },
+                  electrical: {
+                    instance: selectedInstance,
+                    parameters: propertyParametersForInstance(selectedInstance),
+                    parameterValues: instancePropertyDraft.parameters,
+                    firstInputRef: instanceValueInputRef,
+                    referenceVisible:
+                      selectedInstanceLabel !== undefined &&
+                      selectedInstanceLabel.visible !== false,
+                    valueVisible:
+                      selectedInstanceValue !== null &&
+                      selectedInstanceValue.visible !== false,
+                    valueAvailable: selectedInstanceValueAvailable,
+                    additionalParameters: additionalParameterDraft,
+                    additionalParametersChanged:
+                      additionalParameterDraftChanges,
+                    onParameterChange: (key, value) =>
+                      updateInstancePropertyDraft((current) => ({
+                        ...current,
+                        parameters: {
+                          ...current.parameters,
+                          [key]: value,
+                        },
+                      })),
+                    onReferenceVisibilityChange: (checked) =>
+                      setReferenceLabelsVisible([selectedInstance.id], checked),
+                    onValueVisibilityChange: (checked) => {
+                      if (checked) showSelectedInstanceValue();
+                      else setValueLabelsVisible([selectedInstance.id], false);
+                    },
+                    onAdditionalParameterChange: updateAdditionalParameter,
+                    onAdditionalParameterRemove: removeAdditionalParameter,
+                    onAdditionalParameterAdd: addAdditionalParameter,
+                    onAdditionalParametersApply: applyAdditionalParameters,
+                    onAdditionalParametersCancel: cancelAdditionalParameters,
+                  },
+                  placement: {
+                    instance: selectedInstance,
+                    x: instancePropertyDraft.x,
+                    y: instancePropertyDraft.y,
+                    rotation: instancePropertyDraft.rotation,
+                    draftChanged: hasInstancePropertyDraftChanges,
+                    onXChange: (x) =>
+                      updateInstancePropertyDraft((current) => ({
+                        ...current,
+                        x,
+                      })),
+                    onYChange: (y) =>
+                      updateInstancePropertyDraft((current) => ({
+                        ...current,
+                        y,
+                      })),
+                    onRotate: () =>
+                      editorCommands.execute({ id: "transform.rotate" }),
+                    onMirror: (direction) =>
+                      editorCommands.execute({
+                        id: "transform.mirror",
+                        direction,
+                      }),
+                    onReturnToTray: () =>
+                      returnInstancesToTray([selectedInstance.id]),
+                    ...(differentialOutputSibling(selectedInstance.symbolId)
+                      ? {
+                          onSwapOutputs: () =>
+                            transact(
+                              planDifferentialOutputSwap(
+                                selectedInstance.id,
+                                selectedInstance.symbolId,
+                              ),
+                            ),
+                        }
+                      : {}),
+                    ...(selectedInstanceHasDifferentialInputs &&
+                    differentialInputSibling(selectedInstance.symbolId)
+                      ? {
+                          onSwapInputs: () =>
+                            transact(
+                              planDifferentialInputSwap(
+                                selectedInstance.id,
+                                selectedInstance.symbolId,
+                              ),
+                            ),
+                        }
+                      : {}),
+                    onDiscard: discardInstancePropertyDraft,
+                  },
                 }
-                onSelectDiagnostic={jumpToProjectDiagnostic}
-              />
-              {highlightedTrace && highlightedTrace.hops.length > 0 ? (
-                <NetTraceSection
-                  trace={highlightedTrace}
-                  documentLabel={(documentId) =>
+              : null
+          }
+          drafting={
+            selectedDrafting
+              ? {
+                  document,
+                  resolver,
+                  object: selectedDrafting,
+                  inspectorSegment: draftingInspectorSegment,
+                  tangentInput: draftingTangentInput,
+                  bearingInput: draftingBearingInput,
+                  onInspectorSegmentChange: setDraftingInspectorSegment,
+                  onTangentInputChange: setDraftingTangentInput,
+                  onBearingInputChange: setDraftingBearingInput,
+                  onStyleChange: setDraftingStyle,
+                  onTangentAngleChange: setDraftingTangentAngle,
+                  onBearingChange: setDraftingBearing,
+                  onReverse: reverseSelectedDrafting,
+                  onRotate: () =>
+                    editorCommands.execute({ id: "transform.rotate" }),
+                  onToggleLock: () => toggleDraftingLock(selectedDrafting),
+                }
+              : null
+          }
+          placementTray={{
+            document,
+            unplaced,
+            returnablePlaced: returnablePlacedInstances,
+            onPlaceAll: placeAllFromTray,
+            onReturnAll: returnInstancesToTray,
+            onSelect: (instance, label) => {
+              selectOnly("instance", [instance.id]);
+              setStatus(`Selected ${label}`);
+            },
+            onPlace: beginRetainedInstancePlacementFromHook,
+          }}
+          routeActions={{
+            active: selectedRouteId !== null,
+            netLabelInputRef: netLabelPropertyInputRef,
+            netLabel: netLabelDraft,
+            highlightActive: selectedHighlightIsActive,
+            onNetLabelChange: updateNetLabelDraft,
+            onDeleteNetLabel: deleteSelectedRouteNetLabel,
+            onAddCurrentArrow: addCurrentArrow,
+            onToggleHighlight: toggleHighlightedNet,
+            onDeleteWire: deleteSelectedRouteConnection,
+          }}
+          endpointActions={{
+            kind: selectedEndpoint
+              ? selectedEndpoint.endpoint.kind === "junction"
+                ? "junction"
+                : "terminal"
+              : null,
+            noConnect: Boolean(selectedNoConnect),
+            endpointNetId: selectedEndpointNetId,
+            onDisconnect: () => disconnectSelectedEndpoint(false),
+            onDeleteConnection: () => disconnectSelectedEndpoint(true),
+            onToggleNoConnect: toggleSelectedNoConnectFromSelection,
+            onDeleteJunction: deleteSelectedJunctionFromSelection,
+          }}
+          annotationActions={{
+            kind:
+              selectedAnnotation && isRoutedMarker(selectedAnnotation)
+                ? "current-arrow"
+                : selectedAnnotation && selectedNetLabelBinding
+                  ? "net-label"
+                  : null,
+            highlightActive: selectedHighlightIsActive,
+            onReverseCurrentArrow: reverseSelectedCurrentArrow,
+            onDeleteCurrentArrow: deleteSelectedAnnotation,
+            onToggleHighlight: toggleHighlightedNet,
+          }}
+          diagnostics={{
+            snapshot: liveDiagnosticSnapshot,
+            documentLabel: (documentId) =>
+              project.documents.find((candidate) => candidate.id === documentId)
+                ?.name ?? documentId,
+            onSelectDiagnostic: jumpToProjectDiagnostic,
+          }}
+          netTrace={
+            highlightedTrace && highlightedTrace.hops.length > 0
+              ? {
+                  trace: highlightedTrace,
+                  documentLabel: (documentId) =>
                     project.documents.find(
                       (candidate) => candidate.id === documentId,
-                    )?.name ?? documentId
-                  }
-                  onNavigateHop={navigateTraceHop}
-                />
-              ) : null}
-              {importReviewOpen ? (
-                <section className="import-review" aria-label="Import Review">
-                  <h2>Import Review</h2>
-                  <SelectionInspectorDetails
-                    snapshot={{
-                      selected:
-                        selectedIds.length > 0
-                          ? selectedIds.join(", ")
-                          : (selectedRouteId ?? selectedAnnotationId ?? "None"),
-                      internalRouteCount: internalSelection.routeIds.length,
-                      revision: document.revision,
-                      sourceStatus: document.sourceStatus,
-                      documentCount: project.documents.length,
-                      activeDocumentId: document.id,
-                      activeInstanceCount: document.instances.length,
-                      projectInstanceCount,
-                      netCount: document.nets.length,
-                      tool,
-                      flightlineCount: flightlines.length,
-                      crossingCount: crossings.length,
-                      annotationCount: document.annotations.length,
-                      status,
-                    }}
-                    importReport={importReport}
-                  />
-                </section>
-              ) : null}
-              <Suspense fallback={null}>
-                {publicAgentUiEnabled &&
-                agentSession.status !== "idle" &&
-                !agentStatusDismissed ? (
-                  <LazyAgentPropertiesSection
-                    status={agentSession.status}
-                    claimCode={agentSession.claimCode}
-                    claimExpiresAt={agentSession.claimExpiresAt}
-                    scopes={agentSession.scopes}
-                    expiresAt={agentSession.expiresAt}
-                    error={agentSession.error}
-                    onPause={agentSession.pause}
-                    onResume={agentSession.resume}
-                    onReconnect={agentSession.reconnect}
-                    onNewConnection={agentSession.newConnection}
-                    onRevoke={agentSession.revoke}
-                    expanded={agentDetailsOpen}
-                    onToggleDetails={() => setAgentDetailsOpen((open) => !open)}
-                    onDismiss={() => {
-                      setAgentDetailsOpen(false);
-                      setAgentStatusDismissed(true);
-                    }}
-                  />
-                ) : null}
-              </Suspense>
-            </div>
-          </section>
-        </aside>
-        <section className="canvas-panel">
-          {canvasIsEmpty ? (
-            <div
-              className="canvas-empty-state"
-              data-testid="canvas-empty-state"
-            >
-              <strong>Start a schematic</strong>
-              <span>
-                Press <kbd>I</kbd> to insert a component or <kbd>W</kbd> to
-                wire.
-              </span>
-            </div>
-          ) : null}
-          <svg
-            className={[
-              "schematic-canvas",
-              tool === "wire" ? "wire-mode" : "",
-              pendingSymbolId || vddRailMode || copyPlacement
-                ? "component-mode"
-                : "",
-              tool === "arrow" ||
-              tool === "construction-line" ||
-              tool === "rectangle"
-                ? "drawing-mode"
-                : "",
-              projectedMovePreviewDocument ? "semantic-move-preview" : "",
-              panPreview ? "pan-mode" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            data-testid="schematic-canvas"
-            role="img"
-            aria-label="Schematic canvas"
-            viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-            onWheel={handleWheel}
-            onClickCapture={(event) => {
-              const currentInteraction = getCurrentInteractionState();
-              if (currentInteraction.kind === "moving-selection") {
-                if (event.detail === 1) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  commitCommandMoveFromSelection(
-                    pointFromClient(
-                      event.clientX,
-                      event.clientY,
-                      event.currentTarget,
-                    ),
-                    { x: event.clientX, y: event.clientY },
-                    event.currentTarget,
-                  );
+                    )?.name ?? documentId,
+                  onNavigateHop: navigateTraceHop,
                 }
-                return;
-              }
-              if (currentInteraction.kind === "copy-placement") {
-                if (event.detail > 1) return;
-                event.preventDefault();
-                event.stopPropagation();
-                const point = pointFromClient(
-                  event.clientX,
-                  event.clientY,
-                  event.currentTarget,
-                );
-                commitCopyPlacementFromSelection({
-                  x: snapCoordinate(point.x, document.presentation.grid),
-                  y: snapCoordinate(point.y, document.presentation.grid),
-                });
-                return;
-              }
+              : null
+          }
+          importReview={
+            importReviewOpen
+              ? {
+                  snapshot: {
+                    selected:
+                      selectedIds.length > 0
+                        ? selectedIds.join(", ")
+                        : (selectedRouteId ?? selectedAnnotationId ?? "None"),
+                    internalRouteCount: internalSelection.routeIds.length,
+                    revision: document.revision,
+                    sourceStatus: document.sourceStatus,
+                    documentCount: project.documents.length,
+                    activeDocumentId: document.id,
+                    activeInstanceCount: document.instances.length,
+                    projectInstanceCount,
+                    netCount: document.nets.length,
+                    tool,
+                    flightlineCount: flightlines.length,
+                    crossingCount: crossings.length,
+                    annotationCount: document.annotations.length,
+                    status,
+                  },
+                  importReport,
+                }
+              : null
+          }
+          agent={
+            publicAgentUiEnabled &&
+            agentSession.status !== "idle" &&
+            !agentStatusDismissed
+              ? {
+                  status: agentSession.status,
+                  claimCode: agentSession.claimCode,
+                  claimExpiresAt: agentSession.claimExpiresAt,
+                  scopes: agentSession.scopes,
+                  expiresAt: agentSession.expiresAt,
+                  error: agentSession.error,
+                  onPause: agentSession.pause,
+                  onResume: agentSession.resume,
+                  onReconnect: agentSession.reconnect,
+                  onNewConnection: agentSession.newConnection,
+                  onRevoke: agentSession.revoke,
+                  expanded: agentDetailsOpen,
+                  onToggleDetails: () => setAgentDetailsOpen((open) => !open),
+                  onDismiss: () => {
+                    setAgentDetailsOpen(false);
+                    setAgentStatusDismissed(true);
+                  },
+                }
+              : null
+          }
+        />
+        <EditorCanvasSurface
+          empty={canvasIsEmpty}
+          className={[
+            "schematic-canvas",
+            tool === "wire" ? "wire-mode" : "",
+            pendingSymbolId || vddRailMode || copyPlacement
+              ? "component-mode"
+              : "",
+            tool === "arrow" ||
+            tool === "construction-line" ||
+            tool === "rectangle"
+              ? "drawing-mode"
+              : "",
+            projectedMovePreviewDocument ? "semantic-move-preview" : "",
+            panPreview ? "pan-mode" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
+          eventHandlers={canvasEventHandlers}
+          grid={{ visible: gridDotsVisible, viewBox }}
+          sceneInnerHtml={sceneInnerHtml}
+          cellSymbolLayout={
+            selectedCellSymbolLayout
+              ? {
+                  placement: selectedCellSymbolLayout.instance.placement!,
+                  body: selectedCellSymbolLayout.body,
+                  pins: selectedCellSymbolLayout.pins.map(
+                    ({ terminal, pin }) => ({
+                      terminalId: terminal.id,
+                      pin,
+                    }),
+                  ),
+                  onDragStart: beginCellSymbolLayoutDrag,
+                }
+              : null
+          }
+          netHighlight={{
+            highlight: highlightedNet,
+            document,
+            resolver,
+            routeGeometryRecords,
+          }}
+          copyPreviewInnerHtml={copyPreviewInnerHtml}
+          inputPlanes={{
+            tool,
+            viewBox,
+            componentPlacementActive: Boolean(
+              pendingSymbolId || vddRailMode || copyPlacement,
+            ),
+            copyPlacementActive: copyPlacement !== null,
+          }}
+          placementPreview={{
+            vddRailMode,
+            vddRailStart,
+            previewPoint: componentPreviewPoint,
+            powerRailStrokeWidth: styleProfile.strokes.powerRail,
+            styleProfileId: document.presentation.styleProfileId,
+            pendingSymbolId,
+            ...(pendingPlacementSymbol
+              ? { pendingSymbol: pendingPlacementSymbol }
+              : {}),
+            rotation: componentPlacementRotation,
+            mirror: componentPlacementMirror,
+          }}
+          wiring={{
+            netLabelEditorOpen,
+            selectedRouteId,
+            selectedRouteSegmentIndex,
+            routeGeometryRecords,
+            netLabelDraft,
+            netLabelEditorInputRef,
+            onNetLabelDraftChange: updateNetLabelDraft,
+            onNetLabelSubmit: commitNetLabelEditing,
+            onNetLabelEscape: () => {
+              applyNetLabel();
+              setNetLabelEditorOpen(false);
+            },
+            flightlines: displayedFlightlines,
+            onFlightlineClick: handleFlightline,
+            wireDraftPoints,
+            bulkRoutePreview: wireSource?.routePresentation === "bulk-dashed",
+            snapGuideLayerRef,
+          }}
+          routeHandles={{
+            document,
+            routeGeometryRecords,
+            selectedRouteId,
+            selectedRouteSegmentIndex,
+            routeStretchPreview,
+            tool,
+            onHandlePointerDown: (event, routeId, segmentIndex, intent) => {
+              const primaryInstanceId = selectedIds.at(-1);
               if (
-                !vddRailMode &&
-                (!pendingSymbolId || !pendingComponentPlacement)
-              )
+                primaryInstanceId &&
+                compositeSelectionOwnsHit("route", routeId)
+              ) {
+                beginMoveFromSelection(event, primaryInstanceId);
                 return;
-              if (event.detail > 1) return;
+              }
+              beginRouteStretch(event, routeId, segmentIndex, intent);
+            },
+          }}
+          selectionHitLayer={{
+            selection: {
+              document,
+              resolver,
+              routeGeometryRecords,
+              styleProfile,
+              tool,
+              selectedInstanceIds: selectedIds,
+              selectedRouteId,
+              supplementalRouteIds: supplementalSelection.routeIds,
+              selectedInternalRouteIds,
+              selectedAnnotationId,
+              supplementalAnnotationIds: supplementalSelection.annotationIds,
+              cellSymbolLayoutInstanceId: cellSymbolLayoutEnabled
+                ? (selectedInstance?.id ?? null)
+                : null,
+              onInstanceClick: (instance, additive) => {
+                if (suppressInstanceClick.current) {
+                  suppressInstanceClick.current = false;
+                  return;
+                }
+                selectInstanceFromSelection(instance.id, additive);
+              },
+              onInstanceOpen: (instance) => {
+                if (referencedDocumentId(project, instance))
+                  enterHierarchy(instance.id);
+                else inspectInstance(instance.id);
+              },
+              onInstancePointerDown: (event, instance) =>
+                beginMoveFromSelection(event, instance.id),
+              onRoutePointerDown: handleRoutePointerDown,
+              onAnnotationPointerDown: beginAnnotationDrag,
+              onAnnotationEdit: beginAnnotationTextEditing,
+            },
+            endpoints: {
+              document,
+              endpoints: wiringEndpoints,
+              tool,
+              selectedRoute,
+              selectedRouteSegmentIndex,
+              selectedEndpoint,
+              supplementalJunctionIds: supplementalSelection.junctionIds,
+              endpointLabel: endpointTestId,
+              onEndpointActions: (candidate) => {
+                selectEndpoint(candidate);
+                setStatus(
+                  `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
+                );
+              },
+              onPowerRailStretch: beginRouteStretch,
+              onJunctionSelect: (candidate) => {
+                selectEndpoint(candidate);
+                setStatus(`Selected ${endpointTestId(candidate.endpoint)}`);
+              },
+              onWireEndpoint: handleWireEndpoint,
+            },
+          }}
+          draftingHitTargets={{
+            document,
+            resolver,
+            tool,
+            selectedDraftingId,
+            supplementalDraftingIds: supplementalSelection.draftingIds,
+            onPointerDown: (event, object, draggable) => {
+              if (draggable) beginDraftingDrag(event, object);
+              else {
+                event.stopPropagation();
+                selectDraftingObject(object.id);
+              }
+            },
+            onConstructionLineEdit: (event, object) => {
               event.stopPropagation();
-              const rawPoint = pointFromClient(
-                event.clientX,
-                event.clientY,
-                event.currentTarget,
-              );
-              commitPendingPlacementAtFromHook({
-                x: snapCoordinate(rawPoint.x, document.presentation.grid),
-                y: snapCoordinate(rawPoint.y, document.presentation.grid),
-              });
-            }}
-            onPointerDownCapture={(event) => {
-              const target = event.target as Element;
-              if (target.closest('[data-testid="canvas-text-editor"]')) {
-                // The SVG capture layer otherwise re-ranks the canvas below
-                // this HTML editor through elementsFromPoint() before the
-                // editor's own bubbling handlers can stop the event.
-                return;
-              }
-              if (
-                cellSymbolLayoutEnabled &&
-                target.closest('[data-testid="cell-symbol-layout-overlay"]')
-              ) {
-                return;
-              }
-              if (cellSymbolLayoutEnabled) {
-                // Layout grips are a short-lived edit mode. Any ordinary
-                // canvas action leaves it first, so the next hit can use the
-                // regular selection and movement rules.
-                exitCellSymbolLayout();
-              }
-              if (getCurrentInteractionState().kind === "moving-selection") {
-                event.stopPropagation();
-                return;
-              }
-              if (
-                selectedDrafting &&
-                (selectedDrafting.kind === "arrow" ||
-                  selectedDrafting.kind === "construction-line" ||
-                  selectedDrafting.kind === "rectangle") &&
-                !target.closest(
-                  `[data-testid="drafting-hit-${selectedDrafting.id}"]`,
-                ) &&
-                !target.closest(
-                  `[data-testid="drafting-handles-${selectedDrafting.id}"]`,
-                )
-              ) {
-                replaceSelectionKind("drafting", []);
-              }
-              handleCanvasHitPointerDown(event);
-            }}
-            onPointerDown={beginCanvasGesture}
-            onPointerMove={continueCanvasGesture}
-            onPointerLeave={() => {
-              const currentInteraction = getCurrentInteractionState();
-              if (pendingSymbolId) setComponentPreviewPoint(null);
-              if (vddRailMode) setVddRailPreviewPoint(null);
-              if (currentInteraction.kind === "copy-placement") {
-                setCopyPreviewPoint(null);
-              }
-            }}
-            onPointerUp={finishCanvasGesture}
-            onPointerCancel={finishCanvasGesture}
-            onClick={(event) => {
-              const target = event.target as Element;
-              const onBackground =
-                target === event.currentTarget || target.tagName === "rect";
-              if (
-                (tool === "arrow" ||
-                  tool === "construction-line" ||
-                  tool === "rectangle") &&
-                event.detail === 1 &&
-                onBackground
-              ) {
-                handleDraftingCanvasClick(
-                  pointFromClient(
-                    event.clientX,
-                    event.clientY,
-                    event.currentTarget,
-                  ),
-                  event.altKey,
-                  event.shiftKey,
-                  logicalRadiusForPixels(
-                    event.currentTarget,
-                    SNAP_CAPTURE_RADIUS_PX,
-                  ),
-                );
-                return;
-              }
-              if (tool !== "wire" || event.detail !== 1) return;
-              applyWireCanvasPoint(
+              insertConstructionVertex(
+                object,
                 pointFromClient(
                   event.clientX,
                   event.clientY,
-                  event.currentTarget,
-                  false,
+                  event.currentTarget.ownerSVGElement!,
                 ),
-                event.currentTarget,
-                event.altKey,
-                false,
               );
-            }}
-            onDoubleClick={(event) => {
-              const target = event.target as Element;
-              if (tool === "pointer") {
-                // Movement ranks electrical geometry before labels, but a
-                // deliberate double-click is an editing request. Look through
-                // the same point candidates for text instead of forcing users
-                // to Alt-cycle a route-attached label before editing it.
-                const pointHits = rankCanvasHits(
-                  event.currentTarget.ownerDocument.elementsFromPoint(
-                    event.clientX,
-                    event.clientY,
-                  ),
-                );
-                const annotationHit = pointHits.find(
-                  (hit) => hit.kind === "annotation",
-                );
-                const annotation = annotationHit
-                  ? document.annotations.find(
-                      (candidate) => candidate.id === annotationHit.id,
-                    )
-                  : undefined;
-                if (annotation) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  canvasDragSessionRef.current?.cancel();
-                  beginAnnotationTextEditing(annotation);
-                  return;
-                }
-                // A double-click on empty space inside a drafting rectangle is
-                // the same editing intent aimed at the box: open its centered
-                // label, creating the anchored text on first use. Electrical
-                // geometry under the pointer keeps its own double-click
-                // meaning, so wires crossing a group frame never open a label.
-                const electricalHit = pointHits.some(
-                  (hit) =>
-                    hit.kind !== "annotation" &&
-                    hit.kind !== "instance-label" &&
-                    hit.kind !== "drafting",
-                );
-                const interiorPoint = pointFromClient(
+            },
+            onArrowEdit: (event, object) => {
+              event.stopPropagation();
+              insertArrowWaypoint(
+                object,
+                pointFromClient(
                   event.clientX,
                   event.clientY,
-                  event.currentTarget,
-                );
-                const rectangle = electricalHit
-                  ? null
-                  : rectangleInteriorAt(document, resolver, interiorPoint);
-                if (rectangle) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  canvasDragSessionRef.current?.cancel();
-                  const existingLabel = rectangleLabelFor(
-                    document,
-                    rectangle.id,
-                  );
-                  if (existingLabel) {
-                    beginDraftingTextEditing(existingLabel);
-                    return;
-                  }
-                  uniqueSuffixCounter.current += 1;
-                  const label = proposeRectangleLabel(
-                    rectangle,
-                    `note-${uniqueSuffixCounter.current}`,
-                  );
-                  if (
-                    transact([
-                      { kind: "upsert_drafting_object", object: label },
-                    ]).ok
-                  ) {
-                    beginDraftingTextEditing(label);
-                    setStatus(`Editing label of ${rectangle.id}`);
-                  }
-                  return;
-                }
-              }
-              if (
-                tool === "arrow" ||
-                tool === "construction-line" ||
-                tool === "rectangle"
-              ) {
-                if (target !== event.currentTarget && target.tagName !== "rect")
-                  return;
-                finishDraftingCreate();
-                return;
-              }
-              if (tool !== "wire") return;
-              // A double-click ends the wire wherever it lands. The guard
-              // below only lets background presses through, so finishing on a
-              // Junction or an existing Route never reached this handler and
-              // drafting appeared to continue.
-              if (wireSource && wireDraftSteps.length === 0) {
-                // Landing on an endpoint or Route commits on the first press;
-                // the second press then opens a fresh wire at that same spot.
-                // No authored step is what separates it from a real wire.
-                completeWire();
-                setStatus("Wire finished · Esc exits");
-                return;
-              }
-              if (target !== event.currentTarget && target.tagName !== "rect")
-                return;
-              const point = pointFromClient(
-                event.clientX,
-                event.clientY,
-                event.currentTarget,
-                false,
+                  event.currentTarget.ownerSVGElement!,
+                ),
               );
-              const resolved = resolveWireCanvasSnap(
-                point,
-                event.currentTarget,
-                event.altKey,
-              );
-              // Landing on an endpoint or an existing Route commits on the
-              // first press of the double-click, and the second press then
-              // opens a fresh wire at that same spot. Such a source has no
-              // authored step yet, which is what separates it from a real
-              // wire being finished here — so end the session instead of
-              // drawing on from it.
-              if (
-                wireSource &&
-                wireDraftSteps.length === 0 &&
-                wireSource.connection.contactPoint.x === resolved.point.x &&
-                wireSource.connection.contactPoint.y === resolved.point.y
-              ) {
-                completeWire();
-                setStatus("Wire finished · Esc exits");
-                return;
-              }
-              if (
-                wireSource?.endpoint.kind === "junction" &&
-                wireSource.preludeEdits.some(
-                  (edit) => edit.kind === "add_junction" && edit.createNet,
-                ) &&
-                wireSource.connection.contactPoint.x === resolved.point.x &&
-                wireSource.connection.contactPoint.y === resolved.point.y
-              ) {
-                setStatus("Wire finished · Esc exits");
-                completeWire();
-                return;
-              }
-              applyWireCanvasPoint(
-                point,
-                event.currentTarget,
-                event.altKey,
-                true,
-              );
-            }}
-            onContextMenu={(event) => {
-              event.preventDefault();
-              if (
-                tool === "arrow" ||
-                tool === "construction-line" ||
-                tool === "rectangle"
-              ) {
-                if (draftingSource !== null) {
-                  clearDraftingCreate();
-                  setStatus("Drawing cancelled");
-                }
-                return;
-              }
-              if (tool === "wire") {
-                setWireSource(null, null);
-                setWirePreviewPoint(null);
-                setWireDraftSteps([]);
-                setTool("pointer");
-                setBulkDrawInstanceId(null);
-                setStatus("Wire cancelled");
-              }
-            }}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={handleDrop}
-          >
-            {gridDotsVisible ? (
-              <>
-                <defs>
-                  <pattern
-                    id="grid"
-                    width="10"
-                    height="10"
-                    patternUnits="userSpaceOnUse"
-                  >
-                    <circle className="canvas-grid-dot" cx="0" cy="0" r="0.7" />
-                  </pattern>
-                </defs>
-                <rect
-                  data-testid="canvas-grid-dots"
-                  x={viewBox.x}
-                  y={viewBox.y}
-                  width={viewBox.width}
-                  height={viewBox.height}
-                  fill="url(#grid)"
-                />
-              </>
-            ) : null}
-            <g dangerouslySetInnerHTML={sceneInnerHtml} />
-            {selectedCellSymbolLayout
-              ? (() => {
-                  const placement =
-                    selectedCellSymbolLayout.instance.placement!;
-                  const world = (point: { x: number; y: number }) =>
-                    transformPoint(point, placement.position, placement);
-                  const bodyCorner = world({
-                    x: selectedCellSymbolLayout.body.right,
-                    y: selectedCellSymbolLayout.body.bottom,
-                  });
-                  return (
-                    <g
-                      className="cell-symbol-layout-overlay"
-                      data-testid="cell-symbol-layout-overlay"
-                    >
-                      <circle
-                        data-testid="cell-symbol-body-handle"
-                        className="cell-symbol-layout-handle body"
-                        cx={bodyCorner.x}
-                        cy={bodyCorner.y}
-                        r="5"
-                        onPointerDown={(event) =>
-                          beginCellSymbolLayoutDrag(event, "body")
-                        }
-                      />
-                      {selectedCellSymbolLayout.pins.map(
-                        ({ terminal, pin }) => {
-                          const bodyPoint =
-                            pin.direction === "west"
-                              ? {
-                                  x: selectedCellSymbolLayout.body.left,
-                                  y: pin.at.y,
-                                }
-                              : pin.direction === "east"
-                                ? {
-                                    x: selectedCellSymbolLayout.body.right,
-                                    y: pin.at.y,
-                                  }
-                                : pin.direction === "north"
-                                  ? {
-                                      x: pin.at.x,
-                                      y: selectedCellSymbolLayout.body.top,
-                                    }
-                                  : {
-                                      x: pin.at.x,
-                                      y: selectedCellSymbolLayout.body.bottom,
-                                    };
-                          const pinPoint = world(bodyPoint);
-                          return (
-                            <g key={terminal.id}>
-                              <circle
-                                data-testid={`cell-symbol-pin-handle-${terminal.id}`}
-                                className="cell-symbol-layout-handle pin"
-                                cx={pinPoint.x}
-                                cy={pinPoint.y}
-                                r="4.5"
-                                onPointerDown={(event) =>
-                                  beginCellSymbolLayoutDrag(
-                                    event,
-                                    "pin",
-                                    terminal.id,
-                                  )
-                                }
-                              />
-                            </g>
-                          );
-                        },
-                      )}
-                    </g>
-                  );
-                })()
-              : null}
-            {highlightedNet ? (
-              <g
-                data-testid="net-highlight-overlay"
-                data-net-id={highlightedNet.netId}
-                className="net-highlight-overlay"
-                pointerEvents="none"
-              >
-                {routeGeometryRecords
-                  .filter(({ route }) =>
-                    highlightedNet.routes.includes(route.id),
-                  )
-                  .map(({ route, geometry }) => (
-                    <polyline
-                      key={route.id}
-                      className="net-highlight-halo"
-                      points={serializePolylinePoints(geometry.centerline)}
-                    />
-                  ))}
-                {routeGeometryRecords
-                  .filter(({ route }) =>
-                    highlightedNet.routes.includes(route.id),
-                  )
-                  .map(({ route, geometry }) => (
-                    <polyline
-                      key={`${route.id}-core`}
-                      className="net-highlight-core"
-                      points={serializePolylinePoints(geometry.centerline)}
-                    />
-                  ))}
-                {document.junctions
-                  .filter((junction) =>
-                    highlightedNet.junctions.includes(junction.id),
-                  )
-                  .map((junction) => (
-                    <circle
-                      key={junction.id}
-                      cx={junction.position.x}
-                      cy={junction.position.y}
-                      r="4.5"
-                    />
-                  ))}
-                {highlightedNet.visibleEndpoints.flatMap((endpoint) => {
-                  const connection = resolveEndpointConnection(
-                    document,
-                    resolver,
-                    endpoint,
-                  );
-                  if (!connection) return [];
-                  return [
-                    <circle
-                      key={`endpoint:${endpointKey(endpoint)}`}
-                      className="net-highlight-endpoint"
-                      cx={connection.contactPoint.x}
-                      cy={connection.contactPoint.y}
-                      r="5.5"
-                    />,
-                  ];
-                })}
-              </g>
-            ) : null}
-            {copyPreviewInnerHtml !== null ? (
-              <g
-                data-testid="copy-placement-preview"
-                className="copy-placement-preview"
-                dangerouslySetInnerHTML={copyPreviewInnerHtml}
-              />
-            ) : null}
-            {tool === "wire" ? (
-              <rect
-                data-testid="wire-input-plane"
-                className="wire-input-plane"
-                x={viewBox.x}
-                y={viewBox.y}
-                width={viewBox.width}
-                height={viewBox.height}
-              />
-            ) : null}
-            {pendingSymbolId || vddRailMode || copyPlacement ? (
-              <rect
-                data-testid={
-                  copyPlacement
-                    ? "copy-placement-input-plane"
-                    : "component-input-plane"
-                }
-                className="component-input-plane"
-                x={viewBox.x}
-                y={viewBox.y}
-                width={viewBox.width}
-                height={viewBox.height}
-              />
-            ) : null}
-            <g data-layer="editor-overlay">
-              {vddRailMode ? (
-                vddRailStart && componentPreviewPoint ? (
-                  <line
-                    data-testid="vdd-rail-preview"
-                    className="vdd-rail-preview"
-                    x1={vddRailStart.x}
-                    y1={vddRailStart.y}
-                    x2={componentPreviewPoint.x}
-                    y2={componentPreviewPoint.y}
-                    strokeWidth={styleProfile.strokes.powerRail}
-                  />
-                ) : componentPreviewPoint ? (
-                  <ComponentPlacementPreview
-                    styleProfileId={document.presentation.styleProfileId}
-                    symbolId="vdd"
-                    position={componentPreviewPoint}
-                    rotation={0}
-                  />
-                ) : null
-              ) : pendingSymbolId && componentPreviewPoint ? (
-                <ComponentPlacementPreview
-                  styleProfileId={document.presentation.styleProfileId}
-                  symbolId={pendingSymbolId}
-                  {...(pendingPlacementSymbol
-                    ? { symbol: pendingPlacementSymbol }
-                    : {})}
-                  position={componentPreviewPoint}
-                  rotation={componentPlacementRotation}
-                  mirror={componentPlacementMirror}
-                />
-              ) : null}
-              {netLabelEditorOpen && selectedRoute
-                ? (() => {
-                    const geometry = routeGeometryRecords.find(
-                      ({ route }) => route.id === selectedRoute.id,
-                    )?.geometry;
-                    if (!geometry) return null;
-                    const segmentIndex = Math.min(
-                      selectedRouteSegmentIndex ?? 0,
-                      geometry.centerline.length - 2,
-                    );
-                    const from = geometry.centerline[segmentIndex]!;
-                    const to = geometry.centerline[segmentIndex + 1]!;
-                    const x = Math.round((from.x + to.x) / 2 - 58);
-                    const y = Math.round((from.y + to.y) / 2 - 34);
-                    return (
-                      <foreignObject
-                        data-testid="net-label-editor"
-                        x={x}
-                        y={y}
-                        width="116"
-                        height="32"
-                      >
-                        <form
-                          className="net-label-editor"
-                          onPointerDown={(event) => event.stopPropagation()}
-                          onSubmit={(event) => {
-                            event.preventDefault();
-                            commitNetLabelEditing();
-                          }}
-                        >
-                          <input
-                            ref={netLabelEditorInputRef}
-                            aria-label="Net Label"
-                            value={netLabelDraft}
-                            onChange={(event) =>
-                              updateNetLabelDraft(event.currentTarget.value)
-                            }
-                            onKeyDown={(event) => {
-                              if (event.key === "Escape") {
-                                event.preventDefault();
-                                // Escape saves the edit like Enter does.
-                                applyNetLabel();
-                                setNetLabelEditorOpen(false);
-                              }
-                            }}
-                          />
-                        </form>
-                      </foreignObject>
-                    );
-                  })()
-                : null}
-              {displayedFlightlines.map((flightline) => (
-                <g key={flightline.id}>
-                  <line
-                    data-testid="flightline-hit"
-                    className="flightline-hit"
-                    data-net-id={flightline.netId}
-                    x1={flightline.fromPoint.x}
-                    y1={flightline.fromPoint.y}
-                    x2={flightline.toPoint.x}
-                    y2={flightline.toPoint.y}
-                    onClick={(event) => handleFlightline(event, flightline)}
-                  />
-                  <line
-                    data-testid="flightline"
-                    className="flightline"
-                    data-net-id={flightline.netId}
-                    x1={flightline.fromPoint.x}
-                    y1={flightline.fromPoint.y}
-                    x2={flightline.toPoint.x}
-                    y2={flightline.toPoint.y}
-                  />
-                </g>
-              ))}
-              {wireDraftPoints.length >= 2 ? (
-                <polyline
-                  data-testid="wire-preview"
-                  className={
-                    wireSource?.routePresentation === "bulk-dashed"
-                      ? "wire-preview bulk-route-preview"
-                      : "wire-preview"
-                  }
-                  points={serializePolylinePoints(wireDraftPoints)}
-                />
-              ) : null}
-              <g ref={snapGuideLayerRef} data-layer="snap-guides" />
-              {routeGeometryRecords
-                .filter(({ route }) => route.id === selectedRouteId)
-                .map(({ route, geometry }) => {
-                  const segmentIndex = Math.min(
-                    selectedRouteSegmentIndex ?? 0,
-                    geometry.centerline.length - 2,
-                  );
-                  const from = geometry.centerline[segmentIndex]!;
-                  const to = geometry.centerline[segmentIndex + 1]!;
-                  const translatesWholeRoute =
-                    looseRouteAnchorIds(document, route) !== null;
-                  const powerRail =
-                    route.presentation === "power-rail"
-                      ? derivePowerRailComponent(document, route.id)
-                      : null;
-                  const powerRailEnds = powerRail?.endpointJunctionIds
-                    .map((junctionId) =>
-                      document.junctions.find(
-                        (junction) => junction.id === junctionId,
-                      ),
-                    )
-                    .filter(
-                      (junction): junction is NonNullable<typeof junction> =>
-                        Boolean(junction),
-                    )
-                    .sort((left, right) => {
-                      return left.position.x === right.position.x
-                        ? left.position.y - right.position.y
-                        : left.position.x - right.position.x;
-                    });
-                  const routeCenter = centerOfBounds(
-                    polylineBounds(geometry.centerline),
-                  );
-                  const preview =
-                    routeStretchPreview?.routeId === route.id
-                      ? routeStretchPreview.point
-                      : null;
-                  const handlePointerDown = (
-                    event: ReactPointerEvent<SVGElement>,
-                    intent: RouteStretchPreview["intent"],
-                  ) => {
-                    const primaryInstanceId = selectedIds.at(-1);
-                    if (
-                      primaryInstanceId &&
-                      compositeSelectionOwnsHit("route", route.id)
-                    ) {
-                      beginMoveFromSelection(event, primaryInstanceId);
-                      return;
-                    }
-                    beginRouteStretch(event, route.id, segmentIndex, intent);
-                  };
-                  return (
-                    <g key={`handle-${route.id}`}>
-                      <circle
-                        data-testid={`route-handle-${route.id}`}
-                        data-canvas-hit-kind="handle"
-                        data-canvas-hit-id={`route-handle-${route.id}`}
-                        className="route-handle"
-                        cx={
-                          powerRail
-                            ? routeCenter.x
-                            : translatesWholeRoute
-                              ? (preview?.x ?? routeCenter.x)
-                              : from.y === to.y
-                                ? (from.x + to.x) / 2
-                                : (preview?.x ?? (from.x + to.x) / 2)
-                        }
-                        cy={
-                          powerRail
-                            ? routeCenter.y
-                            : translatesWholeRoute
-                              ? (preview?.y ?? routeCenter.y)
-                              : from.x === to.x
-                                ? (from.y + to.y) / 2
-                                : (preview?.y ?? (from.y + to.y) / 2)
-                        }
-                        r="6"
-                        onPointerDown={(event) =>
-                          handlePointerDown(
-                            event,
-                            powerRail
-                              ? "move-power-rail"
-                              : translatesWholeRoute
-                                ? "move-loose-route"
-                                : "stretch-segment",
-                          )
-                        }
-                        pointerEvents={tool === "wire" ? "none" : undefined}
-                      />
-                      {powerRailEnds?.map((junction, index) => (
-                        <circle
-                          key={`power-rail-handle-${route.id}-${index}`}
-                          data-testid={`power-rail-handle-${route.id}-${index === 0 ? "start" : "end"}`}
-                          data-canvas-hit-kind="handle"
-                          data-canvas-hit-id={`power-rail-handle-${route.id}-${index === 0 ? "start" : "end"}`}
-                          className="route-handle"
-                          cx={junction.position.x}
-                          cy={junction.position.y}
-                          r="6"
-                          onPointerDown={(event) =>
-                            handlePointerDown(
-                              event,
-                              index === 0
-                                ? "resize-power-rail-start"
-                                : "resize-power-rail-end",
-                            )
-                          }
-                          pointerEvents={tool === "wire" ? "none" : undefined}
-                        />
-                      ))}
-                    </g>
-                  );
-                })}
-              {document.instances
-                .filter((instance) => instance.placement !== null)
-                .map((instance) => {
-                  const hitBox = instanceHitBox(instance, resolver);
-                  if (!hitBox) return null;
-                  if (
-                    cellSymbolLayoutEnabled &&
-                    selectedInstance?.id === instance.id
-                  ) {
-                    // The layout overlay is the exclusive interaction surface
-                    // for the selected Cell instance while editing its
-                    // definition. Rendering the generic hit box here still
-                    // wins elementsFromPoint() even with pointer-events:none.
-                    return null;
-                  }
-                  const childDocumentId = referencedDocumentId(
-                    project,
-                    instance,
-                  );
-                  return (
-                    <rect
-                      key={instance.id}
-                      data-testid={`hit-${instance.id}`}
-                      data-canvas-hit-kind="instance"
-                      data-canvas-hit-id={instance.id}
-                      data-drag-object-id={instance.id}
-                      {...hitBox}
-                      className={
-                        selectedIds.includes(instance.id)
-                          ? "hit-target selected"
-                          : "hit-target"
-                      }
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (suppressInstanceClick.current) {
-                          suppressInstanceClick.current = false;
-                          return;
-                        }
-                        selectInstanceFromSelection(
-                          instance.id,
-                          event.shiftKey || event.ctrlKey,
-                        );
-                      }}
-                      onDoubleClick={(event) => {
-                        event.stopPropagation();
-                        if (childDocumentId) {
-                          enterHierarchy(instance.id);
-                          return;
-                        }
-                        inspectInstance(instance.id);
-                      }}
-                      onPointerDown={(event) =>
-                        beginMoveFromSelection(event, instance.id)
-                      }
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    />
-                  );
-                })}
-              {routeGeometryRecords.map(({ route, geometry }) => (
-                <polyline
-                  key={route.id}
-                  data-testid={`route-hit-${route.id}`}
-                  data-canvas-hit-kind="route"
-                  data-canvas-hit-id={route.id}
-                  data-drag-object-id={route.id}
-                  className={
-                    selectedRouteId === route.id ||
-                    supplementalSelection.routeIds.includes(route.id) ||
-                    selectedInternalRouteIds.has(route.id)
-                      ? "route-hit selected"
-                      : "route-hit"
-                  }
-                  points={serializePolylinePoints(geometry.centerline)}
-                  onPointerDown={(event) =>
-                    handleRoutePointerDown(event, route.id)
-                  }
-                  onClick={(event) => event.stopPropagation()}
-                />
-              ))}
-              {wiringEndpoints.map((candidate) => {
-                const powerRailEnds =
-                  selectedRoute?.presentation === "power-rail"
-                    ? (derivePowerRailComponent(document, selectedRoute.id)
-                        ?.endpointJunctionIds.map((junctionId) =>
-                          document.junctions.find(
-                            (junction) => junction.id === junctionId,
-                          ),
-                        )
-                        .filter(
-                          (
-                            junction,
-                          ): junction is NonNullable<typeof junction> =>
-                            Boolean(junction),
-                        )
-                        .sort(
-                          (left, right) => left.position.x - right.position.x,
-                        ) ?? [])
-                    : [];
-                const candidateJunctionId =
-                  candidate.endpoint.kind === "junction"
-                    ? candidate.endpoint.junctionId
-                    : null;
-                const powerRailEndIndex =
-                  candidateJunctionId !== null
-                    ? powerRailEnds.findIndex(
-                        (junction) => junction.id === candidateJunctionId,
-                      )
-                    : -1;
-                return (
-                  <circle
-                    key={`${candidate.netId}:${endpointTestId(candidate.endpoint)}`}
-                    data-testid={endpointTestId(candidate.endpoint)}
-                    data-canvas-hit-kind={
-                      candidate.endpoint.kind === "junction"
-                        ? "junction"
-                        : undefined
-                    }
-                    data-canvas-hit-id={
-                      candidate.endpoint.kind === "junction"
-                        ? candidate.endpoint.junctionId
-                        : undefined
-                    }
-                    data-drag-object-id={
-                      candidate.endpoint.kind === "junction"
-                        ? candidate.endpoint.junctionId
-                        : undefined
-                    }
-                    className={
-                      tool === "wire" ||
-                      (candidate.endpoint.kind === "junction" &&
-                        supplementalSelection.junctionIds.includes(
-                          candidate.endpoint.junctionId,
-                        )) ||
-                      (selectedEndpoint?.endpoint.kind === "junction" &&
-                        candidate.endpoint.kind === "junction" &&
-                        selectedEndpoint.endpoint.junctionId ===
-                          candidate.endpoint.junctionId)
-                        ? "endpoint-hit active"
-                        : "endpoint-hit"
-                    }
-                    cx={candidate.connection.contactPoint.x}
-                    cy={candidate.connection.contactPoint.y}
-                    r={4}
-                    onClick={(event) => event.stopPropagation()}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      selectEndpoint(candidate);
-                      setStatus(
-                        `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
-                      );
-                    }}
-                    onPointerDown={(event) => {
-                      if (
-                        tool === "pointer" &&
-                        selectedRoute &&
-                        powerRailEndIndex >= 0
-                      ) {
-                        beginRouteStretch(
-                          event,
-                          selectedRoute.id,
-                          selectedRouteSegmentIndex ?? 0,
-                          powerRailEndIndex === 0
-                            ? "resize-power-rail-start"
-                            : "resize-power-rail-end",
-                        );
-                        return;
-                      }
-                      if (
-                        tool === "pointer" &&
-                        candidate.endpoint.kind === "junction"
-                      ) {
-                        event.stopPropagation();
-                        selectEndpoint(candidate);
-                        setStatus(
-                          `Selected ${endpointTestId(candidate.endpoint)}`,
-                        );
-                        return;
-                      }
-                      handleWireEndpoint(event, candidate);
-                    }}
-                  />
-                );
-              })}
-              {document.annotations
-                .filter((annotation) =>
-                  isSchematicAnnotationVisible(document, annotation),
-                )
-                .map((annotation) => {
-                  const anchor = annotationAnchor(
-                    document,
-                    resolver,
-                    annotation,
-                    routeGeometryRecords,
-                    styleProfile,
-                  );
-                  const hitBox = annotationHitBox(
-                    document,
-                    annotation,
-                    anchor,
-                    routeGeometryRecords,
-                    styleProfile,
-                  );
-                  const selected =
-                    selectedAnnotationId === annotation.id ||
-                    supplementalSelection.annotationIds.includes(annotation.id);
-                  return (
-                    <rect
-                      key={`annotation-hit-${annotation.id}`}
-                      data-testid={`annotation-hit-${annotation.id}`}
-                      data-canvas-hit-kind="annotation"
-                      data-canvas-hit-id={annotation.id}
-                      data-drag-object-id={annotation.id}
-                      className={
-                        selected
-                          ? "hit-target annotation-text-hit selected"
-                          : "hit-target annotation-text-hit"
-                      }
-                      {...hitBox}
-                      onClick={(event) => event.stopPropagation()}
-                      onPointerDown={(event) =>
-                        beginAnnotationDrag(event, annotation)
-                      }
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                      onDoubleClick={(event) => {
-                        event.stopPropagation();
-                        beginAnnotationTextEditing(annotation);
-                      }}
-                    />
-                  );
-                })}
-              {(document.drafting?.objects ?? []).map((object) => {
-                // WP-R5/P1: every drafting object gets a selectable/deletable hit
-                // shape derived from the shared geometry. P1: use the object's
-                // actual shape (stroke polyline/line for lines and arrows) instead
-                // of a full bounding rect, so large leader/callout boxes do not
-                // block the canvas underneath.
-                const geometry = resolveDraftingObjectGeometry(
-                  document,
-                  resolver,
-                  object,
-                );
-                const draggable = !object.locked && draftingDragOrigin(object);
-                const selected =
-                  selectedDraftingId === object.id ||
-                  supplementalSelection.draftingIds.includes(object.id)
-                    ? "annotation-hit selected"
-                    : "annotation-hit";
-                const textSelected =
-                  selectedDraftingId === object.id ||
-                  supplementalSelection.draftingIds.includes(object.id)
-                    ? "hit-target annotation-text-hit selected"
-                    : "hit-target annotation-text-hit";
-                const onDown = (event: ReactPointerEvent<SVGElement>): void => {
-                  if (draggable) {
-                    beginDraftingDrag(event, object);
-                  } else {
-                    event.stopPropagation();
-                    selectDraftingObject(object.id);
-                  }
-                };
-                if (
-                  object.kind === "construction-line" &&
-                  geometry.kind === "construction-line"
-                ) {
-                  const points = object.points
-                    .map((point) => `${point.x},${point.y}`)
-                    .join(" ");
-                  const hasCurve = geometry.curveControls.some(Boolean);
-                  const commonProps = {
-                    "data-testid": `drafting-hit-${object.id}`,
-                    "data-canvas-hit-kind": "drafting",
-                    "data-canvas-hit-id": object.id,
-                    "data-drag-object-id": object.id,
-                    className: selected,
-                    fill: "none",
-                    onPointerDown: onDown,
-                    onDoubleClick: (event: ReactMouseEvent<SVGElement>) => {
-                      event.stopPropagation();
-                      insertConstructionVertex(
-                        object,
-                        pointFromClient(
-                          event.clientX,
-                          event.clientY,
-                          event.currentTarget.ownerSVGElement!,
-                        ),
-                      );
-                    },
-                    pointerEvents: tool === "wire" ? "none" : undefined,
-                  };
-                  return hasCurve ? (
-                    <path
-                      key={`drafting-hit-${object.id}`}
-                      {...commonProps}
-                      d={draftingPathData(
-                        geometry.points,
-                        geometry.curveControls,
-                      )}
-                    />
-                  ) : (
-                    <polyline
-                      key={`drafting-hit-${object.id}`}
-                      {...commonProps}
-                      points={points}
-                    />
-                  );
-                }
-                if (object.kind === "arrow" && geometry.kind === "arrow") {
-                  return geometry.curveControls.some(Boolean) ? (
-                    <path
-                      key={`drafting-hit-${object.id}`}
-                      data-testid={`drafting-hit-${object.id}`}
-                      data-canvas-hit-kind="drafting"
-                      data-canvas-hit-id={object.id}
-                      data-drag-object-id={object.id}
-                      className={selected}
-                      d={draftingPathData(
-                        geometry.points,
-                        geometry.curveControls,
-                      )}
-                      fill="none"
-                      onPointerDown={onDown}
-                      onDoubleClick={(event) => {
-                        event.stopPropagation();
-                        insertArrowWaypoint(
-                          object,
-                          pointFromClient(
-                            event.clientX,
-                            event.clientY,
-                            event.currentTarget.ownerSVGElement!,
-                          ),
-                        );
-                      }}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    />
-                  ) : (
-                    <polyline
-                      key={`drafting-hit-${object.id}`}
-                      data-testid={`drafting-hit-${object.id}`}
-                      data-canvas-hit-kind="drafting"
-                      data-canvas-hit-id={object.id}
-                      data-drag-object-id={object.id}
-                      className={selected}
-                      points={geometry.points
-                        .map((point) => `${point.x},${point.y}`)
-                        .join(" ")}
-                      fill="none"
-                      onPointerDown={onDown}
-                      onDoubleClick={(event) => {
-                        event.stopPropagation();
-                        insertArrowWaypoint(
-                          object,
-                          pointFromClient(
-                            event.clientX,
-                            event.clientY,
-                            event.currentTarget.ownerSVGElement!,
-                          ),
-                        );
-                      }}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    />
-                  );
-                }
-                if (
-                  object.kind === "rectangle" &&
-                  geometry.kind === "rectangle"
-                ) {
-                  return (
-                    <polygon
-                      key={`drafting-hit-${object.id}`}
-                      data-testid={`drafting-hit-${object.id}`}
-                      data-canvas-hit-kind="drafting"
-                      data-canvas-hit-id={object.id}
-                      data-drag-object-id={object.id}
-                      className={`${selected} drafting-rectangle-hit`}
-                      points={serializePolylinePoints(geometry.corners)}
-                      fill="none"
-                      onPointerDown={onDown}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    />
-                  );
-                }
-                if (object.kind === "leader" && geometry.kind === "leader") {
-                  return (
-                    <line
-                      key={`drafting-hit-${object.id}`}
-                      data-testid={`drafting-hit-${object.id}`}
-                      data-canvas-hit-kind="drafting"
-                      data-canvas-hit-id={object.id}
-                      data-drag-object-id={object.id}
-                      className={selected}
-                      x1={geometry.anchor.x}
-                      y1={geometry.anchor.y}
-                      x2={geometry.target.x}
-                      y2={geometry.target.y}
-                      onPointerDown={onDown}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    />
-                  );
-                }
-                if (object.kind === "callout" && geometry.kind === "callout") {
-                  return (
-                    <g
-                      key={`drafting-hit-${object.id}`}
-                      data-testid={`drafting-hit-${object.id}`}
-                      data-canvas-hit-kind="drafting"
-                      data-canvas-hit-id={object.id}
-                      data-drag-object-id={object.id}
-                      onPointerDown={onDown}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                    >
-                      <line
-                        className={selected}
-                        x1={geometry.textPosition.x}
-                        y1={geometry.textPosition.y}
-                        x2={geometry.target.x}
-                        y2={geometry.target.y}
-                      />
-                      <rect className={selected} {...geometry.textBounds} />
-                    </g>
-                  );
-                }
-                return (
-                  <rect
-                    key={`drafting-hit-${object.id}`}
-                    data-testid={`drafting-hit-${object.id}`}
-                    data-canvas-hit-kind="drafting"
-                    data-canvas-hit-id={object.id}
-                    data-drag-object-id={object.id}
-                    className={object.kind === "text" ? textSelected : selected}
-                    {...geometry.bounds}
-                    onPointerDown={onDown}
-                    onDoubleClick={(event) => {
-                      if (object.kind !== "text") return;
-                      event.stopPropagation();
-                      beginDraftingTextEditing(object);
-                    }}
-                  />
-                );
-              })}
-              {selectedDraftingId
-                ? (() => {
-                    const object = document.drafting?.objects.find(
-                      (candidate) => candidate.id === selectedDraftingId,
-                    );
-                    if (!object || object.locked) return null;
-                    const geometry = resolveDraftingObjectGeometry(
-                      document,
-                      resolver,
-                      object,
-                    );
-                    if (object.kind === "arrow" && geometry.kind === "arrow") {
-                      return (
-                        <g
-                          data-testid={`drafting-handles-${object.id}`}
-                          data-canvas-hit-kind="handle"
-                          data-canvas-hit-id={`drafting-handles-${object.id}`}
-                        >
-                          <circle
-                            className="draft-handle"
-                            data-testid={`draft-handle-from-${object.id}`}
-                            cx={geometry.from.x}
-                            cy={geometry.from.y}
-                            r="5"
-                            onPointerDown={(event) =>
-                              beginDraftingHandleDrag(event, object, {
-                                kind: "from",
-                              })
-                            }
-                          />
-                          {geometry.points.slice(1, -1).map((point, index) => (
-                            <circle
-                              key={`draft-arrow-waypoint-${index}`}
-                              className="draft-handle"
-                              data-testid={`draft-handle-waypoint-${index}-${object.id}`}
-                              cx={point.x}
-                              cy={point.y}
-                              r="5"
-                              onPointerDown={(event) =>
-                                beginDraftingHandleDrag(event, object, {
-                                  kind: "waypoint",
-                                  index,
-                                })
-                              }
-                            />
-                          ))}
-                          {geometry.points.slice(0, -1).map((point, index) => {
-                            const next = geometry.points[index + 1]!;
-                            const midpoint = quadraticMidpoint(
-                              point,
-                              geometry.curveControls[index] ?? null,
-                              next,
-                            );
-                            return (
-                              <rect
-                                key={`draft-arrow-segment-${index}`}
-                                className="draft-handle draft-midpoint-handle"
-                                data-testid={`draft-handle-segment-${index}-${object.id}`}
-                                x={midpoint.x - 3}
-                                y={midpoint.y - 3}
-                                width="6"
-                                height="6"
-                                transform={`rotate(45 ${midpoint.x} ${midpoint.y})`}
-                                onPointerDown={(event) =>
-                                  beginDraftingHandleDrag(event, object, {
-                                    kind: "curve",
-                                    index,
-                                  })
-                                }
-                              />
-                            );
-                          })}
-                          <circle
-                            className="draft-handle"
-                            data-testid={`draft-handle-to-${object.id}`}
-                            cx={geometry.to.x}
-                            cy={geometry.to.y}
-                            r="5"
-                            onPointerDown={(event) =>
-                              beginDraftingHandleDrag(event, object, {
-                                kind: "to",
-                              })
-                            }
-                          />
-                        </g>
-                      );
-                    }
-                    if (
-                      object.kind === "construction-line" &&
-                      geometry.kind === "construction-line"
-                    ) {
-                      return (
-                        <g
-                          data-testid={`drafting-handles-${object.id}`}
-                          data-canvas-hit-kind="handle"
-                          data-canvas-hit-id={`drafting-handles-${object.id}`}
-                        >
-                          {geometry.vertices.map((vertex, index) => (
-                            <circle
-                              key={`draft-vx-${index}`}
-                              className="draft-handle"
-                              data-testid={`draft-handle-vx-${index}-${object.id}`}
-                              cx={vertex.x}
-                              cy={vertex.y}
-                              r="5"
-                              onPointerDown={(event) =>
-                                beginDraftingHandleDrag(event, object, {
-                                  kind: "vertex",
-                                  index,
-                                })
-                              }
-                              onDoubleClick={(event) => {
-                                event.stopPropagation();
-                                deleteConstructionVertex(object, index);
-                              }}
-                            />
-                          ))}
-                          {geometry.vertices
-                            .slice(0, -1)
-                            .map((vertex, index) => {
-                              const next = geometry.vertices[index + 1]!;
-                              const midpoint = quadraticMidpoint(
-                                vertex,
-                                geometry.curveControls[index] ?? null,
-                                next,
-                              );
-                              return (
-                                <rect
-                                  key={`draft-line-segment-${index}`}
-                                  className="draft-handle draft-midpoint-handle"
-                                  data-testid={`draft-handle-segment-${index}-${object.id}`}
-                                  x={midpoint.x - 3}
-                                  y={midpoint.y - 3}
-                                  width="6"
-                                  height="6"
-                                  transform={`rotate(45 ${midpoint.x} ${midpoint.y})`}
-                                  onPointerDown={(event) =>
-                                    beginDraftingHandleDrag(event, object, {
-                                      kind: "curve",
-                                      index,
-                                    })
-                                  }
-                                />
-                              );
-                            })}
-                        </g>
-                      );
-                    }
-                    if (
-                      object.kind === "rectangle" &&
-                      geometry.kind === "rectangle"
-                    ) {
-                      return (
-                        <g data-testid={`drafting-handles-${object.id}`}>
-                          {geometry.corners.map((corner, index) => (
-                            <rect
-                              key={`draft-rectangle-corner-${index}`}
-                              className="draft-handle"
-                              data-testid={`draft-handle-corner-${index}-${object.id}`}
-                              x={corner.x - 4}
-                              y={corner.y - 4}
-                              width="8"
-                              height="8"
-                              onPointerDown={(event) =>
-                                beginDraftingHandleDrag(event, object, {
-                                  kind: "rectangle-corner",
-                                  index,
-                                })
-                              }
-                            />
-                          ))}
-                        </g>
-                      );
-                    }
-                    return null;
-                  })()
-                : null}
-              {boxPreview ? (
-                <rect
-                  data-testid={
-                    boxPreview.intent === "zoom" ? "zoom-box" : "selection-box"
-                  }
-                  className={
-                    boxPreview.intent === "zoom"
-                      ? "zoom-box"
-                      : `selection-box selection-box--${marqueeMode(
-                          boxPreview.start,
-                          boxPreview.end,
-                        )}`
-                  }
-                  {...normalizedRect(boxPreview.start, boxPreview.end)}
-                />
-              ) : null}
-              {draftingSource && draftingHover ? (
-                <DraftingCreatePreview
-                  tool={tool}
-                  start={draftingSource}
-                  waypoints={draftingWaypoints}
-                  hover={draftingHover}
-                  snap={draftingSnapPoint}
-                  styleProfile={styleProfile}
-                />
-              ) : null}
-              {tool === "wire" && wirePreviewPoint ? (
-                <circle
-                  className="snap-preview"
-                  cx={wirePreviewPoint.x}
-                  cy={wirePreviewPoint.y}
-                  r="4"
-                />
-              ) : null}
-              {textEditing && textEditingBounds ? (
-                <CanvasTextEditorOverlay
-                  session={textEditing}
-                  bounds={textEditingBounds}
-                  viewBox={viewBox}
-                  disabled={textEditingLocked}
-                  onUpdate={updateTextEditing}
-                  onCommit={commitTextEditing}
-                  onDelete={deleteTextEditing}
-                  {...(editingAnnotation &&
-                  isRoutedMarker(editingAnnotation) &&
-                  effectiveRouteAttachment(editingAnnotation)
-                    ? { onReverseCurrentArrow: reverseSelectedCurrentArrow }
-                    : {})}
-                />
-              ) : null}
-            </g>
-          </svg>
-        </section>
+            },
+            onTextEdit: beginDraftingTextEditing,
+          }}
+          draftingHandles={{
+            document,
+            resolver,
+            selectedDraftingId,
+            onHandlePointerDown: beginDraftingHandleDrag,
+            onDeleteVertex: deleteConstructionVertex,
+          }}
+          interactionPreviews={{
+            boxPreview,
+            draftingSource,
+            draftingWaypoints,
+            draftingHover,
+            draftingSnapPoint,
+            tool,
+            styleProfile,
+            wirePreviewPoint,
+            textEditing,
+            textEditingBounds,
+            viewBox,
+            textEditingLocked,
+            onTextUpdate: updateTextEditing,
+            onTextCommit: commitTextEditing,
+            onTextDelete: deleteTextEditing,
+            ...(editingAnnotation &&
+            isRoutedMarker(editingAnnotation) &&
+            effectiveRouteAttachment(editingAnnotation)
+              ? { onReverseCurrentArrow: reverseSelectedCurrentArrow }
+              : {}),
+          }}
+        />
       </div>
-      <footer className="app-statusbar">
-        <div className="statusbar-left">
-          <p className="editor-status" data-testid="status" aria-live="polite">
-            {status}
-          </p>
-          <span className="statusbar-tool" data-testid="statusbar-tool">
-            {vddRailMode
-              ? "Drawing Power Rail"
-              : pendingSymbolId
-                ? `Placing ${pendingSymbolId}`
-                : tool === "pointer"
-                  ? "Select"
-                  : tool === "construction-line"
-                    ? "Line"
-                    : tool.charAt(0).toUpperCase() + tool.slice(1)}
-          </span>
-          {tool === "wire" ? (
-            <button
-              type="button"
-              className="statusbar-tool"
-              onClick={() => setWireOptionsOpen((open) => !open)}
-              aria-expanded={wireOptionsOpen}
-            >
-              {wireRoutingMode === "orthogonal" ? "Orthogonal" : "45°"} · F3
-            </button>
-          ) : null}
-          {tool === "wire" && wireOptionsOpen ? (
-            <span className="wire-options" data-testid="wire-options">
-              <label>
-                Route
-                <select
-                  value={wireRoutingMode}
-                  onChange={(event) =>
-                    setWireRoutingMode(
-                      event.target.value as typeof wireRoutingMode,
-                    )
-                  }
-                >
-                  <option value="orthogonal">Orthogonal</option>
-                  <option value="octilinear">45° octilinear</option>
-                  <option value="free">Any angle</option>
-                </select>
-              </label>
-              <label>
-                Corner
-                <select
-                  value={wireCornerOrder}
-                  onChange={(event) =>
-                    setWireCornerOrder(
-                      event.target.value as typeof wireCornerOrder,
-                    )
-                  }
-                >
-                  <option value="auto">Auto</option>
-                  <option value="horizontal-first">Horizontal first</option>
-                  <option value="vertical-first">Vertical first</option>
-                  <option value="diagonal-first">Diagonal first</option>
-                  <option value="orthogonal-first">Orthogonal first</option>
-                </select>
-              </label>
-            </span>
-          ) : null}
-          {recoveryStateLabel(recoveryState) === null ? null : (
-            <output
-              className="statusbar-recovery"
-              data-testid="recovery-state"
-              aria-label="Browser recovery state"
-            >
-              {recoveryStateLabel(recoveryState)}
-            </output>
-          )}
-        </div>
-        <div className="canvas-controls" aria-label="Canvas view controls">
-          <button
-            type="button"
-            aria-label={
-              gridDotsVisible ? "Hide background dots" : "Show background dots"
-            }
-            aria-pressed={gridDotsVisible}
-            title={
-              gridDotsVisible ? "Hide background dots" : "Show background dots"
-            }
-            onClick={() =>
-              setGridDotsVisible((visible) => {
-                // Every other canvas control reports what it did; this one
-                // changed the canvas silently.
-                setStatus(
-                  visible ? "Background dots hidden" : "Background dots shown",
-                );
-                return !visible;
-              })
-            }
-          >
-            <ToolIcon name="grid" />
-          </button>
-          <button
-            type="button"
-            aria-label="Zoom out"
-            title="Zoom out"
-            onClick={() => zoomViewAtCenter(1.2)}
-          >
-            <ToolIcon name="zoom-out" />
-          </button>
-          <output aria-label="Current zoom">{zoomPercent}%</output>
-          <button
-            type="button"
-            aria-label="Zoom in"
-            title="Zoom in"
-            onClick={() => zoomViewAtCenter(0.84)}
-          >
-            <ToolIcon name="zoom-in" />
-          </button>
-          <button
-            type="button"
-            aria-label="Fit view"
-            title="Fit view (Home)"
-            onClick={() => editorCommands.execute({ id: "view.fit" })}
-          >
-            <ToolIcon name="fit" />
-          </button>
-        </div>
-      </footer>
+      <EditorStatusbar
+        status={status}
+        tool={tool}
+        vddRailMode={vddRailMode}
+        pendingSymbolId={pendingSymbolId}
+        wireOptionsOpen={wireOptionsOpen}
+        wireRoutingMode={wireRoutingMode}
+        wireCornerOrder={wireCornerOrder}
+        recoveryLabel={recoveryStateLabel(recoveryState)}
+        gridDotsVisible={gridDotsVisible}
+        zoomPercent={zoomPercent}
+        onToggleWireOptions={() => setWireOptionsOpen((open) => !open)}
+        onWireRoutingModeChange={setWireRoutingMode}
+        onWireCornerOrderChange={setWireCornerOrder}
+        onToggleGridDots={() =>
+          setGridDotsVisible((visible) => {
+            setStatus(
+              visible ? "Background dots hidden" : "Background dots shown",
+            );
+            return !visible;
+          })
+        }
+        onZoomOut={() => zoomViewAtCenter(1.2)}
+        onZoomIn={() => zoomViewAtCenter(0.84)}
+        onFitView={() => editorCommands.execute({ id: "view.fit" })}
+      />
     </main>
   );
 }

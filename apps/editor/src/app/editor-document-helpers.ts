@@ -1,7 +1,9 @@
 import type { InstanceValueSource } from "@icm/derived";
-import type { Annotation, RouteEndpoint, SchematicDocument } from "@icm/model";
+import type { RouteEndpoint, SchematicDocument } from "@icm/model";
 
 import { componentParameters } from "../features/component-insert/component-parameters";
+
+export { instanceLabelAnnotationFor } from "../features/instance-display/default-instance-display";
 
 export function endpointTestId(endpoint: RouteEndpoint): string {
   switch (endpoint.kind) {
@@ -48,20 +50,4 @@ export function previewInstanceValueSource(
     symbolId: instance.symbolId,
     netlist: Object.keys(parameters).length > 0 ? { parameters } : undefined,
   };
-}
-
-export function instanceLabelAnnotationFor(
-  document: SchematicDocument,
-  instanceId: string,
-): Annotation | undefined {
-  return document.annotations.find(
-    (annotation) =>
-      (annotation.kind === "instance-label" ||
-        annotation.kind === "net-label") &&
-      (annotation.binding?.kind === "instance-schematic-name" ||
-        annotation.binding?.kind === "cell-terminal-name" ||
-        annotation.binding?.kind === "net-name") &&
-      annotation.anchor.kind === "object" &&
-      annotation.anchor.objectId === instanceId,
-  );
 }
