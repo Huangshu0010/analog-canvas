@@ -22,34 +22,20 @@ import {
   type CellResetPlan,
   type WireSource,
 } from "@icm/edit-engine";
-import { analyzeDesignNetlist } from "@icm/netlist";
 import {
-  buildProjectConnectivityIndex,
-  buildProjectSearchIndex,
-  deriveCrossings,
   deriveNetConnectivity,
   deriveInternalGroupSelection,
-  diagnoseProjectSnapshot,
-  diagnoseVisualQuality,
   endpointKey,
   findHierarchyPath,
-  isMosBulkTerminal,
-  isVisibleEndpoint,
-  resolveEndpointConnection,
   resolveDraftingObjectGeometry,
-  resolveElectricalContactTargets,
   displayableInstanceValue,
   resolveMosBulkConnection,
   resolveDocumentStyleProfile,
-  resolveDocumentLogicalNets,
   resolveRouteTap,
-  resolveDocumentRoutingGeometry,
   summarizeProjectCells,
-  traceHierarchyNet,
 } from "@icm/derived";
 import type {
   Diagnostic,
-  Flightline,
   GlobalNetTraceHop,
   HierarchyFrame,
   HierarchyNetTraceHop,
@@ -150,6 +136,11 @@ import { EditorDialogLayer } from "./editor-dialog-layer";
 import { EditorAppChrome } from "./editor-app-chrome";
 import { EditorPropertiesDock } from "./editor-properties-dock";
 import {
+  type HighlightedNetOrigin,
+  type RoutingGuidanceView,
+  useEditorDerivedModel,
+} from "./use-editor-derived-model";
+import {
   netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
 } from "../features/netlist-export/netlist-authoring";
@@ -245,7 +236,6 @@ import {
   type ProjectedInstanceMove,
   useSelectionInteraction,
 } from "../features/selection/use-selection-interaction";
-import { summarizeVisualDiagnostics } from "../features/selection/selection-inspector-details";
 import {
   hasVisualSelection,
   pruneVisualSelection,
@@ -263,7 +253,6 @@ import {
   annotationHitBox,
   attachmentAtPoint,
   effectiveRouteAttachment,
-  endpointNetId,
   instanceValueAnnotation,
   isRoutedMarker,
   looseRouteAnchorIds,
@@ -636,9 +625,8 @@ export function App({
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [wireOptionsOpen, setWireOptionsOpen] = useState(false);
-  const [routingGuidanceView, setRoutingGuidanceView] = useState<
-    "focused" | "all" | "hidden"
-  >("focused");
+  const [routingGuidanceView, setRoutingGuidanceView] =
+    useState<RoutingGuidanceView>("focused");
   const [routeStretchPreview, setRouteStretchPreview] =
     useState<RouteStretchPreview | null>(null);
   const [draftingHandlePreview, setDraftingHandlePreview] =
@@ -761,12 +749,8 @@ export function App({
   const [bulkDrawInstanceId, setBulkDrawInstanceId] = useState<string | null>(
     null,
   );
-  const [highlightedNetOrigin, setHighlightedNetOrigin] = useState<{
-    documentId: string;
-    netId: string;
-    hierarchyPath: readonly HierarchyFrame[];
-    endpoint?: RouteEndpoint;
-  } | null>(null);
+  const [highlightedNetOrigin, setHighlightedNetOrigin] =
+    useState<HighlightedNetOrigin | null>(null);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   /**
@@ -928,73 +912,39 @@ export function App({
     selection: visualSelection,
     selectedEndpoint,
   });
-  const projectConnectivityIndex = useMemo(
-    () => buildProjectConnectivityIndex(project, resolver),
-    [project, resolver],
-  );
-  const routeGeometryRecords = useMemo(
-    () =>
-      document.routes.flatMap((route) => {
-        const geometry = projectConnectivityIndex.documents
-          .get(document.id)
-          ?.routingGeometry.routes.get(route.id);
-        if (!geometry) return [];
-        return [{ route, geometry }];
-      }),
-    [document, projectConnectivityIndex],
-  );
-  const netlistAnalysis = useMemo(
-    () => analyzeDesignNetlist(project),
-    [project],
-  );
-  const highlightedTrace = useMemo(
-    () =>
-      highlightedNetOrigin
-        ? traceHierarchyNet(
-            projectConnectivityIndex,
-            highlightedNetOrigin.documentId,
-            highlightedNetOrigin.netId,
-            highlightedNetOrigin.endpoint,
-            highlightedNetOrigin.hierarchyPath,
-          )
-        : undefined,
-    [highlightedNetOrigin, projectConnectivityIndex],
-  );
-  const highlightedNet = useMemo(
-    () =>
-      highlightedTrace?.highlights.find(
-        (highlight) =>
-          highlight.documentId === document.id &&
-          highlight.hierarchyPath.length === documentStack.length &&
-          highlight.hierarchyPath.every(
-            (frame, index) =>
-              frame.parentDocumentId ===
-                documentStack[index]?.parentDocumentId &&
-              frame.instanceId === documentStack[index]?.instanceId &&
-              frame.childDocumentId === documentStack[index]?.childDocumentId,
-          ),
-      ),
-    [document.id, documentStack, highlightedTrace],
-  );
-  const highlightedNetId = highlightedNet?.netId ?? null;
-  const liveDiagnosticSnapshot = useMemo(
-    () => diagnoseProjectSnapshot(project, resolver, projectConnectivityIndex),
-    [project, projectConnectivityIndex, resolver],
-  );
-  const electricalDiagnostics = useMemo(
-    () =>
-      liveDiagnosticSnapshot.diagnostics.filter(
-        (diagnostic) => diagnostic.domain === "erc",
-      ),
-    [liveDiagnosticSnapshot],
-  );
-  const searchResults = useMemo(
-    () =>
-      buildProjectSearchIndex(project, {
-        connectivityIndex: projectConnectivityIndex,
-      }).search(searchQuery),
-    [project, projectConnectivityIndex, searchQuery],
-  );
+  const {
+    projectConnectivityIndex,
+    logicalNets,
+    routeGeometryRecords,
+    netlistAnalysis,
+    highlightedTrace,
+    highlightedNet,
+    highlightedNetId,
+    selectedHighlightIsActive,
+    liveDiagnosticSnapshot,
+    electricalDiagnostics,
+    searchResults,
+    flightlines,
+    displayedFlightlines,
+    crossings,
+    visualDiagnostics,
+    visualDiagnosticSummary,
+    visibleEndpoints,
+    wiringEndpoints,
+    contactComponents,
+  } = useEditorDerivedModel({
+    project,
+    document,
+    resolver,
+    documentStack,
+    highlightedNetOrigin,
+    selectedHighlightNetId,
+    selectedHighlightEndpoint,
+    searchQuery,
+    routingGuidanceView,
+    wireSource,
+    bulkDrawInstanceId,
+  });
   const {
     enabled: cellSymbolLayoutEnabled,
     layout: selectedCellSymbolLayout,
@@ -1203,208 +1153,6 @@ export function App({
       : false;
   });
   const styleProfile = resolveDocumentStyleProfile(document.presentation);
-  const selectedHighlightIsActive = Boolean(
-    selectedHighlightNetId &&
-    highlightedNetOrigin?.documentId === document.id &&
-    highlightedNetOrigin.hierarchyPath.length === documentStack.length &&
-    highlightedNetOrigin.hierarchyPath.every(
-      (frame, index) =>
-        frame.parentDocumentId === documentStack[index]?.parentDocumentId &&
-        frame.instanceId === documentStack[index]?.instanceId &&
-        frame.childDocumentId === documentStack[index]?.childDocumentId,
-    ) &&
-    highlightedNetOrigin.netId === selectedHighlightNetId &&
-    (!highlightedNetOrigin.endpoint ||
-      (selectedHighlightEndpoint &&
-        endpointKey(highlightedNetOrigin.endpoint) ===
-          endpointKey(selectedHighlightEndpoint))),
-  );
-  const flightlines = useMemo(
-    () => [
-      ...new Map(
-        [
-          ...(projectConnectivityIndex.documents
-            .get(document.id)
-            ?.logicalNets.values() ?? []),
-        ]
-          .flatMap((net) => net.routingGuidance)
-          .map((line) => [line.id, line] as const),
-      ).values(),
-    ],
-    [document.id, document.nets, projectConnectivityIndex],
-  );
-  const displayedFlightlines = useMemo(() => {
-    // Routing guidance is derived exclusively from imported Net intent. It is
-    // not Document UI state: labelling, moving, or deleting a Route must never
-    // dismiss another imported Net's unresolved topology. A highlighted Net
-    // already has the stronger conductor overlay, so omit only that Net's
-    // guides rather than suppressing the complete imported document.
-    if (routingGuidanceView === "hidden") return [];
-    const focusedNetIds = new Set(
-      [wireSource?.netId, selectedHighlightNetId, highlightedNetId].filter(
-        (netId): netId is string => netId !== null && netId !== undefined,
-      ),
-    );
-    const scoped =
-      routingGuidanceView === "focused" && focusedNetIds.size > 0
-        ? flightlines.filter((flightline) =>
-            [flightline.netId, flightline.fromNetId, flightline.toNetId].some(
-              (netId) => focusedNetIds.has(netId),
-            ),
-          )
-        : flightlines;
-    return highlightedNetId
-      ? scoped.filter(
-          (flightline) =>
-            ![
-              flightline.netId,
-              flightline.fromNetId,
-              flightline.toNetId,
-            ].includes(highlightedNetId),
-        )
-      : scoped;
-  }, [
-    flightlines,
-    highlightedNetId,
-    routingGuidanceView,
-    selectedHighlightNetId,
-    wireSource?.netId,
-  ]);
-  const crossings = useMemo(
-    () =>
-      deriveCrossings(
-        document,
-        resolver,
-        projectConnectivityIndex.documents.get(document.id)?.routingGeometry,
-      ),
-    [document, projectConnectivityIndex, resolver],
-  );
-  const visualDiagnostics = useMemo(
-    () => diagnoseVisualQuality(document, resolver),
-    [document, resolver],
-  );
-  const visualDiagnosticSummary = useMemo(
-    () => summarizeVisualDiagnostics(visualDiagnostics),
-    [visualDiagnostics],
-  );
-  const visibleEndpoints: WireSource[] = useMemo(
-    () => [
-      ...document.instances.flatMap((instance) => {
-        if (!instance.placement) return [];
-        const resolved = resolver.resolve(
-          instance.symbolId,
-          instance.symbolVariantId,
-        );
-        if (!resolved) return [];
-        return resolved.definition.pins
-          .filter((pin) =>
-            isVisibleEndpoint(document, resolver, {
-              kind: "terminal",
-              instanceId: instance.id,
-              pinName: pin.name,
-            }),
-          )
-          .flatMap((pin): WireSource[] => {
-            const endpoint: RouteEndpoint = {
-              kind: "terminal",
-              instanceId: instance.id,
-              pinName: pin.name,
-            };
-            const connection = resolveEndpointConnection(
-              document,
-              resolver,
-              endpoint,
-            );
-            return connection
-              ? [
-                  {
-                    endpoint,
-                    connection,
-                    netId: endpointNetId(document, endpoint),
-                    preludeEdits: [],
-                    ...(isMosBulkTerminal(document, endpoint)
-                      ? { routePresentation: "bulk-dashed" as const }
-                      : {}),
-                  },
-                ]
-              : [];
-          });
-      }),
-      ...document.junctions
-        .filter((junction) => {
-          const role = junction.role ?? "branch";
-          return role === "branch" || role === "route-anchor";
-        })
-        .flatMap((junction): WireSource[] => {
-          const endpoint: RouteEndpoint = {
-            kind: "junction",
-            junctionId: junction.id,
-          };
-          const connection = resolveEndpointConnection(
-            document,
-            resolver,
-            endpoint,
-          );
-          return connection
-            ? [
-                {
-                  endpoint,
-                  connection,
-                  netId: junction.netId,
-                  preludeEdits: [],
-                },
-              ]
-            : [];
-        }),
-    ],
-    [document, resolver],
-  );
-  const visibleBulkEndpoints: WireSource[] = useMemo(
-    () =>
-      document.instances.flatMap((instance): WireSource[] => {
-        if (!instance.placement || bulkDrawInstanceId !== instance.id) {
-          return [];
-        }
-        const endpoint: RouteEndpoint = {
-          kind: "terminal",
-          instanceId: instance.id,
-          pinName: "B",
-        };
-        const connection = resolveEndpointConnection(
-          document,
-          resolver,
-          endpoint,
-        );
-        return connection
-          ? [
-              {
-                endpoint,
-                connection,
-                netId: endpointNetId(document, endpoint),
-                preludeEdits: [],
-                routePresentation: "bulk-dashed",
-              },
-            ]
-          : [];
-      }),
-    [bulkDrawInstanceId, document, resolver],
-  );
-  const wiringEndpoints = useMemo(() => {
-    const byKey = new Map<string, WireSource>();
-    for (const endpoint of [...visibleEndpoints, ...visibleBulkEndpoints]) {
-      byKey.set(endpointKey(endpoint.endpoint), endpoint);
-    }
-    return [...byKey.values()];
-  }, [visibleBulkEndpoints, visibleEndpoints]);
-  const contactComponents = useMemo(
-    () =>
-      [
-        ...(projectConnectivityIndex.documents
-          .get(document.id)
-          ?.logicalNets.values() ?? []),
-      ].flatMap((net) => net.routedComponents),
-    [document.id, projectConnectivityIndex],
-  );
   const {
     createRouteAnchor,
     beginRouteStretch,
@@ -2227,8 +1975,7 @@ export function App({
         )
       : undefined;
   const selectedPortLogicalName = selectedPortNet
-    ? resolveDocumentLogicalNets(document).byBaseNetId.get(selectedPortNet.id)
-        ?.name
+    ? logicalNets.byBaseNetId.get(selectedPortNet.id)?.name
     : undefined;
 
   function commitProjectName(): void {
@@ -3602,7 +3349,7 @@ export function App({
               selectedInstance && selectedBulkResolution
                 ? `${selectedInstance.id}.B → ${
                     selectedBulkResolution.net
-                      ? (resolveDocumentLogicalNets(document).byBaseNetId.get(
+                      ? (logicalNets.byBaseNetId.get(
                           selectedBulkResolution.net.id,
                         )?.name ?? selectedBulkResolution.net.id)
                       : "unresolved"
