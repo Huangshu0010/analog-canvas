@@ -28,12 +28,7 @@ describe("editor derived routing guidance", () => {
 
   it("keeps all guidance when focus has no active Net", () => {
     expect(
-      displayedRoutingGuidance(
-        [analog, bridge],
-        "focused",
-        new Set(),
-        null,
-      ),
+      displayedRoutingGuidance([analog, bridge], "focused", new Set(), null),
     ).toEqual([analog, bridge]);
   });
 
@@ -47,12 +42,7 @@ describe("editor derived routing guidance", () => {
       ),
     ).toEqual([bridge]);
     expect(
-      displayedRoutingGuidance(
-        [analog, bridge],
-        "all",
-        new Set(),
-        "net-b",
-      ),
+      displayedRoutingGuidance([analog, bridge], "all", new Set(), "net-b"),
     ).toEqual([analog]);
   });
 

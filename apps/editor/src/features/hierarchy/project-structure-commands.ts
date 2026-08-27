@@ -227,12 +227,9 @@ export function createProjectStructureCommands({
   ): boolean =>
     commitStructure(
       "delete-cell-pin-selection",
-      planRemoveCellTerminals(
-        project,
-        activeDocument.id,
-        terminalIds,
-        [...documentEdits],
-      ),
+      planRemoveCellTerminals(project, activeDocument.id, terminalIds, [
+        ...documentEdits,
+      ]),
     );
 
   const deleteCellTerminal = (

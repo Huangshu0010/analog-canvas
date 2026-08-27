@@ -114,11 +114,7 @@ interface CanvasEventHandlerDependencies {
 /** DOM event boundary for the editor canvas; domain mutations stay injected. */
 export function createEditorCanvasEventHandlers({
   model: { tool, document, resolver },
-  session: {
-    interactionKind,
-    cellSymbolLayoutEnabled,
-    exitCellSymbolLayout,
-  },
+  session: { interactionKind, cellSymbolLayoutEnabled, exitCellSymbolLayout },
   coordinates: {
     pointFromClient,
     logicalRadiusForPixels,

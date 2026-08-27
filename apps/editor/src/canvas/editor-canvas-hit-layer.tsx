@@ -1,7 +1,4 @@
-import type {
-  PointerEvent as ReactPointerEvent,
-  ReactNode,
-} from "react";
+import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 
 import {
   derivePowerRailComponent,

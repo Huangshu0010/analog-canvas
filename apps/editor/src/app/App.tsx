@@ -1973,9 +1973,7 @@ export function App({
 
   function deleteSelectedFormalPort(): void {
     if (!selectedFormalTerminal || !selectedInstance) return;
-    if (
-      deleteCellTerminal(selectedFormalTerminal.id, selectedInstance.id)
-    ) {
+    if (deleteCellTerminal(selectedFormalTerminal.id, selectedInstance.id)) {
       resetSelection();
     }
   }

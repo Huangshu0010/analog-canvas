@@ -1,9 +1,6 @@
 import { buildProjectConnectivityIndex } from "@icm/derived";
 import { createEmptyProject } from "@icm/model";
-import {
-  builtInSymbols,
-  createProjectSymbolResolver,
-} from "@icm/symbols";
+import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
 import { describe, expect, it, vi } from "vitest";
 
 import {

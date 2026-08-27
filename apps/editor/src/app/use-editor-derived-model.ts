@@ -263,13 +263,13 @@ export function useEditorDerivedModel({
   const highlightedNetId = highlightedNet?.netId ?? null;
   const selectedHighlightIsActive = Boolean(
     selectedHighlightNetId &&
-      highlightedNetOrigin?.documentId === document.id &&
-      hierarchyPathsMatch(highlightedNetOrigin.hierarchyPath, documentStack) &&
-      highlightedNetOrigin.netId === selectedHighlightNetId &&
-      (!highlightedNetOrigin.endpoint ||
-        (selectedHighlightEndpoint &&
-          endpointKey(highlightedNetOrigin.endpoint) ===
-            endpointKey(selectedHighlightEndpoint))),
+    highlightedNetOrigin?.documentId === document.id &&
+    hierarchyPathsMatch(highlightedNetOrigin.hierarchyPath, documentStack) &&
+    highlightedNetOrigin.netId === selectedHighlightNetId &&
+    (!highlightedNetOrigin.endpoint ||
+      (selectedHighlightEndpoint &&
+        endpointKey(highlightedNetOrigin.endpoint) ===
+          endpointKey(selectedHighlightEndpoint))),
   );
   const liveDiagnosticSnapshot = useMemo(
     () => diagnoseProjectSnapshot(project, resolver, projectConnectivityIndex),
@@ -320,7 +320,11 @@ export function useEditorDerivedModel({
   ]);
   const crossings = useMemo(
     () =>
-      deriveCrossings(document, resolver, documentConnectivity?.routingGeometry),
+      deriveCrossings(
+        document,
+        resolver,
+        documentConnectivity?.routingGeometry,
+      ),
     [document, documentConnectivity, resolver],
   );
   const visualDiagnostics = useMemo(
