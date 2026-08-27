@@ -1166,40 +1166,46 @@ export function App({
     commitWire,
     selectRoute,
   } = useWireInteraction({
-    document,
-    resolver,
-    selectedInstance,
-    selectedRouteId,
-    selectedRouteSegmentIndex,
-    visibleEndpoints,
-    routeGeometryRecords,
-    wireSource,
-    wireSourceRevision,
-    wireWaypoints,
-    wireDraftSteps,
-    wireRoutingMode,
-    wireCornerOrder,
-    nextRoutingSuffix,
-    transact,
-    setStatus,
-    setTool,
-    setWireSource,
-    setWirePreviewPoint,
-    setWireDraftSteps,
-    completeWire,
-    clearTransientCanvasState,
-    cancelInteraction,
-    setBulkDrawInstanceId,
-    replaceRouteSelection: (routeIds) =>
-      replaceSelectionKind("route", routeIds),
-    selectOnly,
-    setSelectedRouteSegmentIndex,
-    setSelectedEndpoint,
-    canvasDragSessionRef,
-    setRouteStretchPreview,
-    pointFromClient,
-    logicalRadiusForPixels,
-    contactComponents,
+    model: {
+      document,
+      resolver,
+      visibleEndpoints,
+      routeGeometryRecords,
+      contactComponents,
+    },
+    selection: {
+      selectedInstance,
+      selectedRouteId,
+      selectedRouteSegmentIndex,
+      replaceRouteSelection: (routeIds) =>
+        replaceSelectionKind("route", routeIds),
+      selectOnly,
+      setSelectedRouteSegmentIndex,
+      setSelectedEndpoint,
+    },
+    session: {
+      wireSource,
+      wireSourceRevision,
+      wireWaypoints,
+      wireDraftSteps,
+      wireRoutingMode,
+      wireCornerOrder,
+      setTool,
+      setWireSource,
+      setWirePreviewPoint,
+      setWireDraftSteps,
+      completeWire,
+      clearTransientCanvasState,
+      cancelInteraction,
+      setBulkDrawInstanceId,
+    },
+    transaction: { nextRoutingSuffix, transact, setStatus },
+    drag: {
+      canvasDragSessionRef,
+      setRouteStretchPreview,
+      pointFromClient,
+      logicalRadiusForPixels,
+    },
   });
   const cellInsertCandidates = useMemo(
     () =>
@@ -1640,71 +1646,84 @@ export function App({
     applyWireCanvasPoint,
     handleRoutePointerDown,
   } = useWireCanvasController({
-    document,
-    resolver,
-    wiringEndpoints,
-    routeGeometryRecords,
-    contactComponents,
-    wireSource,
-    wireWaypoints,
-    wireDraftSteps,
-    wireRoutingMode,
-    wireCornerOrder,
-    tool,
-    vddRailMode,
-    componentPlacementPending: Boolean(
-      pendingSymbolId && pendingComponentPlacement,
-    ),
-    selectedInstanceIds: selectedIds,
-    selection: visualSelection,
-    getInteractionKind: () => getCurrentInteractionState().kind,
-    beginInstanceMove: beginMoveFromSelection,
-    beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
-    cancelInteraction,
-    handleWireRoutePointerDown,
-    selectRoute,
-    beginRouteStretch,
-    createRouteAnchor,
-    pointFromClient: (clientX, clientY, svg) =>
-      pointFromClient(clientX, clientY, svg, false),
-    logicalRadiusForPixels,
-    paintSnapGuides,
-    setWireSource,
-    setWirePreviewPoint,
-    setWireDraftSteps,
-    commitWire,
-    fixWirePoint,
-    finishWireAtPoint,
-    setWireRoutingMode,
-    setWireCornerOrder,
-    setStatus,
+    model: {
+      document,
+      resolver,
+      wiringEndpoints,
+      routeGeometryRecords,
+      contactComponents,
+    },
+    session: {
+      wireSource,
+      wireWaypoints,
+      wireDraftSteps,
+      wireRoutingMode,
+      wireCornerOrder,
+      tool,
+      vddRailMode,
+      componentPlacementPending: Boolean(
+        pendingSymbolId && pendingComponentPlacement,
+      ),
+      getInteractionKind: () => getCurrentInteractionState().kind,
+      cancelInteraction,
+      setWireSource,
+      setWirePreviewPoint,
+      setWireDraftSteps,
+      setWireRoutingMode,
+      setWireCornerOrder,
+    },
+    selection: {
+      selectedInstanceIds: selectedIds,
+      selection: visualSelection,
+      beginInstanceMove: beginMoveFromSelection,
+      beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
+    },
+    routes: {
+      handlePointerDown: handleWireRoutePointerDown,
+      select: selectRoute,
+      beginStretch: beginRouteStretch,
+      createAnchor: createRouteAnchor,
+    },
+    viewport: {
+      pointFromClient: (clientX, clientY, svg) =>
+        pointFromClient(clientX, clientY, svg, false),
+      logicalRadiusForPixels,
+      paintSnapGuides,
+    },
+    commands: { commitWire, fixWirePoint, finishWireAtPoint, setStatus },
   });
   const {
     compositeSelectionOwnsHit,
     handlePointerDown: handleCanvasHitPointerDown,
   } = createCanvasHitController({
-    document,
-    visibleEndpoints,
-    selection: visualSelection,
-    selectedInternalRouteIds,
-    selectedInternalJunctionIds,
-    selectedInternalObjectIds,
-    getInteractionKind: () => getCurrentInteractionState().kind,
-    placementOwnsCanvas: Boolean(
-      (pendingSymbolId && pendingComponentPlacement) ||
-      vddRailMode ||
-      copyPlacement !== null,
-    ),
-    tool,
-    cellSymbolLayoutEnabled,
-    beginInstanceMove: beginMoveFromSelection,
-    beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
-    beginAnnotationDrag,
-    handleRoutePointerDown,
-    beginDraftingDrag,
-    selectEndpoint,
-    endpointStatusLabel: (endpoint) => endpointTestId(endpoint.endpoint),
-    setStatus,
+    model: {
+      document,
+      visibleEndpoints,
+      selection: visualSelection,
+      selectedInternalRouteIds,
+      selectedInternalJunctionIds,
+      selectedInternalObjectIds,
+    },
+    session: {
+      getInteractionKind: () => getCurrentInteractionState().kind,
+      placementOwnsCanvas: Boolean(
+        (pendingSymbolId && pendingComponentPlacement) ||
+        vddRailMode ||
+        copyPlacement !== null,
+      ),
+      tool,
+      cellSymbolLayoutEnabled,
+    },
+    actions: {
+      beginInstanceMove: beginMoveFromSelection,
+      beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
+      beginAnnotationDrag,
+      handleRoutePointerDown,
+      beginDraftingDrag,
+      selectEndpoint,
+      endpointStatusLabel: (endpoint) => endpointTestId(endpoint.endpoint),
+      setStatus,
+    },
   });
   const {
     fitView,
@@ -1714,54 +1733,65 @@ export function App({
     continueCanvasGesture,
     finishCanvasGesture,
   } = createCanvasGestureController({
-    document,
-    resolver,
-    routeGeometryRecords,
-    styleProfile,
-    defaultViewBox: DEFAULT_VIEWBOX,
-    contentBounds: contentScene?.viewBox,
-    viewBox,
-    setViewBox,
-    boxPreview,
-    setBoxPreview,
-    panPreview,
-    setPanPreview,
-    pointFromClient: (clientX, clientY, svg) =>
-      pointFromClient(clientX, clientY, svg),
-    rawPointFromClient: (clientX, clientY, svg) =>
-      pointFromClient(clientX, clientY, svg, false),
-    logicalRadiusForPixels,
-    getInteractionKind: () => getCurrentInteractionState().kind,
-    updateCommandMovePreview: updateCommandMovePreviewFromSelection,
-    componentPlacementPending: Boolean(
-      pendingSymbolId && pendingComponentPlacement,
-    ),
-    componentSymbolPending: pendingSymbolId !== null,
-    setComponentPreviewPoint,
-    vddRailMode,
-    vddRailStart,
-    setVddRailPreviewPoint,
-    copyPlacementPending: copyPlacement !== null,
-    setCopyPreviewPoint,
-    tool,
-    draftingSource,
-    snapDraftingPoint,
-    setDraftingHover,
-    setDraftingSnapPoint,
-    wireActive: wireSource !== null,
-    resolveWireCanvasSnap,
-    setWirePreviewPoint,
-    paintSnapGuides,
-    cycleWireCornerShape,
-    noteCanvasPoint: (point) => {
-      lastCanvasPointRef.current = point;
+    model: { document, resolver, routeGeometryRecords, styleProfile },
+    viewport: {
+      defaultViewBox: DEFAULT_VIEWBOX,
+      contentBounds: contentScene?.viewBox,
+      viewBox,
+      setViewBox,
+      pointFromClient: (clientX, clientY, svg) =>
+        pointFromClient(clientX, clientY, svg),
+      rawPointFromClient: (clientX, clientY, svg) =>
+        pointFromClient(clientX, clientY, svg, false),
+      logicalRadiusForPixels,
     },
-    cellSymbolLayoutDragPointerId,
-    cancelCellSymbolLayoutDrag,
-    completeCellSymbolLayoutDrag,
-    replaceSelection,
-    clearSelectedEndpoint: () => setSelectedEndpoint(null),
-    setStatus,
+    gestureSession: {
+      boxPreview,
+      setBoxPreview,
+      panPreview,
+      setPanPreview,
+      getInteractionKind: () => getCurrentInteractionState().kind,
+      paintSnapGuides,
+      noteCanvasPoint: (point) => {
+        lastCanvasPointRef.current = point;
+      },
+      setStatus,
+    },
+    selection: {
+      updateCommandMovePreview: updateCommandMovePreviewFromSelection,
+      replaceSelection,
+      clearSelectedEndpoint: () => setSelectedEndpoint(null),
+    },
+    placement: {
+      componentPlacementPending: Boolean(
+        pendingSymbolId && pendingComponentPlacement,
+      ),
+      componentSymbolPending: pendingSymbolId !== null,
+      setComponentPreviewPoint,
+      vddRailMode,
+      vddRailStart,
+      setVddRailPreviewPoint,
+      copyPlacementPending: copyPlacement !== null,
+      setCopyPreviewPoint,
+    },
+    drafting: {
+      tool,
+      draftingSource,
+      snapDraftingPoint,
+      setDraftingHover,
+      setDraftingSnapPoint,
+    },
+    wiring: {
+      wireActive: wireSource !== null,
+      resolveWireCanvasSnap,
+      setWirePreviewPoint,
+      cycleWireCornerShape,
+    },
+    cellSymbolLayout: {
+      activeDragPointerId: cellSymbolLayoutDragPointerId,
+      cancelDrag: cancelCellSymbolLayoutDrag,
+      completeDrag: completeCellSymbolLayoutDrag,
+    },
   });
   const {
     switchDocument,
@@ -2724,64 +2754,76 @@ export function App({
   }
 
   const canvasEventHandlers = createEditorCanvasEventHandlers({
-    tool,
-    document,
-    resolver,
-    interactionKind: () => getCurrentInteractionState().kind,
-    pendingSymbolId,
-    pendingComponentPlacement: Boolean(pendingComponentPlacement),
-    vddRailMode,
-    copyPlacementActive: copyPlacement !== null,
-    cellSymbolLayoutEnabled,
-    selectedDrafting,
-    wireSource,
-    wireDraftStepCount: wireDraftSteps.length,
-    draftingSourceActive: draftingSource !== null,
-    pointFromClient,
-    snapPlacementPoint: (point) => ({
-      x: snapCoordinate(point.x, document.presentation.grid),
-      y: snapCoordinate(point.y, document.presentation.grid),
-    }),
-    commitCommandMove: commitCommandMoveFromSelection,
-    commitCopyPlacement: commitCopyPlacementFromSelection,
-    commitPendingPlacement: commitPendingPlacementAtFromHook,
-    exitCellSymbolLayout,
-    clearDraftingSelection: () => replaceSelectionKind("drafting", []),
-    handleCanvasHitPointerDown,
-    beginCanvasGesture,
-    continueCanvasGesture,
-    finishCanvasGesture,
-    clearComponentPreview: () => setComponentPreviewPoint(null),
-    clearVddRailPreview: () => setVddRailPreviewPoint(null),
-    clearCopyPreview: () => setCopyPreviewPoint(null),
-    handleDraftingCanvasClick,
-    logicalRadiusForPixels,
-    snapCaptureRadiusPixels: SNAP_CAPTURE_RADIUS_PX,
-    applyWireCanvasPoint,
-    beginAnnotationTextEditing,
-    cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
-    beginDraftingTextEditing,
-    nextRectangleLabelId: () => {
-      uniqueSuffixCounter.current += 1;
-      return `note-${uniqueSuffixCounter.current}`;
+    model: { tool, document, resolver },
+    session: {
+      interactionKind: () => getCurrentInteractionState().kind,
+      cellSymbolLayoutEnabled,
+      exitCellSymbolLayout,
     },
-    upsertDraftingObject: (object) =>
-      transact([{ kind: "upsert_drafting_object", object }]).ok,
-    finishDraftingCreate,
-    resolveWireCanvasSnap,
-    completeWire,
-    cancelDraftingCreate: clearDraftingCreate,
-    cancelWire: () => {
-      setWireSource(null, null);
-      setWirePreviewPoint(null);
-      setWireDraftSteps([]);
-      setTool("pointer");
-      setBulkDrawInstanceId(null);
-      setStatus("Wire cancelled");
+    coordinates: {
+      pointFromClient,
+      logicalRadiusForPixels,
+      snapCaptureRadiusPixels: SNAP_CAPTURE_RADIUS_PX,
     },
-    setStatus,
-    onWheel: handleWheel,
-    onDrop: handleDrop,
+    selection: {
+      commitCommandMove: commitCommandMoveFromSelection,
+      clearDraftingSelection: () => replaceSelectionKind("drafting", []),
+      handleCanvasHitPointerDown,
+    },
+    placement: {
+      pendingSymbolId,
+      pendingComponentPlacement: Boolean(pendingComponentPlacement),
+      vddRailMode,
+      copyPlacementActive: copyPlacement !== null,
+      snapPlacementPoint: (point) => ({
+        x: snapCoordinate(point.x, document.presentation.grid),
+        y: snapCoordinate(point.y, document.presentation.grid),
+      }),
+      commitCopyPlacement: commitCopyPlacementFromSelection,
+      commitPendingPlacement: commitPendingPlacementAtFromHook,
+      clearComponentPreview: () => setComponentPreviewPoint(null),
+      clearVddRailPreview: () => setVddRailPreviewPoint(null),
+      clearCopyPreview: () => setCopyPreviewPoint(null),
+    },
+    gesture: {
+      begin: beginCanvasGesture,
+      continue: continueCanvasGesture,
+      finish: finishCanvasGesture,
+      cancelDrag: () => canvasDragSessionRef.current?.cancel(),
+      onWheel: handleWheel,
+      onDrop: handleDrop,
+    },
+    drafting: {
+      selected: selectedDrafting,
+      sourceActive: draftingSource !== null,
+      handleCanvasClick: handleDraftingCanvasClick,
+      beginAnnotationTextEditing,
+      beginTextEditing: beginDraftingTextEditing,
+      nextRectangleLabelId: () => {
+        uniqueSuffixCounter.current += 1;
+        return `note-${uniqueSuffixCounter.current}`;
+      },
+      upsertObject: (object) =>
+        transact([{ kind: "upsert_drafting_object", object }]).ok,
+      finishCreate: finishDraftingCreate,
+      cancelCreate: clearDraftingCreate,
+    },
+    wiring: {
+      source: wireSource,
+      draftStepCount: wireDraftSteps.length,
+      applyCanvasPoint: applyWireCanvasPoint,
+      resolveCanvasSnap: resolveWireCanvasSnap,
+      complete: completeWire,
+      cancel: () => {
+        setWireSource(null, null);
+        setWirePreviewPoint(null);
+        setWireDraftSteps([]);
+        setTool("pointer");
+        setBulkDrawInstanceId(null);
+        setStatus("Wire cancelled");
+      },
+    },
+    report: setStatus,
   });
 
   return (
