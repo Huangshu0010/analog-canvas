@@ -1,20 +1,8 @@
-import {
-  AnnotationSchema,
-  ConnectivityEvidenceSchema,
-  JunctionSchema,
-  SchematicDocumentSchema,
-  deriveStableId,
-} from "@icm/model";
+import { SchematicDocumentSchema } from "@icm/model";
 import type { SchematicDocument } from "@icm/model";
 import {
   endpointKey,
-  hasExplicitMosBulkRoute,
-  isMosBulkRoute,
   logicalNetContractIssueKey,
-  mosBulkKind,
-  resolveDetachedMosBulkDefault,
-  resolveDocumentLogicalNets,
-  resolveMosBulkConnection,
   validateLogicalNetContract,
 } from "@icm/derived";
 import { EditTransactionSchema, type EditTransaction } from "./edit-schema.js";
@@ -40,18 +28,17 @@ import { applyCellInterfaceEdit } from "./transaction-cell-interface.js";
 import { applyInstanceLifecycleEdit } from "./transaction-instance-lifecycle.js";
 import { applyInstanceNetlistEdit } from "./transaction-instance-netlist.js";
 import { applyInstanceTransformEdit } from "./transaction-instance-transform.js";
+import { applyMosBulkEdit } from "./transaction-mos-bulk.js";
+import { applyNetPowerEdit } from "./transaction-net-power.js";
 import { applyRouteGeometryEdit } from "./transaction-route-geometry.js";
 import { applyRouteTopologyEdit } from "./transaction-route-topology.js";
 import { applyPresentationLayoutEdit } from "./transaction-presentation-layout.js";
 import {
-  connectivityEvidenceNetIds,
-  implicitBulkPresentation,
   mergeBaseNets,
   physicalContactObjectIdsForTransaction,
   preferredPhysicalMergeTarget,
   pruneUnreachableLocalNet,
   reconcileMaterializedMosBulkBindings,
-  removeConnectivityEvidenceOwnedBy,
   removeNoConnectForEndpoint,
   retargetConnectivityEvidenceOwner,
   revokeInvalidatedSupplyBulkDefaults,
@@ -60,7 +47,6 @@ import {
 import {
   addEndpointToNet,
   endpointOwnerNetId,
-  lockedLayoutOwner,
   routeIsProtected,
   sameResolvedRoutePoints,
   validateRoute,
@@ -69,7 +55,6 @@ import {
   gridAlignmentDiagnostics,
   isHistoryEdit,
   schemaDiagnostics,
-  snapPointToDocumentGrid,
 } from "./transaction-preflight.js";
 import {
   rejectTransaction,
@@ -351,417 +336,32 @@ export function executeTransaction(
         connectivityChanged ||= outcome.connectivityChanged;
         break;
       }
-      case "add_power_rail": {
-        const horizontal =
-          edit.start.y === edit.end.y && edit.start.x !== edit.end.x;
-        const vertical =
-          edit.start.x === edit.end.x && edit.start.y !== edit.end.y;
-        if (!horizontal && !vertical) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            "A power rail must be one non-zero axis-aligned segment",
-          );
-        }
-        const ids = [
-          edit.netId,
-          edit.routeId,
-          edit.startJunctionId,
-          edit.endJunctionId,
-          edit.labelId,
-        ];
-        if (new Set(ids).size !== ids.length) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            "Power rail IDs must be distinct",
-          );
-        }
-        const existingSupplyNet = draft.nets.find(
-          (net) => net.id === edit.netId,
-        );
-        const existingIds = new Set([
-          ...draft.instances.map((instance) => instance.id),
-          ...draft.nets
-            .filter((net) => net.id !== existingSupplyNet?.id)
-            .map((net) => net.id),
-          ...draft.routes.map((route) => route.id),
-          ...draft.junctions.map((junction) => junction.id),
-          ...draft.annotations.map((annotation) => annotation.id),
-          ...(draft.drafting?.objects.map((object) => object.id) ?? []),
-          ...draft.layoutGroups.map((group) => group.id),
-          ...draft.constraints.map((constraint) => constraint.id),
-          ...draft.noConnects.map((noConnect) => noConnect.id),
-        ]);
-        const duplicate = ids.find((id) => existingIds.has(id));
-        if (duplicate) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Power rail object ID already exists: ${duplicate}`,
-            [],
-            [duplicate],
-          );
-        }
-        const labelEndpoint = horizontal
-          ? edit.start.x < edit.end.x
-            ? edit.end
-            : edit.start
-          : edit.start.y < edit.end.y
-            ? edit.start
-            : edit.end;
-        const labelJunctionId =
-          labelEndpoint === edit.end
-            ? edit.endJunctionId
-            : edit.startJunctionId;
-        if (!existingSupplyNet) {
-          draft.nets.push({
-            id: edit.netId,
-            terminals: [],
-          });
-        }
-        draft.junctions.push(
-          JunctionSchema.parse({
-            id: edit.startJunctionId,
-            netId: edit.netId,
-            position: edit.start,
-            role: "route-anchor",
-          }),
-          JunctionSchema.parse({
-            id: edit.endJunctionId,
-            netId: edit.netId,
-            position: edit.end,
-            role: "route-anchor",
-          }),
-        );
-        draft.routes.push({
-          id: edit.routeId,
-          netId: edit.netId,
-          from: { kind: "junction", junctionId: edit.startJunctionId },
-          to: { kind: "junction", junctionId: edit.endJunctionId },
-          waypoints: [],
-          segmentModes: ["manual"],
-          presentation: "power-rail",
-        });
-        draft.annotations.push(
-          AnnotationSchema.parse({
-            id: edit.labelId,
-            kind: "power-label",
-            binding: { kind: "net-name", netId: edit.netId },
-            netId: edit.netId,
-            anchor: {
-              kind: "object",
-              objectId: labelJunctionId,
-              localOffset: { x: 10, y: 10 },
-              fallbackPosition: {
-                x: labelEndpoint.x + 10,
-                y: labelEndpoint.y + 10,
-              },
-            },
-            alignment: "start",
-            rotation: 0,
-            locked: false,
-          }),
-        );
-        draft.connectivityEvidence.push(
-          ConnectivityEvidenceSchema.parse({
-            id: deriveStableId(
-              "connectivity-evidence",
-              draft.id,
-              "power-marker",
-              edit.labelId,
-              edit.netId,
-            ),
-            kind: "name-claim",
-            netId: edit.netId,
-            name: edit.netName,
-            scope: edit.scope,
-            powerDomain: edit.powerDomain,
-            owner: { kind: "power-marker", objectId: edit.labelId },
-          }),
-        );
-        for (const id of ids) changedObjectIds.add(id);
-        connectivityChanged = true;
-        break;
-      }
-      case "merge_nets": {
-        if (edit.targetNetId === edit.sourceNetId) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            "Net merge requires two different Nets",
-          );
-        }
-        const merge = mergeBaseNets(
-          draft,
-          edit.targetNetId,
-          edit.sourceNetId,
-          changedObjectIds,
-        );
-        if (!merge.ok) {
-          return rejectAt(merge.code, merge.message, [], merge.netIds);
-        }
-        connectivityChanged = true;
-        break;
-      }
-      case "upsert_connectivity_evidence": {
-        const existingIndex = draft.connectivityEvidence.findIndex(
-          (evidence) => evidence.id === edit.evidence.id,
-        );
-        const collidingObject = [
-          ...draft.instances,
-          ...draft.nets,
-          ...draft.routes,
-          ...draft.junctions,
-          ...draft.noConnects,
-          ...draft.annotations,
-          ...draft.layoutGroups,
-          ...draft.constraints,
-          ...(draft.drafting?.objects ?? []),
-        ].find((object) => object.id === edit.evidence.id);
-        if (collidingObject) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Connectivity evidence ID collides with another object: ${edit.evidence.id}`,
-          );
-        }
-        const previous = draft.connectivityEvidence[existingIndex];
-        const evidence = ConnectivityEvidenceSchema.parse(edit.evidence);
-        if (existingIndex >= 0) {
-          draft.connectivityEvidence[existingIndex] = evidence;
-        } else {
-          draft.connectivityEvidence.push(evidence);
-        }
-        if (
-          evidence.kind === "name-claim" &&
-          evidence.owner.kind === "net-label"
-        ) {
-          const annotationId = evidence.owner.annotationId;
-          const annotation = draft.annotations.find(
-            (candidate) => candidate.id === annotationId,
-          );
-          if (annotation?.formatOverride) {
-            delete annotation.formatOverride;
-            changedObjectIds.add(annotation.id);
-          }
-        }
-        changedObjectIds.add(evidence.id);
-        for (const netId of previous
-          ? connectivityEvidenceNetIds(previous)
-          : []) {
-          if (!connectivityEvidenceNetIds(evidence).includes(netId)) {
-            deferNetPrune(netId);
-          }
-        }
-        connectivityChanged = true;
-        break;
-      }
+      case "add_power_rail":
+      case "merge_nets":
+      case "upsert_connectivity_evidence":
       case "remove_connectivity_evidence": {
-        const evidenceIndex = draft.connectivityEvidence.findIndex(
-          (evidence) => evidence.id === edit.evidenceId,
-        );
-        const evidence = draft.connectivityEvidence[evidenceIndex];
-        if (!evidence) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Connectivity evidence does not exist: ${edit.evidenceId}`,
-          );
-        }
-        const affectedNetIds = connectivityEvidenceNetIds(evidence);
-        draft.connectivityEvidence.splice(evidenceIndex, 1);
-        changedObjectIds.add(evidence.id);
-        for (const netId of affectedNetIds) {
-          deferNetPrune(netId);
-        }
-        connectivityChanged = true;
+        const outcome = applyNetPowerEdit(edit, {
+          draft,
+          changedObjectIds,
+          deferNetPrune,
+          reject: rejectAt,
+        });
+        if (!outcome.ok) return outcome;
+        connectivityChanged ||= outcome.connectivityChanged;
         break;
       }
-      case "set_mos_bulk_defaults": {
-        if (edit.nmosNetId === undefined && edit.pmosNetId === undefined) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            "At least one MOS bulk default must be supplied",
-          );
-        }
-        for (const netId of [edit.nmosNetId, edit.pmosNetId]) {
-          if (netId && !draft.nets.some((net) => net.id === netId)) {
-            return rejectAt("OBJECT_NOT_FOUND", `Net does not exist: ${netId}`);
-          }
-        }
-        const defaults = { ...(draft.mosBulkDefaults ?? {}) };
-        if (edit.nmosNetId !== undefined) {
-          if (edit.nmosNetId === null) delete defaults.nmosNetId;
-          else defaults.nmosNetId = edit.nmosNetId;
-        }
-        if (edit.pmosNetId !== undefined) {
-          if (edit.pmosNetId === null) delete defaults.pmosNetId;
-          else defaults.pmosNetId = edit.pmosNetId;
-        }
-        draft.mosBulkDefaults =
-          defaults.nmosNetId || defaults.pmosNetId ? defaults : undefined;
-        connectivityChanged = true;
-        break;
-      }
-      case "reconcile_mos_bulk": {
-        const selected = edit.instanceIds ? new Set(edit.instanceIds) : null;
-        for (const instance of draft.instances) {
-          if (selected && !selected.has(instance.id)) continue;
-          const kind = mosBulkKind(instance);
-          if (!kind) continue;
-          const configuredNetId =
-            kind === "nmos"
-              ? draft.mosBulkDefaults?.nmosNetId
-              : draft.mosBulkDefaults?.pmosNetId;
-          const configuredNet = configuredNetId
-            ? draft.nets.find((net) => net.id === configuredNetId)
-            : undefined;
-          const connectedNet = draft.nets.find((net) =>
-            net.terminals.some(
-              (terminal) =>
-                terminal.instanceId === instance.id && terminal.pinName === "B",
-            ),
-          );
-
-          // A visible dashed body connection is user-authored and therefore
-          // owns B even when it happens to land on the configured default Net.
-          // Repair stale dual ownership by releasing only the policy metadata;
-          // the explicit Net membership and Route geometry remain untouched.
-          if (hasExplicitMosBulkRoute(draft, instance.id)) {
-            if (instance.mosBulkBinding) {
-              delete instance.mosBulkBinding;
-              changedObjectIds.add(instance.id);
-              connectivityChanged = true;
-            }
-            continue;
-          }
-
-          // Imported four-node MOS data already carries a real B terminal.
-          // When the three-terminal presentation hides that terminal and it
-          // is already on the explicitly configured default, adopt the policy
-          // binding instead of leaving an order-sensitive "explicit" orphan.
-          if (
-            configuredNet &&
-            connectedNet?.id === configuredNet.id &&
-            implicitBulkPresentation(instance, resolver)
-          ) {
-            if (
-              instance.mosBulkBinding?.origin !== "cell-default" ||
-              instance.mosBulkBinding.netId !== configuredNet.id
-            ) {
-              instance.mosBulkBinding = {
-                origin: "cell-default",
-                netId: configuredNet.id,
-              };
-              changedObjectIds.add(instance.id);
-            }
-            continue;
-          }
-
-          // Older imported projects may already contain the failure this
-          // invariant prevents: a hidden B-only split Net and the configured
-          // default retain the same SPICE source provenance. Provenance is not
-          // electrical union, but here it is unambiguous repair evidence.
-          if (
-            configuredNet &&
-            connectedNet &&
-            connectedNet.id !== configuredNet.id &&
-            implicitBulkPresentation(instance, resolver) &&
-            resolveDetachedMosBulkDefault(draft, instance)?.id ===
-              configuredNet.id
-          ) {
-            connectedNet.terminals = connectedNet.terminals.filter(
-              (terminal) =>
-                terminal.instanceId !== instance.id || terminal.pinName !== "B",
-            );
-            if (
-              !configuredNet.terminals.some(
-                (terminal) =>
-                  terminal.instanceId === instance.id &&
-                  terminal.pinName === "B",
-              )
-            ) {
-              configuredNet.terminals.push({
-                instanceId: instance.id,
-                pinName: "B",
-              });
-            }
-            instance.mosBulkBinding = {
-              origin: "cell-default",
-              netId: configuredNet.id,
-            };
-            changedObjectIds.add(instance.id);
-            changedObjectIds.add(connectedNet.id);
-            changedObjectIds.add(configuredNet.id);
-            deferNetPrune(connectedNet.id);
-            connectivityChanged = true;
-            continue;
-          }
-
-          const resolution = resolveMosBulkConnection(draft, instance);
-          if (
-            !resolution ||
-            resolution.materialized ||
-            resolution.status === "no-connect" ||
-            resolution.status === "unresolved"
-          ) {
-            continue;
-          }
-          let target = resolution.net;
-          if (!target || resolution.status !== "cell-default") continue;
-          target.terminals.push({ instanceId: instance.id, pinName: "B" });
-          instance.mosBulkBinding = {
-            origin: "cell-default",
-            netId: target.id,
-          };
-          changedObjectIds.add(instance.id);
-          changedObjectIds.add(target.id);
-          connectivityChanged = true;
-        }
-        break;
-      }
+      case "set_mos_bulk_defaults":
+      case "reconcile_mos_bulk":
       case "clear_mos_bulk_default": {
-        const instance = draft.instances.find(
-          (candidate) => candidate.id === edit.instanceId,
-        );
-        if (!instance) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Instance does not exist: ${edit.instanceId}`,
-          );
-        }
-        const binding = instance.mosBulkBinding;
-        if (!binding) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `MOS ${instance.id} has no default bulk binding to override`,
-          );
-        }
-        if (
-          draft.routes.some(
-            (route) =>
-              isMosBulkRoute(draft, route) &&
-              [route.from, route.to].some(
-                (endpoint) =>
-                  endpoint.kind === "terminal" &&
-                  endpoint.instanceId === instance.id &&
-                  endpoint.pinName === "B",
-              ),
-          )
-        ) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `MOS ${instance.id} already has visible bulk routing`,
-          );
-        }
-        const net = draft.nets.find(
-          (candidate) => candidate.id === binding.netId,
-        );
-        if (net) {
-          net.terminals = net.terminals.filter(
-            (terminal) =>
-              terminal.instanceId !== instance.id || terminal.pinName !== "B",
-          );
-          changedObjectIds.add(net.id);
-        }
-        delete instance.mosBulkBinding;
-        changedObjectIds.add(instance.id);
-        connectivityChanged = true;
+        const outcome = applyMosBulkEdit(edit, {
+          draft,
+          resolver,
+          changedObjectIds,
+          deferNetPrune,
+          reject: rejectAt,
+        });
+        if (!outcome.ok) return outcome;
+        connectivityChanged ||= outcome.connectivityChanged;
         break;
       }
       case "disconnect_endpoint": {
