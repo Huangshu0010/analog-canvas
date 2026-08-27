@@ -17,8 +17,7 @@ import {
   lockedLayoutOwner,
   validateNetLabelBinding,
 } from "./transaction-routing.js";
-import type { RejectedTransaction } from "./transaction-result.js";
-import type { RejectEdit } from "./transaction-cell-interface.js";
+import type { EditMutationOutcome, RejectEdit } from "./transaction-domain.js";
 
 type PresentationLayoutEdit = Extract<
   EditTransaction["edits"][number],
@@ -46,9 +45,7 @@ export interface PresentationLayoutEditContext {
   reject: RejectEdit;
 }
 
-export type PresentationLayoutEditOutcome =
-  | { ok: true; connectivityChanged: boolean }
-  | { ok: false; rejection: RejectedTransaction };
+export type PresentationLayoutEditOutcome = EditMutationOutcome;
 
 export function applyPresentationLayoutEdit(
   edit: PresentationLayoutEdit,
