@@ -14,63 +14,34 @@ import {
   proposePowerRailTranslation,
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
-  planDeleteCell,
-  planRemoveCellTerminals,
-  planEditCellTerminalAnnotation,
   planCellReset,
-  type SchematicEdit,
   type CellResetPlan,
   type WireSource,
 } from "@icm/edit-engine";
-import { analyzeDesignNetlist } from "@icm/netlist";
 import {
-  buildProjectConnectivityIndex,
-  buildProjectSearchIndex,
-  deriveCrossings,
   deriveNetConnectivity,
   deriveInternalGroupSelection,
-  diagnoseProjectSnapshot,
-  diagnoseVisualQuality,
-  endpointKey,
-  findHierarchyPath,
-  isMosBulkTerminal,
-  isVisibleEndpoint,
-  resolveEndpointConnection,
   resolveDraftingObjectGeometry,
-  resolveElectricalContactTargets,
   displayableInstanceValue,
   resolveMosBulkConnection,
   resolveDocumentStyleProfile,
-  resolveDocumentLogicalNets,
   resolveRouteTap,
-  resolveDocumentRoutingGeometry,
   summarizeProjectCells,
-  traceHierarchyNet,
 } from "@icm/derived";
-import type {
-  Diagnostic,
-  Flightline,
-  GlobalNetTraceHop,
-  HierarchyFrame,
-  HierarchyNetTraceHop,
-  SearchResult,
-} from "@icm/derived";
+import type { HierarchyFrame } from "@icm/derived";
 import {
   createEmptyProject,
   createId,
   foldNetName,
   flattenRichText,
-  semanticTextDocument,
 } from "@icm/model";
 import type {
-  Annotation,
   CircuitProject,
   DerivedPoint,
   DraftingObject,
   GridRect,
   Point,
   Rect,
-  RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
 import { buildSvgScene } from "@icm/render-svg";
@@ -150,6 +121,11 @@ import { EditorDialogLayer } from "./editor-dialog-layer";
 import { EditorAppChrome } from "./editor-app-chrome";
 import { EditorPropertiesDock } from "./editor-properties-dock";
 import {
+  type HighlightedNetOrigin,
+  type RoutingGuidanceView,
+  useEditorDerivedModel,
+} from "./use-editor-derived-model";
+import {
   netlistReferenceMatchesPlacement,
   nextInstanceDesignator,
 } from "../features/netlist-export/netlist-authoring";
@@ -179,10 +155,6 @@ import {
   evaluateSubmissionGates,
   type SubmissionGateReport,
 } from "@icm/derived";
-import {
-  proposeConnectedInstanceDeletion,
-  proposeVisualSelectionDeletion,
-} from "../features/selection/delete-selection";
 import {
   createLibraryExampleProject,
   libraryProjectExamples,
@@ -245,7 +217,6 @@ import {
   type ProjectedInstanceMove,
   useSelectionInteraction,
 } from "../features/selection/use-selection-interaction";
-import { summarizeVisualDiagnostics } from "../features/selection/selection-inspector-details";
 import {
   hasVisualSelection,
   pruneVisualSelection,
@@ -263,7 +234,6 @@ import {
   annotationHitBox,
   attachmentAtPoint,
   effectiveRouteAttachment,
-  endpointNetId,
   instanceValueAnnotation,
   isRoutedMarker,
   looseRouteAnchorIds,
@@ -636,9 +606,8 @@ export function App({
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [wireOptionsOpen, setWireOptionsOpen] = useState(false);
-  const [routingGuidanceView, setRoutingGuidanceView] = useState<
-    "focused" | "all" | "hidden"
-  >("focused");
+  const [routingGuidanceView, setRoutingGuidanceView] =
+    useState<RoutingGuidanceView>("focused");
   const [routeStretchPreview, setRouteStretchPreview] =
     useState<RouteStretchPreview | null>(null);
   const [draftingHandlePreview, setDraftingHandlePreview] =
@@ -707,6 +676,7 @@ export function App({
   const {
     createCell,
     renameCell,
+    deleteCell,
     updateCellPinDirection,
     renameCellTerminal,
     moveCellTerminal,
@@ -714,13 +684,21 @@ export function App({
     setExternalSubcircuitDefinition,
     setCellSymbolBodySize,
     setCellSymbolPortPlacement,
+    editCellTerminalAnnotation,
+    removeCellTerminalSelection,
+    deleteCellTerminal,
     renameProject,
   } = createProjectStructureCommands({
     project,
     activeDocument: document,
+    resolver,
     commitStructure,
     setStatus,
     onCellCreated: () => setDocumentStack([]),
+    nextSequence: () => {
+      uniqueSuffixCounter.current += 1;
+      return uniqueSuffixCounter.current;
+    },
   });
   const { openGalleryEntryById, openLibraryExample, insertGalleryEntryById } =
     createGalleryExampleCommands({
@@ -761,12 +739,8 @@ export function App({
   const [bulkDrawInstanceId, setBulkDrawInstanceId] = useState<string | null>(
     null,
   );
-  const [highlightedNetOrigin, setHighlightedNetOrigin] = useState<{
-    documentId: string;
-    netId: string;
-    hierarchyPath: readonly HierarchyFrame[];
-    endpoint?: RouteEndpoint;
-  } | null>(null);
+  const [highlightedNetOrigin, setHighlightedNetOrigin] =
+    useState<HighlightedNetOrigin | null>(null);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   /**
@@ -928,73 +902,39 @@ export function App({
     selection: visualSelection,
     selectedEndpoint,
   });
-  const projectConnectivityIndex = useMemo(
-    () => buildProjectConnectivityIndex(project, resolver),
-    [project, resolver],
-  );
-  const routeGeometryRecords = useMemo(
-    () =>
-      document.routes.flatMap((route) => {
-        const geometry = projectConnectivityIndex.documents
-          .get(document.id)
-          ?.routingGeometry.routes.get(route.id);
-        if (!geometry) return [];
-        return [{ route, geometry }];
-      }),
-    [document, projectConnectivityIndex],
-  );
-  const netlistAnalysis = useMemo(
-    () => analyzeDesignNetlist(project),
-    [project],
-  );
-  const highlightedTrace = useMemo(
-    () =>
-      highlightedNetOrigin
-        ? traceHierarchyNet(
-            projectConnectivityIndex,
-            highlightedNetOrigin.documentId,
-            highlightedNetOrigin.netId,
-            highlightedNetOrigin.endpoint,
-            highlightedNetOrigin.hierarchyPath,
-          )
-        : undefined,
-    [highlightedNetOrigin, projectConnectivityIndex],
-  );
-  const highlightedNet = useMemo(
-    () =>
-      highlightedTrace?.highlights.find(
-        (highlight) =>
-          highlight.documentId === document.id &&
-          highlight.hierarchyPath.length === documentStack.length &&
-          highlight.hierarchyPath.every(
-            (frame, index) =>
-              frame.parentDocumentId ===
-                documentStack[index]?.parentDocumentId &&
-              frame.instanceId === documentStack[index]?.instanceId &&
-              frame.childDocumentId === documentStack[index]?.childDocumentId,
-          ),
-      ),
-    [document.id, documentStack, highlightedTrace],
-  );
-  const highlightedNetId = highlightedNet?.netId ?? null;
-  const liveDiagnosticSnapshot = useMemo(
-    () => diagnoseProjectSnapshot(project, resolver, projectConnectivityIndex),
-    [project, projectConnectivityIndex, resolver],
-  );
-  const electricalDiagnostics = useMemo(
-    () =>
-      liveDiagnosticSnapshot.diagnostics.filter(
-        (diagnostic) => diagnostic.domain === "erc",
-      ),
-    [liveDiagnosticSnapshot],
-  );
-  const searchResults = useMemo(
-    () =>
-      buildProjectSearchIndex(project, {
-        connectivityIndex: projectConnectivityIndex,
-      }).search(searchQuery),
-    [project, projectConnectivityIndex, searchQuery],
-  );
+  const {
+    projectConnectivityIndex,
+    logicalNets,
+    routeGeometryRecords,
+    netlistAnalysis,
+    highlightedTrace,
+    highlightedNet,
+    highlightedNetId,
+    selectedHighlightIsActive,
+    liveDiagnosticSnapshot,
+    electricalDiagnostics,
+    searchResults,
+    flightlines,
+    displayedFlightlines,
+    crossings,
+    visualDiagnostics,
+    visualDiagnosticSummary,
+    visibleEndpoints,
+    wiringEndpoints,
+    contactComponents,
+  } = useEditorDerivedModel({
+    project,
+    document,
+    resolver,
+    documentStack,
+    highlightedNetOrigin,
+    selectedHighlightNetId,
+    selectedHighlightEndpoint,
+    searchQuery,
+    routingGuidanceView,
+    wireSource,
+    bulkDrawInstanceId,
+  });
   const {
     enabled: cellSymbolLayoutEnabled,
     layout: selectedCellSymbolLayout,
@@ -1114,61 +1054,7 @@ export function App({
         ) === true
       );
     },
-    commitCellPinAnnotation: (annotation, name) => {
-      if (annotation.anchor.kind !== "object") return false;
-      const interfaceInstanceId = annotation.anchor.objectId;
-      const terminal = document.netlist?.terminals.find((candidate) =>
-        candidate.interfaceInstanceIds.includes(interfaceInstanceId),
-      );
-      if (!terminal) return false;
-      try {
-        const {
-          content,
-          formatOverride,
-          binding: _binding,
-          ...annotationPresentation
-        } = annotation;
-        const editedContent = formatOverride ?? content;
-        const semanticContent = semanticTextDocument(name, "formal-port");
-        const normalizedAnnotation: Annotation = {
-          ...annotationPresentation,
-          binding: {
-            kind: "cell-terminal-name",
-            terminalId: terminal.id,
-          },
-          ...(editedContent &&
-          JSON.stringify(editedContent) !== JSON.stringify(semanticContent)
-            ? { formatOverride: editedContent }
-            : {}),
-        };
-        const renamed = terminal.name !== name;
-        const edits = planEditCellTerminalAnnotation(
-          project,
-          document.id,
-          terminal.id,
-          normalizedAnnotation,
-          name,
-        );
-        if (edits.length === 0) {
-          setStatus(`Cell Pin ${terminal.name} is already current`);
-          return true;
-        }
-        const committed = commitStructure("edit-cell-pin-label", edits);
-        if (committed) {
-          setStatus(
-            renamed
-              ? `Renamed Cell Pin to ${name}`
-              : `Formatted Cell Pin ${name}`,
-          );
-        }
-        return committed;
-      } catch (error) {
-        setStatus(
-          error instanceof Error ? error.message : "Could not rename port",
-        );
-        return false;
-      }
-    },
+    commitCellPinAnnotation: editCellTerminalAnnotation,
   });
   const selectedInstanceLabel = selectedInstance
     ? instanceLabelAnnotationFor(document, selectedInstance.id)
@@ -1203,208 +1089,6 @@ export function App({
       : false;
   });
   const styleProfile = resolveDocumentStyleProfile(document.presentation);
-  const selectedHighlightIsActive = Boolean(
-    selectedHighlightNetId &&
-    highlightedNetOrigin?.documentId === document.id &&
-    highlightedNetOrigin.hierarchyPath.length === documentStack.length &&
-    highlightedNetOrigin.hierarchyPath.every(
-      (frame, index) =>
-        frame.parentDocumentId === documentStack[index]?.parentDocumentId &&
-        frame.instanceId === documentStack[index]?.instanceId &&
-        frame.childDocumentId === documentStack[index]?.childDocumentId,
-    ) &&
-    highlightedNetOrigin.netId === selectedHighlightNetId &&
-    (!highlightedNetOrigin.endpoint ||
-      (selectedHighlightEndpoint &&
-        endpointKey(highlightedNetOrigin.endpoint) ===
-          endpointKey(selectedHighlightEndpoint))),
-  );
-  const flightlines = useMemo(
-    () => [
-      ...new Map(
-        [
-          ...(projectConnectivityIndex.documents
-            .get(document.id)
-            ?.logicalNets.values() ?? []),
-        ]
-          .flatMap((net) => net.routingGuidance)
-          .map((line) => [line.id, line] as const),
-      ).values(),
-    ],
-    [document.id, document.nets, projectConnectivityIndex],
-  );
-  const displayedFlightlines = useMemo(() => {
-    // Routing guidance is derived exclusively from imported Net intent. It is
-    // not Document UI state: labelling, moving, or deleting a Route must never
-    // dismiss another imported Net's unresolved topology. A highlighted Net
-    // already has the stronger conductor overlay, so omit only that Net's
-    // guides rather than suppressing the complete imported document.
-    if (routingGuidanceView === "hidden") return [];
-    const focusedNetIds = new Set(
-      [wireSource?.netId, selectedHighlightNetId, highlightedNetId].filter(
-        (netId): netId is string => netId !== null && netId !== undefined,
-      ),
-    );
-    const scoped =
-      routingGuidanceView === "focused" && focusedNetIds.size > 0
-        ? flightlines.filter((flightline) =>
-            [flightline.netId, flightline.fromNetId, flightline.toNetId].some(
-              (netId) => focusedNetIds.has(netId),
-            ),
-          )
-        : flightlines;
-    return highlightedNetId
-      ? scoped.filter(
-          (flightline) =>
-            ![
-              flightline.netId,
-              flightline.fromNetId,
-              flightline.toNetId,
-            ].includes(highlightedNetId),
-        )
-      : scoped;
-  }, [
-    flightlines,
-    highlightedNetId,
-    routingGuidanceView,
-    selectedHighlightNetId,
-    wireSource?.netId,
-  ]);
-  const crossings = useMemo(
-    () =>
-      deriveCrossings(
-        document,
-        resolver,
-        projectConnectivityIndex.documents.get(document.id)?.routingGeometry,
-      ),
-    [document, projectConnectivityIndex, resolver],
-  );
-  const visualDiagnostics = useMemo(
-    () => diagnoseVisualQuality(document, resolver),
-    [document, resolver],
-  );
-  const visualDiagnosticSummary = useMemo(
-    () => summarizeVisualDiagnostics(visualDiagnostics),
-    [visualDiagnostics],
-  );
-  const visibleEndpoints: WireSource[] = useMemo(
-    () => [
-      ...document.instances.flatMap((instance) => {
-        if (!instance.placement) return [];
-        const resolved = resolver.resolve(
-          instance.symbolId,
-          instance.symbolVariantId,
-        );
-        if (!resolved) return [];
-        return resolved.definition.pins
-          .filter((pin) =>
-            isVisibleEndpoint(document, resolver, {
-              kind: "terminal",
-              instanceId: instance.id,
-              pinName: pin.name,
-            }),
-          )
-          .flatMap((pin): WireSource[] => {
-            const endpoint: RouteEndpoint = {
-              kind: "terminal",
-              instanceId: instance.id,
-              pinName: pin.name,
-            };
-            const connection = resolveEndpointConnection(
-              document,
-              resolver,
-              endpoint,
-            );
-            return connection
-              ? [
-                  {
-                    endpoint,
-                    connection,
-                    netId: endpointNetId(document, endpoint),
-                    preludeEdits: [],
-                    ...(isMosBulkTerminal(document, endpoint)
-                      ? { routePresentation: "bulk-dashed" as const }
-                      : {}),
-                  },
-                ]
-              : [];
-          });
-      }),
-      ...document.junctions
-        .filter((junction) => {
-          const role = junction.role ?? "branch";
-          return role === "branch" || role === "route-anchor";
-        })
-        .flatMap((junction): WireSource[] => {
-          const endpoint: RouteEndpoint = {
-            kind: "junction",
-            junctionId: junction.id,
-          };
-          const connection = resolveEndpointConnection(
-            document,
-            resolver,
-            endpoint,
-          );
-          return connection
-            ? [
-                {
-                  endpoint,
-                  connection,
-                  netId: junction.netId,
-                  preludeEdits: [],
-                },
-              ]
-            : [];
-        }),
-    ],
-    [document, resolver],
-  );
-  const visibleBulkEndpoints: WireSource[] = useMemo(
-    () =>
-      document.instances.flatMap((instance): WireSource[] => {
-        if (!instance.placement || bulkDrawInstanceId !== instance.id) {
-          return [];
-        }
-        const endpoint: RouteEndpoint = {
-          kind: "terminal",
-          instanceId: instance.id,
-          pinName: "B",
-        };
-        const connection = resolveEndpointConnection(
-          document,
-          resolver,
-          endpoint,
-        );
-        return connection
-          ? [
-              {
-                endpoint,
-                connection,
-                netId: endpointNetId(document, endpoint),
-                preludeEdits: [],
-                routePresentation: "bulk-dashed",
-              },
-            ]
-          : [];
-      }),
-    [bulkDrawInstanceId, document, resolver],
-  );
-  const wiringEndpoints = useMemo(() => {
-    const byKey = new Map<string, WireSource>();
-    for (const endpoint of [...visibleEndpoints, ...visibleBulkEndpoints]) {
-      byKey.set(endpointKey(endpoint.endpoint), endpoint);
-    }
-    return [...byKey.values()];
-  }, [visibleBulkEndpoints, visibleEndpoints]);
-  const contactComponents = useMemo(
-    () =>
-      [
-        ...(projectConnectivityIndex.documents
-          .get(document.id)
-          ?.logicalNets.values() ?? []),
-      ].flatMap((net) => net.routedComponents),
-    [document.id, projectConnectivityIndex],
-  );
   const {
     createRouteAnchor,
     beginRouteStretch,
@@ -1418,40 +1102,46 @@ export function App({
     commitWire,
     selectRoute,
   } = useWireInteraction({
-    document,
-    resolver,
-    selectedInstance,
-    selectedRouteId,
-    selectedRouteSegmentIndex,
-    visibleEndpoints,
-    routeGeometryRecords,
-    wireSource,
-    wireSourceRevision,
-    wireWaypoints,
-    wireDraftSteps,
-    wireRoutingMode,
-    wireCornerOrder,
-    nextRoutingSuffix,
-    transact,
-    setStatus,
-    setTool,
-    setWireSource,
-    setWirePreviewPoint,
-    setWireDraftSteps,
-    completeWire,
-    clearTransientCanvasState,
-    cancelInteraction,
-    setBulkDrawInstanceId,
-    replaceRouteSelection: (routeIds) =>
-      replaceSelectionKind("route", routeIds),
-    selectOnly,
-    setSelectedRouteSegmentIndex,
-    setSelectedEndpoint,
-    canvasDragSessionRef,
-    setRouteStretchPreview,
-    pointFromClient,
-    logicalRadiusForPixels,
-    contactComponents,
+    model: {
+      document,
+      resolver,
+      visibleEndpoints,
+      routeGeometryRecords,
+      contactComponents,
+    },
+    selection: {
+      selectedInstance,
+      selectedRouteId,
+      selectedRouteSegmentIndex,
+      replaceRouteSelection: (routeIds) =>
+        replaceSelectionKind("route", routeIds),
+      selectOnly,
+      setSelectedRouteSegmentIndex,
+      setSelectedEndpoint,
+    },
+    session: {
+      wireSource,
+      wireSourceRevision,
+      wireWaypoints,
+      wireDraftSteps,
+      wireRoutingMode,
+      wireCornerOrder,
+      setTool,
+      setWireSource,
+      setWirePreviewPoint,
+      setWireDraftSteps,
+      completeWire,
+      clearTransientCanvasState,
+      cancelInteraction,
+      setBulkDrawInstanceId,
+    },
+    transaction: { nextRoutingSuffix, transact, setStatus },
+    drag: {
+      canvasDragSessionRef,
+      setRouteStretchPreview,
+      pointFromClient,
+      logicalRadiusForPixels,
+    },
   });
   const cellInsertCandidates = useMemo(
     () =>
@@ -1604,6 +1294,7 @@ export function App({
     clearCommandMoveSession: clearCommandMoveSessionFromSelection,
     deleteSelectedJunction: deleteSelectedJunctionFromSelection,
     deleteSelection: deleteSelectionFromSelection,
+    disconnectSelectedEndpoint,
     canBeginKeyboardSelectionMove,
     canTransformCommandMove,
     mirrorCommandMove: mirrorCommandMoveFromSelection,
@@ -1638,6 +1329,7 @@ export function App({
         revision: committed ? document.revision + 1 : document.revision,
       };
     },
+    commitCellTerminalSelection: removeCellTerminalSelection,
     setStatus,
     setSelectedEndpoint,
     resetSelection,
@@ -1659,7 +1351,6 @@ export function App({
       uniqueSuffixCounter.current += 1;
       return uniqueSuffixCounter.current;
     },
-    nextNoConnectId,
     endpointTestId,
     tool,
     canvasDragSessionRef,
@@ -1892,71 +1583,84 @@ export function App({
     applyWireCanvasPoint,
     handleRoutePointerDown,
   } = useWireCanvasController({
-    document,
-    resolver,
-    wiringEndpoints,
-    routeGeometryRecords,
-    contactComponents,
-    wireSource,
-    wireWaypoints,
-    wireDraftSteps,
-    wireRoutingMode,
-    wireCornerOrder,
-    tool,
-    vddRailMode,
-    componentPlacementPending: Boolean(
-      pendingSymbolId && pendingComponentPlacement,
-    ),
-    selectedInstanceIds: selectedIds,
-    selection: visualSelection,
-    getInteractionKind: () => getCurrentInteractionState().kind,
-    beginInstanceMove: beginMoveFromSelection,
-    beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
-    cancelInteraction,
-    handleWireRoutePointerDown,
-    selectRoute,
-    beginRouteStretch,
-    createRouteAnchor,
-    pointFromClient: (clientX, clientY, svg) =>
-      pointFromClient(clientX, clientY, svg, false),
-    logicalRadiusForPixels,
-    paintSnapGuides,
-    setWireSource,
-    setWirePreviewPoint,
-    setWireDraftSteps,
-    commitWire,
-    fixWirePoint,
-    finishWireAtPoint,
-    setWireRoutingMode,
-    setWireCornerOrder,
-    setStatus,
+    model: {
+      document,
+      resolver,
+      wiringEndpoints,
+      routeGeometryRecords,
+      contactComponents,
+    },
+    session: {
+      wireSource,
+      wireWaypoints,
+      wireDraftSteps,
+      wireRoutingMode,
+      wireCornerOrder,
+      tool,
+      vddRailMode,
+      componentPlacementPending: Boolean(
+        pendingSymbolId && pendingComponentPlacement,
+      ),
+      getInteractionKind: () => getCurrentInteractionState().kind,
+      cancelInteraction,
+      setWireSource,
+      setWirePreviewPoint,
+      setWireDraftSteps,
+      setWireRoutingMode,
+      setWireCornerOrder,
+    },
+    selection: {
+      selectedInstanceIds: selectedIds,
+      selection: visualSelection,
+      beginInstanceMove: beginMoveFromSelection,
+      beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
+    },
+    routes: {
+      handlePointerDown: handleWireRoutePointerDown,
+      select: selectRoute,
+      beginStretch: beginRouteStretch,
+      createAnchor: createRouteAnchor,
+    },
+    viewport: {
+      pointFromClient: (clientX, clientY, svg) =>
+        pointFromClient(clientX, clientY, svg, false),
+      logicalRadiusForPixels,
+      paintSnapGuides,
+    },
+    commands: { commitWire, fixWirePoint, finishWireAtPoint, setStatus },
   });
   const {
     compositeSelectionOwnsHit,
     handlePointerDown: handleCanvasHitPointerDown,
   } = createCanvasHitController({
-    document,
-    visibleEndpoints,
-    selection: visualSelection,
-    selectedInternalRouteIds,
-    selectedInternalJunctionIds,
-    selectedInternalObjectIds,
-    getInteractionKind: () => getCurrentInteractionState().kind,
-    placementOwnsCanvas: Boolean(
-      (pendingSymbolId && pendingComponentPlacement) ||
-      vddRailMode ||
-      copyPlacement !== null,
-    ),
-    tool,
-    cellSymbolLayoutEnabled,
-    beginInstanceMove: beginMoveFromSelection,
-    beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
-    beginAnnotationDrag,
-    handleRoutePointerDown,
-    beginDraftingDrag,
-    selectEndpoint,
-    endpointStatusLabel: (endpoint) => endpointTestId(endpoint.endpoint),
-    setStatus,
+    model: {
+      document,
+      visibleEndpoints,
+      selection: visualSelection,
+      selectedInternalRouteIds,
+      selectedInternalJunctionIds,
+      selectedInternalObjectIds,
+    },
+    session: {
+      getInteractionKind: () => getCurrentInteractionState().kind,
+      placementOwnsCanvas: Boolean(
+        (pendingSymbolId && pendingComponentPlacement) ||
+        vddRailMode ||
+        copyPlacement !== null,
+      ),
+      tool,
+      cellSymbolLayoutEnabled,
+    },
+    actions: {
+      beginInstanceMove: beginMoveFromSelection,
+      beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
+      beginAnnotationDrag,
+      handleRoutePointerDown,
+      beginDraftingDrag,
+      selectEndpoint,
+      endpointStatusLabel: (endpoint) => endpointTestId(endpoint.endpoint),
+      setStatus,
+    },
   });
   const {
     fitView,
@@ -1966,54 +1670,65 @@ export function App({
     continueCanvasGesture,
     finishCanvasGesture,
   } = createCanvasGestureController({
-    document,
-    resolver,
-    routeGeometryRecords,
-    styleProfile,
-    defaultViewBox: DEFAULT_VIEWBOX,
-    contentBounds: contentScene?.viewBox,
-    viewBox,
-    setViewBox,
-    boxPreview,
-    setBoxPreview,
-    panPreview,
-    setPanPreview,
-    pointFromClient: (clientX, clientY, svg) =>
-      pointFromClient(clientX, clientY, svg),
-    rawPointFromClient: (clientX, clientY, svg) =>
-      pointFromClient(clientX, clientY, svg, false),
-    logicalRadiusForPixels,
-    getInteractionKind: () => getCurrentInteractionState().kind,
-    updateCommandMovePreview: updateCommandMovePreviewFromSelection,
-    componentPlacementPending: Boolean(
-      pendingSymbolId && pendingComponentPlacement,
-    ),
-    componentSymbolPending: pendingSymbolId !== null,
-    setComponentPreviewPoint,
-    vddRailMode,
-    vddRailStart,
-    setVddRailPreviewPoint,
-    copyPlacementPending: copyPlacement !== null,
-    setCopyPreviewPoint,
-    tool,
-    draftingSource,
-    snapDraftingPoint,
-    setDraftingHover,
-    setDraftingSnapPoint,
-    wireActive: wireSource !== null,
-    resolveWireCanvasSnap,
-    setWirePreviewPoint,
-    paintSnapGuides,
-    cycleWireCornerShape,
-    noteCanvasPoint: (point) => {
-      lastCanvasPointRef.current = point;
+    model: { document, resolver, routeGeometryRecords, styleProfile },
+    viewport: {
+      defaultViewBox: DEFAULT_VIEWBOX,
+      contentBounds: contentScene?.viewBox,
+      viewBox,
+      setViewBox,
+      pointFromClient: (clientX, clientY, svg) =>
+        pointFromClient(clientX, clientY, svg),
+      rawPointFromClient: (clientX, clientY, svg) =>
+        pointFromClient(clientX, clientY, svg, false),
+      logicalRadiusForPixels,
     },
-    cellSymbolLayoutDragPointerId,
-    cancelCellSymbolLayoutDrag,
-    completeCellSymbolLayoutDrag,
-    replaceSelection,
-    clearSelectedEndpoint: () => setSelectedEndpoint(null),
-    setStatus,
+    gestureSession: {
+      boxPreview,
+      setBoxPreview,
+      panPreview,
+      setPanPreview,
+      getInteractionKind: () => getCurrentInteractionState().kind,
+      paintSnapGuides,
+      noteCanvasPoint: (point) => {
+        lastCanvasPointRef.current = point;
+      },
+      setStatus,
+    },
+    selection: {
+      updateCommandMovePreview: updateCommandMovePreviewFromSelection,
+      replaceSelection,
+      clearSelectedEndpoint: () => setSelectedEndpoint(null),
+    },
+    placement: {
+      componentPlacementPending: Boolean(
+        pendingSymbolId && pendingComponentPlacement,
+      ),
+      componentSymbolPending: pendingSymbolId !== null,
+      setComponentPreviewPoint,
+      vddRailMode,
+      vddRailStart,
+      setVddRailPreviewPoint,
+      copyPlacementPending: copyPlacement !== null,
+      setCopyPreviewPoint,
+    },
+    drafting: {
+      tool,
+      draftingSource,
+      snapDraftingPoint,
+      setDraftingHover,
+      setDraftingSnapPoint,
+    },
+    wiring: {
+      wireActive: wireSource !== null,
+      resolveWireCanvasSnap,
+      setWirePreviewPoint,
+      cycleWireCornerShape,
+    },
+    cellSymbolLayout: {
+      activeDragPointerId: cellSymbolLayoutDragPointerId,
+      cancelDrag: cancelCellSymbolLayoutDrag,
+      completeDrag: completeCellSymbolLayoutDrag,
+    },
   });
   const {
     switchDocument,
@@ -2027,6 +1742,11 @@ export function App({
     enterSelectedHierarchy,
     returnToParentDocument,
     returnToTopDocument,
+    selectSearchResult,
+    jumpToProjectDiagnostic,
+    highlightNet,
+    toggleHighlightedNet,
+    navigateTraceHop,
   } = createEditorNavigationController({
     project,
     document,
@@ -2043,6 +1763,10 @@ export function App({
     selectOnly,
     setSelectedEndpoint,
     setHighlightedNetOrigin,
+    selectedHighlightNetId,
+    selectedHighlightEndpoint,
+    selectedHighlightIsActive,
+    closeSearch,
     setSelectionOpen,
     setInstanceTableOpen,
     setCellManagerOpen,
@@ -2227,8 +1951,7 @@ export function App({
         )
       : undefined;
   const selectedPortLogicalName = selectedPortNet
-    ? resolveDocumentLogicalNets(document).byBaseNetId.get(selectedPortNet.id)
-        ?.name
+    ? logicalNets.byBaseNetId.get(selectedPortNet.id)?.name
     : undefined;
 
   function commitProjectName(): void {
@@ -2250,71 +1973,8 @@ export function App({
 
   function deleteSelectedFormalPort(): void {
     if (!selectedFormalTerminal || !selectedInstance) return;
-    try {
-      const edits = planRemoveCellTerminals(
-        project,
-        document.id,
-        [selectedFormalTerminal.id],
-        proposeConnectedInstanceDeletion(
-          document,
-          resolver,
-          [selectedInstance.id],
-          ++uniqueSuffixCounter.current,
-        ),
-      );
-      if (commitStructure("delete-cell-pin", edits)) {
-        resetSelection();
-        setStatus(`Deleted Cell Pin ${selectedFormalTerminal.name}`);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not delete port",
-      );
-    }
-  }
-
-  function deleteCurrentSelection(): void {
-    const formalTerminals = (document.netlist?.terminals ?? []).filter(
-      (terminal) =>
-        terminal.interfaceInstanceIds.some((instanceId) =>
-          visualSelection.instanceIds.includes(instanceId),
-        ),
-    );
-    if (formalTerminals.length === 0) {
-      deleteSelectionFromSelection();
-      return;
-    }
-    try {
-      const deletionEdits = proposeVisualSelectionDeletion(
-        document,
-        resolver,
-        visualSelection,
-        ++uniqueSuffixCounter.current,
-      );
-      if (formalTerminals.length > 0) {
-        if (
-          commitStructure(
-            "delete-cell-pin-selection",
-            planRemoveCellTerminals(
-              project,
-              document.id,
-              formalTerminals.map((terminal) => terminal.id),
-              deletionEdits,
-            ),
-          )
-        ) {
-          resetSelection();
-          setStatus("Deleted selected schematic objects");
-        }
-        return;
-      }
-      if (deletionEdits.length > 0 && transact(deletionEdits).ok) {
-        resetSelection();
-        setStatus("Deleted selected schematic objects");
-        return;
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Delete failed");
+    if (deleteCellTerminal(selectedFormalTerminal.id, selectedInstance.id)) {
+      resetSelection();
     }
   }
 
@@ -2342,13 +2002,6 @@ export function App({
     browserAgentFileHost.discard(agentFileCandidate.candidateId);
     setAgentFileCandidate(null);
     setStatus("Rejected Agent file candidate");
-  }
-
-  function jumpToProjectDiagnostic(diagnostic: Diagnostic): void {
-    navigateToLocator(
-      diagnostic.primary,
-      `${diagnostic.domain.toUpperCase()} ${diagnostic.code}: ${diagnostic.message}`,
-    );
   }
 
   const clearDrawingPlan = planCellReset(project, document.id, "clear-drawing");
@@ -2579,7 +2232,7 @@ export function App({
       },
       selectAll: selectAllObjects,
       clearSelection: clearEditorSelection,
-      deleteSelection: deleteCurrentSelection,
+      deleteSelection: deleteSelectionFromSelection,
       beginCopy: beginCopyPlacementFromSelection,
       beginMove: beginKeyboardSelectionMoveFromSelection,
       rotatePlacement: rotatePendingComponentFromHook,
@@ -2644,65 +2297,6 @@ export function App({
     setDraftingInspectorSegment(null);
     setDraftingTangentInput(null);
     setDraftingBearingInput(null);
-  }
-
-  // Drafting uses the shared Snap Engine. It may align visually to electrical
-  // geometry, but this profile never creates a Net or junction.
-  // closest point on any route segment, or any existing drafting vertex — within
-  // DRAFTING_SNAP_RADIUS — wins; grid snap is the fallback. Shift locks the
-  // resulting segment from the origin to horizontal/vertical/45°. Purely visual
-  // — never creates a Net, junction, or short.
-  function disconnectSelectedEndpoint(removeRoutes: boolean): void {
-    if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
-      return;
-    }
-    const routeEdits = removeRoutes
-      ? document.routes
-          .filter(
-            (route) =>
-              endpointKey(route.from) ===
-                endpointKey(selectedEndpoint.endpoint) ||
-              endpointKey(route.to) === endpointKey(selectedEndpoint.endpoint),
-          )
-          .map((route): SchematicEdit => ({
-            kind: "remove_route_geometry",
-            routeId: route.id,
-          }))
-      : [];
-    const result = transactConnectivity(
-      "disconnect_endpoint",
-      [
-        ...routeEdits,
-        { kind: "disconnect_endpoint", endpoint: selectedEndpoint.endpoint },
-      ],
-      { removeRoutes },
-    );
-    if (result?.ok) {
-      setSelectedEndpoint(null);
-      setStatus(
-        removeRoutes ? "Deleted endpoint connection" : "Disconnected endpoint",
-      );
-    }
-  }
-
-  function nextNoConnectId(): string {
-    const occupied = new Set([
-      ...document.instances.map((instance) => instance.id),
-      ...document.nets.map((net) => net.id),
-      ...document.routes.map((route) => route.id),
-      ...document.junctions.map((junction) => junction.id),
-      ...document.noConnects.map((noConnect) => noConnect.id),
-      ...document.annotations.map((annotation) => annotation.id),
-      ...document.layoutGroups.map((group) => group.id),
-      ...document.constraints.map((constraint) => constraint.id),
-      ...(document.drafting?.objects ?? []).map((object) => object.id),
-    ]);
-    let id: string;
-    do {
-      uniqueSuffixCounter.current += 1;
-      id = `no-connect-ui-${uniqueSuffixCounter.current}`;
-    } while (occupied.has(id));
-    return id;
   }
 
   useEffect(() => {
@@ -2915,126 +2509,77 @@ export function App({
     return () => window.removeEventListener("keydown", onKeyDown, true);
   });
 
-  function selectSearchResult(result: SearchResult): void {
-    navigateToLocator(
-      result.locator,
-      `Selected ${result.locator.kind} ${result.locator.objectId}`,
-    );
-    closeSearch();
-  }
-
-  function highlightNet(
-    netId: string,
-    documentId = document.id,
-    endpoint?: RouteEndpoint,
-    hierarchyPath: readonly HierarchyFrame[] = documentId === document.id
-      ? documentStack
-      : (findHierarchyPath(
-          projectConnectivityIndex,
-          project.topDocumentId,
-          documentId,
-        ) ?? []),
-  ): void {
-    setHighlightedNetOrigin({
-      documentId,
-      netId,
-      hierarchyPath,
-      ...(endpoint ? { endpoint } : {}),
-    });
-    setStatus(`Highlighted Net ${netId}`);
-  }
-
-  function toggleHighlightedNet(): void {
-    const netId = selectedHighlightNetId;
-    if (!netId) {
-      setStatus(
-        "Select a wire, connected pin, or Net Label before highlighting a Net",
-      );
-      return;
-    }
-    if (selectedHighlightIsActive) {
-      setHighlightedNetOrigin(null);
-      setStatus(`Cleared Net highlight ${netId}`);
-      return;
-    }
-    highlightNet(netId, document.id, selectedHighlightEndpoint);
-  }
-
-  function navigateTraceHop(
-    hop: HierarchyNetTraceHop | GlobalNetTraceHop,
-  ): void {
-    navigateToLocator(
-      {
-        documentId: hop.to.documentId,
-        hierarchyPath: hop.to.hierarchyPath,
-        kind: "net",
-        objectId: hop.to.netId,
-      },
-      hop.direction === "global"
-        ? `Traced global Net ${hop.foldedName} to ${hop.to.netId}`
-        : `Traced Net ${hop.to.netId} via ${hop.frame.instanceId}.${hop.frame.parentPinName}`,
-    );
-  }
-
   const canvasEventHandlers = createEditorCanvasEventHandlers({
-    tool,
-    document,
-    resolver,
-    interactionKind: () => getCurrentInteractionState().kind,
-    pendingSymbolId,
-    pendingComponentPlacement: Boolean(pendingComponentPlacement),
-    vddRailMode,
-    copyPlacementActive: copyPlacement !== null,
-    cellSymbolLayoutEnabled,
-    selectedDrafting,
-    wireSource,
-    wireDraftStepCount: wireDraftSteps.length,
-    draftingSourceActive: draftingSource !== null,
-    pointFromClient,
-    snapPlacementPoint: (point) => ({
-      x: snapCoordinate(point.x, document.presentation.grid),
-      y: snapCoordinate(point.y, document.presentation.grid),
-    }),
-    commitCommandMove: commitCommandMoveFromSelection,
-    commitCopyPlacement: commitCopyPlacementFromSelection,
-    commitPendingPlacement: commitPendingPlacementAtFromHook,
-    exitCellSymbolLayout,
-    clearDraftingSelection: () => replaceSelectionKind("drafting", []),
-    handleCanvasHitPointerDown,
-    beginCanvasGesture,
-    continueCanvasGesture,
-    finishCanvasGesture,
-    clearComponentPreview: () => setComponentPreviewPoint(null),
-    clearVddRailPreview: () => setVddRailPreviewPoint(null),
-    clearCopyPreview: () => setCopyPreviewPoint(null),
-    handleDraftingCanvasClick,
-    logicalRadiusForPixels,
-    snapCaptureRadiusPixels: SNAP_CAPTURE_RADIUS_PX,
-    applyWireCanvasPoint,
-    beginAnnotationTextEditing,
-    cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
-    beginDraftingTextEditing,
-    nextRectangleLabelId: () => {
-      uniqueSuffixCounter.current += 1;
-      return `note-${uniqueSuffixCounter.current}`;
+    model: { tool, document, resolver },
+    session: {
+      interactionKind: () => getCurrentInteractionState().kind,
+      cellSymbolLayoutEnabled,
+      exitCellSymbolLayout,
     },
-    upsertDraftingObject: (object) =>
-      transact([{ kind: "upsert_drafting_object", object }]).ok,
-    finishDraftingCreate,
-    resolveWireCanvasSnap,
-    completeWire,
-    cancelDraftingCreate: clearDraftingCreate,
-    cancelWire: () => {
-      setWireSource(null, null);
-      setWirePreviewPoint(null);
-      setWireDraftSteps([]);
-      setTool("pointer");
-      setBulkDrawInstanceId(null);
-      setStatus("Wire cancelled");
+    coordinates: {
+      pointFromClient,
+      logicalRadiusForPixels,
+      snapCaptureRadiusPixels: SNAP_CAPTURE_RADIUS_PX,
     },
-    setStatus,
-    onWheel: handleWheel,
-    onDrop: handleDrop,
+    selection: {
+      commitCommandMove: commitCommandMoveFromSelection,
+      clearDraftingSelection: () => replaceSelectionKind("drafting", []),
+      handleCanvasHitPointerDown,
+    },
+    placement: {
+      pendingSymbolId,
+      pendingComponentPlacement: Boolean(pendingComponentPlacement),
+      vddRailMode,
+      copyPlacementActive: copyPlacement !== null,
+      snapPlacementPoint: (point) => ({
+        x: snapCoordinate(point.x, document.presentation.grid),
+        y: snapCoordinate(point.y, document.presentation.grid),
+      }),
+      commitCopyPlacement: commitCopyPlacementFromSelection,
+      commitPendingPlacement: commitPendingPlacementAtFromHook,
+      clearComponentPreview: () => setComponentPreviewPoint(null),
+      clearVddRailPreview: () => setVddRailPreviewPoint(null),
+      clearCopyPreview: () => setCopyPreviewPoint(null),
+    },
+    gesture: {
+      begin: beginCanvasGesture,
+      continue: continueCanvasGesture,
+      finish: finishCanvasGesture,
+      cancelDrag: () => canvasDragSessionRef.current?.cancel(),
+      onWheel: handleWheel,
+      onDrop: handleDrop,
+    },
+    drafting: {
+      selected: selectedDrafting,
+      sourceActive: draftingSource !== null,
+      handleCanvasClick: handleDraftingCanvasClick,
+      beginAnnotationTextEditing,
+      beginTextEditing: beginDraftingTextEditing,
+      nextRectangleLabelId: () => {
+        uniqueSuffixCounter.current += 1;
+        return `note-${uniqueSuffixCounter.current}`;
+      },
+      upsertObject: (object) =>
+        transact([{ kind: "upsert_drafting_object", object }]).ok,
+      finishCreate: finishDraftingCreate,
+      cancelCreate: clearDraftingCreate,
+    },
+    wiring: {
+      source: wireSource,
+      draftStepCount: wireDraftSteps.length,
+      applyCanvasPoint: applyWireCanvasPoint,
+      resolveCanvasSnap: resolveWireCanvasSnap,
+      complete: completeWire,
+      cancel: () => {
+        setWireSource(null, null);
+        setWirePreviewPoint(null);
+        setWireDraftSteps([]);
+        setTool("pointer");
+        setBulkDrawInstanceId(null);
+        setStatus("Wire cancelled");
+      },
+    },
+    report: setStatus,
   });
 
   return (
@@ -3339,19 +2884,8 @@ export function App({
                 },
                 onRename: renameCell,
                 onDelete: (documentId) => {
-                  const target = project.documents.find(
-                    (candidate) => candidate.id === documentId,
-                  );
-                  if (!target) return;
-                  if (
-                    commitStructure(
-                      "delete-cell",
-                      planDeleteCell(project, documentId),
-                      project.topDocumentId,
-                    )
-                  ) {
+                  if (deleteCell(documentId)) {
                     setCellManagerOpen(false);
-                    setStatus(`Deleted Cell ${target.name}`);
                   }
                 },
                 onJumpToCaller: jumpToCaller,
@@ -3602,7 +3136,7 @@ export function App({
               selectedInstance && selectedBulkResolution
                 ? `${selectedInstance.id}.B → ${
                     selectedBulkResolution.net
-                      ? (resolveDocumentLogicalNets(document).byBaseNetId.get(
+                      ? (logicalNets.byBaseNetId.get(
                           selectedBulkResolution.net.id,
                         )?.name ?? selectedBulkResolution.net.id)
                       : "unresolved"

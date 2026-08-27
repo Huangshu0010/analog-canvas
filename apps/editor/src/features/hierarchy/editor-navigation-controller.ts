@@ -4,9 +4,13 @@ import {
   findHierarchyPath,
   findHierarchyPaths,
   resolveEndpointConnection,
+  type Diagnostic,
+  type GlobalNetTraceHop,
   type HierarchyFrame,
+  type HierarchyNetTraceHop,
   type ObjectLocator,
   type ProjectConnectivityIndex,
+  type SearchResult,
 } from "@icm/derived";
 import type { WireSource } from "@icm/edit-engine";
 import type { NetlistDiagnostic } from "@icm/netlist";
@@ -15,6 +19,7 @@ import type {
   DraftingObject,
   GridRect,
   Point,
+  RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
 import { buildSvgScene } from "@icm/render-svg";
@@ -52,8 +57,13 @@ export interface EditorNavigationControllerDependencies {
       documentId: string;
       netId: string;
       hierarchyPath: readonly HierarchyFrame[];
+      endpoint?: RouteEndpoint;
     } | null,
   ) => void;
+  selectedHighlightNetId: string | null;
+  selectedHighlightEndpoint: RouteEndpoint | undefined;
+  selectedHighlightIsActive: boolean;
+  closeSearch: () => void;
   setSelectionOpen: (open: boolean) => void;
   setInstanceTableOpen: (open: boolean) => void;
   setCellManagerOpen: (open: boolean) => void;
@@ -83,6 +93,10 @@ export function createEditorNavigationController({
   selectOnly,
   setSelectedEndpoint,
   setHighlightedNetOrigin,
+  selectedHighlightNetId,
+  selectedHighlightEndpoint,
+  selectedHighlightIsActive,
+  closeSearch,
   setSelectionOpen,
   setInstanceTableOpen,
   setCellManagerOpen,
@@ -380,6 +394,77 @@ export function createEditorNavigationController({
     switchDocument(project.topDocumentId);
   };
 
+  const selectSearchResult = (result: SearchResult): void => {
+    navigateToLocator(
+      result.locator,
+      `Selected ${result.locator.kind} ${result.locator.objectId}`,
+    );
+    closeSearch();
+  };
+
+  const jumpToProjectDiagnostic = (diagnostic: Diagnostic): void => {
+    navigateToLocator(
+      diagnostic.primary,
+      `${diagnostic.domain.toUpperCase()} ${diagnostic.code}: ${diagnostic.message}`,
+    );
+  };
+
+  const highlightNet = (
+    netId: string,
+    documentId = document.id,
+    endpoint?: RouteEndpoint,
+    hierarchyPath: readonly HierarchyFrame[] = documentId === document.id
+      ? documentStack
+      : (findHierarchyPath(
+          connectivityIndex,
+          project.topDocumentId,
+          documentId,
+        ) ?? []),
+  ): void => {
+    setHighlightedNetOrigin({
+      documentId,
+      netId,
+      hierarchyPath,
+      ...(endpoint ? { endpoint } : {}),
+    });
+    setStatus(`Highlighted Net ${netId}`);
+  };
+
+  const toggleHighlightedNet = (): void => {
+    if (!selectedHighlightNetId) {
+      setStatus(
+        "Select a wire, connected pin, or Net Label before highlighting a Net",
+      );
+      return;
+    }
+    if (selectedHighlightIsActive) {
+      setHighlightedNetOrigin(null);
+      setStatus(`Cleared Net highlight ${selectedHighlightNetId}`);
+      return;
+    }
+    highlightNet(
+      selectedHighlightNetId,
+      document.id,
+      selectedHighlightEndpoint,
+    );
+  };
+
+  const navigateTraceHop = (
+    hop: HierarchyNetTraceHop | GlobalNetTraceHop,
+  ): void => {
+    navigateToLocator(
+      {
+        documentId: hop.to.documentId,
+        hierarchyPath: hop.to.hierarchyPath,
+        kind: "net",
+        objectId: hop.to.netId,
+      },
+      hop.direction === "global"
+        ? `Traced global Net ${hop.foldedName} to ${hop.to.netId}`
+        : `Traced Net ${hop.to.netId} via ${hop.frame.instanceId}.${hop.frame.parentPinName}`,
+    );
+  };
+
   return {
     switchDocument,
     selectDocumentFromHierarchy,
@@ -392,5 +477,10 @@ export function createEditorNavigationController({
     enterSelectedHierarchy,
     returnToParentDocument,
     returnToTopDocument,
+    selectSearchResult,
+    jumpToProjectDiagnostic,
+    highlightNet,
+    toggleHighlightedNet,
+    navigateTraceHop,
   };
 }

@@ -5,10 +5,9 @@ import {
   CanvasInputPlanes,
   NetHighlightOverlay,
 } from "./editor-canvas-overlays";
+import { EditorCanvasHitLayer } from "./editor-canvas-hit-layer";
 import { EditorCellSymbolLayoutOverlay } from "./editor-cell-symbol-layout-overlay";
-import { EditorEndpointHitTargets } from "./editor-endpoint-hit-targets";
 import { EditorRouteHandles } from "./editor-route-handles";
-import { EditorSelectionHitTargets } from "./editor-selection-hit-targets";
 import {
   EditorDraftingHandles,
   EditorDraftingHitTargets,
@@ -18,11 +17,6 @@ import {
   EditorPlacementPreview,
 } from "./editor-transient-preview-overlays";
 import { EditorWiringOverlay } from "./editor-wiring-overlay";
-
-interface SelectionHitLayer {
-  selection: ComponentProps<typeof EditorSelectionHitTargets>;
-  endpoints: ComponentProps<typeof EditorEndpointHitTargets>;
-}
 
 export interface EditorCanvasSurfaceProps {
   empty: boolean;
@@ -38,7 +32,7 @@ export interface EditorCanvasSurfaceProps {
   placementPreview: ComponentProps<typeof EditorPlacementPreview>;
   wiring: ComponentProps<typeof EditorWiringOverlay>;
   routeHandles: ComponentProps<typeof EditorRouteHandles>;
-  selectionHitLayer: SelectionHitLayer;
+  selectionHitLayer: ComponentProps<typeof EditorCanvasHitLayer>;
   draftingHitTargets: ComponentProps<typeof EditorDraftingHitTargets>;
   draftingHandles: ComponentProps<typeof EditorDraftingHandles>;
   interactionPreviews: ComponentProps<typeof EditorInteractionPreviews>;
@@ -100,9 +94,7 @@ export function EditorCanvasSurface({
           <EditorPlacementPreview {...placementPreview} />
           <EditorWiringOverlay {...wiring} />
           <EditorRouteHandles {...routeHandles} />
-          <EditorSelectionHitTargets {...selectionHitLayer.selection}>
-            <EditorEndpointHitTargets {...selectionHitLayer.endpoints} />
-          </EditorSelectionHitTargets>
+          <EditorCanvasHitLayer {...selectionHitLayer} />
           <EditorDraftingHitTargets {...draftingHitTargets} />
           <EditorDraftingHandles {...draftingHandles} />
           <EditorInteractionPreviews {...interactionPreviews} />

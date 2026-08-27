@@ -49,119 +49,144 @@ type SetViewBox = (
 ) => void;
 
 export interface CanvasGestureControllerDependencies {
-  document: SchematicDocument;
-  resolver: SymbolResolver;
-  routeGeometryRecords: readonly RouteGeometryRecord[];
-  styleProfile: SchematicStyleProfile;
-  defaultViewBox: GridRect;
-  contentBounds: GridRect | null | undefined;
-  viewBox: GridRect;
-  setViewBox: SetViewBox;
-  boxPreview: BoxPreview | null;
-  setBoxPreview: (preview: BoxPreview | null) => void;
-  panPreview: PanPreview | null;
-  setPanPreview: (preview: PanPreview | null) => void;
-  pointFromClient: (
-    clientX: number,
-    clientY: number,
-    svg: SVGSVGElement,
-  ) => Point;
-  rawPointFromClient: (
-    clientX: number,
-    clientY: number,
-    svg: SVGSVGElement,
-  ) => DerivedPoint;
-  logicalRadiusForPixels: (svg: SVGSVGElement, pixels: number) => number;
-  getInteractionKind: () => string;
-  updateCommandMovePreview: (
-    point: Point,
-    clientPoint: Point,
-    svg: SVGSVGElement,
-    suppressSnap: boolean,
-  ) => void;
-  componentPlacementPending: boolean;
-  componentSymbolPending: boolean;
-  setComponentPreviewPoint: (point: Point) => void;
-  vddRailMode: boolean;
-  vddRailStart: Point | null;
-  setVddRailPreviewPoint: (point: Point) => void;
-  copyPlacementPending: boolean;
-  setCopyPreviewPoint: (point: Point) => void;
-  tool: EditorTool;
-  draftingSource: Point | null;
-  snapDraftingPoint: (
-    point: DerivedPoint,
-    altKey: boolean,
-    shiftKey: boolean,
-    origin: Point | undefined,
-    tolerance: number,
-  ) => { point: Point; snap: Point | null; guides: SnapGuideLine[] };
-  setDraftingHover: (point: Point | null) => void;
-  setDraftingSnapPoint: (point: Point | null) => void;
-  wireActive: boolean;
-  resolveWireCanvasSnap: (
-    point: Point,
-    svg: SVGSVGElement,
-    suppressSnap: boolean,
-  ) => WireCanvasSnapResult;
-  setWirePreviewPoint: (point: Point | null) => void;
-  paintSnapGuides: (guides: readonly SnapGuideLine[]) => void;
-  cycleWireCornerShape: () => void;
-  noteCanvasPoint: (point: Point) => void;
-  cellSymbolLayoutDragPointerId: number | null;
-  cancelCellSymbolLayoutDrag: () => void;
-  completeCellSymbolLayoutDrag: (
-    event: ReactPointerEvent<SVGSVGElement>,
-  ) => boolean;
-  replaceSelection: (selection: VisualSelection) => void;
-  clearSelectedEndpoint: () => void;
-  setStatus: (status: string) => void;
+  model: {
+    document: SchematicDocument;
+    resolver: SymbolResolver;
+    routeGeometryRecords: readonly RouteGeometryRecord[];
+    styleProfile: SchematicStyleProfile;
+  };
+  viewport: {
+    defaultViewBox: GridRect;
+    contentBounds: GridRect | null | undefined;
+    viewBox: GridRect;
+    setViewBox: SetViewBox;
+    pointFromClient: (
+      clientX: number,
+      clientY: number,
+      svg: SVGSVGElement,
+    ) => Point;
+    rawPointFromClient: (
+      clientX: number,
+      clientY: number,
+      svg: SVGSVGElement,
+    ) => DerivedPoint;
+    logicalRadiusForPixels: (svg: SVGSVGElement, pixels: number) => number;
+  };
+  gestureSession: {
+    boxPreview: BoxPreview | null;
+    setBoxPreview: (preview: BoxPreview | null) => void;
+    panPreview: PanPreview | null;
+    setPanPreview: (preview: PanPreview | null) => void;
+    getInteractionKind: () => string;
+    paintSnapGuides: (guides: readonly SnapGuideLine[]) => void;
+    noteCanvasPoint: (point: Point) => void;
+    setStatus: (status: string) => void;
+  };
+  selection: {
+    updateCommandMovePreview: (
+      point: Point,
+      clientPoint: Point,
+      svg: SVGSVGElement,
+      suppressSnap: boolean,
+    ) => void;
+    replaceSelection: (selection: VisualSelection) => void;
+    clearSelectedEndpoint: () => void;
+  };
+  placement: {
+    componentPlacementPending: boolean;
+    componentSymbolPending: boolean;
+    setComponentPreviewPoint: (point: Point) => void;
+    vddRailMode: boolean;
+    vddRailStart: Point | null;
+    setVddRailPreviewPoint: (point: Point) => void;
+    copyPlacementPending: boolean;
+    setCopyPreviewPoint: (point: Point) => void;
+  };
+  drafting: {
+    tool: EditorTool;
+    draftingSource: Point | null;
+    snapDraftingPoint: (
+      point: DerivedPoint,
+      altKey: boolean,
+      shiftKey: boolean,
+      origin: Point | undefined,
+      tolerance: number,
+    ) => { point: Point; snap: Point | null; guides: SnapGuideLine[] };
+    setDraftingHover: (point: Point | null) => void;
+    setDraftingSnapPoint: (point: Point | null) => void;
+  };
+  wiring: {
+    wireActive: boolean;
+    resolveWireCanvasSnap: (
+      point: Point,
+      svg: SVGSVGElement,
+      suppressSnap: boolean,
+    ) => WireCanvasSnapResult;
+    setWirePreviewPoint: (point: Point | null) => void;
+    cycleWireCornerShape: () => void;
+  };
+  cellSymbolLayout: {
+    activeDragPointerId: number | null;
+    cancelDrag: () => void;
+    completeDrag: (event: ReactPointerEvent<SVGSVGElement>) => boolean;
+  };
 }
 
 /** Own viewport gestures and canvas-background pointer progression. */
 export function createCanvasGestureController({
-  document,
-  resolver,
-  routeGeometryRecords,
-  styleProfile,
-  defaultViewBox,
-  contentBounds,
-  viewBox,
-  setViewBox,
-  boxPreview,
-  setBoxPreview,
-  panPreview,
-  setPanPreview,
-  pointFromClient,
-  rawPointFromClient,
-  logicalRadiusForPixels,
-  getInteractionKind,
-  updateCommandMovePreview,
-  componentPlacementPending,
-  componentSymbolPending,
-  setComponentPreviewPoint,
-  vddRailMode,
-  vddRailStart,
-  setVddRailPreviewPoint,
-  copyPlacementPending,
-  setCopyPreviewPoint,
-  tool,
-  draftingSource,
-  snapDraftingPoint,
-  setDraftingHover,
-  setDraftingSnapPoint,
-  wireActive,
-  resolveWireCanvasSnap,
-  setWirePreviewPoint,
-  paintSnapGuides,
-  cycleWireCornerShape,
-  noteCanvasPoint,
-  cellSymbolLayoutDragPointerId,
-  cancelCellSymbolLayoutDrag,
-  completeCellSymbolLayoutDrag,
-  replaceSelection,
-  clearSelectedEndpoint,
-  setStatus,
+  model: { document, resolver, routeGeometryRecords, styleProfile },
+  viewport: {
+    defaultViewBox,
+    contentBounds,
+    viewBox,
+    setViewBox,
+    pointFromClient,
+    rawPointFromClient,
+    logicalRadiusForPixels,
+  },
+  gestureSession: {
+    boxPreview,
+    setBoxPreview,
+    panPreview,
+    setPanPreview,
+    getInteractionKind,
+    paintSnapGuides,
+    noteCanvasPoint,
+    setStatus,
+  },
+  selection: {
+    updateCommandMovePreview,
+    replaceSelection,
+    clearSelectedEndpoint,
+  },
+  placement: {
+    componentPlacementPending,
+    componentSymbolPending,
+    setComponentPreviewPoint,
+    vddRailMode,
+    vddRailStart,
+    setVddRailPreviewPoint,
+    copyPlacementPending,
+    setCopyPreviewPoint,
+  },
+  drafting: {
+    tool,
+    draftingSource,
+    snapDraftingPoint,
+    setDraftingHover,
+    setDraftingSnapPoint,
+  },
+  wiring: {
+    wireActive,
+    resolveWireCanvasSnap,
+    setWirePreviewPoint,
+    cycleWireCornerShape,
+  },
+  cellSymbolLayout: {
+    activeDragPointerId: cellSymbolLayoutDragPointerId,
+    cancelDrag: cancelCellSymbolLayoutDrag,
+    completeDrag: completeCellSymbolLayoutDrag,
+  },
 }: CanvasGestureControllerDependencies) {
   const fitView = (): void => {
     setViewBox(

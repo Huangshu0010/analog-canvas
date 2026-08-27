@@ -63,106 +63,121 @@ const WIRE_CORNER_SHAPES = [
 }[];
 
 export interface UseWireCanvasControllerOptions {
-  document: SchematicDocument;
-  resolver: SymbolResolver;
-  wiringEndpoints: readonly WireSource[];
-  routeGeometryRecords: readonly RouteGeometryRecord[];
-  contactComponents: readonly RoutedComponent[];
-  wireSource: WireSource | null;
-  wireWaypoints: readonly Point[];
-  wireDraftSteps: readonly WireDraftStep[];
-  wireRoutingMode: WireRoutingMode;
-  wireCornerOrder: WireCornerOrder;
-  tool: EditorTool;
-  vddRailMode: boolean;
-  componentPlacementPending: boolean;
-  selectedInstanceIds: readonly string[];
-  selection: VisualSelection;
-  getInteractionKind: () => string;
-  beginInstanceMove: (
-    event: ReactPointerEvent<SVGElement>,
-    instanceId: string,
-    hitTarget: SVGElement,
-  ) => void;
-  beginVisualSelectionMove: (
-    event: ReactPointerEvent<SVGElement>,
-    selection: VisualSelection,
-    hitTarget: SVGElement,
-  ) => void;
-  cancelInteraction: () => void;
-  handleWireRoutePointerDown: (
-    event: ReactPointerEvent<SVGElement>,
-    routeId: string,
-    hitTarget: SVGElement,
-  ) => void;
-  selectRoute: (routeId: string, segmentIndex?: number) => void;
-  beginRouteStretch: (
-    event: ReactPointerEvent<SVGElement>,
-    routeId: string,
-    segmentIndex: number,
-    intent: RouteStretchPreview["intent"],
-    hitTarget: SVGElement,
-  ) => void;
-  createRouteAnchor: (
-    routeId: string,
-    point: Point,
-    segmentIndex: number,
-  ) => WireSource;
-  pointFromClient: (
-    clientX: number,
-    clientY: number,
-    svg: SVGSVGElement,
-  ) => Point;
-  logicalRadiusForPixels: (svg: SVGSVGElement, pixels: number) => number;
-  paintSnapGuides: (guides: readonly SnapGuideLine[]) => void;
-  setWireSource: (source: WireSource, revision: number) => void;
-  setWirePreviewPoint: (point: Point | null) => void;
-  setWireDraftSteps: (steps: WireDraftStep[]) => void;
-  commitWire: (source: WireSource) => void;
-  fixWirePoint: (point: Point) => void;
-  finishWireAtPoint: (point: Point) => void;
-  setWireRoutingMode: (mode: WireRoutingMode) => void;
-  setWireCornerOrder: (order: WireCornerOrder) => void;
-  setStatus: (status: string) => void;
+  model: {
+    document: SchematicDocument;
+    resolver: SymbolResolver;
+    wiringEndpoints: readonly WireSource[];
+    routeGeometryRecords: readonly RouteGeometryRecord[];
+    contactComponents: readonly RoutedComponent[];
+  };
+  session: {
+    wireSource: WireSource | null;
+    wireWaypoints: readonly Point[];
+    wireDraftSteps: readonly WireDraftStep[];
+    wireRoutingMode: WireRoutingMode;
+    wireCornerOrder: WireCornerOrder;
+    tool: EditorTool;
+    vddRailMode: boolean;
+    componentPlacementPending: boolean;
+    getInteractionKind: () => string;
+    cancelInteraction: () => void;
+    setWireSource: (source: WireSource, revision: number) => void;
+    setWirePreviewPoint: (point: Point | null) => void;
+    setWireDraftSteps: (steps: WireDraftStep[]) => void;
+    setWireRoutingMode: (mode: WireRoutingMode) => void;
+    setWireCornerOrder: (order: WireCornerOrder) => void;
+  };
+  selection: {
+    selectedInstanceIds: readonly string[];
+    selection: VisualSelection;
+    beginInstanceMove: (
+      event: ReactPointerEvent<SVGElement>,
+      instanceId: string,
+      hitTarget: SVGElement,
+    ) => void;
+    beginVisualSelectionMove: (
+      event: ReactPointerEvent<SVGElement>,
+      selection: VisualSelection,
+      hitTarget: SVGElement,
+    ) => void;
+  };
+  routes: {
+    handlePointerDown: (
+      event: ReactPointerEvent<SVGElement>,
+      routeId: string,
+      hitTarget: SVGElement,
+    ) => void;
+    select: (routeId: string, segmentIndex?: number) => void;
+    beginStretch: (
+      event: ReactPointerEvent<SVGElement>,
+      routeId: string,
+      segmentIndex: number,
+      intent: RouteStretchPreview["intent"],
+      hitTarget: SVGElement,
+    ) => void;
+    createAnchor: (
+      routeId: string,
+      point: Point,
+      segmentIndex: number,
+    ) => WireSource;
+  };
+  viewport: {
+    pointFromClient: (
+      clientX: number,
+      clientY: number,
+      svg: SVGSVGElement,
+    ) => Point;
+    logicalRadiusForPixels: (svg: SVGSVGElement, pixels: number) => number;
+    paintSnapGuides: (guides: readonly SnapGuideLine[]) => void;
+  };
+  commands: {
+    commitWire: (source: WireSource) => void;
+    fixWirePoint: (point: Point) => void;
+    finishWireAtPoint: (point: Point) => void;
+    setStatus: (status: string) => void;
+  };
 }
 
 /** Route hits, canvas wire snapping, and the remembered corner preference. */
 export function useWireCanvasController({
-  document,
-  resolver,
-  wiringEndpoints,
-  routeGeometryRecords,
-  contactComponents,
-  wireSource,
-  wireWaypoints,
-  wireDraftSteps,
-  wireRoutingMode,
-  wireCornerOrder,
-  tool,
-  vddRailMode,
-  componentPlacementPending,
-  selectedInstanceIds,
-  selection,
-  getInteractionKind,
-  beginInstanceMove,
-  beginVisualSelectionMove,
-  cancelInteraction,
-  handleWireRoutePointerDown,
-  selectRoute,
-  beginRouteStretch,
-  createRouteAnchor,
-  pointFromClient,
-  logicalRadiusForPixels,
-  paintSnapGuides,
-  setWireSource,
-  setWirePreviewPoint,
-  setWireDraftSteps,
-  commitWire,
-  fixWirePoint,
-  finishWireAtPoint,
-  setWireRoutingMode,
-  setWireCornerOrder,
-  setStatus,
+  model: {
+    document,
+    resolver,
+    wiringEndpoints,
+    routeGeometryRecords,
+    contactComponents,
+  },
+  session: {
+    wireSource,
+    wireWaypoints,
+    wireDraftSteps,
+    wireRoutingMode,
+    wireCornerOrder,
+    tool,
+    vddRailMode,
+    componentPlacementPending,
+    getInteractionKind,
+    cancelInteraction,
+    setWireSource,
+    setWirePreviewPoint,
+    setWireDraftSteps,
+    setWireRoutingMode,
+    setWireCornerOrder,
+  },
+  selection: {
+    selectedInstanceIds,
+    selection,
+    beginInstanceMove,
+    beginVisualSelectionMove,
+  },
+  routes: {
+    handlePointerDown: handleWireRoutePointerDown,
+    select: selectRoute,
+    beginStretch: beginRouteStretch,
+    createAnchor: createRouteAnchor,
+  },
+  viewport: { pointFromClient, logicalRadiusForPixels, paintSnapGuides },
+  commands: { commitWire, fixWirePoint, finishWireAtPoint, setStatus },
 }: UseWireCanvasControllerOptions) {
   const lastWireShapeRef = useRef<{
     routingMode: WireRoutingMode;

@@ -68,54 +68,71 @@ type TransactionResult = {
 };
 
 export interface UseWireInteractionOptions {
-  document: SchematicDocument;
-  resolver: SymbolResolver;
-  selectedInstance: SchematicDocument["instances"][number] | undefined;
-  selectedRouteId: string | null;
-  selectedRouteSegmentIndex: number | null;
-  visibleEndpoints: readonly WireSource[];
-  routeGeometryRecords: readonly RouteGeometryRecord[];
-  wireSource: WireSource | null;
-  wireSourceRevision: number | null;
-  wireWaypoints: readonly Point[];
-  wireDraftSteps: readonly WireDraftStep[];
-  wireRoutingMode: WireRoutingMode;
-  wireCornerOrder: WireCornerOrder;
-  nextRoutingSuffix: () => number;
-  transact: (
-    edits: SchematicEdit[],
-    options?: { completesWireSession?: boolean },
-  ) => TransactionResult;
-  setStatus: (status: string) => void;
-  setTool: (tool: "wire") => void;
-  setWireSource: (source: WireSource | null, revision: number | null) => void;
-  setWirePreviewPoint: (point: Point | null) => void;
-  setWireDraftSteps: (steps: WireDraftStep[]) => void;
-  completeWire: () => void;
-  clearTransientCanvasState: () => void;
-  cancelInteraction: () => void;
-  setBulkDrawInstanceId: (instanceId: string | null) => void;
-  replaceRouteSelection: (routeIds: readonly string[]) => void;
-  selectOnly: (kind: "route", ids: readonly string[]) => void;
-  setSelectedRouteSegmentIndex: (segmentIndex: number | null) => void;
-  setSelectedEndpoint: (endpoint: WireSource | null) => void;
-  canvasDragSessionRef: MutableRefObject<CanvasDragSession | null>;
-  setRouteStretchPreview: (preview: RouteStretchPreview | null) => void;
-  pointFromClient: (
-    clientX: number,
-    clientY: number,
-    svg: SVGSVGElement,
-    snapToGrid: false,
-  ) => Point;
-  logicalRadiusForPixels: (svg: SVGSVGElement, pixels: number) => number;
-  contactComponents: Parameters<typeof resolveElectricalContactTargets>[3];
+  model: {
+    document: SchematicDocument;
+    resolver: SymbolResolver;
+    visibleEndpoints: readonly WireSource[];
+    routeGeometryRecords: readonly RouteGeometryRecord[];
+    contactComponents: Parameters<typeof resolveElectricalContactTargets>[3];
+  };
+  selection: {
+    selectedInstance: SchematicDocument["instances"][number] | undefined;
+    selectedRouteId: string | null;
+    selectedRouteSegmentIndex: number | null;
+    replaceRouteSelection: (routeIds: readonly string[]) => void;
+    selectOnly: (kind: "route", ids: readonly string[]) => void;
+    setSelectedRouteSegmentIndex: (segmentIndex: number | null) => void;
+    setSelectedEndpoint: (endpoint: WireSource | null) => void;
+  };
+  session: {
+    wireSource: WireSource | null;
+    wireSourceRevision: number | null;
+    wireWaypoints: readonly Point[];
+    wireDraftSteps: readonly WireDraftStep[];
+    wireRoutingMode: WireRoutingMode;
+    wireCornerOrder: WireCornerOrder;
+    setTool: (tool: "wire") => void;
+    setWireSource: (source: WireSource | null, revision: number | null) => void;
+    setWirePreviewPoint: (point: Point | null) => void;
+    setWireDraftSteps: (steps: WireDraftStep[]) => void;
+    completeWire: () => void;
+    clearTransientCanvasState: () => void;
+    cancelInteraction: () => void;
+    setBulkDrawInstanceId: (instanceId: string | null) => void;
+  };
+  transaction: {
+    nextRoutingSuffix: () => number;
+    transact: (
+      edits: SchematicEdit[],
+      options?: { completesWireSession?: boolean },
+    ) => TransactionResult;
+    setStatus: (status: string) => void;
+  };
+  drag: {
+    canvasDragSessionRef: MutableRefObject<CanvasDragSession | null>;
+    setRouteStretchPreview: (preview: RouteStretchPreview | null) => void;
+    pointFromClient: (
+      clientX: number,
+      clientY: number,
+      svg: SVGSVGElement,
+      snapToGrid: false,
+    ) => Point;
+    logicalRadiusForPixels: (svg: SVGSVGElement, pixels: number) => number;
+  };
 }
 
 /**
  * Owns wire sessions and route-specific drag lifecycles. The App remains the
  * cross-domain canvas pointer arbiter.
  */
-export function useWireInteraction(options: UseWireInteractionOptions) {
+export function useWireInteraction(capabilities: UseWireInteractionOptions) {
+  const options = {
+    ...capabilities.model,
+    ...capabilities.selection,
+    ...capabilities.session,
+    ...capabilities.transaction,
+    ...capabilities.drag,
+  };
   const transactProposal = (
     proposal: ConnectivityProposal,
     transactionOptions?: { completesWireSession?: boolean },

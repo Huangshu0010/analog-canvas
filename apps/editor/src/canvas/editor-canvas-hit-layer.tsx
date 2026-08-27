@@ -1,49 +1,33 @@
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 
 import {
+  derivePowerRailComponent,
   isSchematicAnnotationVisible,
+  resolveDocumentStyleProfile,
   type ResolvedRouteGeometry,
 } from "@icm/derived";
+import type { WireSource } from "@icm/edit-engine";
 import type { Annotation, RouteBranch, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
-import { resolveDocumentStyleProfile } from "@icm/derived";
 
-import type { EditorTool } from "../interaction/interaction-state";
 import {
   annotationAnchor,
   annotationHitBox,
   instanceHitBox,
 } from "../features/wiring/route-interaction-geometry";
+import type { EditorTool } from "../interaction/interaction-state";
 import { serializePolylinePoints } from "./canvas-geometry";
 
 type Instance = SchematicDocument["instances"][number];
+type Route = SchematicDocument["routes"][number];
 type StyleProfile = ReturnType<typeof resolveDocumentStyleProfile>;
+type StretchIntent = "resize-power-rail-start" | "resize-power-rail-end";
 type RouteGeometryRecord = {
   route: RouteBranch;
   geometry: ResolvedRouteGeometry;
 };
 
-export function EditorSelectionHitTargets({
-  document,
-  resolver,
-  routeGeometryRecords,
-  styleProfile,
-  tool,
-  selectedInstanceIds,
-  selectedRouteId,
-  supplementalRouteIds,
-  selectedInternalRouteIds,
-  selectedAnnotationId,
-  supplementalAnnotationIds,
-  cellSymbolLayoutInstanceId,
-  onInstanceClick,
-  onInstanceOpen,
-  onInstancePointerDown,
-  onRoutePointerDown,
-  onAnnotationPointerDown,
-  onAnnotationEdit,
-  children,
-}: {
+interface SelectionHitTargetProps {
   document: SchematicDocument;
   resolver: SymbolResolver;
   routeGeometryRecords: readonly RouteGeometryRecord[];
@@ -71,9 +55,66 @@ export function EditorSelectionHitTargets({
     annotation: Annotation,
   ) => void;
   onAnnotationEdit: (annotation: Annotation) => void;
-  /** Endpoint targets stay between Routes and Annotations in SVG hit order. */
-  children?: ReactNode;
+}
+
+interface EndpointHitTargetProps {
+  document: SchematicDocument;
+  endpoints: readonly WireSource[];
+  tool: EditorTool;
+  selectedRoute: Route | undefined;
+  selectedRouteSegmentIndex: number | null;
+  selectedEndpoint: WireSource | null;
+  supplementalJunctionIds: readonly string[];
+  endpointLabel: (endpoint: WireSource["endpoint"]) => string;
+  onEndpointActions: (endpoint: WireSource) => void;
+  onPowerRailStretch: (
+    event: ReactPointerEvent<SVGCircleElement>,
+    routeId: string,
+    segmentIndex: number,
+    intent: StretchIntent,
+  ) => void;
+  onJunctionSelect: (endpoint: WireSource) => void;
+  onWireEndpoint: (
+    event: ReactPointerEvent<SVGCircleElement>,
+    endpoint: WireSource,
+  ) => void;
+}
+
+export function EditorCanvasHitLayer({
+  selection,
+  endpoints,
+}: {
+  selection: SelectionHitTargetProps;
+  endpoints: EndpointHitTargetProps;
 }) {
+  return (
+    <SelectionHitTargets {...selection}>
+      <EndpointHitTargets {...endpoints} />
+    </SelectionHitTargets>
+  );
+}
+
+function SelectionHitTargets({
+  document,
+  resolver,
+  routeGeometryRecords,
+  styleProfile,
+  tool,
+  selectedInstanceIds,
+  selectedRouteId,
+  supplementalRouteIds,
+  selectedInternalRouteIds,
+  selectedAnnotationId,
+  supplementalAnnotationIds,
+  cellSymbolLayoutInstanceId,
+  onInstanceClick,
+  onInstanceOpen,
+  onInstancePointerDown,
+  onRoutePointerDown,
+  onAnnotationPointerDown,
+  onAnnotationEdit,
+  children,
+}: SelectionHitTargetProps & { children: ReactNode }) {
   return (
     <>
       {document.instances
@@ -177,4 +218,93 @@ export function EditorSelectionHitTargets({
         })}
     </>
   );
+}
+
+function EndpointHitTargets({
+  document,
+  endpoints,
+  tool,
+  selectedRoute,
+  selectedRouteSegmentIndex,
+  selectedEndpoint,
+  supplementalJunctionIds,
+  endpointLabel,
+  onEndpointActions,
+  onPowerRailStretch,
+  onJunctionSelect,
+  onWireEndpoint,
+}: EndpointHitTargetProps) {
+  const powerRailEnds =
+    selectedRoute?.presentation === "power-rail"
+      ? (derivePowerRailComponent(document, selectedRoute.id)
+          ?.endpointJunctionIds.map((junctionId) =>
+            document.junctions.find((junction) => junction.id === junctionId),
+          )
+          .filter((junction): junction is NonNullable<typeof junction> =>
+            Boolean(junction),
+          )
+          .sort((left, right) => left.position.x - right.position.x) ?? [])
+      : [];
+  return endpoints.map((candidate) => {
+    const candidateJunctionId =
+      candidate.endpoint.kind === "junction"
+        ? candidate.endpoint.junctionId
+        : null;
+    const powerRailEndIndex =
+      candidateJunctionId !== null
+        ? powerRailEnds.findIndex(
+            (junction) => junction.id === candidateJunctionId,
+          )
+        : -1;
+    const label = endpointLabel(candidate.endpoint);
+    return (
+      <circle
+        key={`${candidate.netId}:${label}`}
+        data-testid={label}
+        data-canvas-hit-kind={
+          candidate.endpoint.kind === "junction" ? "junction" : undefined
+        }
+        data-canvas-hit-id={candidateJunctionId ?? undefined}
+        data-drag-object-id={candidateJunctionId ?? undefined}
+        className={
+          tool === "wire" ||
+          (candidateJunctionId !== null &&
+            supplementalJunctionIds.includes(candidateJunctionId)) ||
+          (selectedEndpoint?.endpoint.kind === "junction" &&
+            candidateJunctionId !== null &&
+            selectedEndpoint.endpoint.junctionId === candidateJunctionId)
+            ? "endpoint-hit active"
+            : "endpoint-hit"
+        }
+        cx={candidate.connection.contactPoint.x}
+        cy={candidate.connection.contactPoint.y}
+        r={4}
+        onClick={(event) => event.stopPropagation()}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onEndpointActions(candidate);
+        }}
+        onPointerDown={(event) => {
+          if (tool === "pointer" && selectedRoute && powerRailEndIndex >= 0) {
+            onPowerRailStretch(
+              event,
+              selectedRoute.id,
+              selectedRouteSegmentIndex ?? 0,
+              powerRailEndIndex === 0
+                ? "resize-power-rail-start"
+                : "resize-power-rail-end",
+            );
+            return;
+          }
+          if (tool === "pointer" && candidate.endpoint.kind === "junction") {
+            event.stopPropagation();
+            onJunctionSelect(candidate);
+            return;
+          }
+          onWireEndpoint(event, candidate);
+        }}
+      />
+    );
+  });
 }

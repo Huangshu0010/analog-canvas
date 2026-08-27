@@ -28,6 +28,44 @@ tests beside the implementation whose contract they protect.
 `main.tsx`, `styles.css`, and `vite-env.d.ts` remain at the source root because
 they are build/runtime entry infrastructure rather than product domains.
 
+## Editor Composition Boundaries
+
+`app/App.tsx` is the editor composition root. It may own application session
+state, modal state, top-level React lifecycles, and the wiring that connects
+feature controllers to view props. It should not become the implementation
+home for derived queries, transaction planning, or pointer policy.
+
+- `app/use-editor-derived-model.ts` owns revision-scoped read models shared by
+  the canvas, diagnostics, navigation, and inspectors. Add a derived value
+  there when it is a projection of the current Project revision and is consumed
+  by more than one composed feature.
+- Feature command facades own domain write intent. They normalize UI input,
+  call the appropriate Edit Engine planner, choose transaction identity, and
+  report the result. `App` composes these commands but does not duplicate their
+  rules.
+- Controllers receive named capability groups such as model, selection,
+  viewport, session, and commands. These groups describe why a dependency is
+  available; they are not a generic context object or an alternative state
+  store.
+- Modal confirmation sessions stay in `App` when the composition root owns the
+  lifecycle. The plan being confirmed remains an Edit Engine contract.
+
+Canvas modules follow interaction ownership rather than one-file-per-element:
+
+- `editor-canvas-surface.tsx` owns the global SVG layer order.
+- `editor-canvas-hit-layer.tsx` owns the relative hit order of instances,
+  Routes, endpoints, and annotations.
+- Route handles, drafting handles, wiring UI, placement previews, and transient
+  previews remain separate where they have distinct behavior or tests.
+- Event routing and gesture policy remain controllers and never move into
+  presentational overlay components.
+
+When evolving this structure, split a module because it owns a business rule,
+lifecycle, reusable contract, focused test contract, or high-risk invariant.
+Co-locate single-parent presentation fragments when they share one ordering or
+change boundary. File length alone is neither a reason to split nor a reason to
+merge.
+
 ## Dependency Direction
 
 Dependencies flow toward stable contracts:

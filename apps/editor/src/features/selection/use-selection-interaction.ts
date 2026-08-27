@@ -11,6 +11,7 @@ import {
   proposePaste,
 } from "../clipboard/clipboard";
 import type { SchematicClipboard } from "../clipboard/clipboard";
+import { endpointKey } from "@icm/derived";
 import {
   createConnectivityProposal,
   executeTransaction,
@@ -37,6 +38,7 @@ import type { ScreenFlip } from "../../interaction/shortcut-orientation";
 import {
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
+  proposeVisualSelectionDeletion,
 } from "./delete-selection";
 import type { VisualSelection } from "./visual-selection";
 import {
@@ -128,6 +130,10 @@ export interface UseSelectionInteractionOptions {
     transactionId: string,
     edits: readonly SchematicEdit[],
   ) => TransactionResult;
+  commitCellTerminalSelection: (
+    terminalIds: readonly string[],
+    documentEdits: readonly SchematicEdit[],
+  ) => boolean;
   setStatus: (status: string) => void;
   setSelectedEndpoint: (endpoint: WireSource | null) => void;
   resetSelection: () => void;
@@ -149,7 +155,6 @@ export interface UseSelectionInteractionOptions {
   ) => void;
   setCopyPreviewPoint: (point: Point) => void;
   nextUniqueSuffix: () => number;
-  nextNoConnectId: () => string;
   endpointTestId: (endpoint: WireSource["endpoint"]) => string;
   tool: string;
   canvasDragSessionRef: MutableRefObject<CanvasDragSession | null>;
@@ -867,7 +872,7 @@ export function useSelectionInteraction(
     const result = transactConnectivity("add_or_remove_no_connect", [
       {
         kind: "add_no_connect",
-        noConnect: { id: options.nextNoConnectId(), endpoint },
+        noConnect: { id: nextNoConnectId(), endpoint },
       },
     ]);
     if (result.ok) {
@@ -877,7 +882,85 @@ export function useSelectionInteraction(
     }
   };
 
+  const nextNoConnectId = (): string => {
+    const occupied = new Set([
+      ...options.document.instances.map((instance) => instance.id),
+      ...options.document.nets.map((net) => net.id),
+      ...options.document.routes.map((route) => route.id),
+      ...options.document.junctions.map((junction) => junction.id),
+      ...options.document.noConnects.map((noConnect) => noConnect.id),
+      ...options.document.annotations.map((annotation) => annotation.id),
+      ...options.document.layoutGroups.map((group) => group.id),
+      ...options.document.constraints.map((constraint) => constraint.id),
+      ...(options.document.drafting?.objects ?? []).map((object) => object.id),
+    ]);
+    let id: string;
+    do {
+      id = `no-connect-ui-${options.nextUniqueSuffix()}`;
+    } while (occupied.has(id));
+    return id;
+  };
+
+  const disconnectSelectedEndpoint = (removeRoutes: boolean): void => {
+    const endpoint = options.selectedEndpoint?.endpoint;
+    if (!endpoint || endpoint.kind === "junction") return;
+    const routeEdits = removeRoutes
+      ? options.document.routes
+          .filter(
+            (route) =>
+              endpointKey(route.from) === endpointKey(endpoint) ||
+              endpointKey(route.to) === endpointKey(endpoint),
+          )
+          .map((route): SchematicEdit => ({
+            kind: "remove_route_geometry",
+            routeId: route.id,
+          }))
+      : [];
+    const result = transactConnectivity(
+      "disconnect_endpoint",
+      [...routeEdits, { kind: "disconnect_endpoint", endpoint }],
+      { removeRoutes },
+    );
+    if (result.ok) {
+      options.setSelectedEndpoint(null);
+      options.setStatus(
+        removeRoutes ? "Deleted endpoint connection" : "Disconnected endpoint",
+      );
+    }
+  };
+
   const deleteSelection = (): void => {
+    const formalTerminals = (options.document.netlist?.terminals ?? []).filter(
+      (terminal) =>
+        terminal.interfaceInstanceIds.some((instanceId) =>
+          options.visualSelection.instanceIds.includes(instanceId),
+        ),
+    );
+    if (formalTerminals.length > 0) {
+      try {
+        const deletionEdits = proposeVisualSelectionDeletion(
+          options.document,
+          options.resolver,
+          options.visualSelection,
+          options.nextUniqueSuffix(),
+        );
+        if (
+          options.commitCellTerminalSelection(
+            formalTerminals.map((terminal) => terminal.id),
+            deletionEdits,
+          )
+        ) {
+          options.resetSelection();
+          options.setSelectedEndpoint(null);
+          options.setStatus("Deleted selected schematic objects");
+        }
+      } catch (error) {
+        options.setStatus(
+          error instanceof Error ? error.message : "Delete failed",
+        );
+      }
+      return;
+    }
     const initialRouteIds = new Set(options.visualSelection.routeIds);
     const selectedAnnotationIds = new Set(
       options.visualSelection.annotationIds,
@@ -1108,6 +1191,7 @@ export function useSelectionInteraction(
     deleteSelectedJunction,
     deleteSelection,
     toggleSelectedNoConnect,
+    disconnectSelectedEndpoint,
     updateCommandMovePreview,
     canBeginKeyboardSelectionMove: () =>
       planSelectionMove(options.document, options.visualSelection)

@@ -9,66 +9,78 @@ import type { VisualSelection } from "../features/selection/visual-selection";
 import { resolveCanvasHitAtPoint } from "./canvas-hit-resolver";
 
 export interface CanvasHitControllerDependencies {
-  document: SchematicDocument;
-  visibleEndpoints: readonly WireSource[];
-  selection: VisualSelection;
-  selectedInternalRouteIds: ReadonlySet<string>;
-  selectedInternalJunctionIds: ReadonlySet<string>;
-  selectedInternalObjectIds: ReadonlySet<string>;
-  getInteractionKind: () => string;
-  placementOwnsCanvas: boolean;
-  tool: EditorTool;
-  cellSymbolLayoutEnabled: boolean;
-  beginInstanceMove: (
-    event: ReactPointerEvent<SVGElement>,
-    instanceId: string,
-    hitTarget: SVGElement,
-  ) => void;
-  beginVisualSelectionMove: (
-    event: ReactPointerEvent<SVGElement>,
-    selection: VisualSelection,
-    hitTarget: SVGElement,
-  ) => void;
-  beginAnnotationDrag: (
-    event: ReactPointerEvent<SVGElement>,
-    annotation: Annotation,
-    hitTarget: SVGElement,
-  ) => void;
-  handleRoutePointerDown: (
-    event: ReactPointerEvent<SVGElement>,
-    routeId: string,
-    hitTarget: SVGElement,
-  ) => void;
-  beginDraftingDrag: (
-    event: ReactPointerEvent<SVGElement>,
-    object: DraftingObject,
-    hitTarget: SVGElement,
-  ) => void;
-  selectEndpoint: (endpoint: WireSource) => void;
-  endpointStatusLabel: (endpoint: WireSource) => string;
-  setStatus: (status: string) => void;
+  model: {
+    document: SchematicDocument;
+    visibleEndpoints: readonly WireSource[];
+    selection: VisualSelection;
+    selectedInternalRouteIds: ReadonlySet<string>;
+    selectedInternalJunctionIds: ReadonlySet<string>;
+    selectedInternalObjectIds: ReadonlySet<string>;
+  };
+  session: {
+    getInteractionKind: () => string;
+    placementOwnsCanvas: boolean;
+    tool: EditorTool;
+    cellSymbolLayoutEnabled: boolean;
+  };
+  actions: {
+    beginInstanceMove: (
+      event: ReactPointerEvent<SVGElement>,
+      instanceId: string,
+      hitTarget: SVGElement,
+    ) => void;
+    beginVisualSelectionMove: (
+      event: ReactPointerEvent<SVGElement>,
+      selection: VisualSelection,
+      hitTarget: SVGElement,
+    ) => void;
+    beginAnnotationDrag: (
+      event: ReactPointerEvent<SVGElement>,
+      annotation: Annotation,
+      hitTarget: SVGElement,
+    ) => void;
+    handleRoutePointerDown: (
+      event: ReactPointerEvent<SVGElement>,
+      routeId: string,
+      hitTarget: SVGElement,
+    ) => void;
+    beginDraftingDrag: (
+      event: ReactPointerEvent<SVGElement>,
+      object: DraftingObject,
+      hitTarget: SVGElement,
+    ) => void;
+    selectEndpoint: (endpoint: WireSource) => void;
+    endpointStatusLabel: (endpoint: WireSource) => string;
+    setStatus: (status: string) => void;
+  };
 }
 
 /** Rank the visible hit stack and hand one press to its owning domain. */
 export function createCanvasHitController({
-  document,
-  visibleEndpoints,
-  selection,
-  selectedInternalRouteIds,
-  selectedInternalJunctionIds,
-  selectedInternalObjectIds,
-  getInteractionKind,
-  placementOwnsCanvas,
-  tool,
-  cellSymbolLayoutEnabled,
-  beginInstanceMove,
-  beginVisualSelectionMove,
-  beginAnnotationDrag,
-  handleRoutePointerDown,
-  beginDraftingDrag,
-  selectEndpoint,
-  endpointStatusLabel,
-  setStatus,
+  model: {
+    document,
+    visibleEndpoints,
+    selection,
+    selectedInternalRouteIds,
+    selectedInternalJunctionIds,
+    selectedInternalObjectIds,
+  },
+  session: {
+    getInteractionKind,
+    placementOwnsCanvas,
+    tool,
+    cellSymbolLayoutEnabled,
+  },
+  actions: {
+    beginInstanceMove,
+    beginVisualSelectionMove,
+    beginAnnotationDrag,
+    handleRoutePointerDown,
+    beginDraftingDrag,
+    selectEndpoint,
+    endpointStatusLabel,
+    setStatus,
+  },
 }: CanvasHitControllerDependencies) {
   const compositeSelectionOwnsHit = (
     kind: "instance" | "instance-label" | "annotation" | "route" | "junction",

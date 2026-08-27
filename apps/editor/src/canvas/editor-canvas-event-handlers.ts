@@ -31,116 +31,140 @@ interface PointFromClient {
 }
 
 interface CanvasEventHandlerDependencies {
-  tool: EditorTool;
-  document: SchematicDocument;
-  resolver: SymbolResolver;
-  interactionKind: () => string;
-  pendingSymbolId: string | null;
-  pendingComponentPlacement: boolean;
-  vddRailMode: boolean;
-  copyPlacementActive: boolean;
-  cellSymbolLayoutEnabled: boolean;
-  selectedDrafting: DraftingObject | null | undefined;
-  wireSource: WireSource | null;
-  wireDraftStepCount: number;
-  draftingSourceActive: boolean;
-  pointFromClient: PointFromClient;
-  snapPlacementPoint: (point: Point) => Point;
-  commitCommandMove: (
-    point: Point,
-    clientPoint: Point,
-    canvas: SVGSVGElement,
-  ) => void;
-  commitCopyPlacement: (point: Point) => void;
-  commitPendingPlacement: (point: Point) => void;
-  exitCellSymbolLayout: () => void;
-  clearDraftingSelection: () => void;
-  handleCanvasHitPointerDown: (event: CanvasPointerEvent) => void;
-  beginCanvasGesture: (event: CanvasPointerEvent) => void;
-  continueCanvasGesture: (event: CanvasPointerEvent) => void;
-  finishCanvasGesture: (event: CanvasPointerEvent) => void;
-  clearComponentPreview: () => void;
-  clearVddRailPreview: () => void;
-  clearCopyPreview: () => void;
-  handleDraftingCanvasClick: (
-    point: Point,
-    alternate: boolean,
-    additive: boolean,
-    logicalRadius: number,
-  ) => void;
-  logicalRadiusForPixels: (canvas: SVGSVGElement, pixels: number) => number;
-  snapCaptureRadiusPixels: number;
-  applyWireCanvasPoint: (
-    point: Point,
-    canvas: SVGSVGElement,
-    alternate: boolean,
-    finish: boolean,
-  ) => void;
-  beginAnnotationTextEditing: (annotation: Annotation) => void;
-  cancelCanvasDrag: () => void;
-  beginDraftingTextEditing: (object: DraftingTextObject) => void;
-  nextRectangleLabelId: () => string;
-  upsertDraftingObject: (object: DraftingObject) => boolean;
-  finishDraftingCreate: () => void;
-  resolveWireCanvasSnap: (
-    point: Point,
-    canvas: SVGSVGElement,
-    alternate: boolean,
-  ) => { point: Point };
-  completeWire: () => void;
-  cancelDraftingCreate: () => void;
-  cancelWire: () => void;
-  setStatus: (status: string) => void;
-  onWheel: (event: ReactWheelEvent<SVGSVGElement>) => void;
-  onDrop: (event: ReactDragEvent<SVGSVGElement>) => void;
+  model: {
+    tool: EditorTool;
+    document: SchematicDocument;
+    resolver: SymbolResolver;
+  };
+  session: {
+    interactionKind: () => string;
+    cellSymbolLayoutEnabled: boolean;
+    exitCellSymbolLayout: () => void;
+  };
+  coordinates: {
+    pointFromClient: PointFromClient;
+    logicalRadiusForPixels: (canvas: SVGSVGElement, pixels: number) => number;
+    snapCaptureRadiusPixels: number;
+  };
+  selection: {
+    commitCommandMove: (
+      point: Point,
+      clientPoint: Point,
+      canvas: SVGSVGElement,
+    ) => void;
+    clearDraftingSelection: () => void;
+    handleCanvasHitPointerDown: (event: CanvasPointerEvent) => void;
+  };
+  placement: {
+    pendingSymbolId: string | null;
+    pendingComponentPlacement: boolean;
+    vddRailMode: boolean;
+    copyPlacementActive: boolean;
+    snapPlacementPoint: (point: Point) => Point;
+    commitCopyPlacement: (point: Point) => void;
+    commitPendingPlacement: (point: Point) => void;
+    clearComponentPreview: () => void;
+    clearVddRailPreview: () => void;
+    clearCopyPreview: () => void;
+  };
+  gesture: {
+    begin: (event: CanvasPointerEvent) => void;
+    continue: (event: CanvasPointerEvent) => void;
+    finish: (event: CanvasPointerEvent) => void;
+    cancelDrag: () => void;
+    onWheel: (event: ReactWheelEvent<SVGSVGElement>) => void;
+    onDrop: (event: ReactDragEvent<SVGSVGElement>) => void;
+  };
+  drafting: {
+    selected: DraftingObject | null | undefined;
+    sourceActive: boolean;
+    handleCanvasClick: (
+      point: Point,
+      alternate: boolean,
+      additive: boolean,
+      logicalRadius: number,
+    ) => void;
+    beginAnnotationTextEditing: (annotation: Annotation) => void;
+    beginTextEditing: (object: DraftingTextObject) => void;
+    nextRectangleLabelId: () => string;
+    upsertObject: (object: DraftingObject) => boolean;
+    finishCreate: () => void;
+    cancelCreate: () => void;
+  };
+  wiring: {
+    source: WireSource | null;
+    draftStepCount: number;
+    applyCanvasPoint: (
+      point: Point,
+      canvas: SVGSVGElement,
+      alternate: boolean,
+      finish: boolean,
+    ) => void;
+    resolveCanvasSnap: (
+      point: Point,
+      canvas: SVGSVGElement,
+      alternate: boolean,
+    ) => { point: Point };
+    complete: () => void;
+    cancel: () => void;
+  };
+  report: (status: string) => void;
 }
 
 /** DOM event boundary for the editor canvas; domain mutations stay injected. */
 export function createEditorCanvasEventHandlers({
-  tool,
-  document,
-  resolver,
-  interactionKind,
-  pendingSymbolId,
-  pendingComponentPlacement,
-  vddRailMode,
-  copyPlacementActive,
-  cellSymbolLayoutEnabled,
-  selectedDrafting,
-  wireSource,
-  wireDraftStepCount,
-  draftingSourceActive,
-  pointFromClient,
-  snapPlacementPoint,
-  commitCommandMove,
-  commitCopyPlacement,
-  commitPendingPlacement,
-  exitCellSymbolLayout,
-  clearDraftingSelection,
-  handleCanvasHitPointerDown,
-  beginCanvasGesture,
-  continueCanvasGesture,
-  finishCanvasGesture,
-  clearComponentPreview,
-  clearVddRailPreview,
-  clearCopyPreview,
-  handleDraftingCanvasClick,
-  logicalRadiusForPixels,
-  snapCaptureRadiusPixels,
-  applyWireCanvasPoint,
-  beginAnnotationTextEditing,
-  cancelCanvasDrag,
-  beginDraftingTextEditing,
-  nextRectangleLabelId,
-  upsertDraftingObject,
-  finishDraftingCreate,
-  resolveWireCanvasSnap,
-  completeWire,
-  cancelDraftingCreate,
-  cancelWire,
-  setStatus,
-  onWheel,
-  onDrop,
+  model: { tool, document, resolver },
+  session: { interactionKind, cellSymbolLayoutEnabled, exitCellSymbolLayout },
+  coordinates: {
+    pointFromClient,
+    logicalRadiusForPixels,
+    snapCaptureRadiusPixels,
+  },
+  selection: {
+    commitCommandMove,
+    clearDraftingSelection,
+    handleCanvasHitPointerDown,
+  },
+  placement: {
+    pendingSymbolId,
+    pendingComponentPlacement,
+    vddRailMode,
+    copyPlacementActive,
+    snapPlacementPoint,
+    commitCopyPlacement,
+    commitPendingPlacement,
+    clearComponentPreview,
+    clearVddRailPreview,
+    clearCopyPreview,
+  },
+  gesture: {
+    begin: beginCanvasGesture,
+    continue: continueCanvasGesture,
+    finish: finishCanvasGesture,
+    cancelDrag: cancelCanvasDrag,
+    onWheel,
+    onDrop,
+  },
+  drafting: {
+    selected: selectedDrafting,
+    sourceActive: draftingSourceActive,
+    handleCanvasClick: handleDraftingCanvasClick,
+    beginAnnotationTextEditing,
+    beginTextEditing: beginDraftingTextEditing,
+    nextRectangleLabelId,
+    upsertObject: upsertDraftingObject,
+    finishCreate: finishDraftingCreate,
+    cancelCreate: cancelDraftingCreate,
+  },
+  wiring: {
+    source: wireSource,
+    draftStepCount: wireDraftStepCount,
+    applyCanvasPoint: applyWireCanvasPoint,
+    resolveCanvasSnap: resolveWireCanvasSnap,
+    complete: completeWire,
+    cancel: cancelWire,
+  },
+  report: setStatus,
 }: CanvasEventHandlerDependencies) {
   return {
     onWheel,
