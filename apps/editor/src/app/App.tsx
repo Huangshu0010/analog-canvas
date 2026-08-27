@@ -14,7 +14,6 @@ import {
   proposePowerRailTranslation,
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
-  planDeleteCell,
   planCellReset,
   type CellResetPlan,
   type WireSource,
@@ -677,6 +676,7 @@ export function App({
   const {
     createCell,
     renameCell,
+    deleteCell,
     updateCellPinDirection,
     renameCellTerminal,
     moveCellTerminal,
@@ -2886,19 +2886,8 @@ export function App({
                 },
                 onRename: renameCell,
                 onDelete: (documentId) => {
-                  const target = project.documents.find(
-                    (candidate) => candidate.id === documentId,
-                  );
-                  if (!target) return;
-                  if (
-                    commitStructure(
-                      "delete-cell",
-                      planDeleteCell(project, documentId),
-                      project.topDocumentId,
-                    )
-                  ) {
+                  if (deleteCell(documentId)) {
                     setCellManagerOpen(false);
-                    setStatus(`Deleted Cell ${target.name}`);
                   }
                 },
                 onJumpToCaller: jumpToCaller,

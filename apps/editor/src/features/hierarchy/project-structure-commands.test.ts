@@ -56,6 +56,27 @@ describe("Project structure commands", () => {
     expect(input.setStatus).toHaveBeenCalledWith("Created Cell Child");
   });
 
+  it("deletes a Cell through the project structure boundary", () => {
+    const input = dependencies();
+    const child = createEmptyDocument("document-child", "Child");
+    input.project.documents.push(child);
+    const commands = createProjectStructureCommands(input);
+
+    expect(commands.deleteCell(child.id)).toBe(true);
+
+    expect(input.commitStructure).toHaveBeenCalledWith(
+      "delete-cell",
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "remove_document",
+          documentId: child.id,
+        }),
+      ]),
+      input.project.topDocumentId,
+    );
+    expect(input.setStatus).toHaveBeenCalledWith("Deleted Cell Child");
+  });
+
   it("normalizes formal parameters before committing their structural edit", () => {
     const input = dependencies();
     const child = createEmptyDocument("document-child", "Child");

@@ -1,6 +1,7 @@
 import {
   planEditCellTerminalAnnotation,
   planCreateCell,
+  planDeleteCell,
   planInstanceDeletion,
   planRemoveCellTerminals,
   planRenameCell,
@@ -86,6 +87,20 @@ export function createProjectStructureCommands({
     ) {
       setStatus(`Renamed Cell to ${name}`);
     }
+  };
+
+  const deleteCell = (documentId: string): boolean => {
+    const target = project.documents.find(
+      (candidate) => candidate.id === documentId,
+    );
+    if (!target) return false;
+    const committed = commitStructure(
+      "delete-cell",
+      planDeleteCell(project, documentId),
+      project.topDocumentId,
+    );
+    if (committed) setStatus(`Deleted Cell ${target.name}`);
+    return committed;
   };
 
   const updateCellPinDirection = (
@@ -398,6 +413,7 @@ export function createProjectStructureCommands({
   return {
     createCell,
     renameCell,
+    deleteCell,
     updateCellPinDirection,
     renameCellTerminal,
     editCellTerminalAnnotation,
