@@ -530,6 +530,9 @@ test("a signed-in owner renames the display name and signs out", async ({
   expect(renames).toEqual(["Token Zhang"]);
 
   await page.locator(".account-more > summary").click();
+  const accountPopover = page.locator(".account-popover");
+  await expect(accountPopover).toHaveCSS("position", "absolute");
+  await expect(accountPopover).toHaveCSS("display", "grid");
   await page.getByTestId("account-signout").click();
   await expect(page.getByTestId("account-signin")).toBeVisible();
   expect(loggedOut).toBe(1);
@@ -895,6 +898,11 @@ test("an ordinary user sees blocking quality gates on an empty project", async (
   await expect(gates).toBeVisible();
   await expect(gates).toContainText("Fix these before publishing");
   await expect(gates).toContainText("Too little content");
+  await expect(gates).toHaveCSS("border-top-color", "rgb(235, 87, 87)");
+  await expect(gates).toHaveCSS("background-color", "rgba(235, 87, 87, 0.08)");
+  const tags = dialog.getByTestId("publish-tags");
+  await expect(tags).toHaveCSS("display", "flex");
+  await expect(tags).toHaveCSS("flex-direction", "column");
   await expect(dialog.getByLabel("Owner passphrase")).toHaveCount(0);
   // The gates still hold, but the button says what actually happens next.
   await expect(dialog.getByRole("button", { name: "Publish" })).toBeDisabled();
@@ -1148,8 +1156,16 @@ test("/mine offers owner withdrawal, restore, and version history", async ({
   await expect(page.getByTestId("mine-status-mine-2")).toHaveText("Published");
   // The version history dialog lists the snapshot with its preview.
   await page.getByTestId("mine-history-mine-2").click();
-  await expect(page.getByTestId("version-history-dialog")).toBeVisible();
-  await expect(page.getByTestId("version-1")).toContainText("Live Amp v1");
+  const history = page.getByTestId("version-history-dialog");
+  await expect(history).toBeVisible();
+  await expect(page.locator(".version-history-backdrop")).toHaveCSS(
+    "position",
+    "fixed",
+  );
+  await expect(history).toHaveCSS("display", "flex");
+  const version = page.getByTestId("version-1");
+  await expect(version).toHaveCSS("display", "grid");
+  await expect(version).toContainText("Live Amp v1");
 });
 
 test("an opened gallery entry offers updating in place", async ({ page }) => {
@@ -1278,9 +1294,14 @@ test("a reviewer browses version history and restores a version", async ({
 
   const history = page.getByTestId("version-history-dialog");
   await expect(history).toBeVisible();
-  await expect(page.getByTestId("version-2")).toContainText(
-    "Ring Oscillator (older)",
+  await expect(page.locator(".version-history-backdrop")).toHaveCSS(
+    "position",
+    "fixed",
   );
+  await expect(history).toHaveCSS("display", "flex");
+  const version = page.getByTestId("version-2");
+  await expect(version).toHaveCSS("display", "grid");
+  await expect(version).toContainText("Ring Oscillator (older)");
   await page.getByTestId("version-restore-2").click();
   await expect(page.getByTestId("status")).toContainText(
     `Opened gallery circuit: ${ENTRY.name}`,
