@@ -8,7 +8,11 @@ import {
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { EditTransaction } from "./edit-schema.js";
-import type { RejectEdit } from "./transaction-cell-interface.js";
+import {
+  type EditMutationOutcome,
+  type RejectEdit,
+  rejectedEditMutation,
+} from "./transaction-domain.js";
 import {
   type BulkDefaultIdentity,
   propagateSpiceSourceEvidenceAfterSplit,
@@ -28,7 +32,6 @@ import {
   validateConnectableEndpoint,
   validateRoute,
 } from "./transaction-routing.js";
-import type { RejectedTransaction } from "./transaction-result.js";
 
 type RouteTopologyEdit = Extract<
   EditTransaction["edits"][number],
@@ -53,8 +56,7 @@ export interface RouteTopologyEditContext {
   reject: RejectEdit;
 }
 
-export type RouteTopologyEditOutcome =
-  { ok: true; connectivityChanged: boolean } | RejectedTransaction;
+export type RouteTopologyEditOutcome = EditMutationOutcome;
 
 export function applyRouteTopologyEdit(
   edit: RouteTopologyEdit,
@@ -69,7 +71,8 @@ export function applyRouteTopologyEdit(
     reject,
   } = editContext;
   const context = { symbolResolver: resolver };
-  const rejectAt = reject;
+  const rejectAt = (...args: Parameters<RejectEdit>) =>
+    rejectedEditMutation(reject, ...args);
   let connectivityChanged = false;
 
   switch (edit.kind) {

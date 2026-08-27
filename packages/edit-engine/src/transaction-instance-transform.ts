@@ -2,11 +2,10 @@ import type { SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { EditTransaction } from "./edit-schema.js";
-import type { RejectEdit } from "./transaction-cell-interface.js";
+import type { EditMutationOutcome, RejectEdit } from "./transaction-domain.js";
 import { followAttachedAnnotations } from "./transaction-instance-annotations.js";
 import { applyInstanceRouteFollow } from "./transaction-route-follow.js";
 import { lockedLayoutOwner } from "./transaction-routing.js";
-import type { RejectedTransaction } from "./transaction-result.js";
 
 type InstanceTransformEdit = Extract<
   EditTransaction["edits"][number],
@@ -28,8 +27,7 @@ export interface InstanceTransformEditContext {
   reject: RejectEdit;
 }
 
-export type InstanceTransformEditOutcome =
-  { ok: true } | { ok: false; rejection: RejectedTransaction };
+export type InstanceTransformEditOutcome = EditMutationOutcome;
 
 export function applyInstanceTransformEdit(
   edit: InstanceTransformEdit,

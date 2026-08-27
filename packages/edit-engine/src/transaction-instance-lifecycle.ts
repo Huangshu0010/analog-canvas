@@ -3,10 +3,9 @@ import type { SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { EditTransaction } from "./edit-schema.js";
-import type { RejectEdit } from "./transaction-cell-interface.js";
+import type { EditMutationOutcome, RejectEdit } from "./transaction-domain.js";
 import { removeConnectivityEvidenceOwnedBy } from "./transaction-connectivity.js";
 import { lockedLayoutOwner } from "./transaction-routing.js";
-import type { RejectedTransaction } from "./transaction-result.js";
 
 type InstanceLifecycleEdit = Extract<
   EditTransaction["edits"][number],
@@ -28,9 +27,7 @@ export interface InstanceLifecycleEditContext {
   reject: RejectEdit;
 }
 
-export type InstanceLifecycleEditOutcome =
-  | { ok: true; connectivityChanged: boolean }
-  | { ok: false; rejection: RejectedTransaction };
+export type InstanceLifecycleEditOutcome = EditMutationOutcome;
 
 export function applyInstanceLifecycleEdit(
   edit: InstanceLifecycleEdit,

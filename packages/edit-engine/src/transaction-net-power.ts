@@ -7,12 +7,15 @@ import {
 import type { SchematicDocument } from "@icm/model";
 
 import type { EditTransaction } from "./edit-schema.js";
-import type { RejectEdit } from "./transaction-cell-interface.js";
+import {
+  type EditMutationOutcome,
+  type RejectEdit,
+  rejectedEditMutation,
+} from "./transaction-domain.js";
 import {
   connectivityEvidenceNetIds,
   mergeBaseNets,
 } from "./transaction-connectivity.js";
-import type { RejectedTransaction } from "./transaction-result.js";
 
 type NetPowerEdit = Extract<
   EditTransaction["edits"][number],
@@ -32,15 +35,15 @@ export interface NetPowerEditContext {
   reject: RejectEdit;
 }
 
-export type NetPowerEditOutcome =
-  { ok: true; connectivityChanged: boolean } | RejectedTransaction;
+export type NetPowerEditOutcome = EditMutationOutcome;
 
 export function applyNetPowerEdit(
   edit: NetPowerEdit,
   editContext: NetPowerEditContext,
 ): NetPowerEditOutcome {
   const { draft, changedObjectIds, deferNetPrune, reject } = editContext;
-  const rejectAt = reject;
+  const rejectAt = (...args: Parameters<RejectEdit>) =>
+    rejectedEditMutation(reject, ...args);
   let connectivityChanged = false;
 
   switch (edit.kind) {

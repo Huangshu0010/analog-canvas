@@ -215,7 +215,7 @@ export function executeTransaction(
           changedObjectIds,
           deferNetPrune,
         });
-        connectivityChanged ||= outcome.connectivityChanged;
+        connectivityChanged ||= outcome.connectivityChanged ?? false;
         geometryChanged ||= outcome.geometryChanged;
         break;
       }
@@ -232,7 +232,7 @@ export function executeTransaction(
           reject: rejectAt,
         });
         if (!outcome.ok) return outcome.rejection;
-        connectivityChanged ||= outcome.connectivityChanged;
+        connectivityChanged ||= outcome.connectivityChanged ?? false;
         break;
       }
       case "place_instance":
@@ -263,7 +263,7 @@ export function executeTransaction(
           reject: rejectAt,
         });
         if (!outcome.ok) return outcome.rejection;
-        connectivityChanged ||= outcome.connectivityChanged;
+        connectivityChanged ||= outcome.connectivityChanged ?? false;
         break;
       }
       case "add_cell_terminal":
@@ -291,7 +291,7 @@ export function executeTransaction(
           reject: rejectAt,
         });
         if (!outcome.ok) return outcome.rejection;
-        connectivityChanged ||= outcome.connectivityChanged;
+        connectivityChanged ||= outcome.connectivityChanged ?? false;
         break;
       }
       case "add_junction":
@@ -306,8 +306,8 @@ export function executeTransaction(
           deferNetPrune,
           reject: rejectAt,
         });
-        if (!outcome.ok) return outcome;
-        connectivityChanged ||= outcome.connectivityChanged;
+        if (!outcome.ok) return outcome.rejection;
+        connectivityChanged ||= outcome.connectivityChanged ?? false;
         break;
       }
       case "remove_route_geometry": {
@@ -319,7 +319,7 @@ export function executeTransaction(
           reject: rejectAt,
         });
         if (!outcome.ok) return outcome.rejection;
-        connectivityChanged ||= outcome.connectivityChanged;
+        connectivityChanged ||= outcome.connectivityChanged ?? false;
         break;
       }
       case "cut_connection":
@@ -332,8 +332,8 @@ export function executeTransaction(
           deferNetPrune,
           reject: rejectAt,
         });
-        if (!outcome.ok) return outcome;
-        connectivityChanged ||= outcome.connectivityChanged;
+        if (!outcome.ok) return outcome.rejection;
+        connectivityChanged ||= outcome.connectivityChanged ?? false;
         break;
       }
       case "add_power_rail":
@@ -346,8 +346,8 @@ export function executeTransaction(
           deferNetPrune,
           reject: rejectAt,
         });
-        if (!outcome.ok) return outcome;
-        connectivityChanged ||= outcome.connectivityChanged;
+        if (!outcome.ok) return outcome.rejection;
+        connectivityChanged ||= outcome.connectivityChanged ?? false;
         break;
       }
       case "set_mos_bulk_defaults":
@@ -360,8 +360,8 @@ export function executeTransaction(
           deferNetPrune,
           reject: rejectAt,
         });
-        if (!outcome.ok) return outcome;
-        connectivityChanged ||= outcome.connectivityChanged;
+        if (!outcome.ok) return outcome.rejection;
+        connectivityChanged ||= outcome.connectivityChanged ?? false;
         break;
       }
       case "disconnect_endpoint": {
@@ -373,8 +373,8 @@ export function executeTransaction(
           deferNetPrune,
           reject: rejectAt,
         });
-        if (!outcome.ok) return outcome;
-        connectivityChanged ||= outcome.connectivityChanged;
+        if (!outcome.ok) return outcome.rejection;
+        connectivityChanged ||= outcome.connectivityChanged ?? false;
         break;
       }
       case "set_presentation_style":

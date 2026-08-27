@@ -2,11 +2,7 @@ import { CellNetlistTerminalSchema } from "@icm/model";
 import type { SchematicDocument } from "@icm/model";
 
 import type { EditTransaction } from "./edit-schema.js";
-import type {
-  EditDiagnostic,
-  EditErrorCode,
-  RejectedTransaction,
-} from "./transaction-result.js";
+import type { EditMutationOutcome, RejectEdit } from "./transaction-domain.js";
 
 type CellInterfaceEdit = Extract<
   EditTransaction["edits"][number],
@@ -20,13 +16,6 @@ type CellInterfaceEdit = Extract<
   }
 >;
 
-export type RejectEdit = (
-  code: EditErrorCode,
-  message: string,
-  diagnostics?: readonly EditDiagnostic[],
-  objectIds?: readonly string[],
-) => RejectedTransaction;
-
 export interface CellInterfaceEditContext {
   draft: SchematicDocument;
   changedObjectIds: Set<string>;
@@ -34,9 +23,7 @@ export interface CellInterfaceEditContext {
   reject: RejectEdit;
 }
 
-export type CellInterfaceEditOutcome =
-  | { ok: true; connectivityChanged: boolean }
-  | { ok: false; rejection: RejectedTransaction };
+export type CellInterfaceEditOutcome = EditMutationOutcome;
 
 export function applyCellInterfaceEdit(
   edit: CellInterfaceEdit,

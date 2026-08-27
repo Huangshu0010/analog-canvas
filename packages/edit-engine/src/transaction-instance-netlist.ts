@@ -2,9 +2,8 @@ import { createReferenceIndex, referenceIssuesForInstance } from "@icm/devices";
 import type { SchematicDocument } from "@icm/model";
 
 import type { EditTransaction } from "./edit-schema.js";
-import type { RejectEdit } from "./transaction-cell-interface.js";
+import type { EditMutationOutcome, RejectEdit } from "./transaction-domain.js";
 import { refreshInstanceValueAnnotation } from "./transaction-instance-annotations.js";
-import type { RejectedTransaction } from "./transaction-result.js";
 
 type InstanceNetlistEdit = Extract<
   EditTransaction["edits"][number],
@@ -26,9 +25,7 @@ export interface InstanceNetlistEditContext {
   reject: RejectEdit;
 }
 
-export type InstanceNetlistEditOutcome =
-  | { ok: true; connectivityChanged: boolean }
-  | { ok: false; rejection: RejectedTransaction };
+export type InstanceNetlistEditOutcome = EditMutationOutcome;
 
 function referencePolicyFailure(
   draft: SchematicDocument,

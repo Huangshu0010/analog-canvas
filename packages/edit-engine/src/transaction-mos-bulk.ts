@@ -9,9 +9,12 @@ import {
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { EditTransaction } from "./edit-schema.js";
-import type { RejectEdit } from "./transaction-cell-interface.js";
+import {
+  type EditMutationOutcome,
+  type RejectEdit,
+  rejectedEditMutation,
+} from "./transaction-domain.js";
 import { implicitBulkPresentation } from "./transaction-connectivity.js";
-import type { RejectedTransaction } from "./transaction-result.js";
 
 type MosBulkEdit = Extract<
   EditTransaction["edits"][number],
@@ -29,8 +32,7 @@ export interface MosBulkEditContext {
   reject: RejectEdit;
 }
 
-export type MosBulkEditOutcome =
-  { ok: true; connectivityChanged: boolean } | RejectedTransaction;
+export type MosBulkEditOutcome = EditMutationOutcome;
 
 export function applyMosBulkEdit(
   edit: MosBulkEdit,
@@ -38,7 +40,8 @@ export function applyMosBulkEdit(
 ): MosBulkEditOutcome {
   const { draft, resolver, changedObjectIds, deferNetPrune, reject } =
     editContext;
-  const rejectAt = reject;
+  const rejectAt = (...args: Parameters<RejectEdit>) =>
+    rejectedEditMutation(reject, ...args);
   let connectivityChanged = false;
 
   switch (edit.kind) {

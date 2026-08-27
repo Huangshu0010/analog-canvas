@@ -8,14 +8,13 @@ import {
   normalizeRouteGeometry,
 } from "./route-geometry-edit.js";
 import { resolveRouteEditPath } from "./route-operations.js";
-import type { RejectEdit } from "./transaction-cell-interface.js";
+import type { EditMutationOutcome, RejectEdit } from "./transaction-domain.js";
 import { removeConnectivityEvidenceOwnedBy } from "./transaction-connectivity.js";
 import {
   routeFromEdit,
   routeIsProtected,
   validateRoute,
 } from "./transaction-routing.js";
-import type { RejectedTransaction } from "./transaction-result.js";
 
 type RouteGeometryEdit = Extract<
   EditTransaction["edits"][number],
@@ -32,9 +31,7 @@ export interface RouteGeometryEditContext {
   reject: RejectEdit;
 }
 
-export type RouteGeometryEditOutcome =
-  | { ok: true; connectivityChanged: boolean }
-  | { ok: false; rejection: RejectedTransaction };
+export type RouteGeometryEditOutcome = EditMutationOutcome;
 
 export function applyRouteGeometryEdit(
   edit: RouteGeometryEdit,

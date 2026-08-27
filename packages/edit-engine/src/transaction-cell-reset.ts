@@ -2,6 +2,7 @@ import type { SchematicDocument } from "@icm/model";
 
 import type { EditTransaction } from "./edit-schema.js";
 import { removeConnectivityEvidenceOwnedBy } from "./transaction-connectivity.js";
+import type { AppliedEditMutation } from "./transaction-domain.js";
 
 type CellResetEdit = Extract<
   EditTransaction["edits"][number],
@@ -16,10 +17,9 @@ export interface CellResetEditContext {
   deferNetPrune(netId: string): void;
 }
 
-export interface CellResetEditOutcome {
-  connectivityChanged: boolean;
-  geometryChanged: true;
-}
+export type CellResetEditOutcome = AppliedEditMutation & {
+  readonly geometryChanged: true;
+};
 
 export function applyCellResetEdit(
   edit: CellResetEdit,
@@ -45,6 +45,7 @@ export function applyCellResetEdit(
       draft.drafting = { objects: [] };
       for (const netId of ownerNetIds) deferNetPrune(netId);
       return {
+        ok: true,
         connectivityChanged: ownerNetIds.length > 0,
         geometryChanged: true,
       };
@@ -70,6 +71,7 @@ export function applyCellResetEdit(
       draft.constraints = [];
       for (const netId of ownerNetIds) deferNetPrune(netId);
       return {
+        ok: true,
         connectivityChanged: ownerNetIds.length > 0,
         geometryChanged: true,
       };
@@ -160,7 +162,11 @@ export function applyCellResetEdit(
       draft.drafting = { objects: [] };
       if (draft.mosBulkDefaults) changedObjectIds.add(draft.id);
       delete draft.mosBulkDefaults;
-      return { connectivityChanged: true, geometryChanged: true };
+      return {
+        ok: true,
+        connectivityChanged: true,
+        geometryChanged: true,
+      };
     }
   }
 }
