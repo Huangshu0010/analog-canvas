@@ -8,6 +8,7 @@ import type {
 import {
   compileWireDraft,
   createFreeWireAnchor,
+  customSymbolUsageCount,
   proposeEndpointRouteAttachment,
   proposeLooseRouteTranslation,
   proposePowerRailEndpointResize,
@@ -443,6 +444,7 @@ export function App({
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [cellManagerOpen, setCellManagerOpen] = useState(false);
+  const [customSymbolManagerOpen, setCustomSymbolManagerOpen] = useState(false);
   const [pendingCellReset, setPendingCellReset] = useState<{
     plan: CellResetPlan;
     command: string;
@@ -684,6 +686,8 @@ export function App({
     setCellFormalParameters,
     setExternalSubcircuitDefinition,
     importCustomSymbolDefinition,
+    renameCustomSymbol,
+    removeCustomSymbolDefinition,
     setCellSymbolBodySize,
     setCellSymbolPortPlacement,
     editCellTerminalAnnotation,
@@ -1193,6 +1197,22 @@ export function App({
   const customInsertSymbols = useMemo(
     () => createProjectCustomSymbols(project),
     [project],
+  );
+  const customSymbolManagerEntries = useMemo(
+    () =>
+      project.customSymbolDefinitions.flatMap((definition, index) => {
+        const symbol = customInsertSymbols[index];
+        return symbol
+          ? [
+              {
+                definition,
+                symbol,
+                usageCount: customSymbolUsageCount(project, definition.id),
+              },
+            ]
+          : [];
+      }),
+    [customInsertSymbols, project],
   );
   const pendingPlacementSymbol = pendingSymbolId
     ? resolver.resolve(pendingSymbolId)?.definition
@@ -2868,6 +2888,17 @@ export function App({
               }
             : null
         }
+        customSymbolManager={
+          customSymbolManagerOpen
+            ? {
+                open: customSymbolManagerOpen,
+                entries: customSymbolManagerEntries,
+                onClose: () => setCustomSymbolManagerOpen(false),
+                onRename: renameCustomSymbol,
+                onRemove: removeCustomSymbolDefinition,
+              }
+            : null
+        }
         cellReset={
           pendingCellReset
             ? {
@@ -3043,6 +3074,7 @@ export function App({
             styleProfileId={document.presentation.styleProfileId}
             open={visibleLibraryPanelOpen}
             customSymbols={customInsertSymbols}
+            onManageCustomSymbols={() => setCustomSymbolManagerOpen(true)}
             onStartInsert={(launch) =>
               editorCommands.execute({ id: "insert.start", launch })
             }

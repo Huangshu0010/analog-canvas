@@ -130,6 +130,7 @@ export interface ShapesPanelProps {
   open: boolean;
   /** Runtime custom symbols (ADR 0047), already namespaced by definition ID. */
   customSymbols?: readonly SymbolDefinition[];
+  onManageCustomSymbols?: () => void;
   onStartInsert(launch: InsertLaunch): void;
 }
 
@@ -137,6 +138,7 @@ export function ShapesPanel({
   styleProfileId,
   open,
   customSymbols = [],
+  onManageCustomSymbols,
   onStartInsert,
 }: ShapesPanelProps) {
   const libraryGroups = componentCatalog(styleProfileId, "");
@@ -250,6 +252,19 @@ export function ShapesPanel({
             </span>
             <span className="shapes-fold-count">{customSymbols.length}</span>
           </summary>
+          {onManageCustomSymbols ? (
+            <button
+              type="button"
+              className="shapes-custom-manage"
+              data-testid="shapes-custom-manage"
+              onClick={(event) => {
+                event.preventDefault();
+                onManageCustomSymbols();
+              }}
+            >
+              Manage custom symbols
+            </button>
+          ) : null}
           <div className="shapes-fold-body">
             {customSymbols.length === 0 ? (
               <p className="shapes-fold-hint">

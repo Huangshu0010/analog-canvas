@@ -12,6 +12,8 @@ import {
   planUpdateCellTerminalDirection,
   proposeSetCellFormalParameters,
   proposeUpsertExternalSubcircuitDefinition,
+  planRemoveCustomSymbolDefinition,
+  planRenameCustomSymbol,
   planUpsertCustomSymbolDefinition,
 } from "@icm/edit-engine";
 import type { ProjectStructureEdit, SchematicEdit } from "@icm/edit-engine";
@@ -365,6 +367,56 @@ export function createProjectStructureCommands({
     }
   };
 
+  /**
+   * Rename one imported symbol's display name. The name lives inside the
+   * embedded artwork, so this commits an artwork replacement that keeps the
+   * definition identity — and every placed reference — untouched.
+   */
+  const renameCustomSymbol = (
+    definitionId: string,
+    inputName: string,
+  ): boolean => {
+    try {
+      const edits = planRenameCustomSymbol(project, definitionId, inputName);
+      if (edits.length === 0) return true;
+      const committed = commitStructure("rename-custom-symbol", edits);
+      if (committed) {
+        setStatus(`Renamed symbol to ${inputName.trim()}`);
+      }
+      return committed;
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not rename the custom symbol",
+      );
+      return false;
+    }
+  };
+
+  /**
+   * Remove one imported symbol definition. A definition still placed anywhere
+   * in the project is refused (matching the external-subcircuit guard), so a
+   * removed symbol never leaves an unresolved instance behind.
+   */
+  const removeCustomSymbolDefinition = (definitionId: string): boolean => {
+    try {
+      const edits = planRemoveCustomSymbolDefinition(project, definitionId);
+      const committed = commitStructure("remove-custom-symbol", edits);
+      if (committed) {
+        setStatus("Removed the imported symbol");
+      }
+      return committed;
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not remove the custom symbol",
+      );
+      return false;
+    }
+  };
+
   const setCellSymbolBodySize = (
     child: SchematicDocument,
     width: number,
@@ -448,6 +500,8 @@ export function createProjectStructureCommands({
     setCellFormalParameters,
     setExternalSubcircuitDefinition,
     importCustomSymbolDefinition,
+    renameCustomSymbol,
+    removeCustomSymbolDefinition,
     setCellSymbolBodySize,
     setCellSymbolPortPlacement,
     renameProject,

@@ -60,6 +60,12 @@ export const LazyInsertComponentDialog = lazy(() =>
   ),
 );
 
+export const LazyCustomSymbolManagerDialog = lazy(() =>
+  import("../features/component-insert/custom-symbol-manager-dialog").then(
+    (module) => ({ default: module.CustomSymbolManagerDialog }),
+  ),
+);
+
 export const LazyConnectAgentPanel = lazy(() =>
   import("../agent/connect-agent-panel").then((module) => ({
     default: module.ConnectAgentPanel,

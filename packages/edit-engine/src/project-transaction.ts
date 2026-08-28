@@ -9,6 +9,7 @@ import {
 import {
   builtInSymbols,
   createProjectSymbolResolver,
+  customSymbolId,
   externalSubcircuitSymbolId,
   hierarchicalSymbolId,
   resolvePdkSymbolMappingForTerminalOrder,
@@ -56,6 +57,10 @@ export const ProjectStructureEditSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("upsert_custom_symbol_definition"),
     definition: CustomSymbolDefinitionSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("remove_custom_symbol_definition"),
+    definitionId: z.string().min(1),
   }),
   z.strictObject({
     kind: z.literal("transact_document"),
@@ -412,6 +417,39 @@ export function executeProjectTransaction(
           edit.definition,
         );
       }
+      structuralChange = true;
+      continue;
+    }
+
+    if (edit.kind === "remove_custom_symbol_definition") {
+      const index = candidate.customSymbolDefinitions.findIndex(
+        (definition) => definition.id === edit.definitionId,
+      );
+      if (index < 0) {
+        return rejectProjectTransaction(
+          project,
+          "OBJECT_NOT_FOUND",
+          `Custom symbol definition does not exist: ${edit.definitionId}`,
+        );
+      }
+      // Same guard as an external subcircuit: a definition still placed
+      // anywhere in the project stays, so no instance is left unresolved.
+      const runtimeId = customSymbolId(edit.definitionId);
+      const caller = candidate.documents.flatMap((document) =>
+        document.instances.flatMap((instance) =>
+          instance.symbolId === runtimeId
+            ? [{ documentId: document.id, instanceId: instance.id }]
+            : [],
+        ),
+      )[0];
+      if (caller) {
+        return rejectProjectTransaction(
+          project,
+          "EDIT_PRECONDITION",
+          `Custom symbol ${edit.definitionId} is still referenced by ${caller.documentId}.${caller.instanceId}`,
+        );
+      }
+      candidate.customSymbolDefinitions.splice(index, 1);
       structuralChange = true;
       continue;
     }

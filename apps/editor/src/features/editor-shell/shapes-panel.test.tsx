@@ -40,6 +40,7 @@ describe("ShapesPanel custom symbols (ADR 0047)", () => {
         styleProfileId="razavi-textbook-v1"
         open
         customSymbols={[symbol]}
+        onManageCustomSymbols={() => undefined}
         onStartInsert={() => undefined}
       />,
     );
@@ -47,6 +48,8 @@ describe("ShapesPanel custom symbols (ADR 0047)", () => {
     expect(markup).toContain("Custom symbols");
     expect(markup).toContain(`data-testid="shapes-chip-${symbol.id}"`);
     expect(markup).toContain("Place My Block");
+    expect(markup).toContain('data-testid="shapes-custom-manage"');
+    expect(markup).toContain("Manage custom symbols");
   });
 
   it("points an empty custom library at the File-menu import entry", () => {

@@ -7,6 +7,7 @@ import { RecoveryFailureBanner } from "../components/recovery-banners";
 import {
   LazyCellManagerDialog,
   LazyConnectAgentPanel,
+  LazyCustomSymbolManagerDialog,
   LazyEditorHelpDialog,
   LazyInsertComponentDialog,
   LazyInstanceTableDialog,
@@ -26,6 +27,9 @@ export interface EditorDialogLayerProps {
   search: ComponentProps<typeof LazyProjectSearchDialog> | null;
   instanceTable: ComponentProps<typeof LazyInstanceTableDialog> | null;
   insertComponent: ComponentProps<typeof LazyInsertComponentDialog> | null;
+  customSymbolManager: ComponentProps<
+    typeof LazyCustomSymbolManagerDialog
+  > | null;
   cellReset: {
     documentName: string;
     pending: { plan: CellResetPlan; command: string };
@@ -53,6 +57,7 @@ export function EditorDialogLayer({
   search,
   instanceTable,
   insertComponent,
+  customSymbolManager,
   cellReset,
   cellManager,
   netlistPreflight,
@@ -76,6 +81,9 @@ export function EditorDialogLayer({
         {instanceTable ? <LazyInstanceTableDialog {...instanceTable} /> : null}
         {insertComponent ? (
           <LazyInsertComponentDialog {...insertComponent} />
+        ) : null}
+        {customSymbolManager ? (
+          <LazyCustomSymbolManagerDialog {...customSymbolManager} />
         ) : null}
         {cellReset ? (
           <div

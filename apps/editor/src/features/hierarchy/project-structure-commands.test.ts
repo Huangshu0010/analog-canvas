@@ -1,6 +1,10 @@
 import type { ProjectStructureEdit } from "@icm/edit-engine";
 import { createEmptyDocument, createEmptyProject } from "@icm/model";
-import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
+import {
+  builtInSymbols,
+  createProjectSymbolResolver,
+  customSymbolId,
+} from "@icm/symbols";
 import { describe, expect, it, vi } from "vitest";
 
 import { createProjectStructureCommands } from "./project-structure-commands";
@@ -252,6 +256,124 @@ describe("Project structure commands", () => {
     expect(input.commitStructure).not.toHaveBeenCalled();
     expect(input.setStatus).toHaveBeenCalledWith(
       "Custom symbol library is full (256 definitions)",
+    );
+  });
+
+  it("renames a custom symbol through an artwork replacement", () => {
+    const input = dependencies();
+    const definition = {
+      id: "custom-symbol-def-1",
+      symbol: {
+        schemaVersion: 1 as const,
+        id: "imported-block",
+        name: "Imported Block",
+        viewBox: { x: -20, y: -20, width: 40, height: 40 },
+        pins: [],
+        primitives: [
+          {
+            kind: "line" as const,
+            from: { x: -10, y: 0 },
+            to: { x: 10, y: 0 },
+          },
+        ],
+        variants: [],
+      },
+    };
+    input.project.customSymbolDefinitions.push(definition);
+    const commands = createProjectStructureCommands(input);
+
+    expect(commands.renameCustomSymbol(definition.id, "  My Block  ")).toBe(
+      true,
+    );
+
+    expect(input.commitStructure).toHaveBeenCalledWith("rename-custom-symbol", [
+      {
+        kind: "upsert_custom_symbol_definition",
+        definition: {
+          id: definition.id,
+          symbol: { ...definition.symbol, name: "My Block" },
+        },
+      },
+    ]);
+    expect(input.setStatus).toHaveBeenCalledWith("Renamed symbol to My Block");
+  });
+
+  it("refuses to rename a custom symbol to an empty name", () => {
+    const input = dependencies();
+    const definition = {
+      id: "custom-symbol-def-1",
+      symbol: {
+        schemaVersion: 1 as const,
+        id: "imported-block",
+        name: "Imported Block",
+        viewBox: { x: -20, y: -20, width: 40, height: 40 },
+        pins: [],
+        primitives: [],
+        variants: [],
+      },
+    };
+    input.project.customSymbolDefinitions.push(definition);
+    const commands = createProjectStructureCommands(input);
+
+    expect(commands.renameCustomSymbol(definition.id, "   ")).toBe(false);
+    expect(input.commitStructure).not.toHaveBeenCalled();
+    expect(input.setStatus).toHaveBeenCalledWith(
+      "A custom symbol name cannot be empty",
+    );
+  });
+
+  it("removes an unreferenced custom symbol through the structure boundary", () => {
+    const input = dependencies();
+    const definition = {
+      id: "custom-symbol-def-1",
+      symbol: {
+        schemaVersion: 1 as const,
+        id: "imported-block",
+        name: "Imported Block",
+        viewBox: { x: -20, y: -20, width: 40, height: 40 },
+        pins: [],
+        primitives: [],
+        variants: [],
+      },
+    };
+    input.project.customSymbolDefinitions.push(definition);
+    const commands = createProjectStructureCommands(input);
+
+    expect(commands.removeCustomSymbolDefinition(definition.id)).toBe(true);
+
+    expect(input.commitStructure).toHaveBeenCalledWith("remove-custom-symbol", [
+      { kind: "remove_custom_symbol_definition", definitionId: definition.id },
+    ]);
+    expect(input.setStatus).toHaveBeenCalledWith("Removed the imported symbol");
+  });
+
+  it("refuses to remove a custom symbol that is still placed", () => {
+    const input = dependencies();
+    const definition = {
+      id: "custom-symbol-def-1",
+      symbol: {
+        schemaVersion: 1 as const,
+        id: "imported-block",
+        name: "Imported Block",
+        viewBox: { x: -20, y: -20, width: 40, height: 40 },
+        pins: [],
+        primitives: [],
+        variants: [],
+      },
+    };
+    input.project.customSymbolDefinitions.push(definition);
+    input.activeDocument.instances.push({
+      id: "X1",
+      symbolId: customSymbolId(definition.id),
+      placement: null,
+    });
+    const commands = createProjectStructureCommands(input);
+
+    expect(commands.removeCustomSymbolDefinition(definition.id)).toBe(false);
+
+    expect(input.commitStructure).not.toHaveBeenCalled();
+    expect(input.setStatus).toHaveBeenCalledWith(
+      "Custom symbol Imported Block is still placed 1 time in this project",
     );
   });
 });

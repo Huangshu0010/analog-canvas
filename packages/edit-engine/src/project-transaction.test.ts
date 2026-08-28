@@ -22,6 +22,8 @@ import {
 } from "./hierarchy-planner.js";
 import {
   MAX_CUSTOM_SYMBOL_DEFINITIONS,
+  planRemoveCustomSymbolDefinition,
+  planRenameCustomSymbol,
   planUpsertCustomSymbolDefinition,
 } from "./custom-symbol-planner.js";
 import { executeProjectTransaction } from "./project-transaction.js";
@@ -1406,5 +1408,113 @@ describe("Project structural transaction", () => {
         customSymbolDefinition("custom-symbol-def-0", "Revised"),
       ),
     ).toHaveLength(1);
+  });
+
+  it("removes an unreferenced custom symbol definition", () => {
+    const project = createEmptyProject("project", "Project");
+    project.customSymbolDefinitions.push(
+      customSymbolDefinition("custom-symbol-def-1"),
+    );
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "remove-custom-symbol",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "test" },
+      edits: planRemoveCustomSymbolDefinition(project, "custom-symbol-def-1"),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.project.customSymbolDefinitions).toHaveLength(0);
+  });
+
+  it("refuses to remove a custom symbol definition that is still placed", () => {
+    const project = createEmptyProject("project", "Project");
+    const definition = customSymbolDefinition("custom-symbol-def-1");
+    project.customSymbolDefinitions.push(definition);
+    project.documents[0]!.instances.push({
+      id: "X1",
+      symbolId: customSymbolId(definition.id),
+      placement: null,
+    });
+
+    // The planner refuses up front with an actionable usage message...
+    expect(() =>
+      planRemoveCustomSymbolDefinition(project, definition.id),
+    ).toThrow(/still placed 1 time/);
+
+    // ...and the transaction boundary enforces the same guard even when the
+    // edit is constructed directly.
+    const result = executeProjectTransaction(project, {
+      transactionId: "remove-custom-symbol",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "test" },
+      edits: [
+        {
+          kind: "remove_custom_symbol_definition",
+          definitionId: definition.id,
+        },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("EDIT_PRECONDITION");
+    expect(result.error.message).toContain("still referenced by");
+    expect(result.project.customSymbolDefinitions).toHaveLength(1);
+  });
+
+  it("rejects removing a custom symbol definition that does not exist", () => {
+    const project = createEmptyProject("project", "Project");
+    const result = executeProjectTransaction(project, {
+      transactionId: "remove-custom-symbol",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "test" },
+      edits: [
+        {
+          kind: "remove_custom_symbol_definition",
+          definitionId: "custom-symbol-def-missing",
+        },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("OBJECT_NOT_FOUND");
+  });
+
+  it("renames a custom symbol through an artwork replacement that keeps references", () => {
+    const project = createEmptyProject("project", "Project");
+    const definition = customSymbolDefinition("custom-symbol-def-1");
+    project.customSymbolDefinitions.push(definition);
+    project.documents[0]!.instances.push({
+      id: "X1",
+      symbolId: customSymbolId(definition.id),
+      placement: null,
+    });
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "rename-custom-symbol",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "test" },
+      edits: planRenameCustomSymbol(
+        project,
+        definition.id,
+        "  Renamed Block  ",
+      ),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.project.customSymbolDefinitions).toHaveLength(1);
+    expect(result.project.customSymbolDefinitions[0]!.symbol.name).toBe(
+      "Renamed Block",
+    );
+    expect(result.project.customSymbolDefinitions[0]!.id).toBe(definition.id);
+    expect(result.project.documents[0]!.instances[0]!.symbolId).toBe(
+      customSymbolId(definition.id),
+    );
   });
 });
