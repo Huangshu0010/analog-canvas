@@ -1,9 +1,16 @@
 import type { SchematicEdit } from "@icm/edit-engine";
 import type { DesignNetlistIR, NetlistFormat } from "@icm/netlist";
-import type { CircuitProject, GridRect, SchematicDocument } from "@icm/model";
+import type {
+  CircuitProject,
+  CustomSymbolDefinition,
+  GridRect,
+  SchematicDocument,
+} from "@icm/model";
+import { createId } from "@icm/model";
 import { importSpiceSources } from "@icm/spice";
 import type { SymbolResolver } from "@icm/symbols";
 
+import { parseImportedSymbolJson } from "../component-insert/symbol-import";
 import { planCheckBulkDefaults } from "../netlist-export/check-and-save";
 import type { WorkspaceSlot } from "./workspace-shelf";
 import { saveToWorkspaceShelf } from "./workspace-shelf";
@@ -46,6 +53,7 @@ export interface EditorFileCommandDependencies {
   setImportReviewOpen: (open: boolean) => void;
   setSelectionOpen: (open: boolean) => void;
   setStatus: (status: string) => void;
+  importCustomSymbolDefinition: (definition: CustomSymbolDefinition) => boolean;
 }
 
 /** File import/export commands and their user-facing gate/status policy. */
@@ -68,6 +76,7 @@ export function createEditorFileCommands({
   setImportReviewOpen,
   setSelectionOpen,
   setStatus,
+  importCustomSymbolDefinition,
 }: EditorFileCommandDependencies) {
   const exportSvg = (): void => {
     const artifact = createSvgExportArtifact(document, resolver, project.name);
@@ -215,11 +224,40 @@ export function createEditorFileCommands({
     }
   };
 
+  /**
+   * Import one user-defined symbol (ADR 0047) from a `.json` Symbol DSL file.
+   * Each import mints a fresh definition identity, so the embedded artwork's
+   * own `symbol.id` never competes with catalog, hierarchy, or external
+   * subcircuit symbols.
+   */
+  const importSymbolFile = async (file: File | null): Promise<void> => {
+    if (!file) return;
+    let text: string;
+    try {
+      text = await file.text();
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not read the symbol file",
+      );
+      return;
+    }
+    const parsed = parseImportedSymbolJson(text);
+    if (!parsed.ok) {
+      setStatus(parsed.message);
+      return;
+    }
+    importCustomSymbolDefinition({
+      id: createId("custom-symbol-def"),
+      symbol: parsed.symbol,
+    });
+  };
+
   return {
     exportSvg,
     checkAndSave,
     exportDesignNetlist,
     exportRaster,
     importSpiceFiles,
+    importSymbolFile,
   };
 }

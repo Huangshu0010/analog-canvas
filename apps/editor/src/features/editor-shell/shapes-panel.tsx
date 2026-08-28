@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import type { SymbolDefinition } from "@icm/symbols";
+
 import type { ComponentInsertRequest } from "../component-insert/component-insert-request";
 import {
   fullInsertLaunch,

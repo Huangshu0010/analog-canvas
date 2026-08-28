@@ -49,6 +49,7 @@ import { renderCrashRequested, sceneCrashRequested } from "./crash-test-hooks";
 import { buildSceneSafely } from "./scene-safety";
 import {
   builtInSymbols,
+  createProjectCustomSymbols,
   externalSubcircuitSymbolId,
   findUnsupportedProjectSymbolIds,
   hierarchicalSymbolId,
@@ -682,6 +683,7 @@ export function App({
     moveCellTerminal,
     setCellFormalParameters,
     setExternalSubcircuitDefinition,
+    importCustomSymbolDefinition,
     setCellSymbolBodySize,
     setCellSymbolPortPlacement,
     editCellTerminalAnnotation,
@@ -1185,6 +1187,12 @@ export function App({
           : [];
       }),
     [project.externalSubcircuitDefinitions, resolver],
+  );
+  // Runtime custom symbols (ADR 0047): already re-keyed to the definition
+  // identity, so these IDs resolve through the project resolver.
+  const customInsertSymbols = useMemo(
+    () => createProjectCustomSymbols(project),
+    [project],
   );
   const pendingPlacementSymbol = pendingSymbolId
     ? resolver.resolve(pendingSymbolId)?.definition
@@ -2266,6 +2274,7 @@ export function App({
     exportDesignNetlist,
     exportRaster,
     importSpiceFiles,
+    importSymbolFile,
   } = createEditorFileCommands({
     project,
     getCurrentProject: () => editorDocumentController.project,
@@ -2287,6 +2296,7 @@ export function App({
     setImportReviewOpen,
     setSelectionOpen,
     setStatus,
+    importCustomSymbolDefinition,
   });
 
   // Single entry point for selecting a drafting object. Editing is opened
@@ -2605,6 +2615,7 @@ export function App({
           onRefresh: refreshApp,
           onOpenProject: (file) => void openProjectFile(file),
           onImportSpice: (files) => void importSpiceFiles(files),
+          onImportSymbol: (file) => void importSymbolFile(file),
           onExportSvg: exportSvg,
           onExportRaster: (format) => void exportRaster(format),
           onExportNetlist: exportDesignNetlist,
@@ -2845,6 +2856,7 @@ export function App({
                 recentSymbolIds,
                 cells: cellInsertCandidates,
                 externalDefinitions: externalSubcircuitInsertCandidates,
+                customSymbols: customInsertSymbols,
                 scope: insertScope,
                 initialSelectionId: insertInitialSelectionId,
                 onApply: (request) =>
@@ -3030,6 +3042,7 @@ export function App({
           <ShapesPanel
             styleProfileId={document.presentation.styleProfileId}
             open={visibleLibraryPanelOpen}
+            customSymbols={customInsertSymbols}
             onStartInsert={(launch) =>
               editorCommands.execute({ id: "insert.start", launch })
             }

@@ -1,5 +1,6 @@
 import {
   CircuitProjectSchema,
+  CustomSymbolDefinitionSchema,
   ExternalSubcircuitDefinitionSchema,
   SchematicDocumentSchema,
   type CircuitProject,
@@ -51,6 +52,10 @@ export const ProjectStructureEditSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("remove_external_subcircuit_definition"),
     definitionId: z.string().min(1),
+  }),
+  z.strictObject({
+    kind: z.literal("upsert_custom_symbol_definition"),
+    definition: CustomSymbolDefinitionSchema,
   }),
   z.strictObject({
     kind: z.literal("transact_document"),
@@ -390,6 +395,23 @@ export function executeProjectTransaction(
         );
       }
       candidate.externalSubcircuitDefinitions.splice(index, 1);
+      structuralChange = true;
+      continue;
+    }
+
+    if (edit.kind === "upsert_custom_symbol_definition") {
+      const index = candidate.customSymbolDefinitions.findIndex(
+        (definition) => definition.id === edit.definition.id,
+      );
+      if (index < 0) {
+        candidate.customSymbolDefinitions.push(
+          structuredClone(edit.definition),
+        );
+      } else {
+        candidate.customSymbolDefinitions[index] = structuredClone(
+          edit.definition,
+        );
+      }
       structuralChange = true;
       continue;
     }

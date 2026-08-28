@@ -14,6 +14,7 @@ export interface FileCommandMenuProps {
   onRefresh: () => void;
   onOpenProject: (file: File | null) => void;
   onImportSpice: (files: FileList | null) => void;
+  onImportSymbol: (file: File | null) => void;
   onExportSvg: () => void;
   onExportRaster: (format: "png" | "pdf") => void;
   onExportNetlist: (format: "spice" | "spectre") => void;
@@ -34,6 +35,7 @@ export function FileCommandMenu({
   onRefresh,
   onOpenProject,
   onImportSpice,
+  onImportSymbol,
   onExportSvg,
   onExportRaster,
   onExportNetlist,
@@ -97,6 +99,17 @@ export function FileCommandMenu({
             accept=".spi,.cir,.sp,.inc,.lib"
             multiple
             onChange={(event) => onImportSpice(event.currentTarget.files)}
+          />
+        </label>
+        <label className="file-import">
+          Import Symbol
+          <input
+            data-testid="symbol-file"
+            type="file"
+            accept=".json,application/json"
+            onChange={(event) =>
+              onImportSymbol(event.currentTarget.files?.[0] ?? null)
+            }
           />
         </label>
         <span className="command-group-label">Export</span>

@@ -12,6 +12,7 @@ import {
   planUpdateCellTerminalDirection,
   proposeSetCellFormalParameters,
   proposeUpsertExternalSubcircuitDefinition,
+  planUpsertCustomSymbolDefinition,
 } from "@icm/edit-engine";
 import type { ProjectStructureEdit, SchematicEdit } from "@icm/edit-engine";
 import {
@@ -22,6 +23,7 @@ import {
 import type {
   Annotation,
   CircuitProject,
+  CustomSymbolDefinition,
   ExternalSubcircuitDefinition,
   SchematicDocument,
 } from "@icm/model";
@@ -337,6 +339,32 @@ export function createProjectStructureCommands({
     }
   };
 
+  /**
+   * Import (or replace, by definition ID) one user-defined symbol definition
+   * from an already validated Symbol DSL payload. The definition ID is minted
+   * by the import flow, so a fresh import never collides and a re-import of
+   * the same file replaces its artwork in place.
+   */
+  const importCustomSymbolDefinition = (
+    definition: CustomSymbolDefinition,
+  ): boolean => {
+    try {
+      const edits = planUpsertCustomSymbolDefinition(project, definition);
+      const committed = commitStructure("import-custom-symbol", edits);
+      if (committed) {
+        setStatus(`Imported symbol ${definition.symbol.name}`);
+      }
+      return committed;
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not import the custom symbol",
+      );
+      return false;
+    }
+  };
+
   const setCellSymbolBodySize = (
     child: SchematicDocument,
     width: number,
@@ -419,6 +447,7 @@ export function createProjectStructureCommands({
     moveCellTerminal,
     setCellFormalParameters,
     setExternalSubcircuitDefinition,
+    importCustomSymbolDefinition,
     setCellSymbolBodySize,
     setCellSymbolPortPlacement,
     renameProject,
