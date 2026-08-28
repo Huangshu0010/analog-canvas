@@ -1,6 +1,7 @@
 import { SymbolDefinitionSchema } from "./schema.js";
 import type { SymbolDefinition, SymbolVariant } from "./schema.js";
 import type { CircuitProject } from "@icm/model";
+import { createProjectCustomSymbols } from "./custom-symbols.js";
 import { createProjectHierarchicalSymbols } from "./hierarchical-block.js";
 
 export interface ResolvedSymbol {
@@ -41,18 +42,29 @@ export class InMemorySymbolResolver implements SymbolResolver {
 
 export function createProjectSymbolResolver(
   project: Pick<CircuitProject, "documents" | "topDocumentId"> &
-    Partial<Pick<CircuitProject, "externalSubcircuitDefinitions">>,
+    Partial<
+      Pick<
+        CircuitProject,
+        "externalSubcircuitDefinitions" | "customSymbolDefinitions"
+      >
+    >,
   baseDefinitions: readonly SymbolDefinition[],
 ): InMemorySymbolResolver {
   return new InMemorySymbolResolver([
     ...baseDefinitions,
     ...createProjectHierarchicalSymbols(project, baseDefinitions),
+    ...createProjectCustomSymbols(project),
   ]);
 }
 
 export function findUnsupportedProjectSymbolIds(
   project: Pick<CircuitProject, "documents" | "topDocumentId"> &
-    Partial<Pick<CircuitProject, "externalSubcircuitDefinitions">>,
+    Partial<
+      Pick<
+        CircuitProject,
+        "externalSubcircuitDefinitions" | "customSymbolDefinitions"
+      >
+    >,
   baseDefinitions: readonly SymbolDefinition[],
 ): string[] {
   const resolver = createProjectSymbolResolver(project, baseDefinitions);
