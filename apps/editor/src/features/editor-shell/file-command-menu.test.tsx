@@ -26,6 +26,7 @@ describe("FileCommandMenu", () => {
         onRefresh={vi.fn()}
         onOpenProject={vi.fn()}
         onImportSpice={vi.fn()}
+        onImportSymbol={vi.fn()}
         onExportSvg={vi.fn()}
         onExportRaster={vi.fn()}
         onExportNetlist={vi.fn()}
@@ -38,6 +39,7 @@ describe("FileCommandMenu", () => {
     expect(markup).toContain("Save Project As…");
     expect(markup).toContain("Saved Circuit");
     expect(markup).toContain("Import SPICE");
+    expect(markup).toContain("Import Symbol");
     expect(markup).toContain("Export Spectre netlist");
     expect(markup).toContain("Recover recent work…");
   });

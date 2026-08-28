@@ -5,7 +5,12 @@ import {
   createEmptyProject,
   flattenRichText,
 } from "@icm/model";
-import { externalSubcircuitSymbolId, hierarchicalSymbolId } from "@icm/symbols";
+import type { CustomSymbolDefinition } from "@icm/model";
+import {
+  customSymbolId,
+  externalSubcircuitSymbolId,
+  hierarchicalSymbolId,
+} from "@icm/symbols";
 
 import {
   planRenameCell,
@@ -15,7 +20,46 @@ import {
   planRenameCellTerminal,
   planSetCellSymbolPresentation,
 } from "./hierarchy-planner.js";
+import {
+  MAX_CUSTOM_SYMBOL_DEFINITIONS,
+  planUpsertCustomSymbolDefinition,
+} from "./custom-symbol-planner.js";
 import { executeProjectTransaction } from "./project-transaction.js";
+
+function customSymbolDefinition(
+  id: string,
+  name = "Imported Block",
+): CustomSymbolDefinition {
+  return {
+    id,
+    symbol: {
+      schemaVersion: 1,
+      id: "imported-block",
+      name,
+      viewBox: { x: -20, y: -20, width: 40, height: 40 },
+      pins: [
+        {
+          name: "A",
+          role: "terminal",
+          at: { x: -20, y: 0 },
+          direction: "west",
+          presentation: { visibility: "visible" },
+        },
+        {
+          name: "Y",
+          role: "terminal",
+          at: { x: 20, y: 0 },
+          direction: "east",
+          presentation: { visibility: "visible" },
+        },
+      ],
+      primitives: [
+        { kind: "line", from: { x: -10, y: 0 }, to: { x: 10, y: 0 } },
+      ],
+      variants: [],
+    },
+  };
+}
 
 function hierarchyInstance(
   id: string,
@@ -1258,5 +1302,109 @@ describe("Project structural transaction", () => {
     expect(incompatible.project.documents[0]!.instances[0]!.symbolId).toBe(
       externalSubcircuitSymbolId(definition.id),
     );
+  });
+
+  it("adds a custom symbol definition and resolves it under the namespaced runtime ID", () => {
+    const project = createEmptyProject("project", "Project");
+    const definition = customSymbolDefinition("custom-symbol-def-1");
+
+    const result = executeProjectTransaction(project, {
+      transactionId: "import-custom-symbol",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "test" },
+      edits: planUpsertCustomSymbolDefinition(project, definition),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.project.customSymbolDefinitions).toHaveLength(1);
+    expect(result.project.customSymbolDefinitions[0]).toEqual(definition);
+    expect(result.structureRevision).toBe(project.structureRevision + 1);
+    // The runtime ID is derived from the definition identity, never from the
+    // embedded artwork's own `symbol.id`.
+    expect(result.project.customSymbolDefinitions[0]!.symbol.id).toBe(
+      "imported-block",
+    );
+  });
+
+  it("replaces an existing custom symbol definition without changing its identity", () => {
+    const project = createEmptyProject("project", "Project");
+    project.customSymbolDefinitions.push(
+      customSymbolDefinition("custom-symbol-def-1", "Original"),
+    );
+
+    const replacement = customSymbolDefinition(
+      "custom-symbol-def-1",
+      "Revised Artwork",
+    );
+    const result = executeProjectTransaction(project, {
+      transactionId: "replace-custom-symbol",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "test" },
+      edits: planUpsertCustomSymbolDefinition(project, replacement),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.project.customSymbolDefinitions).toHaveLength(1);
+    expect(result.project.customSymbolDefinitions[0]!.symbol.name).toBe(
+      "Revised Artwork",
+    );
+  });
+
+  it("keeps placed custom-symbol instances untouched across an artwork replacement", () => {
+    const project = createEmptyProject("project", "Project");
+    const definition = customSymbolDefinition("custom-symbol-def-1");
+    project.customSymbolDefinitions.push(definition);
+    project.documents[0]!.instances.push({
+      id: "X1",
+      symbolId: customSymbolId(definition.id),
+      placement: null,
+    });
+
+    const replacement = customSymbolDefinition(
+      definition.id,
+      "Revised Artwork",
+    );
+    const result = executeProjectTransaction(project, {
+      transactionId: "replace-custom-symbol",
+      projectId: project.id,
+      expectedStructureRevision: project.structureRevision,
+      actor: { kind: "human", id: "test" },
+      edits: planUpsertCustomSymbolDefinition(project, replacement),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // ADR 0047: editing artwork replaces the embedded symbol without
+    // changing project references.
+    expect(result.project.documents[0]!.instances[0]!.symbolId).toBe(
+      customSymbolId(definition.id),
+    );
+  });
+
+  it("rejects a custom symbol import past the library cap", () => {
+    const project = createEmptyProject("project", "Project");
+    for (let index = 0; index < MAX_CUSTOM_SYMBOL_DEFINITIONS; index += 1) {
+      project.customSymbolDefinitions.push(
+        customSymbolDefinition(`custom-symbol-def-${index}`),
+      );
+    }
+    expect(() =>
+      planUpsertCustomSymbolDefinition(
+        project,
+        customSymbolDefinition("custom-symbol-def-next"),
+      ),
+    ).toThrow(/Custom symbol library is full/);
+
+    // Replacing an existing definition at the cap stays allowed.
+    expect(
+      planUpsertCustomSymbolDefinition(
+        project,
+        customSymbolDefinition("custom-symbol-def-0", "Revised"),
+      ),
+    ).toHaveLength(1);
   });
 });

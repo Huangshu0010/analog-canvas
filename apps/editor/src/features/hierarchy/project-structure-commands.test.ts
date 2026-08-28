@@ -175,4 +175,83 @@ describe("Project structure commands", () => {
     );
     expect(input.setStatus).toHaveBeenCalledWith("Deleted Cell Pin IN");
   });
+
+  it("imports a custom symbol definition through the structure boundary", () => {
+    const input = dependencies();
+    const commands = createProjectStructureCommands(input);
+    const definition = {
+      id: "custom-symbol-def-1",
+      symbol: {
+        schemaVersion: 1 as const,
+        id: "imported-block",
+        name: "Imported Block",
+        viewBox: { x: -20, y: -20, width: 40, height: 40 },
+        pins: [
+          {
+            name: "A",
+            role: "terminal" as const,
+            at: { x: -20, y: 0 },
+            direction: "west" as const,
+            presentation: { visibility: "visible" as const },
+          },
+        ],
+        primitives: [
+          {
+            kind: "line" as const,
+            from: { x: -10, y: 0 },
+            to: { x: 10, y: 0 },
+          },
+        ],
+        variants: [],
+      },
+    };
+
+    expect(commands.importCustomSymbolDefinition(definition)).toBe(true);
+
+    expect(input.commitStructure).toHaveBeenCalledWith("import-custom-symbol", [
+      { kind: "upsert_custom_symbol_definition", definition },
+    ]);
+    expect(input.setStatus).toHaveBeenCalledWith(
+      "Imported symbol Imported Block",
+    );
+  });
+
+  it("reports a full custom symbol library without committing", () => {
+    const input = dependencies();
+    for (let index = 0; index < 256; index += 1) {
+      input.project.customSymbolDefinitions.push({
+        id: `custom-symbol-def-${index}`,
+        symbol: {
+          schemaVersion: 1,
+          id: `imported-${index}`,
+          name: `Imported ${index}`,
+          viewBox: { x: -10, y: -10, width: 20, height: 20 },
+          pins: [],
+          primitives: [],
+          variants: [],
+        },
+      });
+    }
+    const commands = createProjectStructureCommands(input);
+
+    expect(
+      commands.importCustomSymbolDefinition({
+        id: "custom-symbol-def-next",
+        symbol: {
+          schemaVersion: 1,
+          id: "imported-next",
+          name: "Imported Next",
+          viewBox: { x: -10, y: -10, width: 20, height: 20 },
+          pins: [],
+          primitives: [],
+          variants: [],
+        },
+      }),
+    ).toBe(false);
+
+    expect(input.commitStructure).not.toHaveBeenCalled();
+    expect(input.setStatus).toHaveBeenCalledWith(
+      "Custom symbol library is full (256 definitions)",
+    );
+  });
 });

@@ -237,7 +237,9 @@ export function createEditorFileCommands({
       text = await file.text();
     } catch (error) {
       setStatus(
-        error instanceof Error ? error.message : "Could not read the symbol file",
+        error instanceof Error
+          ? error.message
+          : "Could not read the symbol file",
       );
       return;
     }

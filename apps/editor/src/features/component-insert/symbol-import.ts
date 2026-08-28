@@ -11,7 +11,9 @@ export type ImportedSymbolParseResult =
  * but never trusted — the runtime re-keys the symbol to the definition
  * identity at the persistence boundary.
  */
-export function parseImportedSymbolJson(text: string): ImportedSymbolParseResult {
+export function parseImportedSymbolJson(
+  text: string,
+): ImportedSymbolParseResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);

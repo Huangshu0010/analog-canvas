@@ -105,15 +105,38 @@ export function quickPlaceRequest(
   };
 }
 
+/**
+ * A user-defined symbol (ADR 0047) is a manual-only device: no device
+ * descriptor means no parameters and no netlist emission, exactly like the
+ * reviewed op-amp and logic-gate treatment.
+ */
+export function quickCustomSymbolRequest(
+  symbol: SymbolDefinition,
+): ComponentInsertRequest {
+  return {
+    kind: "symbol",
+    symbolId: symbol.id,
+    symbolName: symbol.name,
+    parameters: {},
+    initialRotation: 0,
+    showReference: true,
+    referenceText: null,
+    showValue: false,
+  };
+}
+
 export interface ShapesPanelProps {
   styleProfileId: string;
   open: boolean;
+  /** Runtime custom symbols (ADR 0047), already namespaced by definition ID. */
+  customSymbols?: readonly SymbolDefinition[];
   onStartInsert(launch: InsertLaunch): void;
 }
 
 export function ShapesPanel({
   styleProfileId,
   open,
+  customSymbols = [],
   onStartInsert,
 }: ShapesPanelProps) {
   const libraryGroups = componentCatalog(styleProfileId, "");
@@ -128,6 +151,10 @@ export function ShapesPanel({
   function placeSymbol(symbolId: string): void {
     const request = quickPlaceRequest(styleProfileId, symbolId);
     if (request) onStartInsert({ kind: "quick", request });
+  }
+
+  function placeCustomSymbol(symbol: SymbolDefinition): void {
+    onStartInsert({ kind: "quick", request: quickCustomSymbolRequest(symbol) });
   }
 
   function setCategoryOpen(category: string, open: boolean): void {
@@ -209,6 +236,48 @@ export function ShapesPanel({
                 </details>
               ))}
             </div>
+          </div>
+        </details>
+        <details
+          className="shapes-fold"
+          open={customSymbols.length > 0}
+          data-testid="shapes-fold-custom"
+        >
+          <summary className="shapes-fold-summary">
+            <span className="shapes-fold-label">
+              <span className="shapes-fold-label-full">Custom symbols</span>
+              <span className="shapes-fold-label-compact">Custom</span>
+            </span>
+            <span className="shapes-fold-count">{customSymbols.length}</span>
+          </summary>
+          <div className="shapes-fold-body">
+            {customSymbols.length === 0 ? (
+              <p className="shapes-fold-hint">
+                Import a Symbol DSL .json file from the File menu to add your
+                own symbols here. They are saved with this project.
+              </p>
+            ) : (
+              <div className="shapes-grid">
+                {customSymbols.map((symbol) => (
+                  <button
+                    key={symbol.id}
+                    type="button"
+                    className="shapes-chip"
+                    data-testid={`shapes-chip-${symbol.id}`}
+                    aria-label={`Place ${symbol.name}`}
+                    title={`Place ${symbol.name} (imported)`}
+                    onClick={() => placeCustomSymbol(symbol)}
+                  >
+                    <SymbolArtwork
+                      symbol={symbol}
+                      className="shapes-chip-art"
+                      paddingRatio={0.04}
+                    />
+                    <span>{symbol.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </details>
       </div>

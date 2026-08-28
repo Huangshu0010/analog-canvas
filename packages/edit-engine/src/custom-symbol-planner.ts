@@ -27,6 +27,9 @@ export function planUpsertCustomSymbolDefinition(
     );
   }
   return [
-    { kind: "upsert_custom_symbol_definition", definition: structuredClone(definition) },
+    {
+      kind: "upsert_custom_symbol_definition",
+      definition: structuredClone(definition),
+    },
   ];
 }

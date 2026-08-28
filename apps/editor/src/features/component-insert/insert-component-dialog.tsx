@@ -25,6 +25,8 @@ export interface InsertComponentDialogProps {
   recentSymbolIds: readonly string[];
   cells: readonly CellInsertCandidate[];
   externalDefinitions?: readonly ExternalSubcircuitInsertCandidate[];
+  /** Runtime custom symbols (ADR 0047), already namespaced by definition ID. */
+  customSymbols?: readonly SymbolDefinition[];
   scope?: InsertScope;
   initialSelectionId?: string | null;
   onApply(request: ComponentInsertRequest): void;
@@ -58,6 +60,7 @@ export function InsertComponentDialog({
   recentSymbolIds,
   cells,
   externalDefinitions = [],
+  customSymbols = [],
   scope = "all",
   initialSelectionId = null,
   onApply,
@@ -80,6 +83,13 @@ export function InsertComponentDialog({
                 symbol,
               })),
           )),
+      ...(cellsOnly
+        ? []
+        : customSymbols.map((symbol) => ({
+            key: `custom:${symbol.id}`,
+            kind: "symbol" as const,
+            symbol,
+          }))),
       ...cells.map((cell) => ({
         key: `cell:${cell.childDocumentId}`,
         kind: "cell" as const,
@@ -97,7 +107,14 @@ export function InsertComponentDialog({
             masterName: definition.masterName,
           }))),
     ],
-    [cellsOnly, cells, externalDefinitions, recentSymbolIds, styleProfileId],
+    [
+      cellsOnly,
+      cells,
+      customSymbols,
+      externalDefinitions,
+      recentSymbolIds,
+      styleProfileId,
+    ],
   );
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(
@@ -149,6 +166,18 @@ export function InsertComponentDialog({
         definitionId: definition.definitionId,
         masterName: definition.masterName,
       }));
+    const normalizedQuery = query.trim().toLowerCase();
+    const customChoices = (cellsOnly ? [] : customSymbols)
+      .filter(
+        (symbol) =>
+          normalizedQuery.length === 0 ||
+          `${symbol.name} ${symbol.id}`.toLowerCase().includes(normalizedQuery),
+      )
+      .map<InsertChoice>((symbol) => ({
+        key: `custom:${symbol.id}`,
+        kind: "symbol",
+        symbol,
+      }));
     return [
       ...(cellsOnly
         ? []
@@ -162,6 +191,9 @@ export function InsertComponentDialog({
               })),
             }),
           )),
+      ...(customChoices.length > 0
+        ? [{ category: "Custom symbols", choices: customChoices }]
+        : []),
       ...(cellChoices.length > 0
         ? [{ category: "Cells", choices: cellChoices }]
         : []),
@@ -172,6 +204,7 @@ export function InsertComponentDialog({
   }, [
     cellsOnly,
     cells,
+    customSymbols,
     externalDefinitions,
     query,
     recentSymbolIds,

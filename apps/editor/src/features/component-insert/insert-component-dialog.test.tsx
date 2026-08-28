@@ -89,4 +89,50 @@ describe("InsertComponentDialog", () => {
     expect(markup).toContain(">Amplifier</span>");
     expect(markup).toContain('aria-label="Reference name"');
   });
+
+  it("lists imported custom symbols in their own searchable group", () => {
+    const customSymbol = {
+      schemaVersion: 1 as const,
+      id: "custom-symbol-0123456789abcdef",
+      name: "My Block",
+      viewBox: { x: -20, y: -10, width: 40, height: 20 },
+      pins: [],
+      primitives: [
+        { kind: "line" as const, from: { x: -10, y: 0 }, to: { x: 10, y: 0 } },
+      ],
+      variants: [],
+    };
+    const markup = renderToStaticMarkup(
+      <InsertComponentDialog
+        open
+        styleProfileId="razavi-textbook-v1"
+        recentSymbolIds={[]}
+        cells={[]}
+        customSymbols={[customSymbol]}
+        onApply={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain(">Custom symbols</h3>");
+    expect(markup).toContain(
+      'data-testid="insert-component-custom-symbol-0123456789abcdef"',
+    );
+    expect(markup).toContain(">My Block</span>");
+
+    const cellsOnly = renderToStaticMarkup(
+      <InsertComponentDialog
+        open
+        styleProfileId="razavi-textbook-v1"
+        recentSymbolIds={[]}
+        scope="cells"
+        cells={[]}
+        customSymbols={[customSymbol]}
+        onApply={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+    expect(cellsOnly).not.toContain("My Block");
+    expect(cellsOnly).not.toContain("Custom symbols");
+  });
 });
